@@ -3,7 +3,7 @@
     let { sticky = true }: { sticky?: boolean } = $props();
 </script>
 
-<footer class="mt-auto py-6 text-center text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-white/10 bg-[var(--theme-bg)] {sticky ? 'sticky bottom-0' : ''} w-full z-10 flex-shrink-0 transition-colors duration-200">
+<footer class="mt-auto py-6 text-center text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-white/10 bg-[var(--theme-bg)] {sticky ? 'sticky bottom-0 z-10' : ''} w-full flex-shrink-0 transition-colors duration-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center items-center gap-4">
         <a 
             href="https://github.com/SirBlobby/TypstDrive" 

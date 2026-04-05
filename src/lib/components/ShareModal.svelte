@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
+    import Icon from '@iconify/svelte';
     
     let { onClose, docId = undefined } = $props<{ onClose: () => void, docId?: string }>();
     
@@ -25,7 +26,19 @@
     });
     
     function copyLink() {
-        navigator.clipboard.writeText(link);
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(link).catch(console.error);
+        } else {
+            const input = document.getElementById('share-link-input') as HTMLInputElement;
+            if (input) {
+                input.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('Fallback copy failed', err);
+                }
+            }
+        }
         copied = true;
         setTimeout(() => copied = false, 2000);
     }
@@ -54,9 +67,15 @@
                     <button 
                         onclick={copyLink}
                         aria-label="Copy link"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm min-w-[80px]"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm min-w-[100px] flex items-center justify-center gap-2"
                     >
-                        {copied ? 'Copied!' : 'Copy'}
+                        {#if copied}
+                            <Icon icon="mdi:check" class="text-lg" />
+                            <span>Copied!</span>
+                        {:else}
+                            <Icon icon="mdi:content-copy" class="text-lg" />
+                            <span>Copy</span>
+                        {/if}
                     </button>
                 </div>
             </div>

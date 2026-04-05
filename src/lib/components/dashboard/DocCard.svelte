@@ -11,6 +11,25 @@
         shareItem: (item: any) => void;
         deleteDoc: (id: string, name: string) => void;
     }>();
+
+    let dropUp = $state(false);
+
+    function toggleMenu(e: MouseEvent) {
+        e.stopPropagation();
+        if (activeMenu === doc.id) {
+            setActiveMenu(null);
+        } else {
+            const button = e.currentTarget as HTMLElement;
+            const rect = button.getBoundingClientRect();
+            // If there's less than 200px below the button, open upwards
+            if (window.innerHeight - rect.bottom < 200) {
+                dropUp = true;
+            } else {
+                dropUp = false;
+            }
+            setActiveMenu(doc.id);
+        }
+    }
 </script>
 
 <div 
@@ -44,14 +63,14 @@
             <div class="relative action-menu-container">
                 <button 
                     aria-label="Document actions" 
-                    onclick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === doc.id ? null : doc.id); }} 
+                    onclick={toggleMenu} 
                     class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 pointer-events-auto"
                 >
                     <Icon icon="mdi:dots-vertical" class="text-xl" />
                 </button>
                 
                 {#if activeMenu === doc.id}
-                    <div class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
+                    <div class="absolute right-0 {dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
                         <button onclick={(e) => { e.stopPropagation(); openInfo(doc, 'document'); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2">
                             <Icon icon="mdi:information-outline" class="text-lg text-blue-500" />
                             View Info
