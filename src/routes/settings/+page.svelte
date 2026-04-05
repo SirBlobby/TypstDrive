@@ -6,6 +6,7 @@
     import { themes } from '$lib/ts/themes';
     import Icon from '@iconify/svelte';
     import ThemePicker from '$lib/components/ThemePicker.svelte';
+    import Footer from '$lib/components/Footer.svelte';
 
     let username = $state('');
     let isSaving = $state(false);
@@ -106,8 +107,8 @@
 	<meta name="description" content="Manage your TypstDrive settings." />
 </svelte:head>
 
-<div class="h-screen overflow-y-auto bg-transparent flex flex-col">
-    <nav class="bg-white/80 dark:bg-black/20 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-white/10 px-6 py-4 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200 flex-shrink-0">
+<div class="min-h-screen flex flex-col">
+    <nav class="bg-[var(--theme-bg)] shadow-sm border-b border-gray-200 dark:border-white/10 px-6 py-4 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200 flex-shrink-0">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
             <Icon icon="mdi:cog" class="text-blue-600 dark:text-blue-400 text-3xl" />
             Settings
@@ -289,4 +290,5 @@
         </div>
 
     </main>
+    <Footer />
 </div>

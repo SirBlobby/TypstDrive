@@ -83,9 +83,3 @@ pub struct UpdateDocumentRequest {
     pub title: Option<String>,
     pub folder_id: Option<String>,
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateFileRequest {
-    pub name: Option<String>,
-    pub folder_id: Option<String>,
-}

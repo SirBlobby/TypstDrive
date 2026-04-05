@@ -15,6 +15,7 @@
     import RenameModal from '$lib/components/dashboard/RenameModal.svelte';
     import CreateDocModal from '$lib/components/dashboard/CreateDocModal.svelte';
     import CreateFolderModal from '$lib/components/dashboard/CreateFolderModal.svelte';
+    import Footer from '$lib/components/Footer.svelte';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);
@@ -321,12 +322,12 @@
 
 <svelte:window onclick={handleWindowClick} />
 
-<div class="min-h-screen bg-transparent flex flex-col">
+<div class="min-h-screen flex flex-col">
     
     <Navbar />
 
     
-    <main class="max-w-7xl w-full mx-auto py-10 px-4 sm:px-6 lg:px-8 flex-grow flex flex-col overflow-y-auto">
+    <main class="max-w-7xl w-full mx-auto py-10 px-4 sm:px-6 lg:px-8 flex-grow block">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">My Documents</h2>
             
@@ -379,14 +380,14 @@
         </div>
 
         {#if loading}
-            <div class="flex-grow flex items-center justify-center">
+            <div class="min-h-[50vh] flex items-center justify-center">
                 <div class="flex flex-col items-center gap-4 text-gray-500 dark:text-gray-400 animate-pulse">
                     <Icon icon="mdi:loading" class="text-4xl animate-spin" />
                     <p class="text-lg font-medium">Loading your workspace...</p>
                 </div>
             </div>
         {:else if documents.length === 0 && folders.length === 0 && files.length === 0 && currentFolderId === null}
-            <div class="flex-grow flex items-center justify-center">
+            <div class="min-h-[50vh] flex items-center justify-center">
                 <div class="text-center p-12 bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 max-w-md w-full">
                     <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 mb-6">
                         <Icon icon="mdi:file-document-outline" class="text-4xl" />
@@ -468,10 +469,12 @@
             {/if}
             
             {#if documents.length === 0 && folders.length === 0 && files.length === 0}
-                <div class="flex-grow flex items-center justify-center">
+                <div class="min-h-[50vh] flex items-center justify-center">
                     <p class="text-gray-500 dark:text-gray-400">This folder is empty.</p>
                 </div>
             {/if}
         {/if}
     </main>
+
+    <Footer />
 </div>

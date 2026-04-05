@@ -71,7 +71,7 @@
 	<meta property="og:title" content={`${documentTitle} - TypstDrive`} />
 </svelte:head>
 
-<div class="flex flex-col h-full relative">
+<div class="flex flex-col h-screen relative">
 	<Toolbar title={documentTitle} docId={$page.params.id} />
 
 	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">

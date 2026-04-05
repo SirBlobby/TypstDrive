@@ -11,7 +11,7 @@
     }
 </script>
 
-<nav class="bg-white/80 dark:bg-black/20 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-white/10 px-6 py-4 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200">
+<nav class="bg-[var(--theme-bg)] shadow-sm border-b border-gray-200 dark:border-white/10 px-6 py-4 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
         <Icon icon="mdi:script-text" class="text-blue-600 dark:text-blue-400 text-3xl" />
         TypstDrive

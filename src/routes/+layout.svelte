@@ -28,13 +28,13 @@
 
 {#if loaded}
 	<div 
-		class="h-screen w-screen flex flex-col font-sans transition-colors duration-200"
-		style="background-color: {currentColors.background}; color: {currentColors.text};"
+		class="min-h-screen w-full flex flex-col font-sans transition-colors duration-200"
+		style="background-color: {currentColors.background}; color: {currentColors.text}; --theme-bg: {currentColors.background};"
 	>
 		{@render children()}
 	</div>
 {:else}
-	<div class="h-screen w-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-950">
+	<div class="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-zinc-950">
 		<div class="text-gray-500 dark:text-gray-400 font-medium animate-pulse">Loading TypstDrive...</div>
 	</div>
 {/if}

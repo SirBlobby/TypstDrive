@@ -5,14 +5,22 @@
         file: any;
         deleteFile: (id: string, name: string) => void;
     }>();
+
+    let isFont = $derived(file.name.endsWith('.ttf') || file.name.endsWith('.otf'));
+
+    function handleOpen() {
+        if (!isFont) {
+            window.open(`/api/files/${file.id}/data`, '_blank');
+        }
+    }
 </script>
 
 <div 
-    class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 flex flex-col hover:shadow-lg hover:border-green-400 dark:hover:border-green-500/50 transition-all duration-200 relative group transform hover:-translate-y-1 cursor-pointer" 
+    class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 flex flex-col transition-all duration-200 relative group transform hover:-translate-y-1 {isFont ? 'cursor-default' : 'hover:shadow-lg hover:border-green-400 dark:hover:border-green-500/50 cursor-pointer'}" 
     role="button" 
     tabindex="0" 
-    onclick={() => window.open(`/api/files/${file.id}/data`, '_blank')} 
-    onkeydown={(e) => e.key === 'Enter' && window.open(`/api/files/${file.id}/data`, '_blank')}
+    onclick={handleOpen} 
+    onkeydown={(e) => e.key === 'Enter' && handleOpen()}
     draggable="true"
     ondragstart={(e) => e.dataTransfer?.setData('text/plain', JSON.stringify({ type: 'file', id: file.id }))}
 >
@@ -20,8 +28,10 @@
         <div class="p-3 bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg overflow-hidden flex items-center justify-center w-12 h-12">
             {#if file.mime_type.startsWith('image/')}
                 <img src={`/api/files/${file.id}/data`} alt={file.name} class="w-full h-full object-cover rounded" draggable="false" />
+            {:else if isFont}
+                <Icon icon="mdi:format-font" class="text-2xl" />
             {:else}
-                <Icon icon="mdi:image-outline" class="text-2xl" />
+                <Icon icon="mdi:file-outline" class="text-2xl" />
             {/if}
         </div>
         <button aria-label="Delete file" onclick={(e) => { e.stopPropagation(); deleteFile(file.id, file.name); }} class="pointer-events-auto text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-50 hover:bg-red-50 dark:bg-white/5 dark:hover:bg-red-900/20 rounded-full p-2 shadow-sm border border-gray-100 dark:border-white/10">
