@@ -23,5 +23,6 @@ RUN apk add --no-cache libgcc sqlite-libs openssl
 COPY --from=frontend-builder /app/build /app/build
 COPY --from=backend-builder /app/server/target/release/server /app/server
 ENV PORT=3000
+ENV STATIC_DIR=/app/build
 EXPOSE 3000
 CMD ["/app/server"]

@@ -84,10 +84,12 @@ async fn main() {
     let yjs_routes = Router::new()
         .route("/{id}", get(yjs_handler));
 
+    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "../build".to_string());
+
     let app = Router::new()
         .nest("/api", api_routes.layer(TraceLayer::new_for_http()))
         .nest("/yjs", yjs_routes.layer(TraceLayer::new_for_http()))
-        .fallback_service(ServeDir::new("../build").fallback(ServeFile::new("../build/index.html")))
+        .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")

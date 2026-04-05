@@ -422,31 +422,6 @@
                 </div>
             {/if}
 
-{#if showShareModal && shareTarget}
-    
-    <ShareModal docId={shareTarget.id} onClose={() => showShareModal = false} />
-{/if}
-
-{#if showDeleteModal && deleteTarget}
-    <DeleteModal {deleteTarget} {confirmDelete} onClose={() => showDeleteModal = false} />
-{/if}
-
-{#if showInfoModal && selectedInfo}
-    <InfoModal {selectedInfo} onClose={() => showInfoModal = false} />
-{/if}
-
-{#if showRenameModal}
-    <RenameModal initialTitle={renameTitle} {handleRename} onClose={() => showRenameModal = false} />
-{/if}
-
-{#if showCreateModal}
-    <CreateDocModal {createDoc} onClose={() => showCreateModal = false} />
-{/if}
-
-{#if showCreateFolderModal}
-    <CreateFolderModal {createFolder} onClose={() => showCreateFolderModal = false} />
-{/if}
-
             
             {#if documents.length > 0 || files.length > 0}
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -474,6 +449,32 @@
                 </div>
             {/if}
         {/if}
+
+{#if showShareModal && shareTarget}
+    
+    <ShareModal docId={shareTarget.id} onClose={() => showShareModal = false} />
+{/if}
+
+{#if showDeleteModal && deleteTarget}
+    <DeleteModal {deleteTarget} {confirmDelete} onClose={() => showDeleteModal = false} />
+{/if}
+
+{#if showInfoModal && selectedInfo}
+    <InfoModal {selectedInfo} onClose={() => showInfoModal = false} />
+{/if}
+
+{#if showRenameModal}
+    <RenameModal initialTitle={renameTitle} {handleRename} onClose={() => showRenameModal = false} />
+{/if}
+
+{#if showCreateModal}
+    <CreateDocModal {createDoc} onClose={() => showCreateModal = false} />
+{/if}
+
+{#if showCreateFolderModal}
+    <CreateFolderModal {createFolder} onClose={() => showCreateFolderModal = false} />
+{/if}
+
     </main>
 
     <Footer sticky={false} />

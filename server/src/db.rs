@@ -53,12 +53,14 @@ CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
     owner_id TEXT NOT NULL,
     document_id TEXT,
+    folder_id TEXT,
     name TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     data BLOB NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(owner_id) REFERENCES users(id),
-    FOREIGN KEY(document_id) REFERENCES documents(id)
+    FOREIGN KEY(document_id) REFERENCES documents(id),
+    FOREIGN KEY(folder_id) REFERENCES folders(id)
 );
         "#,
     )
@@ -73,6 +75,10 @@ CREATE TABLE IF NOT EXISTS files (
 
     
     let _ = sqlx::query("ALTER TABLE documents ADD COLUMN thumbnail_svg TEXT")
+        .execute(&pool)
+        .await;
+
+    let _ = sqlx::query("ALTER TABLE files ADD COLUMN folder_id TEXT REFERENCES folders(id)")
         .execute(&pool)
         .await;
 
