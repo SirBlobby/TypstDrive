@@ -1,7 +1,7 @@
 use crate::world::MemoryWorld;
 use std::collections::HashMap;
 use typst::diag::{SourceDiagnostic, Warned};
-use typst_layout::PagedDocument;
+use typst::layout::PagedDocument;
 use typst_pdf::{pdf, PdfOptions};
 use typst_render::render;
 
@@ -23,12 +23,8 @@ impl TypstCompiler {
                 output: Ok(doc),
                 warnings: _,
             } => {
-                let svgs = doc
-                    .pages()
-                    .iter()
-                    .map(|page| typst_svg::svg(page))
-                    .collect();
-                let thumbnail = if let Some(page) = doc.pages().first() {
+                let svgs = doc.pages.iter().map(|page| typst_svg::svg(page)).collect();
+                let thumbnail = if let Some(page) = doc.pages.first() {
                     typst_svg::svg(page)
                 } else {
                     String::new()
@@ -80,7 +76,7 @@ impl TypstCompiler {
                 output: Ok(doc),
                 warnings: _,
             } => {
-                if let Some(page) = doc.pages().first() {
+                if let Some(page) = doc.pages.first() {
                     let pixmap = render(page, 2.0);
                     if let Ok(encoded) = pixmap.encode_png() {
                         return Ok(encoded);

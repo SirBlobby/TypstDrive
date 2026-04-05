@@ -22,7 +22,6 @@ ecow = "0.2"
 
 typst = { version = "0.14.2", path = "../typst/crates/typst" }
 typst-kit = { path = "../typst/crates/typst-kit", features = ["downloads", "packages", "embed-fonts"] }
-typst-layout = { path = "../typst/crates/typst-layout" }
 typst-pdf = { path = "../typst/crates/typst-pdf" }
 typst-render = { path = "../typst/crates/typst-render" }
 typst-svg = { path = "../typst/crates/typst-svg" }
@@ -30,3 +29,4 @@ typst-svg = { path = "../typst/crates/typst-svg" }
 yrs = "0.18.8"
 yrs-axum = "0.8"
 
+typst-assets = "0.14.2"

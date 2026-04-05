@@ -9,7 +9,7 @@ RUN npm run build
 # Build Backend
 FROM rust:alpine AS backend-builder
 WORKDIR /app
-RUN apk add --no-cache musl-dev sqlite-dev openssl-dev pkgconfig git
+RUN apk add --no-cache musl-dev sqlite-dev openssl-dev openssl-libs-static pkgconfig git
 RUN git clone -b v0.14.2 --single-branch https://github.com/typst/typst.git typst
 COPY server/Cargo.* server/
 COPY server/src server/src
