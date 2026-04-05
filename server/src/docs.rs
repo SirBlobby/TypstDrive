@@ -1,0 +1,227 @@
+use axum::{
+    extract::{Path, State, Multipart},
+    http::StatusCode,
+    Json,
+};
+use axum_extra::extract::cookie::SignedCookieJar;
+use uuid::Uuid;
+use yrs::{Doc, ReadTxn, Transact, Text};
+
+use crate::{
+    models::{Document, CreateDocumentRequest},
+    AppState,
+};
+
+#[derive(serde::Deserialize)]
+pub struct ListDocsQuery {
+    pub folder_id: Option<String>,
+}
+
+pub async fn list_documents(
+    axum::extract::Query(query): axum::extract::Query<ListDocsQuery>,
+    State(state): State<AppState>,
+    jar: SignedCookieJar,
+) -> Result<Json<Vec<Document>>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    let docs = if let Some(folder_id) = query.folder_id {
+        sqlx::query_as::<_, Document>(
+            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at FROM documents WHERE owner_id = ? AND folder_id = ? ORDER BY updated_at DESC"
+        )
+        .bind(&user_id)
+        .bind(&folder_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    } else {
+        sqlx::query_as::<_, Document>(
+            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at FROM documents WHERE owner_id = ? AND folder_id IS NULL ORDER BY updated_at DESC"
+        )
+        .bind(&user_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    };
+
+    Ok(Json(docs))
+}
+
+#[axum::debug_handler]
+pub async fn create_document(
+    State(state): State<AppState>,
+    jar: SignedCookieJar,
+    Json(payload): Json<CreateDocumentRequest>,
+) -> Result<Json<Document>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    let doc_id = Uuid::new_v4().to_string();
+    
+    let content = {
+        let ydoc = Doc::new();
+        let text = ydoc.get_or_insert_text("typst");
+        let initial_text = payload.content.clone().unwrap_or_else(|| "== New Document".to_string());
+        println!("Creating document with content length: {}", initial_text.len());
+        text.insert(&mut ydoc.transact_mut(), 0, &initial_text);
+        let encoded = ydoc.transact().encode_state_as_update_v1(&yrs::StateVector::default());
+        println!("Encoded Yjs state length: {}", encoded.len());
+        encoded
+    };
+
+    let doc = sqlx::query_as::<_, Document>(
+        "INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES (?, ?, ?, ?, ?) RETURNING id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at"
+    )
+    .bind(&doc_id)
+    .bind(&user_id)
+    .bind(&payload.folder_id)
+    .bind(&payload.title)
+    .bind(&content)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(doc))
+}
+
+pub async fn get_document(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    jar: SignedCookieJar,
+) -> Result<Json<Document>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    let doc = sqlx::query_as::<_, Document>(
+        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at FROM documents WHERE id = ? AND owner_id = ?"
+    )
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    match doc {
+        Some(d) => Ok(Json(d)),
+        None => Err((StatusCode::NOT_FOUND, "Document not found".to_string())),
+    }
+}
+
+pub async fn update_document(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    jar: SignedCookieJar,
+    Json(payload): Json<crate::models::UpdateDocumentRequest>,
+) -> Result<Json<Document>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    
+    let mut doc = sqlx::query_as::<_, Document>(
+        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at FROM documents WHERE id = ? AND owner_id = ?"
+    )
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
+
+    if let Some(new_title) = payload.title {
+        doc.title = new_title;
+    }
+    if let Some(new_folder_id) = payload.folder_id {
+        if new_folder_id.is_empty() {
+            doc.folder_id = None;
+        } else {
+            doc.folder_id = Some(new_folder_id);
+        }
+    }
+
+    
+    let doc = sqlx::query_as::<_, Document>(
+        "UPDATE documents SET title = ?, folder_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND owner_id = ? RETURNING id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at"
+    )
+    .bind(&doc.title)
+    .bind(&doc.folder_id)
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(doc))
+}
+
+pub async fn delete_document(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    jar: SignedCookieJar,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    let result = sqlx::query("DELETE FROM documents WHERE id = ? AND owner_id = ?")
+        .bind(&id)
+        .bind(&user_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "Document not found or unauthorized".to_string()));
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn upload_file(
+    State(state): State<AppState>,
+    Path(doc_id): Path<String>,
+    jar: SignedCookieJar,
+    mut multipart: Multipart,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    
+    let doc_exists = sqlx::query_as::<_, (String, Option<String>)>("SELECT id, folder_id FROM documents WHERE id = ? AND owner_id = ?")
+        .bind(&doc_id)
+        .bind(&user_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if doc_exists.is_none() {
+        return Err((StatusCode::NOT_FOUND, "Document not found or unauthorized".to_string()));
+    }
+
+    let (_, folder_id) = doc_exists.unwrap();
+
+    let mut uploaded_filename = String::new();
+
+    while let Some(field) = multipart.next_field().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))? {
+        let file_name = field.file_name().unwrap_or("unnamed").to_string();
+        let content_type = field.content_type().unwrap_or("application/octet-stream").to_string();
+        let data = field.bytes().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?.to_vec();
+
+        let file_id = Uuid::new_v4().to_string();
+
+        sqlx::query("INSERT INTO files (id, owner_id, document_id, folder_id, name, mime_type, data) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind(&file_id)
+            .bind(&user_id)
+            .bind(&doc_id)
+            .bind(&folder_id)
+            .bind(&file_name)
+            .bind(&content_type)
+            .bind(&data)
+            .execute(&state.db)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        uploaded_filename = file_name;
+        break; 
+    }
+
+    Ok(Json(serde_json::json!({"filename": uploaded_filename})))
+}
