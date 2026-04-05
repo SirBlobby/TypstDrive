@@ -2,9 +2,22 @@ use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Pool, Sqlite};
 
 pub async fn init_db() -> Pool<Sqlite> {
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:typstdrive.db?mode=rwc".to_string());
+    
+    // Ensure parent directory exists if there is one
+    if let Some(path) = db_url.strip_prefix("sqlite:") {
+        if let Some(path) = path.split('?').next() {
+            if let Some(parent) = std::path::Path::new(path).parent() {
+                if !parent.as_os_str().is_empty() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+            }
+        }
+    }
+
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect("sqlite:typstdrive.db?mode=rwc")
+        .connect(&db_url)
         .await
         .expect("Failed to create pool.");
 

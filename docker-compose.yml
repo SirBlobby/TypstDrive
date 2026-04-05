@@ -1,8 +1,12 @@
 services:
   typstdrive:
     build: .
+    container_name: typstdrive
     ports:
-      - "3000:3000"
+      - "3285:3000"
+    environment:
+      # This ensures the database is saved to your mounted volume
+      - DATABASE_URL=sqlite:/app/data/typstdrive.db?mode=rwc
     volumes:
-      - ./data:/app/data
+      - /media/blob/TeaNet/TypstDrive:/app/data
     restart: unless-stopped
