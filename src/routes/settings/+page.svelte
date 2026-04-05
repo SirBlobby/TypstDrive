@@ -21,11 +21,30 @@
     let usernameError = $state('');
     let usernameSuccess = $state(false);
 
-    onMount(() => {
+    let storageStats = $state<{documents_size_bytes: number, files_size_bytes: number, total_size_bytes: number} | null>(null);
+
+    function formatBytes(bytes: number) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    onMount(async () => {
         if (!$userStore) {
             goto('/login');
         } else {
             username = $userStore.username;
+            
+            try {
+                const res = await fetch('/api/auth/storage');
+                if (res.ok) {
+                    storageStats = await res.json();
+                }
+            } catch (err) {
+                console.error("Failed to fetch storage stats", err);
+            }
         }
     });
 
@@ -266,7 +285,9 @@
                 <div class="bg-gray-50 dark:bg-black/20 rounded-lg p-5 border border-gray-200 dark:border-white/10">
                     <div class="mb-2 flex justify-between items-end">
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Total Space Used</span>
-                        <span class="text-sm font-bold text-gray-900 dark:text-white">45 MB</span>
+                        <span class="text-sm font-bold text-gray-900 dark:text-white">
+                            {storageStats ? formatBytes(storageStats.total_size_bytes) : 'Loading...'}
+                        </span>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4 text-sm mt-6">
@@ -274,14 +295,18 @@
                             <div class="w-3 h-3 rounded-full bg-blue-500"></div>
                             <div>
                                 <p class="text-gray-500 dark:text-gray-400">Documents</p>
-                                <p class="font-semibold text-gray-900 dark:text-white">12 MB</p>
+                                <p class="font-semibold text-gray-900 dark:text-white">
+                                    {storageStats ? formatBytes(storageStats.documents_size_bytes) : '...'}
+                                </p>
                             </div>
                         </div>
                         <div class="bg-white dark:bg-black/40 p-3 rounded-lg border border-gray-200 dark:border-white/10 flex items-center gap-3">
                             <div class="w-3 h-3 rounded-full bg-purple-500"></div>
                             <div>
                                 <p class="text-gray-500 dark:text-gray-400">Images & Assets</p>
-                                <p class="font-semibold text-gray-900 dark:text-white">33 MB</p>
+                                <p class="font-semibold text-gray-900 dark:text-white">
+                                    {storageStats ? formatBytes(storageStats.files_size_bytes) : '...'}
+                                </p>
                             </div>
                         </div>
                     </div>

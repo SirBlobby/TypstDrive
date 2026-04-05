@@ -70,6 +70,7 @@ async fn main() {
         .route("/auth/login", post(auth::login))
         .route("/auth/logout", post(auth::logout))
         .route("/auth/me", get(auth::me).put(auth::update_profile))
+        .route("/auth/storage", get(auth::storage_stats))
         .route("/auth/change-password", put(auth::change_password))
         .route("/folders", get(folders::list_folders).post(folders::create_folder))
         .route("/folders/{id}", delete(folders::delete_folder).patch(folders::update_folder))

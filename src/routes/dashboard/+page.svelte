@@ -476,5 +476,5 @@
         {/if}
     </main>
 
-    <Footer />
+    <Footer sticky={false} />
 </div>

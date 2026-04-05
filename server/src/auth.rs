@@ -7,7 +7,7 @@ use axum_extra::extract::cookie::{Cookie, SameSite, SignedCookieJar};
 use uuid::Uuid;
 
 use crate::{
-    models::{User, RegisterRequest, LoginRequest, ChangePasswordRequest, UpdateProfileRequest},
+    models::{User, RegisterRequest, LoginRequest, ChangePasswordRequest, UpdateProfileRequest, StorageStats},
     AppState,
 };
 
@@ -187,4 +187,36 @@ pub async fn change_password(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(StatusCode::OK)
+}
+
+pub async fn storage_stats(
+    State(state): State<AppState>,
+    jar: SignedCookieJar,
+) -> Result<Json<StorageStats>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    let docs_size: (i64,) = sqlx::query_as(
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM documents WHERE owner_id = ?"
+    )
+    .bind(&user_id)
+    .fetch_one(&state.db)
+    .await
+    .unwrap_or((0,));
+
+    let files_size: (i64,) = sqlx::query_as(
+        "SELECT COALESCE(SUM(LENGTH(data)), 0) FROM files WHERE owner_id = ?"
+    )
+    .bind(&user_id)
+    .fetch_one(&state.db)
+    .await
+    .unwrap_or((0,));
+
+    let stats = StorageStats {
+        documents_size_bytes: docs_size.0,
+        files_size_bytes: files_size.0,
+        total_size_bytes: docs_size.0 + files_size.0,
+    };
+
+    Ok(Json(stats))
 }

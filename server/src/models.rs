@@ -83,3 +83,10 @@ pub struct UpdateDocumentRequest {
     pub title: Option<String>,
     pub folder_id: Option<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StorageStats {
+    pub documents_size_bytes: i64,
+    pub files_size_bytes: i64,
+    pub total_size_bytes: i64,
+}

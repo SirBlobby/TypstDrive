@@ -1,6 +1,7 @@
 # TypstDrive
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/your-username/typstdrive)
+[![Typst Version](https://img.shields.io/badge/Typst-0.14.2-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.82+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte)](https://kit.svelte.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -8,7 +9,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-TypstDrive is a real-time collaborative web editor for Typst. With built-in dark mode, multiple themes, and a clean Google Docs-like interface, it makes creating and sharing documents effortless.
+TypstDrive is a collaborative web editor for Typst. With built-in dark mode, multiple themes, and a clean Google Docs-like interface, it makes creating and sharing documents effortless.
 
 ## Features
 
@@ -89,3 +90,13 @@ If you'd like to contribute or run TypstDrive without Docker:
 2. Build and run: `cargo run`
 
 Note: The frontend expects the backend to be running on port 3000. During local development via Vite, API calls are proxied automatically.
+
+## Screenshots
+
+<p align="center">
+  <img src="preview/editor.png" alt="Editor view" width="100%">
+</p>
+<p align="center">
+  <img src="preview/dashboard.png" alt="Dashboard view" width="49%">
+  <img src="preview/register.png" alt="Authentication view" width="49%">
+</p>
