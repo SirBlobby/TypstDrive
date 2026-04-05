@@ -6,6 +6,7 @@
     import Footer from '$lib/components/Footer.svelte';
 
     let username = $state('');
+    let email = $state('');
     let password = $state('');
     let errorMsg = $state('');
 
@@ -16,7 +17,7 @@
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, email, password })
             });
 
             if (!res.ok) {
@@ -25,11 +26,11 @@
                 return;
             }
             
-            
+            // Auto login after successful registration using email
             const loginRes = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ email, password })
             });
 
             if (loginRes.ok) {
@@ -54,7 +55,7 @@
 
 <div class="min-h-screen flex flex-col relative overflow-hidden">
     <div class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative z-10">
-        
+        <!-- Background decorative elements -->
         <div class="absolute -top-40 right-20 w-96 h-96 bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-3xl mix-blend-multiply z-0"></div>
         <div class="absolute top-40 -left-20 w-96 h-96 bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-3xl mix-blend-multiply z-0"></div>
         <div class="absolute -bottom-40 right-40 w-96 h-96 bg-blue-400/20 dark:bg-blue-600/10 rounded-full blur-3xl mix-blend-multiply z-0"></div>
@@ -80,6 +81,15 @@
                                 <Icon icon="mdi:account" class="text-gray-400 dark:text-gray-500" />
                             </div>
                             <input id="username" name="username" type="text" required bind:value={username} class="block w-full rounded-xl border border-gray-300 dark:border-white/20 pl-10 pr-3 py-2.5 bg-white/50 dark:bg-black/40 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-all duration-200" placeholder="Choose a username">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Icon icon="mdi:email" class="text-gray-400 dark:text-gray-500" />
+                            </div>
+                            <input id="email" name="email" type="email" required bind:value={email} class="block w-full rounded-xl border border-gray-300 dark:border-white/20 pl-10 pr-3 py-2.5 bg-white/50 dark:bg-black/40 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-all duration-200" placeholder="user@example.com">
                         </div>
                     </div>
                     <div>

@@ -29,8 +29,8 @@ export const themes: Record<string, ThemeConfig> = {
             keyword: "#e879f9", string: "#2dd4bf", number: "#fbbf24", comment: "#737373", variable: "#f5f5f5", function: "#818cf8"
         },
         light: {
-            background: "#ffffff", text: "#171717", selection: "#f5f5f5", cursor: "#171717",
-            keyword: "#c026d3", string: "#0d9488", number: "#d97706", comment: "#525252", variable: "#171717", function: "#4f46e5"
+            background: "#ffffff", text: "#000000", selection: "#d4d4d4", cursor: "#000000",
+            keyword: "#a21caf", string: "#0f766e", number: "#b45309", comment: "#52525b", variable: "#000000", function: "#4338ca"
         }
     },
     Catppuccin: {
@@ -40,8 +40,8 @@ export const themes: Record<string, ThemeConfig> = {
             keyword: "#cba6f7", string: "#a6e3a1", number: "#fab387", comment: "#6c7086", variable: "#cdd6f4", function: "#89b4fa"
         },
         light: {
-            background: "#eff1f5", text: "#4c4f69", selection: "#e6e9ef", cursor: "#dc8a78",
-            keyword: "#8839ef", string: "#40a02b", number: "#fe640b", comment: "#9ca0b0", variable: "#4c4f69", function: "#1e66f5"
+            background: "#eff1f5", text: "#11111b", selection: "#ccd0da", cursor: "#d20f39",
+            keyword: "#5c249a", string: "#327f22", number: "#e64553", comment: "#5c5f77", variable: "#11111b", function: "#1e66f5"
         }
     },
     "Arch Linux": {
@@ -51,14 +51,15 @@ export const themes: Record<string, ThemeConfig> = {
             keyword: "#bc8cff", string: "#3fb950", number: "#ffa657", comment: "#6e7681", variable: "#c9d1d9", function: "#1793d1"
         },
         light: {
-            background: "#ffffff", text: "#24292f", selection: "#f6f8fa", cursor: "#24292f",
-            keyword: "#8250df", string: "#1a7f37", number: "#bc4c00", comment: "#6e7781", variable: "#24292f", function: "#1793d1"
+            background: "#ffffff", text: "#0d1117", selection: "#d0d7de", cursor: "#0969da",
+            keyword: "#5a32a3", string: "#1a7f37", number: "#953800", comment: "#57606a", variable: "#0d1117", function: "#0550ae"
         }
     }
 };
 
 export function getThemeExtension(themeName: keyof typeof themes, isDark: boolean) {
-    const colors = themes[themeName][isDark ? 'dark' : 'light'];
+    const themeConfig = themes[themeName] || themes['Catppuccin'];
+    const colors = themeConfig[isDark ? 'dark' : 'light'];
     
     const theme = EditorView.theme({
         "&": {

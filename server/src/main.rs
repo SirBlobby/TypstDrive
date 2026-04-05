@@ -1,9 +1,9 @@
 use axum::{
-    routing::{get, post, put, delete},
+    routing::{get, post, put, delete, patch},
     Router,
 };
 use axum_extra::extract::cookie::Key;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::Mutex;
@@ -21,6 +21,7 @@ mod files;
 mod handlers;
 mod models;
 mod world;
+mod collab;
 
 use compiler::TypstCompiler;
 use handlers::{compile_handler, export_handler, yjs_handler};
@@ -29,7 +30,7 @@ use handlers::{compile_handler, export_handler, yjs_handler};
 pub struct AppState {
     pub compiler: Arc<Mutex<TypstCompiler>>,
     pub bcast_map: Arc<Mutex<HashMap<String, Arc<BroadcastGroup>>>>,
-    pub db: Pool<Sqlite>,
+    pub db: Pool<Postgres>,
     pub key: Key,
 }
 
@@ -66,6 +67,8 @@ async fn main() {
     let api_routes = Router::new()
         .route("/compile", post(compile_handler))
         .route("/export/{format}", post(export_handler))
+        .route("/export/pandoc/{format}", post(handlers::pandoc_export_handler))
+        .route("/import/pandoc", post(handlers::pandoc_import_handler))
         .route("/auth/register", post(auth::register))
         .route("/auth/login", post(auth::login))
         .route("/auth/logout", post(auth::logout))
@@ -78,8 +81,13 @@ async fn main() {
         .route("/files/{id}", delete(files::delete_file).patch(files::update_file))
         .route("/files/{id}/data", get(files::get_file_data))
         .route("/docs", get(docs::list_documents).post(docs::create_document))
+        .route("/docs/accept-invite", get(collab::accept_invite))
         .route("/docs/{id}", get(docs::get_document).delete(docs::delete_document).patch(docs::update_document))
-        .route("/docs/{id}/files", post(docs::upload_file));
+        .route("/docs/{id}/files", post(docs::upload_file))
+        .route("/docs/{id}/invite", post(collab::invite_collaborator))
+        .route("/docs/{id}/comments", get(collab::get_comments).post(collab::add_comment))
+        .route("/docs/{id}/versions", get(collab::get_versions).post(collab::create_version))
+        .route("/comments/{id}", patch(collab::update_comment).delete(collab::delete_comment));
 
     let yjs_routes = Router::new()
         .route("/{id}", get(yjs_handler));

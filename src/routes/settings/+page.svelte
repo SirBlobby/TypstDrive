@@ -9,6 +9,7 @@
     import Footer from '$lib/components/Footer.svelte';
 
     let username = $state('');
+    let email = $state('');
     let isSaving = $state(false);
 
     let currentPassword = $state('');
@@ -18,8 +19,8 @@
     let passwordError = $state('');
     let passwordSuccess = $state(false);
 
-    let usernameError = $state('');
-    let usernameSuccess = $state(false);
+    let profileError = $state('');
+    let profileSuccess = $state(false);
 
     let storageStats = $state<{documents_size_bytes: number, files_size_bytes: number, total_size_bytes: number} | null>(null);
 
@@ -36,6 +37,7 @@
             goto('/login');
         } else {
             username = $userStore.username;
+            email = $userStore.email || '';
             
             try {
                 const res = await fetch('/api/auth/storage');
@@ -55,29 +57,29 @@
     }
 
     async function saveProfile() {
-        if (!username || username === $userStore?.username) return;
+        if ((!username || username === $userStore?.username) && (!email || email === $userStore?.email)) return;
         
         isSaving = true;
-        usernameError = '';
-        usernameSuccess = false;
+        profileError = '';
+        profileSuccess = false;
         
         try {
             const res = await fetch('/api/auth/me', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username })
+                body: JSON.stringify({ username, email })
             });
 
             if (!res.ok) {
                 const text = await res.text();
-                usernameError = text || "Failed to update profile";
+                profileError = text || "Failed to update profile";
             } else {
                 const updatedUser = await res.json();
                 userStore.set(updatedUser);
-                usernameSuccess = true;
+                profileSuccess = true;
             }
         } catch (e) {
-            usernameError = "Network error occurred.";
+            profileError = "Network error occurred.";
         }
         
         isSaving = false;
@@ -166,15 +168,15 @@
                     <div class="grid grid-cols-1 gap-4">
                         <h3 class="text-md font-bold text-gray-900 dark:text-white">Profile</h3>
                         
-                        {#if usernameError}
+                        {#if profileError}
                             <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm">
-                                {usernameError}
+                                {profileError}
                             </div>
                         {/if}
                         
-                        {#if usernameSuccess}
+                        {#if profileSuccess}
                             <div class="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 p-3 rounded-lg text-sm">
-                                Username successfully updated.
+                                Profile successfully updated.
                             </div>
                         {/if}
 
@@ -183,8 +185,13 @@
                             <input id="username-input" type="text" bind:value={username} class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                         </div>
 
+                        <div class="mt-2">
+                            <label for="email-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                            <input id="email-input" type="email" bind:value={email} class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        </div>
+
                         <div class="flex justify-start mt-2">
-                            <button onclick={saveProfile} disabled={isSaving || username === $userStore?.username} class="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-5 py-2 rounded-lg shadow-sm text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2">
+                            <button onclick={saveProfile} disabled={isSaving || (username === $userStore?.username && email === $userStore?.email)} class="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-5 py-2 rounded-lg shadow-sm text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2">
                                 {#if isSaving}
                                     <Icon icon="mdi:loading" class="animate-spin text-lg" />
                                     Saving...
@@ -241,7 +248,7 @@
                     <div class="h-px bg-gray-200 dark:bg-white/10"></div>
 
                     <div class="flex justify-end gap-3 pt-2">
-                        <button onclick={saveProfile} disabled={isSaving || username === $userStore?.username} class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2">
+                        <button onclick={saveProfile} disabled={isSaving || (username === $userStore?.username && email === $userStore?.email)} class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2">
                             {#if isSaving}
                                 <Icon icon="mdi:loading" class="animate-spin text-lg" />
                                 Saving...

@@ -1,86 +1,106 @@
-use sqlx::sqlite::SqlitePoolOptions;
-use sqlx::{Pool, Sqlite};
+use sqlx::postgres::PgPoolOptions;
+use sqlx::{Pool, Postgres};
 
-pub async fn init_db() -> Pool<Sqlite> {
-    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:typstdrive.db?mode=rwc".to_string());
-    
-    // Ensure parent directory exists if there is one
-    if let Some(path) = db_url.strip_prefix("sqlite:") {
-        if let Some(path) = path.split('?').next() {
-            if let Some(parent) = std::path::Path::new(path).parent() {
-                if !parent.as_os_str().is_empty() {
-                    let _ = std::fs::create_dir_all(parent);
-                }
-            }
-        }
-    }
+pub async fn init_db() -> Pool<Postgres> {
+    let db_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://postgres:password@localhost:5432/typstdrive".to_string());
 
-    let pool = SqlitePoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
         .await
-        .expect("Failed to create pool.");
+        .expect("Failed to create Postgres pool. Make sure your database is running.");
 
-    sqlx::query(
-        r#"
+    let schema = r#"
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
+    email TEXT UNIQUE,
     password_hash TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS folders (
     id TEXT PRIMARY KEY,
-    owner_id TEXT NOT NULL,
-    parent_id TEXT,
+    owner_id TEXT NOT NULL REFERENCES users(id),
+    parent_id TEXT REFERENCES folders(id),
     name TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(owner_id) REFERENCES users(id),
-    FOREIGN KEY(parent_id) REFERENCES folders(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS documents (
     id TEXT PRIMARY KEY,
-    owner_id TEXT NOT NULL,
-    folder_id TEXT,
+    owner_id TEXT NOT NULL REFERENCES users(id),
+    folder_id TEXT REFERENCES folders(id),
     title TEXT NOT NULL,
-    content BLOB,
+    content BYTEA,
     thumbnail_svg TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(owner_id) REFERENCES users(id),
-    FOREIGN KEY(folder_id) REFERENCES folders(id)
+    public_role TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
-    owner_id TEXT NOT NULL,
-    document_id TEXT,
-    folder_id TEXT,
+    owner_id TEXT NOT NULL REFERENCES users(id),
+    document_id TEXT REFERENCES documents(id),
+    folder_id TEXT REFERENCES folders(id),
     name TEXT NOT NULL,
     mime_type TEXT NOT NULL,
-    data BLOB NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(owner_id) REFERENCES users(id),
-    FOREIGN KEY(document_id) REFERENCES documents(id),
-    FOREIGN KEY(folder_id) REFERENCES folders(id)
+    data BYTEA NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-        "#,
-    )
-    .execute(&pool)
-    .await
-    .expect("Failed to initialize database schema");
+CREATE TABLE IF NOT EXISTS collaborators (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(document_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS invitations (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS comments (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    resolved BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS document_history (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    content BYTEA NOT NULL,
+    created_by TEXT NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS document_versions (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+        "#;
 
-    
-    let _ = sqlx::query("ALTER TABLE documents ADD COLUMN folder_id TEXT REFERENCES folders(id)")
-        .execute(&pool)
-        .await;
+    for query in schema.split(';') {
+        let q = query.trim();
+        if !q.is_empty() {
+            sqlx::query(q).execute(&pool).await.expect("Failed to execute schema query");
+        }
+    }
 
-    
-    let _ = sqlx::query("ALTER TABLE documents ADD COLUMN thumbnail_svg TEXT")
+    // Add public_role column if it doesn't exist
+    sqlx::query("ALTER TABLE documents ADD COLUMN IF NOT EXISTS public_role TEXT")
         .execute(&pool)
-        .await;
-
-    let _ = sqlx::query("ALTER TABLE files ADD COLUMN folder_id TEXT REFERENCES folders(id)")
-        .execute(&pool)
-        .await;
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: Failed to add public_role column (might already exist): {}", e);
+            Default::default()
+        });
 
     pool
 }

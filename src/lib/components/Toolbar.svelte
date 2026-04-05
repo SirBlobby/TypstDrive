@@ -1,19 +1,23 @@
 <script lang="ts">
 	import { exportTypst } from '../ts/typst-api';
-	import { text } from '../ts/yjs-setup';
-	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore } from '../ts/store';
+	import { text, undoManager } from '../ts/yjs-setup';
+	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen } from '../ts/store';
 	import { themes } from '../ts/themes';
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import ThemePicker from './ThemePicker.svelte';
+import PresentationMode from "./PresentationMode.svelte";
+import CommentsSidebar from "./CommentsSidebar.svelte";
+import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 	import Icon from '@iconify/svelte';
 
 	let isShareModalOpen = $state(false);
 	let isPageSettingsOpen = $state(false);
-	let fileInput: HTMLInputElement;
+	let isPresentationOpen = $state(false);
+	let fileInput = $state<HTMLInputElement | null>(null);
 	
-	let { title = 'Untitled Document', docId = undefined } = $props<{ title?: string, docId?: string }>();
+	let { title = 'Untitled Document', docId = undefined, isViewer = false } = $props<{ title?: string, docId?: string, isViewer?: boolean }>();
 
 	function handleExport(format: 'pdf' | 'png' | 'svg' | 'typ') {
 		if (!text) return;
@@ -36,6 +40,54 @@
 		exportTypst(content, format, safeTitle, docId).catch((e) => {
 			console.error(`Export to ${format} failed:`, e);
 			alert(`Failed to export as ${format.toUpperCase()}`);
+		});
+	}
+
+	function handleSaveVersion() {
+		if (!text || !docId) return;
+		const content = text.toString();
+		fetch(`/api/docs/${docId}/versions`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ content })
+		}).then(res => {
+			if (!res.ok) throw new Error("Failed to save version");
+			alert("Version saved successfully.");
+		}).catch(err => {
+			console.error(err);
+			alert("Failed to save version.");
+		});
+	}
+
+	function handlePandocExport(format: string) {
+		if (!text || !docId) return;
+		const content = text.toString();
+		const safeTitle = title.replace(/[^a-z0-9_-]/gi, "_");
+		fetch(`/api/export/pandoc/${format}`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ text: content, document_id: docId })
+		})
+		.then(res => {
+			if (!res.ok) throw new Error("Export failed");
+			return res.blob();
+		})
+		.then(blob => {
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			let ext = format;
+			if (format === "latex") ext = "tex";
+			if (format === "markdown") ext = "md";
+			a.download = `${safeTitle}.${ext}`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		})
+		.catch(err => {
+			console.error(err);
+			alert(`Failed to export as ${format}`);
 		});
 	}
 
@@ -267,7 +319,7 @@
 
 <svelte:window onclick={handleWindowClick} />
 
-<header class="flex flex-col border-b border-gray-200 dark:border-white/10 bg-white/80 dark:bg-black/20 backdrop-blur-md select-none w-full relative z-[60]">
+<header class="flex flex-col border-b border-[var(--theme-border)] bg-[var(--theme-bg)] text-[var(--theme-text)] backdrop-blur-md select-none w-full relative z-[60]" style="background-color: var(--theme-bg); color: var(--theme-text); border-color: var(--theme-border);">
 	
 	<div class="flex items-center justify-between px-4 py-2.5">
 		<div class="flex items-center gap-3">
@@ -307,12 +359,16 @@
 						{#if activeMenu === 'file'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
 								<button onclick={() => { activeMenu = null; goto('/dashboard'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">New / Open</button>
+								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Document Info</button>
+								{#if !isViewer}
+								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
+								<button onclick={() => { activeMenu = null; handleSaveVersion(); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Save Version</button>
 								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
 								<button onclick={() => { activeMenu = null; openRename(); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Rename</button>
 								<button onclick={() => { activeMenu = null; isShareModalOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Share</button>
-								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Document Info</button>
 								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
 								<button onclick={() => { activeMenu = null; isPageSettingsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Page Settings</button>
+								{/if}
 								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
 								<div class="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Download</div>
 								<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">.typ source</button>
@@ -320,11 +376,20 @@
 								<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">.png image</button>
 								<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">.svg graphics</button>
 								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
+								<div class="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Export (Pandoc)</div>
+								<button onclick={() => { activeMenu = null; handlePandocExport('docx'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Word (.docx)</button>
+								<button onclick={() => { activeMenu = null; handlePandocExport('latex'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">LaTeX (.tex)</button>
+								<button onclick={() => { activeMenu = null; handlePandocExport('markdown'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Markdown (.md)</button>
+								<button onclick={() => { activeMenu = null; handlePandocExport('html'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">HTML (.html)</button>
+								{#if !isViewer}
+								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
 								<button onclick={() => { activeMenu = null; deleteDoc(); }} class="w-full text-left px-4 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10">Delete</button>
+								{/if}
 							</div>
 						{/if}
 					</div>
 
+					{#if !isViewer}
 					<div class="relative">
 						<button 
 							onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'edit' ? null : 'edit'; }} 
@@ -334,8 +399,8 @@
 						</button>
 						{#if activeMenu === 'edit'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
-								<button onclick={() => { activeMenu = null; document.execCommand('undo'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Undo (Ctrl+Z)</button>
-								<button onclick={() => { activeMenu = null; document.execCommand('redo'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Redo (Ctrl+Y)</button>
+								<button onclick={() => { activeMenu = null; if (undoManager) undoManager.undo(); else document.execCommand('undo'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Undo (Ctrl+Z)</button>
+								<button onclick={() => { activeMenu = null; if (undoManager) undoManager.redo(); else document.execCommand('redo'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Redo (Ctrl+Y)</button>
 								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
 								<button onclick={() => { activeMenu = null; document.execCommand('cut'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Cut (Ctrl+X)</button>
 								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Copy (Ctrl+C)</button>
@@ -343,6 +408,7 @@
 							</div>
 						{/if}
 					</div>
+					{/if}
 
 					<div class="relative">
 						<button 
@@ -353,6 +419,10 @@
 						</button>
 						{#if activeMenu === 'view'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
+								<button onclick={() => { activeMenu = null; $versionHistoryOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between">
+									Version History
+								</button>
+								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
 								<button onclick={() => { activeMenu = null; $darkModeStore = !$darkModeStore; document.documentElement.classList.toggle('dark', $darkModeStore); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between">
 									Dark Mode
 									<Icon icon={$darkModeStore ? "mdi:check" : ""} class="text-sm" />
@@ -393,6 +463,23 @@
 			<div class="w-px h-5 bg-gray-300 dark:bg-white/10"></div>
 
 			
+			{#if !isViewer}
+			<button
+				onclick={() => (isPresentationOpen = true)}
+				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10 rounded-md transition-colors"
+			>
+				<Icon icon="mdi:presentation-play" class="text-[16px]" />
+				Present
+			</button>
+
+			<button
+				onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)}
+				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10 rounded-md transition-colors"
+			>
+				<Icon icon="mdi:comment-outline" class="text-[16px]" />
+				Comments
+			</button>
+
 			<button
 				onclick={() => (isShareModalOpen = true)}
 				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10 rounded-md transition-colors"
@@ -400,6 +487,7 @@
 				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
 				Share
 			</button>
+			{/if}
 
 			<div class="w-px h-5 bg-gray-300 dark:bg-white/10"></div>
 			
@@ -445,9 +533,11 @@
 			</button>
 			<div class="w-px h-4 mx-1 bg-gray-300 dark:bg-white/10"></div>
 			<input type="file" bind:this={fileInput} onchange={handleImageUpload} class="hidden" accept="image/*,.ttf,.otf" />
-			<button onclick={() => fileInput.click()} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Upload Image / Font">
+			{#if !isViewer}
+			<button onclick={() => fileInput?.click()} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Upload Image / Font">
 				<Icon icon="mdi:image-plus" class="text-lg" />
 			</button>
+			{/if}
 		</div>
 
 		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
@@ -469,6 +559,7 @@
 		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
 
 		<div class="flex items-center gap-2">
+			{#if !isViewer}
 			<button
 				onclick={() => (isPageSettingsOpen = true)}
 				class="flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-100 border border-gray-300 rounded shadow-sm dark:text-gray-300 dark:bg-black/20 dark:border-white/20 dark:hover:bg-white/10 dark:hover:text-white transition-colors"
@@ -476,6 +567,7 @@
 				<Icon icon="mdi:file-document-edit-outline" class="text-sm" />
 				Page Settings
 			</button>
+			{/if}
 		</div>
 
 		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
@@ -518,6 +610,18 @@
 
 {#if isPageSettingsOpen}
 	<PageSettingsModal onClose={() => (isPageSettingsOpen = false)} onApply={handlePageSettings} currentSettings={parseSettings()} />
+{/if}
+
+{#if isPresentationOpen}
+	<PresentationMode onClose={() => (isPresentationOpen = false)} />
+{/if}
+
+{#if $commentsSidebarOpen && docId}
+	<CommentsSidebar docId={docId} onClose={() => ($commentsSidebarOpen = false)} />
+{/if}
+
+{#if $versionHistoryOpen && docId}
+	<VersionHistorySidebar docId={docId} onClose={() => ($versionHistoryOpen = false)} />
 {/if}
 
 {#if showInfoModal}

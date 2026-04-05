@@ -28,7 +28,7 @@ pub async fn list_files(
 
     let files = if let Some(folder_id) = query.folder_id {
         sqlx::query_as::<_, File>(
-            "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE owner_id = ? AND folder_id = ? ORDER BY name ASC"
+            "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE owner_id = $1 AND folder_id = $2 ORDER BY name ASC"
         )
         .bind(&user_id)
         .bind(&folder_id)
@@ -37,7 +37,7 @@ pub async fn list_files(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, File>(
-            "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE owner_id = ? AND folder_id IS NULL ORDER BY name ASC"
+            "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC"
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -71,7 +71,7 @@ pub async fn upload_file_global(
 
         let file_id = Uuid::new_v4().to_string();
 
-        sqlx::query("INSERT INTO files (id, owner_id, folder_id, name, mime_type, data) VALUES (?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO files (id, owner_id, folder_id, name, mime_type, data) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(&file_id)
             .bind(&user_id)
             .bind(&query.folder_id)
@@ -96,7 +96,7 @@ pub async fn get_file_data(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let file = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT mime_type, data FROM files WHERE id = ? AND owner_id = ?")
+    let file = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT mime_type, data FROM files WHERE id = $1 AND owner_id = $2")
         .bind(&id)
         .bind(&user_id)
         .fetch_optional(&state.db)
@@ -121,7 +121,7 @@ pub async fn delete_file(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM files WHERE id = ? AND owner_id = ?")
+    let result = sqlx::query("DELETE FROM files WHERE id = $1 AND owner_id = $2")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -151,7 +151,7 @@ pub async fn update_file(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut file = sqlx::query_as::<_, File>(
-        "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE id = ? AND owner_id = ?"
+        "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE id = $1 AND owner_id = $2"
     )
     .bind(&id)
     .bind(&user_id)
@@ -172,7 +172,7 @@ pub async fn update_file(
     }
 
     let file = sqlx::query_as::<_, File>(
-        "UPDATE files SET name = ?, folder_id = ? WHERE id = ? AND owner_id = ? RETURNING id, owner_id, document_id, folder_id, name, mime_type, created_at"
+        "UPDATE files SET name = $1, folder_id = $2 WHERE id = $3 AND owner_id = $4 RETURNING id, owner_id, document_id, folder_id, name, mime_type, created_at"
     )
     .bind(&file.name)
     .bind(&file.folder_id)

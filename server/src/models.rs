@@ -5,6 +5,7 @@ use sqlx::FromRow;
 pub struct User {
     pub id: String,
     pub username: String,
+    pub email: String,
     #[serde(skip_serializing)]
     pub password_hash: String,
 }
@@ -38,6 +39,10 @@ pub struct Document {
     #[serde(skip_serializing)]
     pub content: Option<Vec<u8>>,
     pub thumbnail_svg: Option<String>,
+    pub public_role: Option<String>,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub effective_role: Option<String>,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }
@@ -45,18 +50,20 @@ pub struct Document {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegisterRequest {
     pub username: String,
+    pub email: String,
     pub password: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginRequest {
-    pub username: String,
+    pub email: String,
     pub password: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateProfileRequest {
     pub username: String,
+    pub email: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -82,6 +89,7 @@ pub struct CreateDocumentRequest {
 pub struct UpdateDocumentRequest {
     pub title: Option<String>,
     pub folder_id: Option<String>,
+    pub public_role: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -89,4 +97,67 @@ pub struct StorageStats {
     pub documents_size_bytes: i64,
     pub files_size_bytes: i64,
     pub total_size_bytes: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct Collaborator {
+    pub id: String,
+    pub document_id: String,
+    pub user_id: String,
+    pub role: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct Invitation {
+    pub id: String,
+    pub document_id: String,
+    pub role: String,
+    pub token: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub expires_at: Option<chrono::NaiveDateTime>,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct Comment {
+    pub id: String,
+    pub document_id: String,
+    pub user_id: String,
+    pub content: String,
+    pub resolved: bool,
+    pub created_at: chrono::NaiveDateTime,
+    pub author_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateCommentRequest {
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateCommentRequest {
+    pub content: Option<String>,
+    pub resolved: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DocumentVersion {
+    pub id: String,
+    pub document_id: String,
+    pub user_id: String,
+    pub content: String,
+    pub created_at: chrono::NaiveDateTime,
+    #[sqlx(default)]
+    pub author_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateVersionRequest {
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InviteRequest {
+    pub email: String,
+    pub role: String,
 }

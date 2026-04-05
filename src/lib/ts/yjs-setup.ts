@@ -8,6 +8,7 @@ import type { AwarenessUser } from './store';
 export let doc: Y.Doc | null = null;
 export let text: Y.Text | null = null;
 export let provider: WebsocketProvider | null = null;
+export let undoManager: Y.UndoManager | null = null;
 
 const userColors = [
 	'#30bced', '#6eeb83', '#ffbc42', '#ecd444', '#ee6352',
@@ -25,6 +26,7 @@ export function initYjs(docId: string) {
 
 	doc = new Y.Doc();
 	text = doc.getText('typst');
+	undoManager = new Y.UndoManager(text);
 
 	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 	const host = window.location.host;
@@ -88,6 +90,10 @@ export function cleanupYjs() {
 	if (provider) {
 		provider.disconnect();
 		provider = null;
+	}
+	if (undoManager) {
+		undoManager.destroy();
+		undoManager = null;
 	}
 	doc = null;
 	text = null;

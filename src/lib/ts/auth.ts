@@ -3,6 +3,7 @@ import { writable } from 'svelte/store';
 export type User = {
     id: string;
     username: string;
+    email: string;
 };
 
 export const userStore = writable<User | null>(null);

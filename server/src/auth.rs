@@ -20,8 +20,8 @@ pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<User>, (StatusCode, String)> {
-    if payload.username.is_empty() || payload.password.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Username and password cannot be empty".to_string()));
+    if payload.username.is_empty() || payload.password.is_empty() || payload.email.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Username, email, and password cannot be empty".to_string()));
     }
 
     let salt = SaltString::generate(&mut OsRng);
@@ -34,10 +34,11 @@ pub async fn register(
     let user_id = Uuid::new_v4().to_string();
 
     let result = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, username, password_hash) VALUES (?, ?, ?) RETURNING id, username, password_hash"
+        "INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, password_hash"
     )
     .bind(&user_id)
     .bind(&payload.username)
+    .bind(&payload.email)
     .bind(&password_hash)
     .fetch_one(&state.db)
     .await;
@@ -45,7 +46,7 @@ pub async fn register(
     match result {
         Ok(user) => Ok(Json(user)),
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
-            Err((StatusCode::CONFLICT, "Username already exists".to_string()))
+            Err((StatusCode::CONFLICT, "Username or email already exists".to_string()))
         }
         Err(err) => Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
     }
@@ -56,22 +57,22 @@ pub async fn login(
     jar: SignedCookieJar,
     Json(payload): Json<LoginRequest>,
 ) -> Result<(SignedCookieJar, Json<User>), (StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>("SELECT id, username, password_hash FROM users WHERE username = ?")
-        .bind(&payload.username)
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE email = $1")
+        .bind(&payload.email)
         .fetch_optional(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let user = match user {
         Some(u) => u,
-        None => return Err((StatusCode::UNAUTHORIZED, "Invalid username or password".to_string())),
+        None => return Err((StatusCode::UNAUTHORIZED, "Invalid email or password".to_string())),
     };
 
     let parsed_hash = PasswordHash::new(&user.password_hash)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if Argon2::default().verify_password(payload.password.as_bytes(), &parsed_hash).is_err() {
-        return Err((StatusCode::UNAUTHORIZED, "Invalid username or password".to_string()));
+        return Err((StatusCode::UNAUTHORIZED, "Invalid email or password".to_string()));
     }
 
     let mut cookie = Cookie::new("session_user_id", user.id.clone());
@@ -92,19 +93,20 @@ pub async fn update_profile(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    if payload.username.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Username cannot be empty".to_string()));
+    if payload.username.is_empty() || payload.email.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Username and email cannot be empty".to_string()));
     }
 
-    let result = sqlx::query("UPDATE users SET username = ? WHERE id = ?")
+    let result = sqlx::query("UPDATE users SET username = $1, email = $2 WHERE id = $3")
         .bind(&payload.username)
+        .bind(&payload.email)
         .bind(&user_id)
         .execute(&state.db)
         .await;
 
     match result {
         Ok(_) => {
-            let user = sqlx::query_as::<_, User>("SELECT id, username, password_hash FROM users WHERE id = ?")
+            let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = $1")
                 .bind(&user_id)
                 .fetch_optional(&state.db)
                 .await
@@ -113,7 +115,7 @@ pub async fn update_profile(
             Ok(Json(user))
         }
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
-            Err((StatusCode::CONFLICT, "Username already exists".to_string()))
+            Err((StatusCode::CONFLICT, "Username or email already exists".to_string()))
         }
         Err(err) => Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
     }
@@ -135,7 +137,7 @@ pub async fn me(
         None => return Err((StatusCode::UNAUTHORIZED, "Not logged in".to_string())),
     };
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, password_hash FROM users WHERE id = ?")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = $1")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -159,7 +161,7 @@ pub async fn change_password(
         return Err((StatusCode::BAD_REQUEST, "Passwords cannot be empty".to_string()));
     }
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, password_hash FROM users WHERE id = ?")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = $1")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -179,7 +181,7 @@ pub async fn change_password(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .to_string();
 
-    sqlx::query("UPDATE users SET password_hash = ? WHERE id = ?")
+    sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
         .bind(&new_password_hash)
         .bind(&user_id)
         .execute(&state.db)
@@ -197,7 +199,7 @@ pub async fn storage_stats(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let docs_size: (i64,) = sqlx::query_as(
-        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM documents WHERE owner_id = ?"
+        "SELECT COALESCE(SUM(OCTET_LENGTH(content)), 0) FROM documents WHERE owner_id = $1"
     )
     .bind(&user_id)
     .fetch_one(&state.db)
@@ -205,7 +207,7 @@ pub async fn storage_stats(
     .unwrap_or((0,));
 
     let files_size: (i64,) = sqlx::query_as(
-        "SELECT COALESCE(SUM(LENGTH(data)), 0) FROM files WHERE owner_id = ?"
+        "SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM files WHERE owner_id = $1"
     )
     .bind(&user_id)
     .fetch_one(&state.db)

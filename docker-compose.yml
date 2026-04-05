@@ -1,11 +1,25 @@
+version: '3.8'
+
 services:
-  typstdrive:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: typstdrive
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
     build: .
-    container_name: typstdrive
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=sqlite:/app/data/typstdrive.db?mode=rwc
-    volumes:
-      - ./data:/app/data
-    restart: unless-stopped
+      - DATABASE_URL=postgres://postgres:password@db:5432/typstdrive
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

@@ -23,7 +23,7 @@ impl TypstCompiler {
                 output: Ok(doc),
                 warnings: _,
             } => {
-                let svgs = doc.pages.iter().map(|page| typst_svg::svg(page)).collect();
+                let svgs = doc.pages.iter().map(typst_svg::svg).collect();
                 let thumbnail = if let Some(page) = doc.pages.first() {
                     typst_svg::svg(page)
                 } else {

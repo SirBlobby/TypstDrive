@@ -31,6 +31,8 @@
     let dragOverFolderId = $state<string | null>(null);
     let dragOverBreadcrumbIndex = $state<number | null>(null);
     let fileInput = $state<HTMLInputElement | null>(null);
+    let importFileInput = $state<HTMLInputElement | null>(null);
+    let isImporting = $state(false);
     
     let showDeleteModal = $state(false);
     let deleteTarget = $state<{id: string, type: 'document'|'folder'|'file', name: string} | null>(null);
@@ -195,6 +197,56 @@
         }
     }
 
+    async function handleImportUpload(e: Event) {
+        const target = e.target as HTMLInputElement;
+        if (!target.files || target.files.length === 0) return;
+        const file = target.files[0];
+        
+        isImporting = true;
+        showPlusDropdown = false;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const res = await fetch('/api/import/pandoc', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (res.ok) {
+                const typstContent = await res.text();
+                const title = file.name.replace(/\.[^/.]+$/, "");
+                
+                const createRes = await fetch('/api/docs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        title: title, 
+                        folder_id: currentFolderId || undefined,
+                        content: typstContent
+                    })
+                });
+                
+                if (createRes.ok) {
+                    const doc = await createRes.json();
+                    goto(`/doc/${doc.id}`);
+                } else {
+                    alert('Failed to create imported document.');
+                }
+            } else {
+                const err = await res.text();
+                alert(`Failed to import document: ${err}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Network error during import.');
+        } finally {
+            isImporting = false;
+            target.value = '';
+        }
+    }
+
     async function deleteDoc(id: string, name: string) {
         openDelete(id, 'document', name);
     }
@@ -327,7 +379,7 @@
     <Navbar />
 
     
-    <main class="max-w-7xl w-full mx-auto py-10 px-4 sm:px-6 lg:px-8 flex-grow block">
+    <main class="max-w-7xl w-full mx-auto py-10 px-4 sm:px-6 lg:px-8 grow block">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">My Documents</h2>
             
@@ -350,9 +402,20 @@
                             <Icon icon="mdi:upload" class="text-lg text-green-500" />
                             Upload File
                         </button>
+                        <div class="h-px bg-gray-100 dark:bg-zinc-700 my-1"></div>
+                        <button onclick={() => { showPlusDropdown = false; importFileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center gap-2" disabled={isImporting}>
+                            {#if isImporting}
+                                <Icon icon="mdi:loading" class="text-lg text-purple-500 animate-spin" />
+                                Importing...
+                            {:else}
+                                <Icon icon="mdi:file-import" class="text-lg text-purple-500" />
+                                Import (.docx, .tex, .md)
+                            {/if}
+                        </button>
                     </div>
                 {/if}
                 <input type="file" bind:this={fileInput} accept="image/*,font/*,.typ,.ttf,.otf" multiple onchange={handleFileUpload} class="hidden" />
+                <input type="file" bind:this={importFileInput} accept=".docx,.tex,.md,.html" onchange={handleImportUpload} class="hidden" />
             </div>
         </div>
 

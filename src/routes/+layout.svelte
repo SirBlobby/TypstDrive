@@ -29,7 +29,14 @@
 {#if loaded}
 	<div 
 		class="min-h-screen w-full flex flex-col font-sans transition-colors duration-200"
-		style="background-color: {currentColors.background}; color: {currentColors.text}; --theme-bg: {currentColors.background};"
+		style="
+			background-color: {currentColors.background}; 
+			color: {currentColors.text}; 
+			--theme-bg: {currentColors.background};
+			--theme-text: {currentColors.text};
+			--theme-border: {currentColors.selection};
+			--theme-cursor: {currentColors.cursor};
+		"
 	>
 		{@render children()}
 	</div>

@@ -27,7 +27,7 @@ pub async fn list_documents(
 
     let docs = if let Some(folder_id) = query.folder_id {
         sqlx::query_as::<_, Document>(
-            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at FROM documents WHERE owner_id = ? AND folder_id = ? ORDER BY updated_at DESC"
+            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE owner_id = $1 AND folder_id = $2 ORDER BY updated_at DESC"
         )
         .bind(&user_id)
         .bind(&folder_id)
@@ -36,7 +36,7 @@ pub async fn list_documents(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Document>(
-            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at FROM documents WHERE owner_id = ? AND folder_id IS NULL ORDER BY updated_at DESC"
+            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC"
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -70,7 +70,7 @@ pub async fn create_document(
     };
 
     let doc = sqlx::query_as::<_, Document>(
-        "INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES (?, ?, ?, ?, ?) RETURNING id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at"
+        "INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5) RETURNING id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at"
     )
     .bind(&doc_id)
     .bind(&user_id)
@@ -89,22 +89,48 @@ pub async fn get_document(
     Path(id): Path<String>,
     jar: SignedCookieJar,
 ) -> Result<Json<Document>, (StatusCode, String)> {
-    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
-        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+    let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
-    let doc = sqlx::query_as::<_, Document>(
-        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at FROM documents WHERE id = ? AND owner_id = ?"
+    let mut doc = sqlx::query_as::<_, Document>(
+        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1"
     )
     .bind(&id)
-    .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
 
-    match doc {
-        Some(d) => Ok(Json(d)),
-        None => Err((StatusCode::NOT_FOUND, "Document not found".to_string())),
+    let mut effective_role = "none".to_string();
+
+    if let Some(uid) = &user_id_opt {
+        if &doc.owner_id == uid {
+            effective_role = "owner".to_string();
+        } else {
+            if let Ok(Some((role,))) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2")
+                .bind(&id)
+                .bind(uid)
+                .fetch_optional(&state.db)
+                .await 
+            {
+                effective_role = role;
+            }
+        }
     }
+
+    if effective_role == "none" {
+        if let Some(pr) = &doc.public_role {
+            if pr == "viewer" || pr == "editor" {
+                effective_role = pr.clone();
+            }
+        }
+    }
+
+    if effective_role == "none" {
+        return Err((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()));
+    }
+
+    doc.effective_role = Some(effective_role);
+    Ok(Json(doc))
 }
 
 pub async fn update_document(
@@ -118,7 +144,7 @@ pub async fn update_document(
 
     
     let mut doc = sqlx::query_as::<_, Document>(
-        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at FROM documents WHERE id = ? AND owner_id = ?"
+        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2"
     )
     .bind(&id)
     .bind(&user_id)
@@ -137,13 +163,21 @@ pub async fn update_document(
             doc.folder_id = Some(new_folder_id);
         }
     }
+    if let Some(new_public_role) = payload.public_role {
+        if new_public_role == "none" || new_public_role.is_empty() {
+            doc.public_role = None;
+        } else {
+            doc.public_role = Some(new_public_role);
+        }
+    }
 
     
     let doc = sqlx::query_as::<_, Document>(
-        "UPDATE documents SET title = ?, folder_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND owner_id = ? RETURNING id, owner_id, folder_id, title, content, thumbnail_svg, created_at, updated_at"
+        "UPDATE documents SET title = $1, folder_id = $2, public_role = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 AND owner_id = $5 RETURNING id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at"
     )
     .bind(&doc.title)
     .bind(&doc.folder_id)
+    .bind(&doc.public_role)
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
@@ -161,7 +195,7 @@ pub async fn delete_document(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM documents WHERE id = ? AND owner_id = ?")
+    let result = sqlx::query("DELETE FROM documents WHERE id = $1 AND owner_id = $2")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -185,7 +219,7 @@ pub async fn upload_file(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     
-    let doc_exists = sqlx::query_as::<_, (String, Option<String>)>("SELECT id, folder_id FROM documents WHERE id = ? AND owner_id = ?")
+    let doc_exists = sqlx::query_as::<_, (String, Option<String>)>("SELECT id, folder_id FROM documents WHERE id = $1 AND owner_id = $2")
         .bind(&doc_id)
         .bind(&user_id)
         .fetch_optional(&state.db)
@@ -200,14 +234,14 @@ pub async fn upload_file(
 
     let mut uploaded_filename = String::new();
 
-    while let Some(field) = multipart.next_field().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))? {
+    if let Some(field) = multipart.next_field().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))? {
         let file_name = field.file_name().unwrap_or("unnamed").to_string();
         let content_type = field.content_type().unwrap_or("application/octet-stream").to_string();
         let data = field.bytes().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?.to_vec();
 
         let file_id = Uuid::new_v4().to_string();
 
-        sqlx::query("INSERT INTO files (id, owner_id, document_id, folder_id, name, mime_type, data) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO files (id, owner_id, document_id, folder_id, name, mime_type, data) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(&file_id)
             .bind(&user_id)
             .bind(&doc_id)
@@ -220,7 +254,6 @@ pub async fn upload_file(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
         uploaded_filename = file_name;
-        break; 
     }
 
     Ok(Json(serde_json::json!({"filename": uploaded_filename})))
