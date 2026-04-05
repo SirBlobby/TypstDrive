@@ -2,15 +2,15 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm i
 COPY . .
 RUN npm run build
 
 # Build Backend
-FROM rust:1.82-alpine AS backend-builder
+FROM rust:alpine AS backend-builder
 WORKDIR /app
-RUN apk add --no-cache musl-dev sqlite-dev openssl-dev pkgconfig
-COPY typst/ typst/
+RUN apk add --no-cache musl-dev sqlite-dev openssl-dev pkgconfig git
+RUN git clone -b v0.14.2 --single-branch https://github.com/typst/typst.git typst
 COPY server/Cargo.* server/
 COPY server/src server/src
 WORKDIR /app/server

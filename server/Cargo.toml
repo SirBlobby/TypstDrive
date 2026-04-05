@@ -21,7 +21,7 @@ futures-util = "0.3"
 ecow = "0.2"
 
 typst = { version = "0.14.2", path = "../typst/crates/typst" }
-typst-kit = { path = "../typst/crates/typst-kit", features = ["system-downloader", "system-packages", "embedded-fonts"] }
+typst-kit = { path = "../typst/crates/typst-kit", features = ["downloads", "packages", "embed-fonts"] }
 typst-layout = { path = "../typst/crates/typst-layout" }
 typst-pdf = { path = "../typst/crates/typst-pdf" }
 typst-render = { path = "../typst/crates/typst-render" }
