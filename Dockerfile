@@ -10,7 +10,7 @@ RUN bun run build
 FROM rust:alpine AS backend-builder
 WORKDIR /app
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig git
-RUN git clone -b v0.14.2 --single-branch https://github.com/typst/typst.git typst
+RUN git clone https://github.com/typst/typst.git typst && cd typst && git checkout d6848a802e86a6269300f9768c054a641c2da77f
 COPY server/Cargo.* server/
 COPY server/src server/src
 WORKDIR /app/server
