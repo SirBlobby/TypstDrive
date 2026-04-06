@@ -8,7 +8,7 @@
 	import { compileTypst } from '$lib/ts/typst-api';
 	import type { Diagnostic } from '$lib/ts/typst-api';
 	import { page } from '$app/stores';
-	import { commentsSidebarOpen, commentReference, editorViewStore } from '$lib/ts/store';
+	import { commentsSidebarOpen, commentReference, editorViewStore, editorErrors } from '$lib/ts/store';
 
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -60,8 +60,10 @@
 				if (res.svgs) {
 					svgs = res.svgs;
 					errors = [];
+					$editorErrors = [];
 				} else if (res.errors) {
 					errors = res.errors;
+					$editorErrors = res.errors;
 				}
 			})
 			.catch((e) => {
@@ -136,15 +138,15 @@
 <!-- Custom Context Menu for Editor -->
 {#if contextMenu.show}
 	<div 
-		class="fixed z-[9999] bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-gray-200 dark:border-white/10 py-1 min-w-[200px] overflow-hidden" 
+		class="fixed z-[9999] bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-lg shadow-xl border border-[var(--theme-border)] py-1 min-w-[200px] overflow-hidden" 
 		style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
 	>
-		<button onclick={handleAddComment} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2">
+		<button onclick={handleAddComment} class="w-full text-left px-4 py-2 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2">
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
 			Add Comment on Selection
 		</button>
-		<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-		<button onclick={() => { navigator.clipboard.writeText(contextMenu.text); closeContextMenu(); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2">
+		<div class="h-px bg-[var(--theme-border)] my-1"></div>
+		<button onclick={() => { navigator.clipboard.writeText(contextMenu.text); closeContextMenu(); }} class="w-full text-left px-4 py-2 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2">
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
 			Copy Text
 		</button>

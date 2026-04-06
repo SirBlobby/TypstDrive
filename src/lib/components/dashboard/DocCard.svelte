@@ -44,8 +44,8 @@
     
     <div class="h-40 w-full bg-gray-50 dark:bg-black/40 rounded-t-xl overflow-hidden flex items-center justify-center border-b border-gray-100 dark:border-white/10 relative pointer-events-none">
         {#if doc.thumbnail_svg}
-            <div class="w-full h-full flex items-center justify-center p-2 bg-white transition-transform duration-300 group-hover:scale-110">
-                <img src={`data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(doc.thumbnail_svg)))}`} class="max-w-full max-h-full object-contain shadow-sm border border-gray-200" alt="Thumbnail" draggable="false" />
+            <div class="w-full h-full flex items-start justify-center bg-white transition-transform duration-300 group-hover:scale-110">
+                <img src={`data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(doc.thumbnail_svg)))}`} class="w-full h-auto shadow-sm border border-gray-200" alt="Thumbnail" draggable="false" />
             </div>
         {:else}
             <div class="p-4 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full transition-transform duration-300 group-hover:scale-110">

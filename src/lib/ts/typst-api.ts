@@ -1,6 +1,8 @@
 export interface Diagnostic {
 	message: string;
 	severity: string;
+	from?: number;
+	to?: number;
 }
 
 export interface CompileResponse {

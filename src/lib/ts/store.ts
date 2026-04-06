@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import type { Diagnostic } from './typst-api';
 
 export const themeStore = writable('Catppuccin');
 export const darkModeStore = writable(true);
@@ -8,6 +9,8 @@ export const documentZoomStore = writable(100);
 export const commentsSidebarOpen = writable(false);
 export const versionHistoryOpen = writable(false);
 export const commentReference = writable('');
+export const editorErrors = writable<Diagnostic[]>([]);
+export const triggerLspReconnect = writable(0);
 
 export interface AwarenessUser {
     clientId: number;

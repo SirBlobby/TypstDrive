@@ -233,6 +233,7 @@ pub async fn upload_file(
     let (_, folder_id) = doc_exists.unwrap();
 
     let mut uploaded_filename = String::new();
+    let mut font_family = None;
 
     if let Some(field) = multipart.next_field().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))? {
         let file_name = field.file_name().unwrap_or("unnamed").to_string();
@@ -240,6 +241,12 @@ pub async fn upload_file(
         let data = field.bytes().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?.to_vec();
 
         let file_id = Uuid::new_v4().to_string();
+
+        if file_name.to_lowercase().ends_with(".ttf") || file_name.to_lowercase().ends_with(".otf") {
+            if let Some(font) = typst::text::Font::iter(typst::foundations::Bytes::new(data.clone())).next() {
+                font_family = Some(font.info().family.clone());
+            }
+        }
 
         sqlx::query("INSERT INTO files (id, owner_id, document_id, folder_id, name, mime_type, data) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(&file_id)
@@ -256,5 +263,8 @@ pub async fn upload_file(
         uploaded_filename = file_name;
     }
 
-    Ok(Json(serde_json::json!({"filename": uploaded_filename})))
+    Ok(Json(serde_json::json!({
+        "filename": uploaded_filename,
+        "font_family": font_family
+    })))
 }

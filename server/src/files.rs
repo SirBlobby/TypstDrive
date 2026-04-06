@@ -63,6 +63,7 @@ pub async fn upload_file_global(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut uploaded_files = vec![];
+    let mut font_families = vec![];
 
     while let Some(field) = multipart.next_field().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))? {
         let file_name = field.file_name().unwrap_or("unnamed").to_string();
@@ -70,6 +71,13 @@ pub async fn upload_file_global(
         let data = field.bytes().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?.to_vec();
 
         let file_id = Uuid::new_v4().to_string();
+
+        let mut font_family = None;
+        if file_name.to_lowercase().ends_with(".ttf") || file_name.to_lowercase().ends_with(".otf") {
+            if let Some(font) = typst::text::Font::iter(typst::foundations::Bytes::new(data.clone())).next() {
+                font_family = Some(font.info().family.clone());
+            }
+        }
 
         sqlx::query("INSERT INTO files (id, owner_id, folder_id, name, mime_type, data) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(&file_id)
@@ -83,9 +91,13 @@ pub async fn upload_file_global(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
         uploaded_files.push(file_name);
+        font_families.push(font_family);
     }
 
-    Ok(Json(serde_json::json!({"files": uploaded_files})))
+    Ok(Json(serde_json::json!({
+        "files": uploaded_files,
+        "font_families": font_families
+    })))
 }
 
 pub async fn get_file_data(
@@ -133,6 +145,35 @@ pub async fn delete_file(
     }
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn list_fonts(
+    State(state): State<AppState>,
+    jar: SignedCookieJar,
+) -> Result<Json<Vec<String>>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    let files = sqlx::query_as::<_, (String,)>(
+        "SELECT name FROM files WHERE owner_id = $1"
+    )
+    .bind(&user_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let mut fonts = Vec::new();
+    for (name,) in files {
+        if name.to_lowercase().ends_with(".ttf") || name.to_lowercase().ends_with(".otf") {
+            if let Some(stem) = std::path::Path::new(&name).file_stem() {
+                if let Some(stem_str) = stem.to_str() {
+                    fonts.push(stem_str.to_string());
+                }
+            }
+        }
+    }
+
+    Ok(Json(fonts))
 }
 
 #[derive(Deserialize)]

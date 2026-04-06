@@ -1,7 +1,7 @@
 {
 	"name": "typstdrive",
 	"private": true,
-	"version": "1.2.0",
+	"version": "1.3.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev --host",
@@ -23,13 +23,16 @@
 		"svelte-check": "^4.4.6",
 		"tailwindcss": "^4.2.2",
 		"typescript": "^5.9.3",
-		"vite": "^7.3.1",
+		"vite": "^7.3.2",
 		"vite-plugin-top-level-await": "^1.6.0",
 		"vite-plugin-wasm": "^3.6.0"
 	},
 	"dependencies": {
+		"@codemirror/autocomplete": "^6.20.1",
 		"@codemirror/commands": "^6.10.3",
 		"@codemirror/lang-rust": "^6.0.2",
+		"@codemirror/lint": "^6.9.5",
+		"@codemirror/lsp-client": "^6.2.2",
 		"@codemirror/state": "^6.6.0",
 		"@codemirror/view": "^6.41.0",
 		"@iconify/svelte": "^5.2.1",

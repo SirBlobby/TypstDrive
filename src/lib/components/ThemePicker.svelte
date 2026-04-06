@@ -23,14 +23,14 @@
 </script>
 
 <div class="flex items-center gap-2 {className}">
-    <Icon icon={themes[$themeStore]?.icon || 'mdi:palette'} class="text-xl text-gray-500 dark:text-gray-400" />
+    <Icon icon={themes[$themeStore]?.icon || 'mdi:palette'} class="text-xl text-[var(--theme-text)] opacity-70" />
     <select 
         value={selectedValue}
         onchange={handleChange}
-        class="bg-white/50 dark:bg-black/20 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/20 text-sm font-medium rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 block py-1.5 pl-3 pr-8 appearance-none cursor-pointer hover:border-gray-400 dark:hover:border-white/30 transition-colors outline-none"
+        class="bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] text-sm font-medium rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 block py-1.5 pl-3 pr-8 appearance-none cursor-pointer transition-colors outline-none"
     >
         {#each themeOptions as opt}
-            <option class="bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100" value={opt.name}>{opt.name}</option>
+            <option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value={opt.name}>{opt.name}</option>
         {/each}
     </select>
 </div>

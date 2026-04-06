@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { exportTypst } from '../ts/typst-api';
-	import { text, undoManager } from '../ts/yjs-setup';
-	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen } from '../ts/store';
+	import { text } from '../ts/yjs-setup';
+	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen, triggerLspReconnect } from '../ts/store';
 	import { themes } from '../ts/themes';
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import ThemePicker from './ThemePicker.svelte';
-import PresentationMode from "./PresentationMode.svelte";
-import CommentsSidebar from "./CommentsSidebar.svelte";
-import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
+	import PresentationMode from "./PresentationMode.svelte";
+	import CommentsSidebar from "./CommentsSidebar.svelte";
+	import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 	import Icon from '@iconify/svelte';
+	import { undo, redo } from '@codemirror/commands';
 
 	let isShareModalOpen = $state(false);
 	let isPageSettingsOpen = $state(false);
@@ -18,6 +19,17 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 	let fileInput = $state<HTMLInputElement | null>(null);
 	
 	let { title = 'Untitled Document', docId = undefined, isViewer = false } = $props<{ title?: string, docId?: string, isViewer?: boolean }>();
+
+	let uploadedFonts = $state<string[]>([]);
+
+	$effect(() => {
+		fetch('/api/fonts')
+			.then(res => res.json())
+			.then(data => {
+				uploadedFonts = Array.isArray(data) ? data : [];
+			})
+			.catch(console.error);
+	});
 
 	function handleExport(format: 'pdf' | 'png' | 'svg' | 'typ') {
 		if (!text) return;
@@ -56,6 +68,44 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 		}).catch(err => {
 			console.error(err);
 			alert("Failed to save version.");
+		});
+	}
+
+	function handlePrint() {
+		if (!text) return;
+		const content = text.toString();
+		const safeTitle = title.replace(/[^a-z0-9_-]/gi, '_');
+		
+		fetch(`/api/export/pdf`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ text: content, document_id: docId }),
+		})
+		.then((res) => {
+			if (!res.ok) throw new Error('Print failed');
+			return res.blob();
+		})
+		.then((blob) => {
+			const url = URL.createObjectURL(blob);
+			const iframe = document.createElement('iframe');
+			iframe.style.position = 'fixed';
+			iframe.style.right = '0';
+			iframe.style.bottom = '0';
+			iframe.style.width = '0';
+			iframe.style.height = '0';
+			iframe.style.border = '0';
+			iframe.src = url;
+			document.body.appendChild(iframe);
+			
+			iframe.onload = () => {
+				setTimeout(() => {
+					iframe.contentWindow?.print();
+				}, 100);
+			};
+		})
+		.catch((e) => {
+			console.error(`Print failed:`, e);
+			alert(`Failed to print document`);
 		});
 	}
 
@@ -107,7 +157,7 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 			const oldArgs = match[1];
 			
 			
-			const propRegex = new RegExp(`${propKeyTrimmed}\\s*:\\s*(?:"[^"]*"|[^,]+)`);
+			const propRegex = new RegExp(`${propKeyTrimmed}\\s*:\\s*(?:\\([^)]*\\)|"[^"]*"|[^,)]+)`);
 			let newArgs;
 			if (propRegex.test(oldArgs)) {
 				newArgs = oldArgs.replace(propRegex, `${propKeyTrimmed}: ${propValTrimmed}`);
@@ -153,11 +203,27 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 			body: formData
 		}).then(res => res.json()).then(data => {
 			if (data.filename) {
+				if (data.filename.toLowerCase().endsWith('.ttf') || data.filename.toLowerCase().endsWith('.otf')) {
+					triggerLspReconnect.update(n => n + 1);
+					let stem = data.filename.substring(0, data.filename.lastIndexOf('.'));
+					if (!uploadedFonts.includes(stem)) {
+						uploadedFonts = [...uploadedFonts, stem];
+					}
+				}
 				const view = $editorViewStore;
 				if (view) {
 					const selection = view.state.selection.main;
 					const isFont = data.filename.toLowerCase().endsWith('.ttf') || data.filename.toLowerCase().endsWith('.otf');
-					const replacement = isFont ? `#set text(font: ("New Computer Modern", "${data.filename.replace(/\.[^/.]+$/, "")}"))\n` : `#image("${data.filename}")\n`;
+					let replacement = "";
+					if (isFont) {
+						if (data.font_family) {
+							replacement = `#set text(font: "${data.font_family}")\n`;
+						} else {
+							replacement = `// The font ${data.filename} is available!\n// Type #set text(font: "") and use autocomplete to select its name.\n`;
+						}
+					} else {
+						replacement = `#image("${data.filename}")\n`;
+					}
 					view.dispatch({
 						changes: { from: selection.from, to: selection.to, insert: replacement },
 						selection: { anchor: selection.from + replacement.length }
@@ -315,6 +381,16 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 			activeMenu = null;
 		}
 	}
+
+	function handleUndo() {
+		activeMenu = null;
+		if ($editorViewStore) undo($editorViewStore);
+	}
+
+	function handleRedo() {
+		activeMenu = null;
+		if ($editorViewStore) redo($editorViewStore);
+	}
 </script>
 
 <svelte:window onclick={handleWindowClick} />
@@ -352,38 +428,39 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 					<div class="relative">
 						<button 
 							onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'file' ? null : 'file'; }} 
-							class="px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 transition-colors {activeMenu === 'file' ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white' : ''}"
+							class="px-2 py-0.5 rounded transition-colors {activeMenu === 'file' ? 'bg-[var(--theme-border)] text-[var(--theme-text)]' : 'hover:bg-[var(--theme-border)]'}"
 						>
 							File
 						</button>
 						{#if activeMenu === 'file'}
-							<div class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
-								<button onclick={() => { activeMenu = null; goto('/dashboard'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">New / Open</button>
-								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Document Info</button>
+							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+								<button onclick={() => { activeMenu = null; goto('/dashboard'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">New / Open</button>
+								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Document Info</button>
 								{#if !isViewer}
-								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-								<button onclick={() => { activeMenu = null; handleSaveVersion(); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Save Version</button>
-								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-								<button onclick={() => { activeMenu = null; openRename(); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Rename</button>
-								<button onclick={() => { activeMenu = null; isShareModalOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Share</button>
-								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-								<button onclick={() => { activeMenu = null; isPageSettingsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Page Settings</button>
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<button onclick={() => { activeMenu = null; handleSaveVersion(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Save Version</button>
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<button onclick={() => { activeMenu = null; openRename(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Rename</button>
+								<button onclick={() => { activeMenu = null; isShareModalOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Share</button>
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<button onclick={() => { activeMenu = null; isPageSettingsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Page Settings</button>
 								{/if}
-								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-								<div class="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Download</div>
-								<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">.typ source</button>
-								<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">.pdf document</button>
-								<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">.png image</button>
-								<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">.svg graphics</button>
-								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-								<div class="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Export (Pandoc)</div>
-								<button onclick={() => { activeMenu = null; handlePandocExport('docx'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Word (.docx)</button>
-								<button onclick={() => { activeMenu = null; handlePandocExport('latex'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">LaTeX (.tex)</button>
-								<button onclick={() => { activeMenu = null; handlePandocExport('markdown'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Markdown (.md)</button>
-								<button onclick={() => { activeMenu = null; handlePandocExport('html'); }} class="w-full text-left px-4 py-1 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">HTML (.html)</button>
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider opacity-60">Download</div>
+								<button onclick={() => { activeMenu = null; handlePrint(); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:printer" /> Print Document</button>
+								<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:code-braces" /> .typ source</button>
+								<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:file-pdf-box" /> .pdf document</button>
+								<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:image" /> .png image</button>
+								<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:svg" /> .svg graphics</button>
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider opacity-60">Export (Pandoc)</div>
+								<button onclick={() => { activeMenu = null; handlePandocExport('docx'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Word (.docx)</button>
+								<button onclick={() => { activeMenu = null; handlePandocExport('latex'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">LaTeX (.tex)</button>
+								<button onclick={() => { activeMenu = null; handlePandocExport('markdown'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Markdown (.md)</button>
+								<button onclick={() => { activeMenu = null; handlePandocExport('html'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">HTML (.html)</button>
 								{#if !isViewer}
-								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-								<button onclick={() => { activeMenu = null; deleteDoc(); }} class="w-full text-left px-4 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10">Delete</button>
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<button onclick={() => { activeMenu = null; deleteDoc(); }} class="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-red-500/10">Delete</button>
 								{/if}
 							</div>
 						{/if}
@@ -393,18 +470,18 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 					<div class="relative">
 						<button 
 							onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'edit' ? null : 'edit'; }} 
-							class="px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 transition-colors {activeMenu === 'edit' ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white' : ''}"
+							class="px-2 py-0.5 rounded transition-colors {activeMenu === 'edit' ? 'bg-[var(--theme-border)] text-[var(--theme-text)]' : 'hover:bg-[var(--theme-border)]'}"
 						>
 							Edit
 						</button>
 						{#if activeMenu === 'edit'}
-							<div class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
-								<button onclick={() => { activeMenu = null; if (undoManager) undoManager.undo(); else document.execCommand('undo'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Undo (Ctrl+Z)</button>
-								<button onclick={() => { activeMenu = null; if (undoManager) undoManager.redo(); else document.execCommand('redo'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Redo (Ctrl+Y)</button>
-								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-								<button onclick={() => { activeMenu = null; document.execCommand('cut'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Cut (Ctrl+X)</button>
-								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Copy (Ctrl+C)</button>
-								<button onclick={() => { activeMenu = null; navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t)); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Paste (Ctrl+V)</button>
+							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+								<button onclick={handleUndo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Undo (Ctrl+Z)</button>
+								<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Redo (Ctrl+Y)</button>
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<button onclick={() => { activeMenu = null; document.execCommand('cut'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Cut (Ctrl+X)</button>
+								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Copy (Ctrl+C)</button>
+								<button onclick={() => { activeMenu = null; navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t)); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Paste (Ctrl+V)</button>
 							</div>
 						{/if}
 					</div>
@@ -413,17 +490,17 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 					<div class="relative">
 						<button 
 							onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'view' ? null : 'view'; }} 
-							class="px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 transition-colors {activeMenu === 'view' ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white' : ''}"
+							class="px-2 py-0.5 rounded transition-colors {activeMenu === 'view' ? 'bg-[var(--theme-border)] text-[var(--theme-text)]' : 'hover:bg-[var(--theme-border)]'}"
 						>
 							View
 						</button>
 						{#if activeMenu === 'view'}
-							<div class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
-								<button onclick={() => { activeMenu = null; $versionHistoryOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between">
+							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+								<button onclick={() => { activeMenu = null; $versionHistoryOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
 									Version History
 								</button>
-								<div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-								<button onclick={() => { activeMenu = null; $darkModeStore = !$darkModeStore; document.documentElement.classList.toggle('dark', $darkModeStore); }} class="w-full text-left px-4 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between">
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<button onclick={() => { activeMenu = null; $darkModeStore = !$darkModeStore; document.documentElement.classList.toggle('dark', $darkModeStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
 									Dark Mode
 									<Icon icon={$darkModeStore ? "mdi:check" : ""} class="text-sm" />
 								</button>
@@ -492,6 +569,10 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 			<div class="w-px h-5 bg-gray-300 dark:bg-white/10"></div>
 			
 			<div class="flex items-center bg-gray-100/50 dark:bg-zinc-900/50 rounded-md p-0.5 border border-gray-200 dark:border-white/10">
+				<button onclick={handlePrint} class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-[var(--theme-bg)] bg-[var(--theme-text)] hover:opacity-80 rounded transition-all shadow-sm" title="Print Document">
+					<Icon icon="mdi:printer" class="text-sm" />
+					Print
+				</button>
 				<button onclick={() => handleExport('typ')} class="px-2.5 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-white dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-all" title="Download .typ source">TYP</button>
 				<button onclick={() => handleExport('svg')} class="px-2.5 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-white dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-all" title="Export as SVG">SVG</button>
 				<button onclick={() => handleExport('png')} class="px-2.5 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-white dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-all" title="Export as PNG">PNG</button>
@@ -543,16 +624,23 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
 
 		<div class="flex items-center gap-2">
-			<label for="font-select" class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Font</label>
+			<label for="font-select" class="text-[11px] font-semibold uppercase tracking-wider opacity-60">Font</label>
 			<select 
 				id="font-select"
 				onchange={(e) => insertTypstConfig('text', `font: "${e.currentTarget.value}"`)}
-				class="bg-white dark:bg-black/20 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/20 text-xs rounded shadow-sm focus:ring-blue-500 focus:border-blue-500 block py-1 pl-2 pr-6 appearance-none cursor-pointer hover:border-gray-400 dark:hover:border-zinc-600 transition-colors"
+				class="bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] text-xs rounded shadow-sm focus:ring-blue-500 focus:border-blue-500 block py-1 pl-2 pr-6 appearance-none cursor-pointer transition-colors"
 			>
-				<option class="bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100" value="New Computer Modern">Default (New CM)</option>
-				<option class="bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100" value="Libertinus Serif">Libertinus Serif</option>
-				<option class="bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100" value="PT Sans">PT Sans</option>
-				<option class="bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100" value="Roboto">Roboto</option>
+				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="New Computer Modern">Default (New CM)</option>
+				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="Libertinus Serif">Libertinus Serif</option>
+				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="PT Sans">PT Sans</option>
+				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="Roboto">Roboto</option>
+				{#if uploadedFonts.length > 0}
+					<optgroup label="Uploaded Fonts" class="bg-[var(--theme-bg)] text-[var(--theme-text)] font-semibold italic">
+						{#each uploadedFonts as font}
+							<option class="bg-[var(--theme-bg)] text-[var(--theme-text)] not-italic font-normal" value={font}>{font}</option>
+						{/each}
+					</optgroup>
+				{/if}
 			</select>
 		</div>
 
@@ -562,7 +650,7 @@ import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 			{#if !isViewer}
 			<button
 				onclick={() => (isPageSettingsOpen = true)}
-				class="flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-100 border border-gray-300 rounded shadow-sm dark:text-gray-300 dark:bg-black/20 dark:border-white/20 dark:hover:bg-white/10 dark:hover:text-white transition-colors"
+				class="flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] rounded shadow-sm transition-colors opacity-90 hover:opacity-100"
 			>
 				<Icon icon="mdi:file-document-edit-outline" class="text-sm" />
 				Page Settings

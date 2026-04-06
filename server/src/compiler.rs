@@ -1,7 +1,7 @@
 use crate::world::MemoryWorld;
 use std::collections::HashMap;
 use typst::diag::{SourceDiagnostic, Warned};
-use typst::layout::PagedDocument;
+use typst_layout::PagedDocument;
 use typst_pdf::{pdf, PdfOptions};
 use typst_render::render;
 
@@ -16,15 +16,15 @@ impl TypstCompiler {
         &self,
         text: String,
         files: HashMap<String, Vec<u8>>,
-    ) -> Result<(Vec<String>, String), Vec<SourceDiagnostic>> {
+    ) -> Result<(Vec<String>, String), Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
         let world = MemoryWorld::new(text, files);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
                 output: Ok(doc),
                 warnings: _,
             } => {
-                let svgs = doc.pages.iter().map(typst_svg::svg).collect();
-                let thumbnail = if let Some(page) = doc.pages.first() {
+                let svgs = doc.pages().iter().map(typst_svg::svg).collect();
+                let thumbnail = if let Some(page) = doc.pages().first() {
                     typst_svg::svg(page)
                 } else {
                     String::new()
@@ -35,7 +35,11 @@ impl TypstCompiler {
                 output: Err(errors),
                 warnings: _,
             } => {
-                let diag = errors.into_iter().collect();
+                use typst::World;
+                let diag = errors.into_iter().map(|d| {
+                    let range = d.span.id().and_then(|id| world.source(id).ok()).and_then(|s| s.range(d.span));
+                    (d, range)
+                }).collect();
                 Err(diag)
             }
         }
@@ -45,7 +49,7 @@ impl TypstCompiler {
         &self,
         text: String,
         files: HashMap<String, Vec<u8>>,
-    ) -> Result<Vec<u8>, Vec<SourceDiagnostic>> {
+    ) -> Result<Vec<u8>, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
         let world = MemoryWorld::new(text, files);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
@@ -61,7 +65,13 @@ impl TypstCompiler {
             Warned {
                 output: Err(errors),
                 warnings: _,
-            } => Err(errors.into_iter().collect()),
+            } => {
+                use typst::World;
+                Err(errors.into_iter().map(|d| {
+                    let range = d.span.id().and_then(|id| world.source(id).ok()).and_then(|s| s.range(d.span));
+                    (d, range)
+                }).collect())
+            },
         }
     }
 
@@ -69,14 +79,14 @@ impl TypstCompiler {
         &self,
         text: String,
         files: HashMap<String, Vec<u8>>,
-    ) -> Result<Vec<u8>, Vec<SourceDiagnostic>> {
+    ) -> Result<Vec<u8>, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
         let world = MemoryWorld::new(text, files);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
                 output: Ok(doc),
                 warnings: _,
             } => {
-                if let Some(page) = doc.pages.first() {
+                if let Some(page) = doc.pages().first() {
                     let pixmap = render(page, 2.0);
                     if let Ok(encoded) = pixmap.encode_png() {
                         return Ok(encoded);
@@ -87,7 +97,13 @@ impl TypstCompiler {
             Warned {
                 output: Err(errors),
                 warnings: _,
-            } => Err(errors.into_iter().collect()),
+            } => {
+                use typst::World;
+                Err(errors.into_iter().map(|d| {
+                    let range = d.span.id().and_then(|id| world.source(id).ok()).and_then(|s| s.range(d.span));
+                    (d, range)
+                }).collect())
+            },
         }
     }
 }

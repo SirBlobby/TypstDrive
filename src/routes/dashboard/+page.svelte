@@ -384,7 +384,7 @@
             <h2 class="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">My Documents</h2>
             
             <div class="relative plus-dropdown-container">
-                <button onclick={() => showPlusDropdown = !showPlusDropdown} class="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full shadow-md hover:shadow-lg transition-all duration-200 focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-zinc-950 focus:ring-blue-500 transform hover:-translate-y-0.5">
+                <button onclick={() => showPlusDropdown = !showPlusDropdown} class="flex items-center justify-center text-[var(--theme-text)] bg-[var(--theme-border)] opacity-90 hover:opacity-100 w-10 h-10 rounded-full shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 border border-white/10 dark:border-black/20">
                     <Icon icon="mdi:plus" class="text-2xl" />
                 </button>
 
@@ -466,11 +466,11 @@
         {:else}
             
             {#if folders.length > 0}
-                <div class="mb-8 bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
-                    <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 bg-white/40 dark:bg-white/5 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                <div class="mb-8">
+                    <div class="px-2 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Folders
                     </div>
-                    <div class="divide-y divide-gray-100 dark:divide-white/5">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {#each folders as folder}
                             <FolderRow 
                                 {folder} 

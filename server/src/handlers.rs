@@ -64,6 +64,8 @@ pub struct CompileResponse {
 pub struct Diagnostic {
     pub message: String,
     pub severity: String,
+    pub from: Option<usize>,
+    pub to: Option<usize>,
 }
 
 pub async fn yjs_handler(
@@ -232,9 +234,11 @@ pub async fn compile_handler(
         Err(diags) => {
             let errors = diags
                 .into_iter()
-                .map(|d| Diagnostic {
+                .map(|(d, range)| Diagnostic {
                     message: d.message.to_string(),
                     severity: format!("{:?}", d.severity),
+                    from: range.as_ref().map(|r| r.start),
+                    to: range.as_ref().map(|r| r.end),
                 })
                 .collect();
             Json(CompileResponse {
@@ -463,4 +467,151 @@ pub async fn pandoc_import_handler(
         output.stdout,
     )
         .into_response()
+}
+
+pub async fn lsp_handler(
+    ws: axum::extract::ws::WebSocketUpgrade,
+    Path(id): Path<String>,
+    State(state): State<AppState>,
+    jar: axum_extra::extract::cookie::SignedCookieJar,
+) -> impl IntoResponse {
+    let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
+
+    let doc = match sqlx::query_as::<_, crate::models::Document>("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1").bind(&id).fetch_optional(&state.db).await {
+        Ok(Some(d)) => d,
+        _ => return (StatusCode::NOT_FOUND, "Document not found").into_response(),
+    };
+
+    let mut has_access = false;
+    if let Some(uid) = &user_id_opt {
+        if &doc.owner_id == uid {
+            has_access = true;
+        } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2")
+            .bind(&id)
+            .bind(uid)
+            .fetch_optional(&state.db)
+            .await 
+        {
+            has_access = true;
+        }
+    }
+    if !has_access {
+        if let Some(pr) = &doc.public_role {
+            if pr == "viewer" || pr == "editor" {
+                has_access = true;
+            }
+        }
+    }
+
+    if !has_access {
+        return (StatusCode::FORBIDDEN, "Forbidden").into_response();
+    }
+
+    let mut files_map = std::collections::HashMap::new();
+    if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = $1")
+        .bind(doc.owner_id)
+        .fetch_all(&state.db)
+        .await
+    {
+        for (name, data) in files {
+            files_map.insert(name, data);
+        }
+    }
+
+    ws.on_upgrade(move |socket| async move {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+        use tokio::process::Command;
+        use std::process::Stdio;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        
+        for (name, data) in files_map {
+            let path = temp_dir.path().join(&name);
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = std::fs::write(&path, data);
+        }
+
+        let mut child = Command::new("tinymist")
+            .arg("lsp")
+            .arg("--font-path")
+            .arg(temp_dir.path())
+            .current_dir(temp_dir.path())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Failed to start tinymist lsp");
+
+        let mut stdin = child.stdin.take().unwrap();
+        let stdout = child.stdout.take().unwrap();
+        let mut stdout_reader = BufReader::new(stdout);
+
+        let (mut ws_tx, mut ws_rx) = socket.split();
+
+        let root_uri = format!("file://{}", temp_dir.path().display());
+        let init_msg = serde_json::json!({
+            "type": "init",
+            "rootUri": root_uri
+        });
+        use futures_util::SinkExt;
+        let _ = ws_tx.send(axum::extract::ws::Message::Text(init_msg.to_string().into())).await;
+
+        let ws_to_lsp = tokio::spawn(async move {
+            while let Some(Ok(axum::extract::ws::Message::Text(msg))) = ws_rx.next().await {
+                let content_length = format!("Content-Length: {}\r\n\r\n", msg.len());
+                if stdin.write_all(content_length.as_bytes()).await.is_err() {
+                    break;
+                }
+                if stdin.write_all(msg.as_bytes()).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        let lsp_to_ws = tokio::spawn(async move {
+            loop {
+                let mut content_length = 0;
+                let mut header = String::new();
+                loop {
+                    let mut char_buf = [0; 1];
+                    if stdout_reader.read_exact(&mut char_buf).await.is_err() {
+                        return;
+                    }
+                    header.push(char_buf[0] as char);
+                    if header.ends_with("\r\n\r\n") {
+                        break;
+                    }
+                }
+
+                for line in header.split("\r\n") {
+                    if line.starts_with("Content-Length: ") {
+                        if let Ok(len) = line["Content-Length: ".len()..].trim().parse::<usize>() {
+                            content_length = len;
+                        }
+                    }
+                }
+
+                if content_length == 0 { continue; }
+
+                let mut body = vec![0; content_length];
+                if stdout_reader.read_exact(&mut body).await.is_err() {
+                    break;
+                }
+
+                if let Ok(text) = String::from_utf8(body) {
+                    use futures_util::SinkExt;
+                    if ws_tx.send(axum::extract::ws::Message::Text(text.into())).await.is_err() {
+                        break;
+                    }
+                }
+            }
+        });
+
+        tokio::select! {
+            _ = ws_to_lsp => {}
+            _ = lsp_to_ws => {}
+            _ = child.wait() => {}
+        }
+    })
 }

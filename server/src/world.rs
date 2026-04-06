@@ -2,13 +2,13 @@ use chrono::Datelike;
 use std::collections::HashMap;
 
 use typst::diag::{FileError, FileResult};
-use typst::foundations::{Bytes, Datetime};
-use typst::syntax::{FileId, Source, VirtualPath};
-use typst_kit::download::{Downloader, ProgressSink};
-use typst_kit::package::PackageStorage;
+use typst::foundations::{Bytes, Datetime, Duration};
+use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
 use typst::text::{Font, FontBook};
 use typst::World;
 use typst::{Library, LibraryExt};
+use typst_kit::downloader::SystemDownloader;
+use typst_kit::packages::SystemPackages;
 
 pub struct MemoryWorld {
     library: typst::utils::LazyHash<Library>,
@@ -17,15 +17,18 @@ pub struct MemoryWorld {
     files: HashMap<String, Vec<u8>>,
     book: typst::utils::LazyHash<FontBook>,
     fonts: Vec<Font>,
-    packages: PackageStorage,
+    packages: SystemPackages,
 }
 
 impl MemoryWorld {
     pub fn new(text: String, files: HashMap<String, Vec<u8>>) -> Self {
-        let main = FileId::new(None, VirtualPath::new("main.typ"));
+        let main = FileId::new(RootedPath::new(
+            VirtualRoot::Project,
+            VirtualPath::new("main.typ").unwrap(),
+        ));
         let source = Source::new(main, text);
-        let downloader = Downloader::new("TypstDrive (typst-kit)");
-        let packages = PackageStorage::new(None, None, downloader);
+        let downloader = SystemDownloader::new("TypstDrive (typst-kit)");
+        let packages = SystemPackages::new(downloader);
 
         let mut book = FontBook::new();
         let mut fonts = Vec::new();
@@ -41,7 +44,7 @@ impl MemoryWorld {
 
         // Add custom fonts from files
         for (name, data) in &files {
-            if name.ends_with(".ttf") || name.ends_with(".otf") {
+            if name.to_lowercase().ends_with(".ttf") || name.to_lowercase().ends_with(".otf") {
                 for font in Font::iter(Bytes::new(data.clone())) {
                     let info = font.info().clone();
                     book.push(info.clone());
@@ -87,39 +90,39 @@ impl World for MemoryWorld {
     fn source(&self, id: FileId) -> FileResult<Source> {
         if id == self.main {
             Ok(self.source.clone())
-        } else if let Some(package) = id.package() {
-            let dir = self
+        } else if let VirtualRoot::Package(package) = id.root() {
+            let root = self
                 .packages
-                .prepare_package(package, &mut ProgressSink)
+                .obtain(package)
                 .map_err(|e| FileError::Other(Some(e.to_string().into())))?;
-            let path = id.vpath().resolve(&dir).ok_or_else(|| FileError::NotFound(id.vpath().as_rootless_path().into()))?;
-            let data = std::fs::read(&path).map_err(|_| FileError::NotFound(id.vpath().as_rootless_path().into()))?;
-            let text = String::from_utf8(data).map_err(|_| FileError::InvalidUtf8)?;
+            let data = root.load(id.vpath())?;
+            let text = std::str::from_utf8(&data)
+                .map_err(|_| FileError::InvalidUtf8)?
+                .to_owned();
             Ok(Source::new(id, text))
         } else {
-            Err(FileError::NotFound(
-                id.vpath().as_rootless_path().into(),
-            ))
+            Err(FileError::NotFound(id.vpath().get_without_slash().into()))
         }
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
         if id == self.main {
             Ok(Bytes::from_string(self.source.text().to_string()))
-        } else if let Some(package) = id.package() {
-            let dir = self
+        } else if let VirtualRoot::Package(package) = id.root() {
+            let root = self
                 .packages
-                .prepare_package(package, &mut ProgressSink)
+                .obtain(package)
                 .map_err(|e| FileError::Other(Some(e.to_string().into())))?;
-            let path = id.vpath().resolve(&dir).ok_or_else(|| FileError::NotFound(id.vpath().as_rootless_path().into()))?;
-            let data = std::fs::read(&path).map_err(|_| FileError::NotFound(id.vpath().as_rootless_path().into()))?;
-            Ok(Bytes::new(data))
-        } else if let Some(data) = self.files.get(&id.vpath().as_rootless_path().to_string_lossy().to_string().replace("\\", "/")) {
+            root.load(id.vpath())
+        } else if let Some(data) = self.files.get(
+            &id.vpath()
+                .get_without_slash()
+                .to_string()
+                .replace("\\", "/"),
+        ) {
             Ok(Bytes::new(data.clone()))
         } else {
-            Err(FileError::NotFound(
-                id.vpath().as_rootless_path().into(),
-            ))
+            Err(FileError::NotFound(id.vpath().get_without_slash().into()))
         }
     }
 
@@ -127,11 +130,12 @@ impl World for MemoryWorld {
         self.fonts.get(index).cloned()
     }
 
-    fn today(&self, offset: Option<i64>) -> Option<Datetime> {
+    fn today(&self, offset: Option<Duration>) -> Option<Datetime> {
         let now = chrono::Local::now();
         let date = if let Some(offset) = offset {
-            let offset = chrono::FixedOffset::east_opt(offset as i32)?;
-            now.with_timezone(&offset).date_naive()
+            let offset_secs = offset.hours() as i32 * 3600;
+            let offset_chrono = chrono::FixedOffset::east_opt(offset_secs)?;
+            now.with_timezone(&offset_chrono).date_naive()
         } else {
             now.date_naive()
         };
