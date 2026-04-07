@@ -1,8 +1,8 @@
 # Build Frontend
 FROM oven/bun:alpine AS frontend-builder
 WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+COPY package.json ./
+RUN bun install
 COPY . .
 RUN bun run build
 
