@@ -8,6 +8,7 @@ export interface Diagnostic {
 export interface CompileResponse {
 	svgs: string[] | null;
 	errors: Diagnostic[] | null;
+	stats?: { pages: number; words: number; characters: number; characters_excluding_spaces: number };
 }
 
 export async function compileTypst(text: string, document_id?: string): Promise<CompileResponse> {

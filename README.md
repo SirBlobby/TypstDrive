@@ -58,6 +58,7 @@ TypstDrive is completely self-hostable. We provide a Docker image that packages 
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
+- [Tinymist](https://github.com/Myriad-Dreamin/tinymist) (Required if running the backend locally for Language Server features)
 
 ### Getting Started
 
@@ -94,9 +95,15 @@ git clone https://github.com/typst/typst.git typst
 2. Run the dev server: `npm run dev`
 
 ### Backend
-1. Start the local database: `docker-compose up -d db`
-2. Navigate to the `server/` directory.
-3. Build and run: `cargo run`
+1. Ensure you have the required dependencies installed (e.g., `libssl-dev` on Ubuntu: `sudo apt-get install libssl-dev`).
+2. Install the `tinymist` CLI and ensure it is in your system's PATH, as the backend relies on it for Language Server Protocol (LSP) functionality.
+   (e.g., via `cargo binstall tinymist` or downloading from [releases](https://github.com/Myriad-Dreamin/tinymist/releases)). Example for Linux x64:
+   ```bash
+   curl -L -o ~/.cargo/bin/tinymist https://github.com/Myriad-Dreamin/tinymist/releases/latest/download/tinymist-linux-x64 && chmod +x ~/.cargo/bin/tinymist
+   ```
+3. Start the local database: `docker-compose up -d db`
+4. Navigate to the `server/` directory.
+5. Build and run: `cargo run`
 
 Note: The frontend expects the backend to be running on port 3000. During local development via Vite, API calls are proxied automatically.
 

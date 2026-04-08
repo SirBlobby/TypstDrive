@@ -3,12 +3,13 @@
 	import Editor from '$lib/components/Editor.svelte';
 	import Preview from '$lib/components/Preview.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import DocFooter from '$lib/components/DocFooter.svelte';
 	import ErrorBanner from '$lib/components/ErrorBanner.svelte';
 	import { text, initYjs, cleanupYjs } from '$lib/ts/yjs-setup';
 	import { compileTypst } from '$lib/ts/typst-api';
 	import type { Diagnostic } from '$lib/ts/typst-api';
 	import { page } from '$app/stores';
-	import { commentsSidebarOpen, commentReference, editorViewStore, editorErrors } from '$lib/ts/store';
+	import { commentsSidebarOpen, commentReference, editorViewStore, editorErrors, documentStatsStore } from '$lib/ts/store';
 
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -57,6 +58,9 @@
 		const docId = $page.params.id;
 		compileTypst(content, docId)
 			.then((res) => {
+				if (res.stats) {
+					$documentStatsStore = res.stats;
+				}
 				if (res.svgs) {
 					svgs = res.svgs;
 					errors = [];
@@ -133,6 +137,8 @@
 			<ErrorBanner {errors} />
 		</div>
 	</main>
+
+	<DocFooter />
 </div>
 
 <!-- Custom Context Menu for Editor -->

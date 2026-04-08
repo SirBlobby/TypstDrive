@@ -54,10 +54,13 @@ pub struct CompileRequest {
     pub document_id: Option<String>,
 }
 
+use crate::compiler::DocumentStats;
+
 #[derive(Serialize)]
 pub struct CompileResponse {
     pub svgs: Option<Vec<String>>,
     pub errors: Option<Vec<Diagnostic>>,
+    pub stats: Option<DocumentStats>,
 }
 
 #[derive(Serialize)]
@@ -215,7 +218,7 @@ pub async fn compile_handler(
 
     let compiler = state.compiler.lock().await;
     match compiler.compile_svg(payload.text, files_map) {
-        Ok((svgs, thumbnail)) => {
+        Ok((svgs, thumbnail, stats)) => {
             if let Some(doc_id) = &payload.document_id {
                 if can_save_thumbnail {
                     let _ = sqlx::query("UPDATE documents SET thumbnail_svg = $1 WHERE id = $2")
@@ -229,6 +232,7 @@ pub async fn compile_handler(
             Json(CompileResponse {
                 svgs: Some(svgs),
                 errors: None,
+                stats: Some(stats),
             })
         }
         Err(diags) => {
@@ -244,6 +248,7 @@ pub async fn compile_handler(
             Json(CompileResponse {
                 svgs: None,
                 errors: Some(errors),
+                stats: None,
             })
         }
     }
@@ -318,7 +323,7 @@ pub async fn export_handler(
             Err(_) => (StatusCode::BAD_REQUEST, "Compilation failed").into_response(),
         },
         "svg" => match compiler.compile_svg(payload.text, files_map.clone()) {
-            Ok((svgs, _)) => {
+            Ok((svgs, _, _)) => {
                 
                 
                 let mut combined = String::new();

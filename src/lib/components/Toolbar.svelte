@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { exportTypst } from '../ts/typst-api';
 	import { text } from '../ts/yjs-setup';
-	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen, triggerLspReconnect } from '../ts/store';
+	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen, triggerLspReconnect, documentStatsStore } from '../ts/store';
 	import { themes } from '../ts/themes';
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
@@ -414,13 +414,7 @@
 						{title}
 					</h1>
 
-					<div class="flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full text-[11px] font-medium {
-						$connectionStatus === 'connected' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/30' : 
-						'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/30'
-					} border">
-						<div class="w-1.5 h-1.5 rounded-full {$connectionStatus === 'connected' ? 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.4)]' : 'bg-amber-500 animate-pulse'}"></div>
-						{$connectionStatus === 'connected' ? 'Synced' : 'Connecting...'}
-					</div>
+					<!-- Sync status removed from here and moved to Footer -->
 				</div>
 
 				

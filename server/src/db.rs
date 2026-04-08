@@ -3,7 +3,7 @@ use sqlx::{Pool, Postgres};
 
 pub async fn init_db() -> Pool<Postgres> {
     let db_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:password@localhost:5432/typstdrive".to_string());
+        .unwrap_or_else(|_| "postgres://postgres:password@192.168.1.214:5432/typstdrive".to_string());
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
