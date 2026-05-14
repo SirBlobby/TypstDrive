@@ -1,23 +1,25 @@
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: typstdrive
-    ports:
-      - "5433:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
   app:
     build: .
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgres://postgres:password@db:5432/typstdrive
-    depends_on:
-      - db
+      - DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
+      - DB_TYPE=sqlite   # set to "postgres" with a postgres DATABASE_URL to use PostgreSQL
+    volumes:
+      - appdata:/data
+
+  # Uncomment to use PostgreSQL instead of SQLite
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: typstdrive
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - appdata:/var/lib/postgresql/data
 
 volumes:
-  pgdata:
+  appdata:

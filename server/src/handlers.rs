@@ -78,9 +78,9 @@ pub async fn yjs_handler(
     jar: axum_extra::extract::cookie::SignedCookieJar,
 ) -> impl IntoResponse {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    
+
     let doc_info = sqlx::query_as::<_, Document>(
-        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1"
+        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -91,11 +91,11 @@ pub async fn yjs_handler(
         if let Some(uid) = &user_id_opt {
             if &d.owner_id == uid {
                 is_viewer = false;
-            } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2 AND role = 'editor'")
+            } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ? AND role = 'editor'")
                 .bind(&id)
                 .bind(uid)
                 .fetch_optional(&state.db)
-                .await 
+                .await
             {
                 is_viewer = false;
             }
@@ -114,7 +114,7 @@ pub async fn yjs_handler(
         bcast.clone()
     } else {
         let ydoc = Doc::new();
-        
+
         if let Ok(Some(db_doc)) = doc_info {
             if let Some(content) = db_doc.content {
                 if let Ok(update) = Update::decode_v1(&content) {
@@ -122,7 +122,7 @@ pub async fn yjs_handler(
                 }
             }
         }
-        
+
         let awareness = Arc::new(RwLock::new(Awareness::new(ydoc)));
         let new_bcast = Arc::new(BroadcastGroup::new(awareness.clone(), 10).await);
         bcast_map.insert(id.clone(), new_bcast.clone());
@@ -136,7 +136,7 @@ pub async fn yjs_handler(
                 interval.tick().await;
                 let doc = save_awareness.read().await;
                 let content = doc.doc().transact().encode_state_as_update_v1(&yrs::StateVector::default());
-                let _ = sqlx::query("UPDATE documents SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                let _ = sqlx::query("UPDATE documents SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(content)
                     .bind(&save_id)
                     .execute(&save_db)
@@ -152,7 +152,7 @@ pub async fn yjs_handler(
     ws.on_upgrade(move |socket| async move {
         let (sink, stream) = socket.split();
         let sink = Arc::new(Mutex::new(AxumSink(sink)));
-        
+
         let filtered_stream = ViewerFilterStream {
             inner: stream,
             is_viewer,
@@ -176,24 +176,28 @@ pub async fn compile_handler(
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
     if let Some(doc_id) = &payload.document_id {
-        if let Ok(doc) = sqlx::query_as::<_, crate::models::Document>("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1").bind(doc_id).fetch_one(&state.db).await {
-            
-            // Allow compilation if owner or if it has a public role or if they are a collaborator
+        if let Ok(doc) = sqlx::query_as::<_, crate::models::Document>(
+            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
+        )
+        .bind(doc_id)
+        .fetch_one(&state.db)
+        .await
+        {
             let mut has_access = false;
             if let Some(uid) = &user_id_opt {
                 if &doc.owner_id == uid {
                     has_access = true;
                     can_save_thumbnail = true;
-                } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2")
+                } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?")
                     .bind(doc_id)
                     .bind(uid)
                     .fetch_optional(&state.db)
-                    .await 
+                    .await
                 {
                     has_access = true;
                 }
             }
-            
+
             if !has_access {
                 if let Some(pr) = &doc.public_role {
                     if pr == "viewer" || pr == "editor" {
@@ -203,7 +207,7 @@ pub async fn compile_handler(
             }
 
             if has_access {
-                if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = $1")
+                if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = ?")
                     .bind(doc.owner_id)
                     .fetch_all(&state.db)
                     .await
@@ -221,14 +225,14 @@ pub async fn compile_handler(
         Ok((svgs, thumbnail, stats)) => {
             if let Some(doc_id) = &payload.document_id {
                 if can_save_thumbnail {
-                    let _ = sqlx::query("UPDATE documents SET thumbnail_svg = $1 WHERE id = $2")
+                    let _ = sqlx::query("UPDATE documents SET thumbnail_svg = ? WHERE id = ?")
                         .bind(&thumbnail)
                         .bind(doc_id)
                         .execute(&state.db)
                         .await;
                 }
             }
-            
+
             Json(CompileResponse {
                 svgs: Some(svgs),
                 errors: None,
@@ -264,17 +268,22 @@ pub async fn export_handler(
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
     if let Some(doc_id) = &payload.document_id {
-        if let Ok(doc) = sqlx::query_as::<_, crate::models::Document>("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1").bind(doc_id).fetch_one(&state.db).await {
-            
+        if let Ok(doc) = sqlx::query_as::<_, crate::models::Document>(
+            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
+        )
+        .bind(doc_id)
+        .fetch_one(&state.db)
+        .await
+        {
             let mut has_access = false;
             if let Some(uid) = &user_id_opt {
                 if &doc.owner_id == uid {
                     has_access = true;
-                } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2")
+                } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?")
                     .bind(doc_id)
                     .bind(uid)
                     .fetch_optional(&state.db)
-                    .await 
+                    .await
                 {
                     has_access = true;
                 }
@@ -288,7 +297,7 @@ pub async fn export_handler(
             }
 
             if has_access {
-                if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = $1")
+                if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = ?")
                     .bind(doc.owner_id)
                     .fetch_all(&state.db)
                     .await
@@ -324,8 +333,6 @@ pub async fn export_handler(
         },
         "svg" => match compiler.compile_svg(payload.text, files_map.clone()) {
             Ok((svgs, _, _)) => {
-                
-                
                 let mut combined = String::new();
                 for svg in svgs {
                     combined.push_str(&svg);
@@ -425,7 +432,7 @@ pub async fn pandoc_import_handler(
             } else if file_name.ends_with(".html") {
                 file_ext = "html".to_string();
             } else {
-                file_ext = "markdown".to_string(); // fallback
+                file_ext = "markdown".to_string();
             }
         }
         if let Ok(bytes) = field.bytes().await {
@@ -482,7 +489,13 @@ pub async fn lsp_handler(
 ) -> impl IntoResponse {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
-    let doc = match sqlx::query_as::<_, crate::models::Document>("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1").bind(&id).fetch_optional(&state.db).await {
+    let doc = match sqlx::query_as::<_, crate::models::Document>(
+        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
+    )
+    .bind(&id)
+    .fetch_optional(&state.db)
+    .await
+    {
         Ok(Some(d)) => d,
         _ => return (StatusCode::NOT_FOUND, "Document not found").into_response(),
     };
@@ -491,11 +504,11 @@ pub async fn lsp_handler(
     if let Some(uid) = &user_id_opt {
         if &doc.owner_id == uid {
             has_access = true;
-        } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2")
+        } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?")
             .bind(&id)
             .bind(uid)
             .fetch_optional(&state.db)
-            .await 
+            .await
         {
             has_access = true;
         }
@@ -513,7 +526,7 @@ pub async fn lsp_handler(
     }
 
     let mut files_map = std::collections::HashMap::new();
-    if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = $1")
+    if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = ?")
         .bind(doc.owner_id)
         .fetch_all(&state.db)
         .await
@@ -529,7 +542,7 @@ pub async fn lsp_handler(
         use std::process::Stdio;
 
         let temp_dir = tempfile::tempdir().unwrap();
-        
+
         for (name, data) in files_map {
             let path = temp_dir.path().join(&name);
             if let Some(parent) = path.parent() {

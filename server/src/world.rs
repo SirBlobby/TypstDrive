@@ -42,22 +42,13 @@ impl MemoryWorld {
             }
         }
 
-        // Add custom fonts from files
+        // Add custom fonts from files, registered only by their embedded metadata
+        // so that all variants (Bold, Italic, etc.) resolve correctly under one family name.
         for (name, data) in &files {
             if name.to_lowercase().ends_with(".ttf") || name.to_lowercase().ends_with(".otf") {
                 for font in Font::iter(Bytes::new(data.clone())) {
-                    let info = font.info().clone();
-                    book.push(info.clone());
-                    fonts.push(font.clone());
-
-                    let mut custom_info = info;
-                    if let Some(stem) = std::path::Path::new(name).file_stem() {
-                        if let Some(stem_str) = stem.to_str() {
-                            custom_info.family = stem_str.to_string();
-                            book.push(custom_info);
-                            fonts.push(font);
-                        }
-                    }
+                    book.push(font.info().clone());
+                    fonts.push(font);
                 }
             }
         }

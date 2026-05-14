@@ -16,7 +16,7 @@ pub struct Folder {
     pub owner_id: String,
     pub parent_id: Option<String>,
     pub name: String,
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -27,7 +27,7 @@ pub struct File {
     pub folder_id: Option<String>,
     pub name: String,
     pub mime_type: String,
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -43,8 +43,8 @@ pub struct Document {
     #[serde(default)]
     #[sqlx(default)]
     pub effective_role: Option<String>,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -105,7 +105,7 @@ pub struct Collaborator {
     pub document_id: String,
     pub user_id: String,
     pub role: String,
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -114,8 +114,8 @@ pub struct Invitation {
     pub document_id: String,
     pub role: String,
     pub token: String,
-    pub created_at: chrono::NaiveDateTime,
-    pub expires_at: Option<chrono::NaiveDateTime>,
+    pub created_at: String,
+    pub expires_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -125,7 +125,7 @@ pub struct Comment {
     pub user_id: String,
     pub content: String,
     pub resolved: bool,
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: String,
     pub author_name: Option<String>,
 }
 
@@ -140,13 +140,13 @@ pub struct UpdateCommentRequest {
     pub resolved: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct DocumentVersion {
     pub id: String,
     pub document_id: String,
     pub user_id: String,
     pub content: String,
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: String,
     #[sqlx(default)]
     pub author_name: Option<String>,
 }

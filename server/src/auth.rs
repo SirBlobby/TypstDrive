@@ -34,7 +34,7 @@ pub async fn register(
     let user_id = Uuid::new_v4().to_string();
 
     let result = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, password_hash"
+        "INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?) RETURNING id, username, email, password_hash"
     )
     .bind(&user_id)
     .bind(&payload.username)
@@ -57,7 +57,7 @@ pub async fn login(
     jar: SignedCookieJar,
     Json(payload): Json<LoginRequest>,
 ) -> Result<(SignedCookieJar, Json<User>), (StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE email = $1")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE email = ?")
         .bind(&payload.email)
         .fetch_optional(&state.db)
         .await
@@ -79,7 +79,7 @@ pub async fn login(
     cookie.set_http_only(true);
     cookie.set_same_site(SameSite::Lax);
     cookie.set_path("/");
-    
+
     let jar = jar.add(cookie);
 
     Ok((jar, Json(user)))
@@ -97,7 +97,7 @@ pub async fn update_profile(
         return Err((StatusCode::BAD_REQUEST, "Username and email cannot be empty".to_string()));
     }
 
-    let result = sqlx::query("UPDATE users SET username = $1, email = $2 WHERE id = $3")
+    let result = sqlx::query("UPDATE users SET username = ?, email = ? WHERE id = ?")
         .bind(&payload.username)
         .bind(&payload.email)
         .bind(&user_id)
@@ -106,7 +106,7 @@ pub async fn update_profile(
 
     match result {
         Ok(_) => {
-            let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = $1")
+            let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = ?")
                 .bind(&user_id)
                 .fetch_optional(&state.db)
                 .await
@@ -130,14 +130,12 @@ pub async fn me(
     State(state): State<AppState>,
     jar: SignedCookieJar,
 ) -> Result<Json<User>, (StatusCode, String)> {
-    let user_id = jar.get("session_user_id").map(|c| c.value().to_string());
-
-    let user_id = match user_id {
+    let user_id = match jar.get("session_user_id").map(|c| c.value().to_string()) {
         Some(id) => id,
         None => return Err((StatusCode::UNAUTHORIZED, "Not logged in".to_string())),
     };
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = $1")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = ?")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -161,7 +159,7 @@ pub async fn change_password(
         return Err((StatusCode::BAD_REQUEST, "Passwords cannot be empty".to_string()));
     }
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = $1")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = ?")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -181,7 +179,7 @@ pub async fn change_password(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .to_string();
 
-    sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
+    sqlx::query("UPDATE users SET password_hash = ? WHERE id = ?")
         .bind(&new_password_hash)
         .bind(&user_id)
         .execute(&state.db)
@@ -198,8 +196,9 @@ pub async fn storage_stats(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
+    // LENGTH() returns byte count for both BYTEA (Postgres) and BLOB (SQLite)
     let docs_size: (i64,) = sqlx::query_as(
-        "SELECT COALESCE(SUM(OCTET_LENGTH(content)), 0) FROM documents WHERE owner_id = $1"
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM documents WHERE owner_id = ?"
     )
     .bind(&user_id)
     .fetch_one(&state.db)
@@ -207,7 +206,7 @@ pub async fn storage_stats(
     .unwrap_or((0,));
 
     let files_size: (i64,) = sqlx::query_as(
-        "SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM files WHERE owner_id = $1"
+        "SELECT COALESCE(SUM(LENGTH(data)), 0) FROM files WHERE owner_id = ?"
     )
     .bind(&user_id)
     .fetch_one(&state.db)

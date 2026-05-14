@@ -27,7 +27,7 @@ pub async fn list_folders(
 
     let folders = if let Some(parent_id) = query.parent_id {
         sqlx::query_as::<_, Folder>(
-            "SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE owner_id = $1 AND parent_id = $2 ORDER BY name ASC"
+            "SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE owner_id = ? AND parent_id = ? ORDER BY name ASC"
         )
         .bind(&user_id)
         .bind(&parent_id)
@@ -36,7 +36,7 @@ pub async fn list_folders(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Folder>(
-            "SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE owner_id = $1 AND parent_id IS NULL ORDER BY name ASC"
+            "SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE owner_id = ? AND parent_id IS NULL ORDER BY name ASC"
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -58,7 +58,7 @@ pub async fn create_folder(
     let folder_id = Uuid::new_v4().to_string();
 
     let folder = sqlx::query_as::<_, Folder>(
-        "INSERT INTO folders (id, owner_id, parent_id, name) VALUES ($1, $2, $3, $4) RETURNING id, owner_id, parent_id, name, created_at"
+        "INSERT INTO folders (id, owner_id, parent_id, name) VALUES (?, ?, ?, ?) RETURNING id, owner_id, parent_id, name, created_at"
     )
     .bind(&folder_id)
     .bind(&user_id)
@@ -79,9 +79,7 @@ pub async fn delete_folder(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    
-    
-    let result = sqlx::query("DELETE FROM folders WHERE id = $1 AND owner_id = $2")
+    let result = sqlx::query("DELETE FROM folders WHERE id = ? AND owner_id = ?")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -110,7 +108,7 @@ pub async fn update_folder(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let folder = sqlx::query_as::<_, Folder>(
-        "UPDATE folders SET name = $1 WHERE id = $2 AND owner_id = $3 RETURNING id, owner_id, parent_id, name, created_at"
+        "UPDATE folders SET name = ? WHERE id = ? AND owner_id = ? RETURNING id, owner_id, parent_id, name, created_at"
     )
     .bind(&payload.name)
     .bind(&id)
@@ -124,4 +122,3 @@ pub async fn update_folder(
         None => Err((StatusCode::NOT_FOUND, "Folder not found".to_string())),
     }
 }
-

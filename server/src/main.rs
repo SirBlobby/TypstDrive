@@ -3,7 +3,7 @@ use axum::{
     Router,
 };
 use axum_extra::extract::cookie::Key;
-use sqlx::{Pool, Postgres};
+use sqlx::AnyPool;
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::Mutex;
@@ -30,7 +30,7 @@ use handlers::{compile_handler, export_handler, yjs_handler};
 pub struct AppState {
     pub compiler: Arc<Mutex<TypstCompiler>>,
     pub bcast_map: Arc<Mutex<HashMap<String, Arc<BroadcastGroup>>>>,
-    pub db: Pool<Postgres>,
+    pub db: AnyPool,
     pub key: Key,
 }
 

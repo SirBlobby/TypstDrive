@@ -205,9 +205,9 @@
 			if (data.filename) {
 				if (data.filename.toLowerCase().endsWith('.ttf') || data.filename.toLowerCase().endsWith('.otf')) {
 					triggerLspReconnect.update(n => n + 1);
-					let stem = data.filename.substring(0, data.filename.lastIndexOf('.'));
-					if (!uploadedFonts.includes(stem)) {
-						uploadedFonts = [...uploadedFonts, stem];
+					const fontName = data.font_family || data.filename.substring(0, data.filename.lastIndexOf('.'));
+					if (!uploadedFonts.includes(fontName)) {
+						uploadedFonts = [...uploadedFonts, fontName];
 					}
 				}
 				const view = $editorViewStore;
