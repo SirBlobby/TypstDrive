@@ -4,12 +4,31 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # --- Required ---
+      # SQLite (default, single-volume, no extra container):
       - DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
-      - DB_TYPE=sqlite   # set to "postgres" with a postgres DATABASE_URL to use PostgreSQL
+      - DB_TYPE=sqlite
+      # PostgreSQL alternative (uncomment and set DB_TYPE=postgres):
+      # - DATABASE_URL=postgres://postgres:password@db:5432/typstdrive
+      # - DB_TYPE=postgres
+
+      # --- Optional ---
+      # Server listen port (default: 3000, also update the ports mapping above)
+      # - PORT=3000
+      # Path to compiled frontend assets (default: /app/build)
+      # - STATIC_DIR=/app/build
+      # 64+ byte secret for signing session cookies.
+      # Without this, sessions are cleared on every container restart.
+      # Generate one with: openssl rand -hex 64
+      # - COOKIE_SECRET=your-64-plus-byte-secret-here
+      # Log verbosity (default: server=debug,tower_http=debug)
+      # - RUST_LOG=info
     volumes:
       - appdata:/data
 
-  # Uncomment to use PostgreSQL instead of SQLite
+  # Uncomment the db service below when using PostgreSQL (DB_TYPE=postgres).
+  # Also switch the volume mount in the app service from appdata:/data
+  # to a separate volume, since PostgreSQL manages its own data directory.
   # db:
   #   image: postgres:16-alpine
   #   environment:
@@ -19,7 +38,8 @@ services:
   #   ports:
   #     - "5433:5432"
   #   volumes:
-  #     - appdata:/var/lib/postgresql/data
+  #     - pgdata:/var/lib/postgresql/data
 
 volumes:
   appdata:
+  # pgdata:   # Uncomment when using PostgreSQL

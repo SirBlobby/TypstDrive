@@ -24,7 +24,22 @@ RUN mkdir -p /data
 RUN curl -L https://github.com/Myriad-Dreamin/tinymist/releases/latest/download/tinymist-alpine-x64 -o /usr/local/bin/tinymist && chmod +x /usr/local/bin/tinymist
 COPY --from=frontend-builder /app/build /app/build
 COPY --from=backend-builder /app/server/target/release/server /app/server
+
+# --- Environment Variables ---
+# PORT            Server listen port (default: 3000)
+# STATIC_DIR      Path to compiled frontend assets (default: /app/build)
+# DATABASE_URL    Database connection URL
+#                   SQLite:   sqlite:///data/typstdrive.db?mode=rwc
+#                   Postgres: postgres://user:pass@host:5432/typstdrive
+# DB_TYPE         Database backend: "sqlite" or "postgres"
+#                 Auto-detected from DATABASE_URL if not set.
+# COOKIE_SECRET   64+ byte secret for signing session cookies.
+#                 If unset, a random key is generated on each start
+#                 and all sessions are invalidated on restart.
+# RUST_LOG        Log filter (default: server=debug,tower_http=debug)
 ENV PORT=3000
 ENV STATIC_DIR=/app/build
+ENV DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
+ENV DB_TYPE=sqlite
 EXPOSE 3000
 CMD ["/app/server"]

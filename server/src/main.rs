@@ -55,7 +55,21 @@ async fn main() {
     let db = db::init_db().await;
 
     
-    let key = Key::generate();
+    let key = match std::env::var("COOKIE_SECRET") {
+        Ok(secret) => {
+            let bytes = secret.as_bytes();
+            if bytes.len() < 64 {
+                tracing::warn!("COOKIE_SECRET is shorter than 64 bytes; sessions will not persist across restarts");
+                Key::generate()
+            } else {
+                Key::from(bytes)
+            }
+        }
+        Err(_) => {
+            tracing::warn!("COOKIE_SECRET not set; generating a random key. Sessions will be invalidated on restart.");
+            Key::generate()
+        }
+    };
 
     let state = AppState {
         compiler: Arc::new(Mutex::new(TypstCompiler::new())),
@@ -102,10 +116,12 @@ async fn main() {
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .unwrap();
-    tracing::info!("Server listening on http://0.0.0.0:3000");
+    tracing::info!("Server listening on http://{}", addr);
     axum::serve(listener, app).await.unwrap();
 }
 
