@@ -11,7 +11,9 @@ pub async fn init_schema(pool: &AnyPool) {
             id TEXT PRIMARY KEY,
             username TEXT NOT NULL UNIQUE,
             email TEXT UNIQUE,
-            password_hash TEXT NOT NULL
+            password_hash TEXT NOT NULL,
+            is_admin INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
         )",
         "CREATE TABLE IF NOT EXISTS folders (
             id TEXT PRIMARY KEY,
@@ -86,5 +88,14 @@ pub async fn init_schema(pool: &AnyPool) {
             .execute(pool)
             .await
             .expect("Failed to execute SQLite schema");
+    }
+
+    // Idempotent migrations for existing databases
+    let migrations = [
+        "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))",
+    ];
+    for stmt in &migrations {
+        let _ = sqlx::query(stmt).execute(pool).await;
     }
 }

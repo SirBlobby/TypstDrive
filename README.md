@@ -1,6 +1,6 @@
 # TypstDrive
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/your-username/typstdrive)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/your-username/typstdrive)
 [![Typst Version](https://img.shields.io/badge/Typst-0.14.2-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.82+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte)](https://kit.svelte.dev/)
@@ -15,10 +15,11 @@ TypstDrive is a collaborative web editor for Typst. With built-in dark mode, mul
 ## Features
 
 - **Real-Time Collaboration**: Powered by Yjs and CodeMirror 6, see changes and cursors from other users instantly.
-- **Instant Preview**: Compile Typst to SVG on the fly with sub-second latency, featuring interactive document zoom controls.
+- **Instant Preview**: Compile Typst to SVG on the fly with sub-second latency, featuring interactive document zoom controls and a collapsible preview pane.
 - **Customizable Themes**: Choose from multiple editor themes (Catppuccin, Arch Linux, Cerberus) and toggle global dark mode.
 - **Export Options**: Export your compiled documents directly to PDF, PNG, SVG, HTML, Markdown, Word, or LaTeX formats using internal conversion and Pandoc integrations.
 - **User Authentication & Document Access**: Secure accounts, workspaces, and sharing features via email-based collaborator invitations (Editor or Viewer roles) for all your documents.
+- **Admin System**: First-run setup wizard creates an admin account. Admins can manage all users, create new accounts with temporary passwords, toggle admin privileges, and delete accounts from the Settings panel.
 - **Presentation Mode**: Turn your documents into instant slideshows with built-in slide controls and a live drawing/annotation tool overlay.
 - **Asset Management**: Upload and seamlessly use custom fonts and images directly within your documents.
 
@@ -85,6 +86,8 @@ TypstDrive is completely self-hostable. A Docker image packages both the Rust ba
 
 3. Open your browser and navigate to `http://localhost:3000`.
 
+On first launch with no users in the database, you will be redirected to the **Setup** page to create the initial admin account.
+
 ### Data Storage
 
 By default, TypstDrive uses **SQLite** — no separate database container required. All data is stored in a single file persisted via the `appdata` Docker volume.
@@ -102,6 +105,7 @@ All variables can be set in the `environment:` section of `docker-compose.yml` o
 | `PORT` | `3000` | Port the HTTP server listens on. |
 | `STATIC_DIR` | `/app/build` | Path to compiled frontend assets. |
 | `COOKIE_SECRET` | *(random)* | 64+ byte secret used to sign session cookies. **If not set, a random key is generated on startup and all sessions are invalidated on every container restart.** Generate a stable value with: `openssl rand -hex 64` |
+| `ALLOW_REGISTRATION` | `true` | Set to `false` to disable public self-registration. When disabled, the register link is hidden on the login page and the registration endpoint returns 403. Admins can still create accounts from the Settings panel. |
 | `RUST_LOG` | `server=debug,tower_http=debug` | Log filter. Set to `info` for quieter production logs. |
 
 #### Example: production-ready `docker-compose.yml` snippet
@@ -112,6 +116,7 @@ environment:
   - DB_TYPE=sqlite
   - PORT=3000
   - COOKIE_SECRET=your-64-plus-byte-secret-here
+  - ALLOW_REGISTRATION=false
   - RUST_LOG=info
 ```
 
@@ -119,6 +124,15 @@ Generate a `COOKIE_SECRET`:
 ```bash
 openssl rand -hex 64
 ```
+
+### Admin Panel
+
+The first account created via the setup wizard is automatically an administrator. Admins have access to an **Admin** section in Settings (`/settings`) which provides:
+
+- A list of all users with creation dates
+- **Create User** — set a username, email, and temporary password; optionally grant admin privileges immediately
+- **Toggle Admin** — promote or demote any other user
+- **Delete User** — permanently remove any account other than your own
 
 ## Contributing & Local Development
 

@@ -1,6 +1,19 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
+// sqlx::Any maps SQLite INTEGER to i64 (BIGINT), not bool.
+// These helpers let us store is_admin as i64 in DB-mapped structs
+// while still serializing it as a JSON boolean for the frontend.
+mod serde_i64_bool {
+    use serde::{Deserialize, Deserializer, Serializer};
+    pub fn serialize<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_bool(*v != 0)
+    }
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<i64, D::Error> {
+        Ok(if bool::deserialize(d)? { 1 } else { 0 })
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct User {
     pub id: String,
@@ -8,6 +21,18 @@ pub struct User {
     pub email: String,
     #[serde(skip_serializing)]
     pub password_hash: String,
+    #[serde(with = "serde_i64_bool")]
+    pub is_admin: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct AdminUserView {
+    pub id: String,
+    pub username: String,
+    pub email: String,
+    #[serde(with = "serde_i64_bool")]
+    pub is_admin: i64,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -160,4 +185,32 @@ pub struct CreateVersionRequest {
 pub struct InviteRequest {
     pub email: String,
     pub role: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AdminCreateUserRequest {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    pub is_admin: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SetupRequest {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SetupStatus {
+    pub needs_setup: bool,
+    pub registration_enabled: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateUserRequest {
+    pub is_admin: Option<bool>,
+    pub username: Option<String>,
+    pub email: Option<String>,
 }

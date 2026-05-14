@@ -2,6 +2,8 @@
 	import '../app.css';
 	import { fetchUser } from '$lib/ts/auth';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { themeStore, darkModeStore } from '$lib/ts/store';
 	import { themes } from '$lib/ts/themes';
 
@@ -9,6 +11,17 @@
 	let loaded = $state(false);
 
 	onMount(async () => {
+		const setupRes = await fetch('/api/setup');
+		if (setupRes.ok) {
+			const { needs_setup } = await setupRes.json();
+			if (needs_setup) {
+				if ($page.url.pathname !== '/setup') {
+					await goto('/setup');
+				}
+				loaded = true;
+				return;
+			}
+		}
 		await fetchUser();
 		loaded = true;
 	});

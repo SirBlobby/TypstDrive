@@ -12,6 +12,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+mod admin;
 mod auth;
 mod compiler;
 mod db;
@@ -20,6 +21,7 @@ mod folders;
 mod files;
 mod handlers;
 mod models;
+mod setup;
 mod world;
 mod collab;
 
@@ -32,6 +34,7 @@ pub struct AppState {
     pub bcast_map: Arc<Mutex<HashMap<String, Arc<BroadcastGroup>>>>,
     pub db: AnyPool,
     pub key: Key,
+    pub registration_enabled: bool,
 }
 
 impl axum::extract::FromRef<AppState> for Key {
@@ -71,14 +74,22 @@ async fn main() {
         }
     };
 
+    let registration_enabled = std::env::var("ALLOW_REGISTRATION")
+        .map(|v| v.to_lowercase() != "false")
+        .unwrap_or(true);
+
     let state = AppState {
         compiler: Arc::new(Mutex::new(TypstCompiler::new())),
         bcast_map: Arc::new(Mutex::new(HashMap::new())),
         db,
         key,
+        registration_enabled,
     };
 
     let api_routes = Router::new()
+        .route("/setup", get(setup::setup_status).post(setup::run_setup))
+        .route("/admin/users", get(admin::list_users).post(admin::create_user))
+        .route("/admin/users/{id}", patch(admin::update_user).delete(admin::delete_user))
         .route("/compile", post(compile_handler))
         .route("/export/{format}", post(export_handler))
         .route("/export/pandoc/{format}", post(handlers::pandoc_export_handler))

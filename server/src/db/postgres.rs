@@ -6,7 +6,9 @@ pub async fn init_schema(pool: &AnyPool) {
             id TEXT PRIMARY KEY,
             username TEXT NOT NULL UNIQUE,
             email TEXT UNIQUE,
-            password_hash TEXT NOT NULL
+            password_hash TEXT NOT NULL,
+            is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')
         )",
         "CREATE TABLE IF NOT EXISTS folders (
             id TEXT PRIMARY KEY,
@@ -83,12 +85,13 @@ pub async fn init_schema(pool: &AnyPool) {
             .expect("Failed to execute Postgres schema");
     }
 
-    // Idempotent migration for existing databases with TIMESTAMP columns
-    sqlx::query("ALTER TABLE documents ADD COLUMN IF NOT EXISTS public_role TEXT")
-        .execute(pool)
-        .await
-        .unwrap_or_else(|e| {
-            eprintln!("Warning: public_role migration: {}", e);
-            Default::default()
-        });
+    // Idempotent migrations for existing databases
+    let migrations = [
+        "ALTER TABLE documents ADD COLUMN IF NOT EXISTS public_role TEXT",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')",
+    ];
+    for stmt in &migrations {
+        sqlx::query(stmt).execute(pool).await.unwrap_or_else(|_| Default::default());
+    }
 }

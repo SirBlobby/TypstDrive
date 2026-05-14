@@ -33,10 +33,12 @@ COPY --from=backend-builder /app/server/target/release/server /app/server
 #                   Postgres: postgres://user:pass@host:5432/typstdrive
 # DB_TYPE         Database backend: "sqlite" or "postgres"
 #                 Auto-detected from DATABASE_URL if not set.
-# COOKIE_SECRET   64+ byte secret for signing session cookies.
-#                 If unset, a random key is generated on each start
-#                 and all sessions are invalidated on restart.
-# RUST_LOG        Log filter (default: server=debug,tower_http=debug)
+# COOKIE_SECRET        64+ byte secret for signing session cookies.
+#                      If unset, a random key is generated on each start
+#                      and all sessions are invalidated on restart.
+# ALLOW_REGISTRATION   Set to "false" to disable public registration.
+#                      Admins can still create accounts via the admin panel.
+# RUST_LOG             Log filter (default: server=debug,tower_http=debug)
 ENV PORT=3000
 ENV STATIC_DIR=/app/build
 ENV DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc

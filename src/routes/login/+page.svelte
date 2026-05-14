@@ -8,6 +8,7 @@
     let email = $state('');
     let password = $state('');
     let errorMsg = $state('');
+    let registrationEnabled = $state(true);
 
     async function login(e: Event) {
         e.preventDefault();
@@ -33,8 +34,15 @@
         }
     }
 
-    onMount(() => {
-        if ($userStore) goto('/dashboard');
+    onMount(async () => {
+        if ($userStore) { goto('/dashboard'); return; }
+        try {
+            const res = await fetch('/api/setup');
+            if (res.ok) {
+                const data = await res.json();
+                registrationEnabled = data.registration_enabled;
+            }
+        } catch {}
     });
 </script>
 
@@ -98,12 +106,14 @@
                     </button>
                 </div>
             </form>
+            {#if registrationEnabled}
             <div class="text-sm text-center mt-6 pt-4 border-t border-gray-200 dark:border-white/10">
                 <span class="text-gray-500 dark:text-gray-400">New to TypstDrive? </span>
                 <a href="/register" class="font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors hover:underline">
                     Create an account
                 </a>
             </div>
+            {/if}
         </div>
     </div>
     <Footer />

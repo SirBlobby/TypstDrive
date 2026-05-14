@@ -9,7 +9,7 @@
 	import { compileTypst } from '$lib/ts/typst-api';
 	import type { Diagnostic } from '$lib/ts/typst-api';
 	import { page } from '$app/stores';
-	import { commentsSidebarOpen, commentReference, editorViewStore, editorErrors, documentStatsStore } from '$lib/ts/store';
+	import { commentsSidebarOpen, commentReference, editorViewStore, editorErrors, documentStatsStore, previewOpenStore } from '$lib/ts/store';
 
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -53,7 +53,7 @@
 	}
 
 	function triggerCompile() {
-		if (!text) return;
+		if (!text || !$previewOpenStore) return;
 		const content = text.toString();
 		const docId = $page.params.id;
 		compileTypst(content, docId)
@@ -75,6 +75,12 @@
 				errors = [{ message: 'Network or Server Error compiling document.', severity: 'error' }];
 			});
 	}
+
+	$effect(() => {
+		if ($previewOpenStore && initialized) {
+			triggerCompile();
+		}
+	});
 
 	onMount(() => {
 		const docId = $page.params.id;
@@ -122,20 +128,21 @@
 	<Toolbar title={documentTitle} docId={$page.params.id} isViewer={isViewer} />
 
 	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative" oncontextmenu={handleContextMenu}>
-		
+
 		{#if !isViewer}
-		<div class="w-full md:w-1/2 flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 shadow-[1px_0_10px_rgba(0,0,0,0.05)] dark:shadow-[1px_0_10px_rgba(0,0,0,0.2)] border-r border-gray-200 dark:border-white/10">
+		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 shadow-[1px_0_10px_rgba(0,0,0,0.05)] dark:shadow-[1px_0_10px_rgba(0,0,0,0.2)] {$previewOpenStore ? 'w-full md:w-1/2 border-r border-gray-200 dark:border-white/10' : 'w-full'}">
 			{#if initialized}
 				<Editor />
 			{/if}
 		</div>
 		{/if}
 
-		
+		{#if $previewOpenStore || isViewer}
 		<div class="{isViewer ? 'w-full' : 'w-full md:w-1/2'} relative bg-white/50 dark:bg-black/20 min-h-[50%] md:min-h-0 flex flex-col">
 			<Preview {svgs} />
 			<ErrorBanner {errors} />
 		</div>
+		{/if}
 	</main>
 
 	<DocFooter />

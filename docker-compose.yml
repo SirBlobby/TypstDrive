@@ -21,6 +21,8 @@ services:
       # Without this, sessions are cleared on every container restart.
       # Generate one with: openssl rand -hex 64
       # - COOKIE_SECRET=your-64-plus-byte-secret-here
+      # Set to "false" to disable public registration (admin panel can still create users)
+      - ALLOW_REGISTRATION=false
       # Log verbosity (default: server=debug,tower_http=debug)
       # - RUST_LOG=info
     volumes:

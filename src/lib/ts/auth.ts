@@ -4,6 +4,7 @@ export type User = {
     id: string;
     username: string;
     email: string;
+    is_admin: boolean;
 };
 
 export const userStore = writable<User | null>(null);

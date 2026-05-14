@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { exportTypst } from '../ts/typst-api';
 	import { text } from '../ts/yjs-setup';
-	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen, triggerLspReconnect, documentStatsStore } from '../ts/store';
+	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen, triggerLspReconnect, documentStatsStore, previewOpenStore } from '../ts/store';
 	import { themes } from '../ts/themes';
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
@@ -395,7 +395,7 @@
 
 <svelte:window onclick={handleWindowClick} />
 
-<header class="flex flex-col border-b border-[var(--theme-border)] bg-[var(--theme-bg)] text-[var(--theme-text)] backdrop-blur-md select-none w-full relative z-[60]" style="background-color: var(--theme-bg); color: var(--theme-text); border-color: var(--theme-border);">
+<header class="flex flex-col border-b border-[var(--theme-border)] bg-[var(--theme-bg)] text-[var(--theme-text)] backdrop-blur-md select-none w-full relative z-[70]" style="background-color: var(--theme-bg); color: var(--theme-text); border-color: var(--theme-border);">
 	
 	<div class="flex items-center justify-between px-4 py-2.5">
 		<div class="flex items-center gap-3">
@@ -427,7 +427,7 @@
 							File
 						</button>
 						{#if activeMenu === 'file'}
-							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100] max-h-[calc(100vh-8rem)] overflow-y-auto">
 								<button onclick={() => { activeMenu = null; goto('/dashboard'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">New / Open</button>
 								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Document Info</button>
 								{#if !isViewer}
@@ -561,19 +561,48 @@
 			{/if}
 
 			<div class="w-px h-5 bg-gray-300 dark:bg-white/10"></div>
-			
-			<div class="flex items-center bg-gray-100/50 dark:bg-zinc-900/50 rounded-md p-0.5 border border-gray-200 dark:border-white/10">
-				<button onclick={handlePrint} class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-[var(--theme-bg)] bg-[var(--theme-text)] hover:opacity-80 rounded transition-all shadow-sm" title="Print Document">
-					<Icon icon="mdi:printer" class="text-sm" />
-					Print
+
+			<button
+				onclick={() => ($previewOpenStore = !$previewOpenStore)}
+				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium transition-colors rounded-md {$previewOpenStore ? 'text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40'}"
+				title={$previewOpenStore ? 'Hide preview' : 'Show preview'}
+			>
+				<Icon icon={$previewOpenStore ? 'mdi:eye-off-outline' : 'mdi:eye-outline'} class="text-[16px]" />
+				Preview
+			</button>
+
+			<div class="w-px h-5 bg-gray-300 dark:bg-white/10"></div>
+
+			<button onclick={handlePrint} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10 rounded-md transition-colors" title="Print Document">
+				<Icon icon="mdi:printer" class="text-[16px]" />
+				Print
+			</button>
+
+			<div class="relative action-menu-container">
+				<button
+					onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'export' ? null : 'export'; }}
+					class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-md transition-colors {activeMenu === 'export' ? 'ring-2 ring-blue-500/30' : ''}"
+				>
+					<Icon icon="mdi:export-variant" class="text-[16px]" />
+					Export
+					<Icon icon="mdi:chevron-down" class="text-sm opacity-70" />
 				</button>
-				<button onclick={() => handleExport('typ')} class="px-2.5 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-white dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-all" title="Download .typ source">TYP</button>
-				<button onclick={() => handleExport('svg')} class="px-2.5 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-white dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-all" title="Export as SVG">SVG</button>
-				<button onclick={() => handleExport('png')} class="px-2.5 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-white dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-all" title="Export as PNG">PNG</button>
-				<button onclick={() => handleExport('pdf')} class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded transition-all">
-					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
-					PDF
-				</button>
+				{#if activeMenu === 'export'}
+					<div class="absolute right-0 top-full mt-1 w-44 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+						<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
+							<Icon icon="mdi:file-pdf-box" class="text-base text-red-500" /> PDF document
+						</button>
+						<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
+							<Icon icon="mdi:code-braces" class="text-base text-purple-500" /> TYP source
+						</button>
+						<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
+							<Icon icon="mdi:svg" class="text-base text-orange-500" /> SVG graphics
+						</button>
+						<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
+							<Icon icon="mdi:image" class="text-base text-blue-500" /> PNG image
+						</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

@@ -11,6 +11,8 @@ use crate::{
     AppState,
 };
 
+const USER_FIELDS: &str = "id, username, email, password_hash, is_admin";
+
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
@@ -20,6 +22,10 @@ pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<User>, (StatusCode, String)> {
+    if !state.registration_enabled {
+        return Err((StatusCode::FORBIDDEN, "Registration is disabled on this instance".to_string()));
+    }
+
     if payload.username.is_empty() || payload.password.is_empty() || payload.email.is_empty() {
         return Err((StatusCode::BAD_REQUEST, "Username, email, and password cannot be empty".to_string()));
     }
@@ -34,7 +40,7 @@ pub async fn register(
     let user_id = Uuid::new_v4().to_string();
 
     let result = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?) RETURNING id, username, email, password_hash"
+        "INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?) RETURNING id, username, email, password_hash, is_admin"
     )
     .bind(&user_id)
     .bind(&payload.username)
@@ -57,7 +63,7 @@ pub async fn login(
     jar: SignedCookieJar,
     Json(payload): Json<LoginRequest>,
 ) -> Result<(SignedCookieJar, Json<User>), (StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE email = ?")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = ?")
         .bind(&payload.email)
         .fetch_optional(&state.db)
         .await
@@ -106,7 +112,7 @@ pub async fn update_profile(
 
     match result {
         Ok(_) => {
-            let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = ?")
+            let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = ?")
                 .bind(&user_id)
                 .fetch_optional(&state.db)
                 .await
@@ -135,7 +141,7 @@ pub async fn me(
         None => return Err((StatusCode::UNAUTHORIZED, "Not logged in".to_string())),
     };
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = ?")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = ?")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -159,7 +165,7 @@ pub async fn change_password(
         return Err((StatusCode::BAD_REQUEST, "Passwords cannot be empty".to_string()));
     }
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash FROM users WHERE id = ?")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = ?")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await

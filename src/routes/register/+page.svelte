@@ -9,6 +9,16 @@
     let email = $state('');
     let password = $state('');
     let errorMsg = $state('');
+    let registrationDisabled = $state(false);
+
+    onMount(async () => {
+        if ($userStore) { goto('/dashboard'); return; }
+        const res = await fetch('/api/setup');
+        if (res.ok) {
+            const data = await res.json();
+            registrationDisabled = !data.registration_enabled;
+        }
+    });
 
     async function register(e: Event) {
         e.preventDefault();
@@ -72,51 +82,63 @@
                     Join TypstDrive to start collaborating
                 </p>
             </div>
-            <form class="mt-8 space-y-6" onsubmit={register}>
-                <div class="space-y-5">
-                    <div>
-                        <label for="username" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Username</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Icon icon="mdi:account" class="text-gray-400 dark:text-gray-500" />
-                            </div>
-                            <input id="username" name="username" type="text" required bind:value={username} class="block w-full rounded-xl border border-gray-300 dark:border-white/20 pl-10 pr-3 py-2.5 bg-white/50 dark:bg-black/40 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-all duration-200" placeholder="Choose a username">
-                        </div>
-                    </div>
-                    <div>
-                        <label for="email" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Icon icon="mdi:email" class="text-gray-400 dark:text-gray-500" />
-                            </div>
-                            <input id="email" name="email" type="email" required bind:value={email} class="block w-full rounded-xl border border-gray-300 dark:border-white/20 pl-10 pr-3 py-2.5 bg-white/50 dark:bg-black/40 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-all duration-200" placeholder="user@example.com">
-                        </div>
-                    </div>
-                    <div>
-                        <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Icon icon="mdi:lock" class="text-gray-400 dark:text-gray-500" />
-                            </div>
-                            <input id="password" name="password" type="password" required bind:value={password} class="block w-full rounded-xl border border-gray-300 dark:border-white/20 pl-10 pr-3 py-2.5 bg-white/50 dark:bg-black/40 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-all duration-200" placeholder="••••••••">
+            {#if registrationDisabled}
+                <div class="flex flex-col items-center gap-4 py-4">
+                    <div class="flex items-center gap-3 w-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 p-4 rounded-xl border border-amber-200 dark:border-amber-500/20">
+                        <Icon icon="mdi:lock-outline" class="text-2xl flex-shrink-0" />
+                        <div>
+                            <p class="font-semibold text-sm">Registration Disabled</p>
+                            <p class="text-xs mt-0.5 text-amber-600 dark:text-amber-500">New account creation has been disabled by the administrator. Please contact your administrator to get an account.</p>
                         </div>
                     </div>
                 </div>
-
-                {#if errorMsg}
-                    <div class="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400 p-3 rounded-lg text-sm border border-red-200 dark:border-red-500/20 shadow-sm animate-in slide-in-from-top-1 fade-in duration-200">
-                        <Icon icon="mdi:alert-circle" class="text-lg flex-shrink-0" />
-                        <span class="font-medium">{errorMsg}</span>
+            {:else}
+                <form class="mt-8 space-y-6" onsubmit={register}>
+                    <div class="space-y-5">
+                        <div>
+                            <label for="username" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Username</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Icon icon="mdi:account" class="text-gray-400 dark:text-gray-500" />
+                                </div>
+                                <input id="username" name="username" type="text" required bind:value={username} class="block w-full rounded-xl border border-gray-300 dark:border-white/20 pl-10 pr-3 py-2.5 bg-white/50 dark:bg-black/40 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-all duration-200" placeholder="Choose a username">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Icon icon="mdi:email" class="text-gray-400 dark:text-gray-500" />
+                                </div>
+                                <input id="email" name="email" type="email" required bind:value={email} class="block w-full rounded-xl border border-gray-300 dark:border-white/20 pl-10 pr-3 py-2.5 bg-white/50 dark:bg-black/40 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-all duration-200" placeholder="user@example.com">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Icon icon="mdi:lock" class="text-gray-400 dark:text-gray-500" />
+                                </div>
+                                <input id="password" name="password" type="password" required bind:value={password} class="block w-full rounded-xl border border-gray-300 dark:border-white/20 pl-10 pr-3 py-2.5 bg-white/50 dark:bg-black/40 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-all duration-200" placeholder="••••••••">
+                            </div>
+                        </div>
                     </div>
-                {/if}
 
-                <div class="pt-2">
-                    <button type="submit" class="group w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 focus:ring-blue-500 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                        Register
-                        <Icon icon="mdi:arrow-right" class="text-lg group-hover:translate-x-1 transition-transform" />
-                    </button>
-                </div>
-            </form>
+                    {#if errorMsg}
+                        <div class="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400 p-3 rounded-lg text-sm border border-red-200 dark:border-red-500/20 shadow-sm animate-in slide-in-from-top-1 fade-in duration-200">
+                            <Icon icon="mdi:alert-circle" class="text-lg flex-shrink-0" />
+                            <span class="font-medium">{errorMsg}</span>
+                        </div>
+                    {/if}
+
+                    <div class="pt-2">
+                        <button type="submit" class="group w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 focus:ring-blue-500 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                            Register
+                            <Icon icon="mdi:arrow-right" class="text-lg group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    </div>
+                </form>
+            {/if}
             <div class="text-sm text-center mt-6 pt-4 border-t border-gray-200 dark:border-white/10">
                 <span class="text-gray-500 dark:text-gray-400">Already have an account? </span>
                 <a href="/login" class="font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors hover:underline">
