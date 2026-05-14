@@ -169,5 +169,5 @@ The frontend dev server proxies API calls to `localhost:3000` automatically.
 </p>
 <p align="center">
   <img src="preview/dashboard.png" alt="Dashboard view" width="49%">
-  <img src="preview/register.png" alt="Authentication view" width="49%">
+  <img src="preview/login.png" alt="Authentication view" width="49%">
 </p>
