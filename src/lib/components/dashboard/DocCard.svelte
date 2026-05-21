@@ -70,21 +70,21 @@
                 </button>
                 
                 {#if activeMenu === doc.id}
-                    <div class="absolute right-0 {dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-48 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
-                        <button onclick={(e) => { e.stopPropagation(); openInfo(doc, 'document'); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2">
+                    <div class="absolute right-0 {dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-gray-200 dark:border-white/10 py-1 z-[100]">
+                        <button onclick={(e) => { e.stopPropagation(); openInfo(doc, 'document'); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
                             <Icon icon="mdi:information-outline" class="text-lg text-blue-500" />
                             View Info
                         </button>
-                        <button onclick={(e) => { e.stopPropagation(); openRename(doc.id, doc.title, 'document'); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2">
+                        <button onclick={(e) => { e.stopPropagation(); openRename(doc.id, doc.title, 'document'); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
                             <Icon icon="mdi:pencil-outline" class="text-lg text-yellow-500" />
                             Rename
                         </button>
-                        <button onclick={(e) => { e.stopPropagation(); shareItem(doc); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2">
+                        <button onclick={(e) => { e.stopPropagation(); shareItem(doc); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
                             <Icon icon="mdi:share-variant-outline" class="text-lg text-green-500" />
                             Share
                         </button>
-                        <div class="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-                        <button onclick={(e) => { e.stopPropagation(); deleteDoc(doc.id, doc.title); }} class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2">
+                        <div class="h-px bg-gray-200 dark:bg-white/10 my-1"></div>
+                        <button onclick={(e) => { e.stopPropagation(); deleteDoc(doc.id, doc.title); }} class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 flex items-center gap-2">
                             <Icon icon="mdi:trash-can-outline" class="text-lg" />
                             Delete
                         </button>

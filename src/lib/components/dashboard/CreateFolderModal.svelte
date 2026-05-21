@@ -13,9 +13,9 @@
     }
 </script>
 
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation" onclick={onClose}>
-    <div tabindex="-1" class="bg-white/80 dark:bg-black/40 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-md overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="create-folder-title" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') onClose(); }}>
-        <div class="flex justify-between items-center p-5 border-b border-gray-100 dark:border-white/10">
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200" role="presentation" onclick={onClose}>
+    <div tabindex="-1" class="bg-[var(--theme-bg)] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-md overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="create-folder-title" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') onClose(); }}>
+        <div class="flex justify-between items-center p-5 border-b border-gray-200 dark:border-white/10">
             <h2 id="create-folder-title" class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Icon icon="mdi:folder-plus" class="text-yellow-500 text-xl" />
                 Create Folder
@@ -33,7 +33,7 @@
                     type="text" 
                     required
                     bind:value={newFolderName}
-                    class="w-full bg-transparent border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    class="w-full bg-black/5 dark:bg-white/5 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder="New Folder"
                 />
             </div>

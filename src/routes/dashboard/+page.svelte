@@ -389,21 +389,21 @@
                 </button>
 
                 {#if showPlusDropdown}
-                    <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-gray-100 dark:border-zinc-700 py-1 z-20">
-                        <button onclick={openCreateModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center gap-2">
+                    <div class="absolute right-0 mt-2 w-48 bg-[var(--theme-bg)] rounded-lg shadow-xl border border-gray-200 dark:border-white/10 py-1 z-20">
+                        <button onclick={openCreateModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
                             <Icon icon="mdi:file-document-plus" class="text-lg text-blue-500" />
                             New Document
                         </button>
-                        <button onclick={openCreateFolderModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center gap-2">
+                        <button onclick={openCreateFolderModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
                             <Icon icon="mdi:folder-plus" class="text-lg text-yellow-500" />
                             New Folder
                         </button>
-                        <button onclick={() => { showPlusDropdown = false; fileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center gap-2">
+                        <button onclick={() => { showPlusDropdown = false; fileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
                             <Icon icon="mdi:upload" class="text-lg text-green-500" />
                             Upload File
                         </button>
-                        <div class="h-px bg-gray-100 dark:bg-zinc-700 my-1"></div>
-                        <button onclick={() => { showPlusDropdown = false; importFileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center gap-2" disabled={isImporting}>
+                        <div class="h-px bg-gray-200 dark:bg-white/10 my-1"></div>
+                        <button onclick={() => { showPlusDropdown = false; importFileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2" disabled={isImporting}>
                             {#if isImporting}
                                 <Icon icon="mdi:loading" class="text-lg text-purple-500 animate-spin" />
                                 Importing...
