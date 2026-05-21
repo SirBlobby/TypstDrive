@@ -13,6 +13,7 @@ use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod admin;
+mod api_keys;
 mod auth;
 mod compiler;
 mod db;
@@ -21,12 +22,15 @@ mod folders;
 mod files;
 mod handlers;
 mod models;
+mod public_api;
 mod setup;
 mod world;
 mod collab;
 
 use compiler::TypstCompiler;
 use handlers::{compile_handler, export_handler, yjs_handler};
+
+pub type RateLimiterMap = Arc<Mutex<HashMap<String, (u32, std::time::Instant)>>>;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -35,6 +39,7 @@ pub struct AppState {
     pub db: AnyPool,
     pub key: Key,
     pub registration_enabled: bool,
+    pub rate_limiter: RateLimiterMap,
 }
 
 impl axum::extract::FromRef<AppState> for Key {
@@ -84,6 +89,7 @@ async fn main() {
         db,
         key,
         registration_enabled,
+        rate_limiter: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let api_routes = Router::new()
@@ -114,7 +120,14 @@ async fn main() {
         .route("/docs/{id}/invite", post(collab::invite_collaborator))
         .route("/docs/{id}/comments", get(collab::get_comments).post(collab::add_comment))
         .route("/docs/{id}/versions", get(collab::get_versions).post(collab::create_version))
-        .route("/comments/{id}", patch(collab::update_comment).delete(collab::delete_comment));
+        .route("/comments/{id}", patch(collab::update_comment).delete(collab::delete_comment))
+        .route("/keys", get(api_keys::list_keys).post(api_keys::create_key))
+        .route("/keys/usage", get(api_keys::get_aggregate_usage))
+        .route("/keys/{id}", delete(api_keys::delete_key))
+        .route("/keys/{id}/regenerate", post(api_keys::regenerate_key));
+
+    let v1_routes = Router::new()
+        .route("/render", post(public_api::render_handler));
 
     let yjs_routes = Router::new()
         .route("/{id}", get(yjs_handler));
@@ -123,6 +136,7 @@ async fn main() {
 
     let app = Router::new()
         .nest("/api", api_routes.layer(TraceLayer::new_for_http()))
+        .nest("/v1", v1_routes.layer(TraceLayer::new_for_http()))
         .nest("/yjs", yjs_routes.layer(TraceLayer::new_for_http()))
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))
         .with_state(state);

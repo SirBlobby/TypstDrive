@@ -33,3 +33,5 @@ yrs-axum = "0.8"
 typst-assets = { version = "0.14.2", features = ["fonts"] }
 tokio-stream = "0.1.18"
 tempfile = "3.27.0"
+sha2 = "0.10"
+base64 = "0.22"

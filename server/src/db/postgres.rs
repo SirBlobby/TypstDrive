@@ -76,6 +76,35 @@ pub async fn init_schema(pool: &AnyPool) {
             content TEXT NOT NULL,
             created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')
         )",
+        "CREATE TABLE IF NOT EXISTS api_keys (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            key_hash TEXT NOT NULL UNIQUE,
+            key_prefix TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_used_at TEXT,
+            rate_limit INTEGER NOT NULL DEFAULT 60
+        )",
+        "CREATE TABLE IF NOT EXISTS api_render_cache (
+            id TEXT PRIMARY KEY,
+            content_hash TEXT NOT NULL UNIQUE,
+            format TEXT NOT NULL,
+            data BYTEA NOT NULL,
+            created_at TEXT NOT NULL
+        )",
+        "CREATE TABLE IF NOT EXISTS api_key_usage (
+            key_id TEXT NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+            date TEXT NOT NULL,
+            count INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY(key_id, date)
+        )",
+        "CREATE TABLE IF NOT EXISTS api_key_usage_detail (
+            key_id TEXT NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+            minute TEXT NOT NULL,
+            count INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY(key_id, minute)
+        )",
     ];
 
     for stmt in &statements {

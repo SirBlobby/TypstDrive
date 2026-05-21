@@ -24,6 +24,9 @@
         <div class="h-6 w-px bg-gray-300 dark:bg-white/20"></div>
 
         
+        <a href="/api-docs" class="text-sm font-medium text-gray-600 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400 transition-colors bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 px-3 py-2 rounded-lg flex items-center gap-2 border border-transparent dark:border-white/10" title="API Docs">
+            <Icon icon="mdi:api" class="text-xl" />
+        </a>
         <a href="https://typst.app/docs/" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-600 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-400 transition-colors bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 px-3 py-2 rounded-lg flex items-center gap-2 border border-transparent dark:border-white/10" title="Typst Docs">
             <Icon icon="mdi:book-open-page-variant-outline" class="text-xl" />
         </a>

@@ -195,6 +195,27 @@ pub struct AdminCreateUserRequest {
     pub is_admin: Option<bool>,
 }
 
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct UsagePoint {
+    pub date: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct ApiKeyView {
+    pub id: String,
+    pub name: String,
+    pub key_prefix: String,
+    pub created_at: String,
+    pub last_used_at: Option<String>,
+    pub rate_limit: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateApiKeyRequest {
+    pub name: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SetupRequest {
     pub username: String,

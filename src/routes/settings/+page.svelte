@@ -1,10 +1,12 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { userStore } from '$lib/ts/auth';
     import Icon from '@iconify/svelte';
     import ThemePicker from '$lib/components/ThemePicker.svelte';
     import Footer from '$lib/components/Footer.svelte';
+    import { Chart, LineController, LineElement, PointElement, CategoryScale, LinearScale, Filler, Tooltip } from 'chart.js';
+    Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Filler, Tooltip);
 
     type AdminUser = {
         id: string;
@@ -12,6 +14,15 @@
         email: string;
         is_admin: boolean;
         created_at: string;
+    };
+
+    type ApiKey = {
+        id: string;
+        name: string;
+        key_prefix: string;
+        created_at: string;
+        last_used_at: string | null;
+        rate_limit: number;
     };
 
     let activeSection = $state('account');
@@ -36,6 +47,29 @@
     let adminError = $state('');
     let deletingUserId = $state<string | null>(null);
     let confirmDeleteId = $state<string | null>(null);
+
+    let apiKeys = $state<ApiKey[]>([]);
+    let apiKeysLoading = $state(false);
+    let apiKeysError = $state('');
+    let showCreateKeyForm = $state(false);
+    let createKeyName = $state('');
+    let createKeyError = $state('');
+    let createKeyLoading = $state(false);
+    let newlyCreatedKey = $state<{ key: string; name: string } | null>(null);
+    let confirmDeleteKeyId = $state<string | null>(null);
+    let deletingKeyId = $state<string | null>(null);
+    let copiedKey = $state(false);
+    let confirmRegenerateId = $state<string | null>(null);
+    let regeneratingKeyId = $state<string | null>(null);
+
+    // Usage chart
+    type UsagePoint = { date: string; count: number };
+    type UsagePeriod = '1hr' | '1day' | '1week';
+    let usageData = $state<UsagePoint[]>([]);
+    let usageLoading = $state(false);
+    let usagePeriod = $state<UsagePeriod>('1week');
+    let chartCanvas = $state<HTMLCanvasElement | null>(null);
+    let chartInstance: Chart | null = null;
 
     let showCreateForm = $state(false);
     let createUsername = $state('');
@@ -67,6 +101,174 @@
         } catch {}
     });
 
+    async function loadApiKeys() {
+        apiKeysLoading = true;
+        apiKeysError = '';
+        try {
+            const res = await fetch('/api/keys');
+            if (res.ok) {
+                apiKeys = await res.json();
+            } else {
+                apiKeysError = 'Failed to load API keys.';
+            }
+        } catch {
+            apiKeysError = 'Network error.';
+        }
+        apiKeysLoading = false;
+    }
+
+    async function createApiKey(e: Event) {
+        e.preventDefault();
+        createKeyError = '';
+        createKeyLoading = true;
+        try {
+            const res = await fetch('/api/keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: createKeyName })
+            });
+            if (!res.ok) {
+                createKeyError = await res.text() || 'Failed to create key.';
+            } else {
+                const data = await res.json();
+                newlyCreatedKey = { key: data.key, name: data.name };
+                apiKeys = [...apiKeys, {
+                    id: data.id,
+                    name: data.name,
+                    key_prefix: data.prefix,
+                    created_at: data.created_at,
+                    last_used_at: null,
+                    rate_limit: data.rate_limit,
+                }];
+                showCreateKeyForm = false;
+                createKeyName = '';
+                copiedKey = false;
+            }
+        } catch {
+            createKeyError = 'Network error.';
+        }
+        createKeyLoading = false;
+    }
+
+    async function deleteApiKey(id: string) {
+        deletingKeyId = id;
+        try {
+            const res = await fetch(`/api/keys/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                apiKeys = apiKeys.filter(k => k.id !== id);
+            }
+        } catch {}
+        deletingKeyId = null;
+        confirmDeleteKeyId = null;
+    }
+
+    async function copyKey(key: string) {
+        await navigator.clipboard.writeText(key);
+        copiedKey = true;
+        setTimeout(() => copiedKey = false, 2000);
+    }
+
+    async function regenerateApiKey(id: string) {
+        regeneratingKeyId = id;
+        try {
+            const res = await fetch(`/api/keys/${id}/regenerate`, { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                newlyCreatedKey = { key: data.key, name: data.name };
+                apiKeys = apiKeys.map(k => k.id === id ? {
+                    ...k, key_prefix: data.prefix, created_at: data.created_at, last_used_at: null
+                } : k);
+                copiedKey = false;
+            }
+        } catch {}
+        regeneratingKeyId = null;
+        confirmRegenerateId = null;
+    }
+
+    async function loadUsage(period: UsagePeriod) {
+        usageLoading = true;
+        try {
+            const res = await fetch(`/api/keys/usage?period=${period}`);
+            if (res.ok) usageData = await res.json();
+        } catch {}
+        usageLoading = false;
+    }
+
+    function pad(n: number) { return String(n).padStart(2, '0'); }
+
+    function buildChartData(period: UsagePeriod) {
+        const labels: string[] = [];
+        const counts: number[] = [];
+        if (period === '1hr') {
+            // Floor to current UTC minute, then step back 59 more
+            const now = new Date();
+            const baseMs = now.getTime() - (now.getUTCSeconds() * 1000 + now.getUTCMilliseconds());
+            for (let i = 59; i >= 0; i--) {
+                const d = new Date(baseMs - i * 60000);
+                const key = `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+                labels.push(`${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`);
+                const pt = usageData.find(p => p.date === key);
+                counts.push(pt ? pt.count : 0);
+            }
+        } else if (period === '1day') {
+            // Floor to current UTC hour, then step back 23 more
+            const now = new Date();
+            const baseMs = now.getTime() - (now.getUTCMinutes() * 60000 + now.getUTCSeconds() * 1000 + now.getUTCMilliseconds());
+            for (let i = 23; i >= 0; i--) {
+                const d = new Date(baseMs - i * 3600000);
+                const key = `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}`;
+                labels.push(`${pad(d.getUTCHours())}:00`);
+                const pt = usageData.find(p => p.date === key);
+                counts.push(pt ? pt.count : 0);
+            }
+        } else {
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const iso = d.toISOString().split('T')[0];
+                labels.push(iso.slice(5));
+                const pt = usageData.find(p => p.date === iso);
+                counts.push(pt ? pt.count : 0);
+            }
+        }
+        return { labels, counts };
+    }
+
+    $effect(() => {
+        if (!chartCanvas) return;
+        const { labels, counts } = buildChartData(usagePeriod);
+        if (chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(chartCanvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Requests',
+                    data: counts,
+                    fill: true,
+                    backgroundColor: 'rgba(59,130,246,0.12)',
+                    borderColor: 'rgba(59,130,246,0.85)',
+                    pointBackgroundColor: 'rgba(59,130,246,0.9)',
+                    pointRadius: usagePeriod === '1hr' ? 2 : 3,
+                    tension: 0.35,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: {
+                    title: (items) => items[0].label,
+                    label: (item) => ` ${item.raw} request${(item.raw as number) !== 1 ? 's' : ''}`,
+                }}},
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, color: '#9ca3af', font: { size: 10 } }, grid: { color: 'rgba(156,163,175,0.1)' } },
+                    x: { ticks: { color: '#9ca3af', font: { size: 10 }, maxTicksLimit: usagePeriod === '1hr' ? 12 : 8 }, grid: { display: false } }
+                }
+            }
+        });
+        return () => { chartInstance?.destroy(); chartInstance = null; };
+    });
+
     async function loadAdminUsers() {
         adminLoading = true;
         adminError = '';
@@ -82,6 +284,18 @@
         }
         adminLoading = false;
     }
+
+    $effect(() => {
+        if (activeSection === 'api-keys') {
+            loadApiKeys();
+        }
+    });
+
+    $effect(() => {
+        if (activeSection === 'api-keys') {
+            loadUsage(usagePeriod);
+        }
+    });
 
     $effect(() => {
         if (activeSection === 'admin' && $userStore?.is_admin) {
@@ -196,6 +410,7 @@
         { id: 'account', label: 'Account', icon: 'mdi:account-outline' },
         { id: 'theme', label: 'Theme', icon: 'mdi:palette-outline' },
         { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
+        { id: 'api-keys', label: 'API Keys', icon: 'mdi:key-outline' },
         ...($userStore?.is_admin ? [{ id: 'admin', label: 'Admin', icon: 'mdi:shield-crown-outline' }] : [])
     ]);
 </script>
@@ -218,7 +433,6 @@
     </nav>
 
     <div class="flex flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 gap-8">
-        <!-- Sidebar -->
         <aside class="w-56 flex-shrink-0">
             <nav class="sticky top-24 space-y-1">
                 {#each navItems as item}
@@ -245,10 +459,8 @@
             </nav>
         </aside>
 
-        <!-- Main content -->
         <main class="flex-1 min-w-0 space-y-6 pb-16">
 
-            <!-- Account Section -->
             {#if activeSection === 'account'}
                 <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
                     <div class="p-6 sm:p-8">
@@ -342,7 +554,6 @@
                 </div>
             {/if}
 
-            <!-- Theme Section -->
             {#if activeSection === 'theme'}
                 <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
                     <div class="p-6 sm:p-8">
@@ -356,7 +567,6 @@
                 </div>
             {/if}
 
-            <!-- Storage Section -->
             {#if activeSection === 'storage'}
                 <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
                     <div class="p-6 sm:p-8">
@@ -390,6 +600,216 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            {/if}
+
+            {#if activeSection === 'api-keys'}
+                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+                    <div class="p-6 sm:p-8">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Icon icon="mdi:key-outline" class="text-2xl text-blue-500 dark:text-blue-400" />
+                                API Keys
+                            </h2>
+                            <button
+                                onclick={() => { showCreateKeyForm = !showCreateKeyForm; createKeyError = ''; newlyCreatedKey = null; }}
+                                class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors {showCreateKeyForm ? 'bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'}"
+                            >
+                                <Icon icon={showCreateKeyForm ? 'mdi:close' : 'mdi:plus'} class="text-base" />
+                                {showCreateKeyForm ? 'Cancel' : 'New Key'}
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            Use API keys to render Typst documents programmatically via <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">POST /v1/render</code>.
+                            Each key allows up to 60 requests/minute.
+                            <a href="/api-docs" class="text-blue-600 dark:text-blue-400 hover:underline ml-1">View API docs →</a>
+                        </p>
+
+                        <!-- Usage chart -->
+                        <div class="mb-6 p-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/30">
+                            <div class="flex items-center justify-between mb-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    Requests — {usagePeriod === '1hr' ? 'Last 60 Min' : usagePeriod === '1day' ? 'Last 24 Hours' : 'Last 7 Days'}
+                                    {#if usageData.length > 0}
+                                        <span class="ml-2 normal-case font-normal text-gray-400 dark:text-gray-500">
+                                            ({usageData.reduce((s, p) => s + p.count, 0)} total)
+                                        </span>
+                                    {/if}
+                                </p>
+                                <div class="flex items-center gap-1">
+                                    {#each ([['1hr', '1 hr'], ['1day', '1 day'], ['1week', '1 week']] as const) as [val, label]}
+                                        <button
+                                            onclick={() => usagePeriod = val}
+                                            class="px-2 py-0.5 text-xs font-semibold rounded-md transition-colors {usagePeriod === val ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}"
+                                        >{label}</button>
+                                    {/each}
+                                </div>
+                            </div>
+                            <div class="h-32">
+                                {#if usageLoading}
+                                    <div class="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
+                                        <Icon icon="mdi:loading" class="animate-spin mr-2" /> Loading...
+                                    </div>
+                                {:else if usageData.length === 0}
+                                    <div class="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
+                                        No usage yet — make your first API call to see data here.
+                                    </div>
+                                {:else}
+                                    <canvas bind:this={chartCanvas}></canvas>
+                                {/if}
+                            </div>
+                        </div>
+
+                        {#if newlyCreatedKey}
+                            <div class="mb-6 p-4 rounded-xl border border-green-200 dark:border-green-700/50 bg-green-50 dark:bg-green-900/10">
+                                <div class="flex items-start justify-between gap-4 mb-2">
+                                    <div>
+                                        <p class="text-sm font-bold text-green-800 dark:text-green-300 flex items-center gap-2">
+                                            <Icon icon="mdi:check-circle" class="text-lg" />
+                                            Key created: {newlyCreatedKey.name}
+                                        </p>
+                                        <p class="text-xs text-green-700 dark:text-green-400 mt-0.5">Copy this key now — it will not be shown again.</p>
+                                    </div>
+                                    <button onclick={() => newlyCreatedKey = null} class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 flex-shrink-0">
+                                        <Icon icon="mdi:close" class="text-lg" />
+                                    </button>
+                                </div>
+                                <div class="flex items-center gap-2 mt-3">
+                                    <code class="flex-1 font-mono text-xs bg-white dark:bg-black/40 border border-green-200 dark:border-green-700/50 text-gray-800 dark:text-gray-200 px-3 py-2 rounded-lg break-all">{newlyCreatedKey.key}</code>
+                                    <button
+                                        onclick={() => copyKey(newlyCreatedKey!.key)}
+                                        class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg transition-colors {copiedKey ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300'}"
+                                    >
+                                        <Icon icon={copiedKey ? 'mdi:check' : 'mdi:content-copy'} class="text-base" />
+                                        {copiedKey ? 'Copied!' : 'Copy'}
+                                    </button>
+                                </div>
+                            </div>
+                        {/if}
+
+                        {#if showCreateKeyForm}
+                            <form onsubmit={createApiKey} class="mb-6 p-4 rounded-xl border border-blue-200 dark:border-blue-800/50 bg-blue-50/50 dark:bg-blue-900/10 space-y-3">
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Icon icon="mdi:key-plus" class="text-blue-500" />
+                                    Create API Key
+                                </h3>
+                                {#if createKeyError}
+                                    <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-lg text-sm">{createKeyError}</div>
+                                {/if}
+                                <div class="flex items-end gap-3">
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Key Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            bind:value={createKeyName}
+                                            placeholder="e.g. My App, CI Pipeline"
+                                            class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={createKeyLoading || !createKeyName.trim()}
+                                        class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                                    >
+                                        {#if createKeyLoading}
+                                            <Icon icon="mdi:loading" class="animate-spin text-base" />
+                                            Creating...
+                                        {:else}
+                                            <Icon icon="mdi:key-plus" class="text-base" />
+                                            Create
+                                        {/if}
+                                    </button>
+                                </div>
+                            </form>
+                        {/if}
+
+                        {#if apiKeysError}
+                            <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-4">{apiKeysError}</div>
+                        {/if}
+
+                        {#if apiKeysLoading}
+                            <div class="flex items-center justify-center py-12 text-gray-400 dark:text-gray-500">
+                                <Icon icon="mdi:loading" class="animate-spin text-2xl mr-2" />
+                                Loading keys...
+                            </div>
+                        {:else if apiKeys.length === 0}
+                            <div class="text-center py-12 text-gray-400 dark:text-gray-500">
+                                <Icon icon="mdi:key-outline" class="text-4xl mb-2 opacity-40" />
+                                <p class="text-sm">No API keys yet. Create one to get started.</p>
+                            </div>
+                        {:else}
+                            <div class="space-y-2">
+                                {#each apiKeys as key (key.id)}
+                                    <div class="flex items-center gap-4 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20">
+                                        <div class="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0">
+                                            <Icon icon="mdi:key" class="text-lg" />
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{key.name}</p>
+                                            <p class="text-xs font-mono text-gray-500 dark:text-gray-400">{key.key_prefix}... · {key.rate_limit}/min</p>
+                                        </div>
+                                        <div class="text-right flex-shrink-0 hidden sm:block">
+                                            <p class="text-xs text-gray-400 dark:text-gray-500">Created {formatDate(key.created_at)}</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500">{key.last_used_at ? `Last used ${formatDate(key.last_used_at)}` : 'Never used'}</p>
+                                        </div>
+                                        <div class="flex items-center gap-1 flex-shrink-0">
+                                            {#if confirmRegenerateId === key.id}
+                                                <div class="flex items-center gap-1">
+                                                    <span class="text-xs text-gray-500 dark:text-gray-400">Regenerate?</span>
+                                                    <button
+                                                        onclick={() => regenerateApiKey(key.id)}
+                                                        disabled={regeneratingKeyId === key.id}
+                                                        class="text-xs px-2 py-1 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors disabled:opacity-50"
+                                                    >
+                                                        {regeneratingKeyId === key.id ? '...' : 'Yes'}
+                                                    </button>
+                                                    <button
+                                                        onclick={() => confirmRegenerateId = null}
+                                                        class="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-semibold transition-colors"
+                                                    >
+                                                        No
+                                                    </button>
+                                                </div>
+                                            {:else if confirmDeleteKeyId === key.id}
+                                                <div class="flex items-center gap-1">
+                                                    <span class="text-xs text-gray-500 dark:text-gray-400">Delete?</span>
+                                                    <button
+                                                        onclick={() => deleteApiKey(key.id)}
+                                                        disabled={deletingKeyId === key.id}
+                                                        class="text-xs px-2 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50"
+                                                    >
+                                                        {deletingKeyId === key.id ? '...' : 'Yes'}
+                                                    </button>
+                                                    <button
+                                                        onclick={() => confirmDeleteKeyId = null}
+                                                        class="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-semibold transition-colors"
+                                                    >
+                                                        No
+                                                    </button>
+                                                </div>
+                                            {:else}
+                                                <button
+                                                    onclick={() => { confirmRegenerateId = key.id; confirmDeleteKeyId = null; }}
+                                                    title="Regenerate key"
+                                                    class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                                                >
+                                                    <Icon icon="mdi:refresh" class="text-lg" />
+                                                </button>
+                                                <button
+                                                    onclick={() => { confirmDeleteKeyId = key.id; confirmRegenerateId = null; }}
+                                                    title="Revoke key"
+                                                    class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                                >
+                                                    <Icon icon="mdi:delete-outline" class="text-lg" />
+                                                </button>
+                                            {/if}
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
                     </div>
                 </div>
             {/if}
