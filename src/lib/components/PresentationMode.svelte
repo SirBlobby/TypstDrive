@@ -14,7 +14,6 @@
 	let isDrawing = false;
 	let currentPath = $state<{x: number, y: number}[]>([]);
 	
-	// New feature states
 	let tool = $state<'pen' | 'highlighter' | 'eraser' | 'laser'>('laser');
 	let selectedColor = $state('#ef4444');
 	let showGrid = $state(false);
@@ -23,7 +22,6 @@
 	
 	const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ffffff', '#000000'];
 
-	// Map from slide index to image data url so we can persist drawings when switching slides
 	let drawings = $state<Record<number, string>>({});
 	let undoStack = $state<Record<number, string[]>>({});
 	let redoStack = $state<Record<number, string[]>>({});
@@ -41,7 +39,6 @@
 	}
 
 	onMount(() => {
-		// Find the preview svgs from the main DOM
 		const previewContainers = document.querySelectorAll('.preview-container svg');
 		const svgStrings: string[] = [];
 		previewContainers.forEach(container => {
@@ -49,7 +46,6 @@
 		});
 		svgs = svgStrings;
 
-		// Request fullscreen
 		const el = document.getElementById('presentation-container');
 		if (el && el.requestFullscreen) {
 			el.requestFullscreen().catch(err => console.error(err));
@@ -104,7 +100,6 @@
 
 	$effect(() => {
 		if (canvas && currentSlide !== undefined && !showGrid) {
-			// Resize canvas to match the svg
 			const svgEl = document.getElementById('presentation-svg')?.querySelector('svg');
 			if (svgEl) {
 				const rect = svgEl.getBoundingClientRect();
@@ -126,7 +121,6 @@
 					ctx.lineCap = 'round';
 					ctx.lineJoin = 'round';
 					
-					// Load previous drawing if any
 					if (drawings[currentSlide]) {
 						const img = new Image();
 						img.onload = () => {
@@ -302,7 +296,6 @@
 
 <div id="presentation-container" class="fixed inset-0 z-[100] flex flex-col items-center justify-center">
 	
-	<!-- Laser Pointer Overlay -->
 	{#if tool === 'laser' && laserPos.visible && !showGrid}
 		<div 
 			class="pointer-events-none fixed z-[150] w-3 h-3 bg-red-500 rounded-full shadow-[0_0_15px_5px_rgba(239,68,68,0.8)] -translate-x-1/2 -translate-y-1/2"
@@ -310,7 +303,6 @@
 		></div>
 	{/if}
 
-	<!-- Thumbnail Grid UI -->
 	{#if showGrid}
 		<div class="absolute inset-0 z-[50] p-8 overflow-y-auto">
 			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 max-w-7xl mx-auto pb-24">
@@ -331,7 +323,6 @@
 		</div>
 	{/if}
 
-	<!-- Top toolbar -->
 	<div class="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between px-6 transition-opacity duration-300 z-[110] {uiVisible || showGrid ? 'opacity-100' : 'opacity-0'}">
 		<div class="flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md px-4 py-2 rounded-xl border shadow-2xl border-[var(--theme-border)]">
 			<button class="p-2 rounded-lg transition-colors {tool === 'laser' ? 'bg-red-500/20 text-red-400' : 'text-gray-300 hover:bg-white/10'}" onclick={() => tool = 'laser'} title="Laser Pointer">
@@ -383,19 +374,16 @@
 		</div>
 	</div>
 
-	<!-- Slide Area -->
 	<div class="relative w-full h-full flex items-center justify-center p-8">
 		{#if svgs.length > 0 && !showGrid}
 			<div id="presentation-svg" class="relative max-h-full max-w-full shadow-2xl flex items-center justify-center bg-[var(--theme-bg)] text-[var(--theme-text)]">
 				{@html svgs[currentSlide]}
 				
-				<!-- Drawing Canvas Overlay -->
 				<canvas 
 					bind:this={canvas} 
 					class="absolute inset-0 z-10 touch-none pointer-events-none"
 				></canvas>
 
-				<!-- Active Stroke Canvas Overlay -->
 				<canvas 
 					bind:this={activeCanvas} 
 					class="absolute inset-0 z-20 touch-none {tool === 'laser' ? 'cursor-none' : 'cursor-crosshair'}"
@@ -413,7 +401,6 @@
 		{/if}
 	</div>
 
-	<!-- Bottom Navigation -->
 	{#if svgs.length > 0}
 		<div class="absolute bottom-6 flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md px-6 py-3 rounded-full border shadow-2xl transition-opacity duration-300 z-[110] {uiVisible || showGrid ? 'opacity-100' : 'opacity-0'} border-[var(--theme-border)]">
 			{#if svgs.length > 1}

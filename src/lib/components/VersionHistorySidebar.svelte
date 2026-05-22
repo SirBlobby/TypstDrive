@@ -55,7 +55,6 @@
 </script>
 
 <div class="fixed right-0 top-0 bottom-0 w-80 bg-[var(--theme-bg)] backdrop-blur-xl border-l shadow-2xl flex flex-col z-[70] transform transition-transform duration-300 border-[var(--theme-border)]">
-	<!-- Header -->
 	<div class="flex items-center justify-between px-4 py-3 border-b bg-gray-50/50 bg-[var(--theme-bg)] text-[var(--theme-text)] border-[var(--theme-border)]">
 		<div class="flex items-center gap-2">
 			<Icon icon="mdi:history" class="text-lg" />
@@ -67,7 +66,6 @@
 		</button>
 	</div>
 
-	<!-- Feed -->
 	<div class="flex-1 overflow-y-auto p-4 space-y-4">
 		{#if loading}
 			<div class="flex justify-center items-center h-full">

@@ -96,7 +96,6 @@
 </script>
 
 <div class="fixed right-0 top-0 bottom-0 w-80 bg-[var(--theme-bg)] backdrop-blur-xl border-l shadow-2xl flex flex-col z-[70] transform transition-transform duration-300 border-[var(--theme-border)]">
-	<!-- Header -->
 	<div class="flex items-center justify-between px-4 py-3 border-b bg-[var(--theme-bg)] text-[var(--theme-text)] border-[var(--theme-border)]">
 		<div class="flex items-center gap-2">
 			<Icon icon="mdi:comment-text-multiple-outline" class="text-lg" />
@@ -108,7 +107,6 @@
 		</button>
 	</div>
 
-	<!-- Feed -->
 	<div class="flex-1 overflow-y-auto p-4 space-y-4">
 		{#if loading}
 			<div class="flex justify-center items-center h-full">
@@ -137,7 +135,6 @@
 							</div>
 						</div>
 						
-						<!-- Actions -->
 						<div class="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
 							{#if $userStore?.id === comment.user_id}
 								<button onclick={() => deleteComment(comment.id)} class="p-1 hover:text-red-500 rounded hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors" title="Delete">
@@ -155,7 +152,6 @@
 		{/if}
 	</div>
 
-	<!-- Input Area -->
 	<div class="p-4 border-t bg-[var(--theme-bg)] text-[var(--theme-text)] border-[var(--theme-border)]">
 		<div class="relative">
 			<textarea

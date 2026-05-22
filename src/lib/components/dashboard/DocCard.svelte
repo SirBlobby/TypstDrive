@@ -21,7 +21,6 @@
         } else {
             const button = e.currentTarget as HTMLElement;
             const rect = button.getBoundingClientRect();
-            // If there's less than 200px below the button, open upwards
             if (window.innerHeight - rect.bottom < 200) {
                 dropUp = true;
             } else {

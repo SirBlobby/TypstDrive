@@ -62,7 +62,6 @@
     let confirmRegenerateId = $state<string | null>(null);
     let regeneratingKeyId = $state<string | null>(null);
 
-    // Usage chart
     type UsagePoint = { date: string; count: number };
     type UsagePeriod = '1hr' | '1day' | '1week';
     let usageData = $state<UsagePoint[]>([]);
@@ -200,7 +199,6 @@
         const labels: string[] = [];
         const counts: number[] = [];
         if (period === '1hr') {
-            // Floor to current UTC minute, then step back 59 more
             const now = new Date();
             const baseMs = now.getTime() - (now.getUTCSeconds() * 1000 + now.getUTCMilliseconds());
             for (let i = 59; i >= 0; i--) {
@@ -211,7 +209,6 @@
                 counts.push(pt ? pt.count : 0);
             }
         } else if (period === '1day') {
-            // Floor to current UTC hour, then step back 23 more
             const now = new Date();
             const baseMs = now.getTime() - (now.getUTCMinutes() * 60000 + now.getUTCSeconds() * 1000 + now.getUTCMilliseconds());
             for (let i = 23; i >= 0; i--) {
@@ -626,7 +623,6 @@
                             <a href="/api-docs" class="text-blue-600 dark:text-blue-400 hover:underline ml-1">View API docs →</a>
                         </p>
 
-                        <!-- Usage chart -->
                         <div class="mb-6 p-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/30">
                             <div class="flex items-center justify-between mb-3">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -814,7 +810,6 @@
                 </div>
             {/if}
 
-            <!-- Admin Section -->
             {#if activeSection === 'admin' && $userStore?.is_admin}
                 <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
                     <div class="p-6 sm:p-8">

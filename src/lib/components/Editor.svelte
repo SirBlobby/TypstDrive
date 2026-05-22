@@ -248,9 +248,6 @@
 						const msg = JSON.parse(data);
 						if (msg.type === 'init') {
 							lspInitialized = true;
-							
-							// Recreate the client because the backend started a completely new LSP process
-							// which requires a fresh 'initialize' handshake.
 							client = new LSPClient({
 								rootUri: msg.rootUri,
 								timeout: 10000,
@@ -262,9 +259,7 @@
 							});
 							return;
 						}
-					} catch (err) {
-						// Fallthrough
-					}
+					} catch (err) {}
 				}
 				
 				let processedData = data;
@@ -281,9 +276,7 @@
 				for (let h of lsHandlers) h(processedData);
 			};
 
-			lsSocket.onopen = () => {
-				// Waiting for init message from server
-			};
+			lsSocket.onopen = () => {};
 		}
 		
 		connectLsp();

@@ -358,7 +358,6 @@
             try {
                 data = JSON.parse(dataString);
             } catch (err) {
-                // For backward compatibility if it's just an id
                 data = { type: 'document', id: dataString };
             }
 
@@ -512,13 +511,11 @@
                 </div>
             </div>
         {:else}
-            <!-- Folders section — always visible at root (includes "Shared with me" virtual folder) -->
             {#if currentFolderId === null || folders.length > 0}
                 <div class="mb-8">
                     <div class="px-2 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Folders</div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {#if currentFolderId === null}
-                            <!-- Shared with me — permanent, undeletable virtual folder -->
                             <div
                                 class="flex flex-row items-center p-3 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl shadow-sm hover:shadow-md cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-300 dark:hover:border-purple-500/30"
                                 role="button"
@@ -565,7 +562,6 @@
                 </div>
             {/if}
 
-            <!-- Empty states -->
             {#if documents.length === 0 && files.length === 0 && currentFolderId !== null && folders.length === 0}
                 <div class="min-h-[30vh] flex items-center justify-center">
                     <p class="text-gray-500 dark:text-gray-400">This folder is empty.</p>

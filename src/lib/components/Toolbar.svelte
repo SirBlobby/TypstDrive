@@ -414,7 +414,6 @@
 						{title}
 					</h1>
 
-					<!-- Sync status removed from here and moved to Footer -->
 				</div>
 
 				

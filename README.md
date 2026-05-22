@@ -1,6 +1,6 @@
 # TypstDrive
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/your-username/typstdrive)
+[![Version](https://img.shields.io/badge/version-1.4.5-blue.svg)](https://github.com/your-username/typstdrive)
 [![Typst Version](https://img.shields.io/badge/Typst-0.14.2-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.82+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte)](https://kit.svelte.dev/)
@@ -18,7 +18,8 @@ TypstDrive is a collaborative web editor for Typst. With built-in dark mode, mul
 - **Instant Preview**: Compile Typst to SVG on the fly with sub-second latency, featuring interactive document zoom controls and a collapsible preview pane.
 - **Customizable Themes**: Choose from multiple editor themes (Catppuccin, Arch Linux, Cerberus) and toggle global dark mode.
 - **Export Options**: Export your compiled documents directly to PDF, PNG, SVG, HTML, Markdown, Word, or LaTeX formats using internal conversion and Pandoc integrations.
-- **User Authentication & Document Access**: Secure accounts, workspaces, and sharing features via email-based collaborator invitations (Editor or Viewer roles) for all your documents.
+- **Document Sharing**: Invite collaborators by email with Editor or Viewer roles. Collaborators' uploaded fonts and images are available to the compiler. A dedicated "Shared with me" folder on the dashboard surfaces all documents others have shared with you. Manage and remove collaborators directly from the Share modal in the editor.
+- **Public REST API**: Programmatically render Typst documents to PNG or PDF via `POST /v1/render`. Manage API keys from the Settings panel, with a live usage chart supporting 1-hour, 1-day, and 1-week views. Full API reference available at `/api-docs`.
 - **Admin System**: First-run setup wizard creates an admin account. Admins can manage all users, create new accounts with temporary passwords, toggle admin privileges, and delete accounts from the Settings panel.
 - **Presentation Mode**: Turn your documents into instant slideshows with built-in slide controls and a live drawing/annotation tool overlay.
 - **Asset Management**: Upload and seamlessly use custom fonts and images directly within your documents.

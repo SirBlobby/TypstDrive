@@ -24,7 +24,6 @@
 		const view = $editorViewStore;
 		if (!view) return;
 		
-		// Ensure context menu only triggers on editor
 		const target = e.target as HTMLElement;
 		if (!target.closest('.cm-editor') && !target.closest('.cm-content')) return;
 
@@ -148,7 +147,6 @@
 	<DocFooter />
 </div>
 
-<!-- Custom Context Menu for Editor -->
 {#if contextMenu.show}
 	<div 
 		class="fixed z-[9999] bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-lg shadow-xl border border-[var(--theme-border)] py-1 min-w-[200px] overflow-hidden" 

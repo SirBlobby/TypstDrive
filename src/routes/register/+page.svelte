@@ -36,7 +36,6 @@
                 return;
             }
             
-            // Auto login after successful registration using email
             const loginRes = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -65,7 +64,6 @@
 
 <div class="min-h-screen flex flex-col relative overflow-hidden">
     <div class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative z-10">
-        <!-- Background decorative elements -->
         <div class="absolute -top-40 right-20 w-96 h-96 bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-3xl mix-blend-multiply z-0"></div>
         <div class="absolute top-40 -left-20 w-96 h-96 bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-3xl mix-blend-multiply z-0"></div>
         <div class="absolute -bottom-40 right-40 w-96 h-96 bg-blue-400/20 dark:bg-blue-600/10 rounded-full blur-3xl mix-blend-multiply z-0"></div>
