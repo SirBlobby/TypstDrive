@@ -4,16 +4,42 @@
     import Icon from '@iconify/svelte';
     
     let { onClose, docId = undefined } = $props<{ onClose: () => void, docId?: string }>();
-    
+
+    type CollaboratorView = { id: string; user_id: string; username: string; email: string; role: string; created_at: string };
+
     let link = $state('');
     let copied = $state(false);
     let role = $state('editor');
-    
+
+    let collaborators = $state<CollaboratorView[]>([]);
+    let collabLoading = $state(false);
+    let removingId = $state<string | null>(null);
+
     let inviteEmail = $state('');
     let inviteRole = $state('editor');
     let inviteStatus = $state<'idle' | 'loading' | 'success' | 'error'>('idle');
     let inviteMessage = $state('');
     
+    async function loadCollaborators() {
+        if (!docId) return;
+        collabLoading = true;
+        try {
+            const res = await fetch(`/api/docs/${docId}/collaborators`);
+            if (res.ok) collaborators = await res.json();
+        } catch {}
+        collabLoading = false;
+    }
+
+    async function removeCollaborator(collab: CollaboratorView) {
+        if (!docId) return;
+        removingId = collab.id;
+        try {
+            const res = await fetch(`/api/docs/${docId}/collaborators/${collab.id}`, { method: 'DELETE' });
+            if (res.ok) collaborators = collaborators.filter(c => c.id !== collab.id);
+        } catch {}
+        removingId = null;
+    }
+
     async function inviteUser(e: Event) {
         e.preventDefault();
         if (!docId || !inviteEmail.trim()) return;
@@ -24,9 +50,7 @@
         try {
             const res = await fetch(`/api/docs/${docId}/invite`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole })
             });
 
@@ -34,25 +58,23 @@
                 inviteStatus = 'success';
                 inviteMessage = 'User invited successfully!';
                 inviteEmail = '';
+                loadCollaborators();
             } else {
                 const text = await res.text();
                 inviteStatus = 'error';
                 inviteMessage = text || 'Failed to invite user';
             }
         } catch (err) {
-            console.error(err);
             inviteStatus = 'error';
             inviteMessage = 'Network error occurred';
         }
     }
 
     onMount(() => {
-        
         const baseUrl = window.location.origin;
         const docUrl = docId ? `${baseUrl}/doc/${docId}` : window.location.href;
-        
-        
         link = `${docUrl}?role=${role}`;
+        loadCollaborators();
     });
     
     $effect(() => {
@@ -124,6 +146,44 @@
                     </div>
                 {/if}
             </div>
+
+            {#if collabLoading}
+                <div class="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-1">
+                    <Icon icon="mdi:loading" class="animate-spin text-base" />
+                    Loading collaborators...
+                </div>
+            {:else if collaborators.length > 0}
+                <div class="h-px bg-gray-200 dark:bg-zinc-800/50"></div>
+                <div class="space-y-2">
+                    <div class="text-sm font-semibold text-[var(--theme-text)]" style="color: var(--theme-text);">People with access</div>
+                    {#each collaborators as collab (collab.id)}
+                        <div class="flex items-center gap-3 py-1.5">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold flex-shrink-0">
+                                {collab.username[0].toUpperCase()}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{collab.username}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{collab.email}</p>
+                            </div>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 {collab.role === 'editor' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'}">
+                                {collab.role}
+                            </span>
+                            <button
+                                onclick={() => removeCollaborator(collab)}
+                                disabled={removingId === collab.id}
+                                title="Remove collaborator"
+                                class="flex-shrink-0 p-1 rounded text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                            >
+                                {#if removingId === collab.id}
+                                    <Icon icon="mdi:loading" class="text-base animate-spin" />
+                                {:else}
+                                    <Icon icon="mdi:close" class="text-base" />
+                                {/if}
+                            </button>
+                        </div>
+                    {/each}
+                </div>
+            {/if}
 
             <div class="h-px bg-gray-200 dark:bg-zinc-800/50"></div>
 

@@ -208,11 +208,24 @@ pub async fn compile_handler(
 
             if has_access {
                 if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = ?")
-                    .bind(doc.owner_id)
+                    .bind(&doc.owner_id)
                     .fetch_all(&state.db)
                     .await
                 {
                     for (name, data) in files {
+                        files_map.insert(name, data);
+                    }
+                }
+                // Also include files uploaded by collaborators specifically for this document
+                if let Ok(collab_files) = sqlx::query_as::<_, (String, Vec<u8>)>(
+                    "SELECT name, data FROM files WHERE document_id = ? AND owner_id != ?"
+                )
+                .bind(doc_id)
+                .bind(&doc.owner_id)
+                .fetch_all(&state.db)
+                .await
+                {
+                    for (name, data) in collab_files {
                         files_map.insert(name, data);
                     }
                 }
@@ -298,11 +311,23 @@ pub async fn export_handler(
 
             if has_access {
                 if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = ?")
-                    .bind(doc.owner_id)
+                    .bind(&doc.owner_id)
                     .fetch_all(&state.db)
                     .await
                 {
                     for (name, data) in files {
+                        files_map.insert(name, data);
+                    }
+                }
+                if let Ok(collab_files) = sqlx::query_as::<_, (String, Vec<u8>)>(
+                    "SELECT name, data FROM files WHERE document_id = ? AND owner_id != ?"
+                )
+                .bind(doc_id)
+                .bind(&doc.owner_id)
+                .fetch_all(&state.db)
+                .await
+                {
+                    for (name, data) in collab_files {
                         files_map.insert(name, data);
                     }
                 }

@@ -134,6 +134,16 @@ pub struct Collaborator {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct CollaboratorView {
+    pub id: String,
+    pub user_id: String,
+    pub username: String,
+    pub email: String,
+    pub role: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Invitation {
     pub id: String,
     pub document_id: String,

@@ -8,7 +8,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    models::{Collaborator, Comment, CreateCommentRequest, Invitation, InviteRequest, UpdateCommentRequest},
+    models::{Collaborator, CollaboratorView, Comment, CreateCommentRequest, Invitation, InviteRequest, UpdateCommentRequest},
     AppState,
 };
 
@@ -32,7 +32,7 @@ pub async fn invite_collaborator(
         return Err((StatusCode::FORBIDDEN, "Only the owner can invite collaborators".to_string()));
     }
 
-    let invited_user = sqlx::query_as::<_, crate::models::User>("SELECT id, username, email, password_hash FROM users WHERE email = ?")
+    let invited_user = sqlx::query_as::<_, crate::models::User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = ?")
         .bind(&payload.email)
         .fetch_optional(&state.db)
         .await
@@ -101,6 +101,82 @@ pub async fn accept_invite(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(collab))
+}
+
+pub async fn list_collaborators(
+    State(state): State<AppState>,
+    Path(doc_id): Path<String>,
+    jar: SignedCookieJar,
+) -> Result<Json<Vec<CollaboratorView>>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    // Only owner or collaborators on the document can see the list
+    let has_access = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM documents WHERE id = ? AND owner_id = ? \
+         UNION ALL SELECT COUNT(*) FROM collaborators WHERE document_id = ? AND user_id = ?"
+    )
+    .bind(&doc_id).bind(&user_id).bind(&doc_id).bind(&user_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .into_iter().sum::<i64>() > 0;
+
+    if !has_access {
+        return Err((StatusCode::FORBIDDEN, "Access denied".to_string()));
+    }
+
+    let collaborators = sqlx::query_as::<_, CollaboratorView>(
+        "SELECT c.id, c.user_id, u.username, u.email, c.role, c.created_at \
+         FROM collaborators c \
+         INNER JOIN users u ON u.id = c.user_id \
+         WHERE c.document_id = ? \
+         ORDER BY c.created_at ASC"
+    )
+    .bind(&doc_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(collaborators))
+}
+
+pub async fn remove_collaborator(
+    State(state): State<AppState>,
+    Path((doc_id, collab_id)): Path<(String, String)>,
+    jar: SignedCookieJar,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    // Only the document owner can remove collaborators
+    let is_owner = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM documents WHERE id = ? AND owner_id = ?"
+    )
+    .bind(&doc_id)
+    .bind(&user_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))? > 0;
+
+    if !is_owner {
+        return Err((StatusCode::FORBIDDEN, "Only the document owner can remove collaborators".to_string()));
+    }
+
+    let result = sqlx::query(
+        "DELETE FROM collaborators WHERE id = ? AND document_id = ?"
+    )
+    .bind(&collab_id)
+    .bind(&doc_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "Collaborator not found".to_string()));
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn get_comments(

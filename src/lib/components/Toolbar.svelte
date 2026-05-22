@@ -716,7 +716,7 @@
 </header>
 
 {#if isShareModalOpen}
-	<ShareModal onClose={() => (isShareModalOpen = false)} />
+	<ShareModal {docId} onClose={() => (isShareModalOpen = false)} />
 {/if}
 
 {#if isPageSettingsOpen}

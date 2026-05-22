@@ -17,6 +17,28 @@ pub struct ListDocsQuery {
     pub folder_id: Option<String>,
 }
 
+pub async fn list_shared_documents(
+    State(state): State<AppState>,
+    jar: SignedCookieJar,
+) -> Result<Json<Vec<Document>>, (StatusCode, String)> {
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    let docs = sqlx::query_as::<_, Document>(
+        "SELECT d.id, d.owner_id, d.folder_id, d.title, d.content, d.thumbnail_svg, \
+         d.public_role, d.created_at, d.updated_at, c.role as effective_role \
+         FROM documents d \
+         INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = ? \
+         ORDER BY d.updated_at DESC"
+    )
+    .bind(&user_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(docs))
+}
+
 pub async fn list_documents(
     axum::extract::Query(query): axum::extract::Query<ListDocsQuery>,
     State(state): State<AppState>,

@@ -161,6 +161,7 @@
     }
 
     function navigateToBreadcrumb(index: number) {
+        inSharedDrive = false;
         if (index === -1) {
             folderPath = [];
             currentFolderId = null;
@@ -314,6 +315,26 @@
         }
     }
 
+    let inSharedDrive = $state(false);
+    let sharedDocs = $state<any[]>([]);
+    let sharedDocsLoading = $state(false);
+
+    async function loadSharedDocs() {
+        sharedDocsLoading = true;
+        try {
+            const res = await fetch('/api/docs/shared');
+            if (res.ok) sharedDocs = await res.json();
+        } catch {}
+        sharedDocsLoading = false;
+    }
+
+    function enterSharedDrive() {
+        inSharedDrive = true;
+        folderPath = [];
+        currentFolderId = null;
+        loadSharedDocs();
+    }
+
     let showShareModal = $state(false);
     let shareTarget = $state<any>(null);
 
@@ -421,94 +442,145 @@
 
         
         <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-6 bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-gray-200 dark:border-white/10">
-            <button 
-                onclick={() => navigateToBreadcrumb(-1)} 
+            <button
+                onclick={() => navigateToBreadcrumb(-1)}
                 ondragover={(e) => { e.preventDefault(); dragOverBreadcrumbIndex = -1; }}
                 ondragleave={() => dragOverBreadcrumbIndex = null}
                 ondrop={(e) => handleDrop(e, null)}
                 class="hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded {dragOverBreadcrumbIndex === -1 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}">
                 <Icon icon="mdi:home" class="text-lg inline-block pb-0.5" /> Home
             </button>
-            {#each folderPath as folder, index}
+            {#if inSharedDrive}
                 <Icon icon="mdi:chevron-right" class="text-lg text-gray-400" />
-                <button 
-                    onclick={() => navigateToBreadcrumb(index)} 
-                    ondragover={(e) => { e.preventDefault(); dragOverBreadcrumbIndex = index; }}
-                    ondragleave={() => dragOverBreadcrumbIndex = null}
-                    ondrop={(e) => handleDrop(e, folder.id)}
-                    class="hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded {dragOverBreadcrumbIndex === index ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}">
-                    {folder.name}
-                </button>
-            {/each}
+                <span class="font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1 px-2 py-1">
+                    <Icon icon="mdi:folder-account" class="text-base" /> Shared with me
+                </span>
+            {:else}
+                {#each folderPath as folder, index}
+                    <Icon icon="mdi:chevron-right" class="text-lg text-gray-400" />
+                    <button
+                        onclick={() => navigateToBreadcrumb(index)}
+                        ondragover={(e) => { e.preventDefault(); dragOverBreadcrumbIndex = index; }}
+                        ondragleave={() => dragOverBreadcrumbIndex = null}
+                        ondrop={(e) => handleDrop(e, folder.id)}
+                        class="hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded {dragOverBreadcrumbIndex === index ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}">
+                        {folder.name}
+                    </button>
+                {/each}
+            {/if}
         </div>
 
-        {#if loading}
+        {#if inSharedDrive}
+            {#if sharedDocsLoading}
+                <div class="min-h-[50vh] flex items-center justify-center">
+                    <div class="flex flex-col items-center gap-4 text-gray-500 dark:text-gray-400 animate-pulse">
+                        <Icon icon="mdi:loading" class="text-4xl animate-spin" />
+                        <p class="text-lg font-medium">Loading shared documents...</p>
+                    </div>
+                </div>
+            {:else if sharedDocs.length === 0}
+                <div class="min-h-[50vh] flex items-center justify-center">
+                    <div class="text-center p-12 bg-white/50 dark:bg-black/20 rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 max-w-md w-full">
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-purple-100/50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 mb-6">
+                            <Icon icon="mdi:folder-account-outline" class="text-4xl" />
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">No shared documents</h3>
+                        <p class="text-gray-500 dark:text-gray-400">Documents shared with you by other users will appear here.</p>
+                    </div>
+                </div>
+            {:else}
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {#each sharedDocs as doc}
+                        <DocCard
+                            {doc}
+                            {activeMenu}
+                            setActiveMenu={(id) => activeMenu = id}
+                            {openInfo}
+                            openRename={() => {}}
+                            {shareItem}
+                            deleteDoc={() => {}}
+                        />
+                    {/each}
+                </div>
+            {/if}
+
+        {:else if loading}
             <div class="min-h-[50vh] flex items-center justify-center">
                 <div class="flex flex-col items-center gap-4 text-gray-500 dark:text-gray-400 animate-pulse">
                     <Icon icon="mdi:loading" class="text-4xl animate-spin" />
                     <p class="text-lg font-medium">Loading your workspace...</p>
                 </div>
             </div>
-        {:else if documents.length === 0 && folders.length === 0 && files.length === 0 && currentFolderId === null}
-            <div class="min-h-[50vh] flex items-center justify-center">
-                <div class="text-center p-12 bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 max-w-md w-full">
-                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 mb-6">
-                        <Icon icon="mdi:file-document-outline" class="text-4xl" />
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">No documents yet</h3>
-                    <p class="text-gray-500 dark:text-gray-400 mb-8">Get started by creating your first Typst document. It's fast, collaborative, and beautiful.</p>
-                    <button onclick={openCreateModal} class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-sm text-base font-medium transition-colors">
-                        <Icon icon="mdi:plus" class="text-xl" />
-                        Create Document
-                    </button>
-                </div>
-            </div>
         {:else}
-            
-            {#if folders.length > 0}
+            <!-- Folders section — always visible at root (includes "Shared with me" virtual folder) -->
+            {#if currentFolderId === null || folders.length > 0}
                 <div class="mb-8">
-                    <div class="px-2 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Folders
-                    </div>
+                    <div class="px-2 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Folders</div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {#if currentFolderId === null}
+                            <!-- Shared with me — permanent, undeletable virtual folder -->
+                            <div
+                                class="flex flex-row items-center p-3 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl shadow-sm hover:shadow-md cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-300 dark:hover:border-purple-500/30"
+                                role="button"
+                                tabindex="0"
+                                onclick={enterSharedDrive}
+                                onkeydown={(e) => e.key === 'Enter' && enterSharedDrive()}
+                            >
+                                <div class="flex items-center justify-center w-10 h-10 bg-purple-50 dark:bg-purple-500/10 rounded-lg group-hover:scale-105 transition-transform pointer-events-none shrink-0 mr-3">
+                                    <Icon icon="mdi:folder-account" class="text-2xl text-purple-500" />
+                                </div>
+                                <span class="font-medium text-gray-900 dark:text-white text-sm truncate w-full pointer-events-none">Shared with me</span>
+                            </div>
+                        {/if}
                         {#each folders as folder}
-                            <FolderRow 
-                                {folder} 
-                                {dragOverFolderId} 
-                                {navigateToFolder} 
-                                {handleDrop} 
-                                {deleteFolder} 
-                                setDragOverFolderId={(id) => dragOverFolderId = id} 
+                            <FolderRow
+                                {folder}
+                                {dragOverFolderId}
+                                {navigateToFolder}
+                                {handleDrop}
+                                {deleteFolder}
+                                setDragOverFolderId={(id) => dragOverFolderId = id}
                             />
                         {/each}
                     </div>
                 </div>
             {/if}
 
-            
             {#if documents.length > 0 || files.length > 0}
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {#each documents as doc}
-                        <DocCard 
-                            {doc} 
-                            {activeMenu} 
-                            setActiveMenu={(id) => activeMenu = id} 
-                            {openInfo} 
-                            {openRename} 
-                            {shareItem} 
-                            {deleteDoc} 
+                        <DocCard
+                            {doc}
+                            {activeMenu}
+                            setActiveMenu={(id) => activeMenu = id}
+                            {openInfo}
+                            {openRename}
+                            {shareItem}
+                            {deleteDoc}
                         />
                     {/each}
-
                     {#each files as file}
                         <FileCard {file} {deleteFile} />
                     {/each}
                 </div>
             {/if}
-            
-            {#if documents.length === 0 && folders.length === 0 && files.length === 0}
-                <div class="min-h-[50vh] flex items-center justify-center">
+
+            <!-- Empty states -->
+            {#if documents.length === 0 && files.length === 0 && currentFolderId !== null && folders.length === 0}
+                <div class="min-h-[30vh] flex items-center justify-center">
                     <p class="text-gray-500 dark:text-gray-400">This folder is empty.</p>
+                </div>
+            {:else if documents.length === 0 && files.length === 0 && folders.length === 0 && currentFolderId === null}
+                <div class="text-center py-12">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 mb-4">
+                        <Icon icon="mdi:file-document-outline" class="text-3xl" />
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">No documents yet</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6 text-sm">Create your first Typst document to get started.</p>
+                    <button onclick={openCreateModal} class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm text-sm font-medium transition-colors">
+                        <Icon icon="mdi:plus" class="text-lg" />
+                        Create Document
+                    </button>
                 </div>
             {/if}
         {/if}
