@@ -11,8 +11,6 @@ use crate::{
     AppState,
 };
 
-const USER_FIELDS: &str = "id, username, email, password_hash, is_admin";
-
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,

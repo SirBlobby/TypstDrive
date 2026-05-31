@@ -5,7 +5,8 @@ use typst::diag::{SourceDiagnostic, Warned};
 use typst::layout::{Frame, FrameItem};
 use typst_layout::PagedDocument;
 use typst_pdf::{pdf, PdfOptions};
-use typst_render::render;
+use typst_render::{render, RenderOptions};
+use typst_svg::SvgOptions;
 
 #[derive(Serialize, Clone)]
 pub struct DocumentStats {
@@ -71,9 +72,14 @@ impl TypstCompiler {
                 warnings: _,
             } => {
                 let stats = extract_stats(&doc);
-                let svgs = doc.pages().iter().map(typst_svg::svg).collect();
+                let options = SvgOptions::default();
+                let svgs = doc
+                    .pages()
+                    .iter()
+                    .map(|page| typst_svg::svg(page, &options))
+                    .collect();
                 let thumbnail = if let Some(page) = doc.pages().first() {
-                    typst_svg::svg(page)
+                    typst_svg::svg(page, &options)
                 } else {
                     String::new()
                 };
@@ -83,15 +89,11 @@ impl TypstCompiler {
                 output: Err(errors),
                 warnings: _,
             } => {
-                use typst::World;
+                use typst::WorldExt;
                 let diag = errors
                     .into_iter()
                     .map(|d| {
-                        let range = d
-                            .span
-                            .id()
-                            .and_then(|id| world.source(id).ok())
-                            .and_then(|s| s.range(d.span));
+                        let range = world.range(d.span);
                         (d, range)
                     })
                     .collect();
@@ -121,15 +123,11 @@ impl TypstCompiler {
                 output: Err(errors),
                 warnings: _,
             } => {
-                use typst::World;
+                use typst::WorldExt;
                 Err(errors
                     .into_iter()
                     .map(|d| {
-                        let range = d
-                            .span
-                            .id()
-                            .and_then(|id| world.source(id).ok())
-                            .and_then(|s| s.range(d.span));
+                        let range = world.range(d.span);
                         (d, range)
                     })
                     .collect())
@@ -149,7 +147,11 @@ impl TypstCompiler {
                 warnings: _,
             } => {
                 if let Some(page) = doc.pages().first() {
-                    let pixmap = render(page, 2.0);
+                    let options = RenderOptions {
+                        pixel_per_pt: 2.0,
+                        ..RenderOptions::default()
+                    };
+                    let pixmap = render(page, &options);
                     if let Ok(encoded) = pixmap.encode_png() {
                         return Ok(encoded);
                     }
@@ -160,15 +162,11 @@ impl TypstCompiler {
                 output: Err(errors),
                 warnings: _,
             } => {
-                use typst::World;
+                use typst::WorldExt;
                 Err(errors
                     .into_iter()
                     .map(|d| {
-                        let range = d
-                            .span
-                            .id()
-                            .and_then(|id| world.source(id).ok())
-                            .and_then(|s| s.range(d.span));
+                        let range = world.range(d.span);
                         (d, range)
                     })
                     .collect())

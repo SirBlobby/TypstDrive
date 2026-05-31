@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -23,6 +23,37 @@ pub struct RenderRequest {
 pub struct InlineFile {
     pub name: String,
     pub data: String, // base64-encoded
+}
+
+#[derive(Serialize)]
+struct CompileErrorDetail {
+    message: String,
+    severity: String,
+    line: Option<usize>,
+    column: Option<usize>,
+}
+
+#[derive(Serialize)]
+struct CompileErrorResponse {
+    error: String,
+    details: Vec<CompileErrorDetail>,
+}
+
+fn line_and_column(code: &str, offset: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut column = 1;
+    for (index, character) in code.char_indices() {
+        if index >= offset {
+            break;
+        }
+        if character == '\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+    (line, column)
 }
 
 fn compute_cache_key(format: &str, code: &str, files: &Option<Vec<InlineFile>>) -> String {
@@ -206,6 +237,48 @@ pub async fn render_handler(
 
             (StatusCode::OK, [(header::CONTENT_TYPE, content_type)], data).into_response()
         }
-        Err(_) => (StatusCode::UNPROCESSABLE_ENTITY, "Typst compilation failed. Check your code for errors.").into_response(),
+        Err(diagnostics) => {
+            let details: Vec<CompileErrorDetail> = diagnostics
+                .into_iter()
+                .map(|(diagnostic, range)| {
+                    let (line, column) = match range.as_ref() {
+                        Some(range) => {
+                            let (line, column) = line_and_column(&payload.code, range.start);
+                            (Some(line), Some(column))
+                        }
+                        None => (None, None),
+                    };
+                    CompileErrorDetail {
+                        message: diagnostic.message.to_string(),
+                        severity: format!("{:?}", diagnostic.severity).to_lowercase(),
+                        line,
+                        column,
+                    }
+                })
+                .collect();
+
+            let summary = details
+                .iter()
+                .map(|detail| match (detail.line, detail.column) {
+                    (Some(line), Some(column)) => {
+                        format!("{} (line {}, column {})", detail.message, line, column)
+                    }
+                    _ => detail.message.clone(),
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+
+            let error = if summary.is_empty() {
+                "Typst compilation failed.".to_string()
+            } else {
+                format!("Typst compilation failed: {}", summary)
+            };
+
+            (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(CompileErrorResponse { error, details }),
+            )
+                .into_response()
+        }
     }
 }

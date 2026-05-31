@@ -14,12 +14,12 @@
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/kit": "^2.60.1",
+		"@sveltejs/kit": "^2.61.1",
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.3.0",
-		"svelte": "^5.55.9",
+		"svelte": "^5.56.0",
 		"svelte-check": "^4.4.8",
 		"tailwindcss": "^4.3.0",
 		"typescript": "^5.9.3",
@@ -42,6 +42,6 @@
 		"highlight.js": "^11.11.1",
 		"y-codemirror.next": "^0.3.5",
 		"y-websocket": "^3.0.0",
-		"yjs": "^13.6.30"
+		"yjs": "^13.6.31"
 	}
 }

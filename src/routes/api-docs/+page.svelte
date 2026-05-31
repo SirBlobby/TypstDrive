@@ -97,6 +97,18 @@ with open("output.png", "wb") as f:
   ]
 }`;
 
+    const compileErrorJson = `{
+  "error": "Typst compilation failed: unknown variable: x (line 3, column 5)",
+  "details": [
+    {
+      "message": "unknown variable: x",
+      "severity": "error",
+      "line": 3,
+      "column": 5
+    }
+  ]
+}`;
+
     // Highlighted versions (derived so they update if baseUrl changes)
     let hCurlPng    = $derived(hljs.highlight(curlPng,          { language: 'bash'       }).value);
     let hCurlPdf    = $derived(hljs.highlight(curlPdf,          { language: 'bash'       }).value);
@@ -104,6 +116,7 @@ with open("output.png", "wb") as f:
     let hPython     = $derived(hljs.highlight(pythonExample,    { language: 'python'     }).value);
     let hFiles      = $derived(hljs.highlight(filesExample,     { language: 'python'     }).value);
     let hSchema     = $derived(hljs.highlight(requestSchemaJson,{ language: 'json'       }).value);
+    let hCompileErr = $derived(hljs.highlight(compileErrorJson, { language: 'json'       }).value);
 
     async function copy(id: string, text: string) {
         await navigator.clipboard.writeText(text);
@@ -321,6 +334,15 @@ with open("output.png", "wb") as f:
                         </div>
                     </div>
 
+                    <div>
+                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">Compilation errors</p>
+                        <div class="p-3 mb-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 text-sm">
+                            <span class="font-mono text-xs font-bold text-red-700 dark:text-red-400">422 Unprocessable Entity</span>
+                            <span class="text-gray-600 dark:text-gray-400 ml-2">JSON body describing every Typst error. <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">error</code> is a readable summary; <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">details</code> lists each diagnostic with its message, severity, and source line and column.</span>
+                        </div>
+                        <pre class="rounded-xl border border-gray-700 overflow-x-auto"><code class="hljs block px-4 py-4 text-xs font-mono leading-relaxed rounded-xl">{@html hCompileErr}</code></pre>
+                    </div>
+
                     <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 text-sm text-blue-800 dark:text-blue-300">
                         <p class="font-semibold mb-1 flex items-center gap-2"><Icon icon="mdi:folder-account-outline" class="text-base" /> Account files available automatically</p>
                         <p>Files uploaded to your TypstDrive account are available by filename inside your Typst code. Pass additional files inline via the <code class="font-mono text-xs bg-blue-100 dark:bg-blue-800/40 px-1 rounded">files</code> array to supplement or override them.</p>
@@ -399,7 +421,7 @@ with open("output.png", "wb") as f:
                         {#each [
                             { code: '400', name: 'Bad Request',           desc: 'Invalid format value, empty code, or malformed JSON body.'                              },
                             { code: '401', name: 'Unauthorized',          desc: 'Missing or invalid Authorization header, or unknown API key.'                           },
-                            { code: '422', name: 'Unprocessable Entity',  desc: 'Your Typst code compiled with errors. Fix the markup and retry.'                        },
+                            { code: '422', name: 'Unprocessable Entity',  desc: 'Your Typst code compiled with errors. The JSON body lists each error message with its source line and column.' },
                             { code: '429', name: 'Too Many Requests',     desc: 'Rate limit exceeded. Wait for the current 60-second window to reset.'                   },
                             { code: '500', name: 'Internal Server Error', desc: 'Unexpected server error. Try again after a short delay.'                                },
                         ] as err}
@@ -414,7 +436,7 @@ with open("output.png", "wb") as f:
                     </div>
                     <div class="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10">
                         <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Error body</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Error responses return plain text describing the issue — no JSON envelope.</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Compilation failures (<code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">422</code>) return a JSON body with an <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">error</code> summary and a <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">details</code> array. All other errors return plain text describing the issue.</p>
                     </div>
                 </div>
             {/if}
