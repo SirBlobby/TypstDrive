@@ -13,20 +13,29 @@ use typst_kit::packages::SystemPackages;
 pub struct MemoryWorld {
     library: typst::utils::LazyHash<Library>,
     main: FileId,
-    source: Source,
     files: HashMap<String, Vec<u8>>,
+    local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
     book: typst::utils::LazyHash<FontBook>,
     fonts: Vec<Font>,
     packages: SystemPackages,
 }
 
+const LOCAL_NAMESPACE: &str = "typstdrive";
+
+fn normalize_path(path: &str) -> String {
+    path.trim_start_matches('/').replace('\\', "/")
+}
+
 impl MemoryWorld {
-    pub fn new(text: String, files: HashMap<String, Vec<u8>>) -> Self {
+    pub fn new_project(
+        entrypoint: String,
+        files: HashMap<String, Vec<u8>>,
+        local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
+    ) -> Self {
         let main = FileId::new(RootedPath::new(
             VirtualRoot::Project,
-            VirtualPath::new("main.typ").unwrap(),
+            VirtualPath::new(&entrypoint).unwrap_or_else(|_| VirtualPath::new("main.typ").unwrap()),
         ));
-        let source = Source::new(main, text);
         let downloader = SystemDownloader::new("TypstDrive (typst-kit)");
         let packages = SystemPackages::new(downloader);
 
@@ -56,12 +65,39 @@ impl MemoryWorld {
         Self {
             library: typst::utils::LazyHash::new(Library::builder().build()),
             main,
-            source,
             files,
+            local_packages,
             book: typst::utils::LazyHash::new(book),
             fonts,
             packages,
         }
+    }
+
+    fn load_bytes(&self, id: FileId) -> FileResult<Vec<u8>> {
+        let path = normalize_path(id.vpath().get_without_slash());
+
+        if let VirtualRoot::Package(package) = id.root() {
+            if package.namespace.as_str() == LOCAL_NAMESPACE {
+                let key = format!("{}:{}", package.name, package.version);
+                return self
+                    .local_packages
+                    .get(&key)
+                    .and_then(|files| files.get(&path))
+                    .cloned()
+                    .ok_or_else(|| FileError::NotFound(path.clone().into()));
+            }
+
+            let root = self
+                .packages
+                .obtain(package)
+                .map_err(|e| FileError::Other(Some(e.to_string().into())))?;
+            return root.load(id.vpath()).map(|bytes| bytes.to_vec());
+        }
+
+        self.files
+            .get(&path)
+            .cloned()
+            .ok_or_else(|| FileError::NotFound(path.into()))
     }
 }
 
@@ -79,42 +115,16 @@ impl World for MemoryWorld {
     }
 
     fn source(&self, id: FileId) -> FileResult<Source> {
-        if id == self.main {
-            Ok(self.source.clone())
-        } else if let VirtualRoot::Package(package) = id.root() {
-            let root = self
-                .packages
-                .obtain(package)
-                .map_err(|e| FileError::Other(Some(e.to_string().into())))?;
-            let data = root.load(id.vpath())?;
-            let text = std::str::from_utf8(&data)
-                .map_err(|_| FileError::InvalidUtf8)?
-                .to_owned();
-            Ok(Source::new(id, text))
-        } else {
-            Err(FileError::NotFound(id.vpath().get_without_slash().into()))
-        }
+        let data = self.load_bytes(id)?;
+        let text = std::str::from_utf8(&data)
+            .map_err(|_| FileError::InvalidUtf8)?
+            .to_owned();
+        Ok(Source::new(id, text))
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        if id == self.main {
-            Ok(Bytes::from_string(self.source.text().to_string()))
-        } else if let VirtualRoot::Package(package) = id.root() {
-            let root = self
-                .packages
-                .obtain(package)
-                .map_err(|e| FileError::Other(Some(e.to_string().into())))?;
-            root.load(id.vpath())
-        } else if let Some(data) = self.files.get(
-            &id.vpath()
-                .get_without_slash()
-                .to_string()
-                .replace("\\", "/"),
-        ) {
-            Ok(Bytes::new(data.clone()))
-        } else {
-            Err(FileError::NotFound(id.vpath().get_without_slash().into()))
-        }
+        let data = self.load_bytes(id)?;
+        Ok(Bytes::new(data))
     }
 
     fn font(&self, index: usize) -> Option<Font> {

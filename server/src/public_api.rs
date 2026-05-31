@@ -10,7 +10,7 @@ use sha2::{Sha256, Digest};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::{api_keys::hash_key, AppState};
+use crate::{api_keys::hash_key, compiler::ProjectInput, AppState};
 
 #[derive(Deserialize)]
 pub struct RenderRequest {
@@ -214,8 +214,8 @@ pub async fn render_handler(
     // Compile
     let compiler = state.compiler.lock().await;
     let result = match payload.format.as_str() {
-        "pdf" => compiler.export_pdf(payload.code.clone(), files_map),
-        "png" => compiler.export_png(payload.code.clone(), files_map),
+        "pdf" => compiler.export_pdf(ProjectInput::single(payload.code.clone(), files_map)),
+        "png" => compiler.export_png(ProjectInput::single(payload.code.clone(), files_map)),
         _ => unreachable!(),
     };
     drop(compiler);

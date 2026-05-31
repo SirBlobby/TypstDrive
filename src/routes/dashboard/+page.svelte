@@ -14,6 +14,7 @@
     import InfoModal from '$lib/components/dashboard/InfoModal.svelte';
     import RenameModal from '$lib/components/dashboard/RenameModal.svelte';
     import CreateDocModal from '$lib/components/dashboard/CreateDocModal.svelte';
+    import CreateSpaceModal from '$lib/components/dashboard/CreateSpaceModal.svelte';
     import CreateFolderModal from '$lib/components/dashboard/CreateFolderModal.svelte';
     import Footer from '$lib/components/Footer.svelte';
 
@@ -26,6 +27,7 @@
     let newFolderName = $state('');
     let loading = $state(true);
     let showCreateModal = $state(false);
+    let showCreateSpaceModal = $state(false);
     let newDocTitle = $state('');
     let showPlusDropdown = $state(false);
     let dragOverFolderId = $state<string | null>(null);
@@ -190,11 +192,32 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: title.trim(), folder_id: currentFolderId || undefined })
         });
-        
+
         if (res.ok) {
             const doc = await res.json();
             showCreateModal = false;
             goto(`/doc/${doc.id}`);
+        }
+    }
+
+    function openCreateSpaceModal() {
+        showPlusDropdown = false;
+        showCreateSpaceModal = true;
+    }
+
+    async function createSpace(name: string) {
+        if (!name.trim()) return;
+
+        const res = await fetch('/api/spaces', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name.trim(), folder_id: currentFolderId || undefined })
+        });
+
+        if (res.ok) {
+            const space = await res.json();
+            showCreateSpaceModal = false;
+            goto(`/space/${space.id}`);
         }
     }
 
@@ -414,6 +437,10 @@
                             <Icon icon="mdi:file-document-plus" class="text-lg text-blue-500" />
                             New Document
                         </button>
+                        <button onclick={openCreateSpaceModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
+                            <Icon icon="mdi:folder-multiple-plus" class="text-lg text-indigo-500" />
+                            New Space
+                        </button>
                         <button onclick={openCreateFolderModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
                             <Icon icon="mdi:folder-plus" class="text-lg text-yellow-500" />
                             New Folder
@@ -600,6 +627,10 @@
 
 {#if showCreateModal}
     <CreateDocModal {createDoc} onClose={() => showCreateModal = false} />
+{/if}
+
+{#if showCreateSpaceModal}
+    <CreateSpaceModal {createSpace} onClose={() => showCreateSpaceModal = false} />
 {/if}
 
 {#if showCreateFolderModal}

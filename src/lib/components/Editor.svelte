@@ -5,7 +5,8 @@
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { autocompletion, snippetCompletion, type CompletionContext } from '@codemirror/autocomplete';
 	import { typst, TypstParser, typstHighlight } from 'codemirror-lang-typst';
-	import { Language } from '@codemirror/language';
+	import { Language, StreamLanguage } from '@codemirror/language';
+	import { toml } from '@codemirror/legacy-modes/mode/toml';
 	import { yCollab } from 'y-codemirror.next';
 	import { text, provider } from '../ts/yjs-setup';
 	import { getThemeExtension } from '../ts/themes';
@@ -13,6 +14,20 @@
 	import { page } from '$app/stores';
 	import { LSPClient, languageServerExtensions } from "@codemirror/lsp-client";
 	import { setDiagnostics, lintGutter } from '@codemirror/lint';
+
+	let {
+		ytext = undefined,
+		awarenessProvider = undefined,
+		lspDocId = undefined,
+		enableLsp = true,
+		filePath = undefined
+	}: {
+		ytext?: any;
+		awarenessProvider?: any;
+		lspDocId?: string;
+		enableLsp?: boolean;
+		filePath?: string;
+	} = $props();
 
 	let editorContainer: HTMLElement;
 	let view: EditorView;
@@ -136,7 +151,9 @@
 	}
 
 	onMount(() => {
-		if (!text || !provider) return;
+		const activeText = ytext ?? text;
+		const activeProvider = awarenessProvider ?? provider;
+		if (!activeText || !activeProvider) return;
 
 		themeStore.subscribe(t => { currentTheme = t; })();
 		darkModeStore.subscribe(d => { isDark = d; })();
@@ -150,16 +167,20 @@
 			'typst'
 		);
 
+		const isToml = (filePath ?? '').toLowerCase().endsWith('.toml');
+		const languageExtension = isToml ? StreamLanguage.define(toml) : myLang;
+		const completionExtensions = isToml ? [] : [autocompletion({ override: [typstCompletions] })];
+
 		state = EditorState.create({
-			doc: text.toString(),
+			doc: activeText.toString(),
 			extensions: [
 				lineNumbers(),
 				lintGutter(),
 				history(),
 				keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab] as any),
-				myLang,
-				yCollab(text, provider.awareness),
-				autocompletion({ override: [typstCompletions] }),
+				languageExtension,
+				yCollab(activeText, activeProvider.awareness),
+				...completionExtensions,
 				themeCompartment.of(getThemeExtension(currentTheme as any, isDark)),
 				lspCompartment.of([]),
 				EditorView.lineWrapping,
@@ -219,7 +240,7 @@
 
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		const host = window.location.host;
-		const docId = $page.params.id;
+		const docId = lspDocId ?? $page.params.id;
 
 		let lsHandlers: ((value: string) => void)[] = [];
 		let lspInitialized = false;
@@ -279,13 +300,15 @@
 			lsSocket.onopen = () => {};
 		}
 		
-		connectLsp();
-		
-		unsubscribeLspReconnect = triggerLspReconnect.subscribe((val) => {
-			if (val > 0) {
-				connectLsp();
-			}
-		});
+		if (enableLsp && docId) {
+			connectLsp();
+
+			unsubscribeLspReconnect = triggerLspReconnect.subscribe((val) => {
+				if (val > 0) {
+					connectLsp();
+				}
+			});
+		}
 	});
 
 	onDestroy(() => {

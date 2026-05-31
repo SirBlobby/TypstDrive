@@ -105,6 +105,60 @@ pub async fn init_schema(pool: &AnyPool) {
             count INTEGER NOT NULL DEFAULT 1,
             PRIMARY KEY(key_id, minute)
         )",
+        "CREATE TABLE IF NOT EXISTS spaces (
+            id TEXT PRIMARY KEY,
+            owner_id TEXT NOT NULL REFERENCES users(id),
+            folder_id TEXT REFERENCES folders(id),
+            name TEXT NOT NULL,
+            entrypoint TEXT NOT NULL DEFAULT 'main.typ',
+            thumbnail_svg TEXT,
+            public_role TEXT DEFAULT NULL,
+            created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'),
+            updated_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+        )",
+        "CREATE TABLE IF NOT EXISTS space_files (
+            id TEXT PRIMARY KEY,
+            space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+            path TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'text',
+            content BYTEA,
+            mime_type TEXT NOT NULL DEFAULT 'text/plain',
+            created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'),
+            UNIQUE(space_id, path)
+        )",
+        "CREATE TABLE IF NOT EXISTS space_collaborators (
+            id TEXT PRIMARY KEY,
+            space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'),
+            UNIQUE(space_id, user_id)
+        )",
+        "CREATE TABLE IF NOT EXISTS packages (
+            id TEXT PRIMARY KEY,
+            owner_id TEXT NOT NULL REFERENCES users(id),
+            namespace TEXT NOT NULL DEFAULT 'typstdrive',
+            name TEXT NOT NULL,
+            description TEXT,
+            created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'),
+            UNIQUE(namespace, name)
+        )",
+        "CREATE TABLE IF NOT EXISTS package_versions (
+            id TEXT PRIMARY KEY,
+            package_id TEXT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+            version TEXT NOT NULL,
+            entrypoint TEXT NOT NULL DEFAULT 'lib.typ',
+            manifest BYTEA,
+            created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'),
+            UNIQUE(package_id, version)
+        )",
+        "CREATE TABLE IF NOT EXISTS package_files (
+            id TEXT PRIMARY KEY,
+            version_id TEXT NOT NULL REFERENCES package_versions(id) ON DELETE CASCADE,
+            path TEXT NOT NULL,
+            data BYTEA NOT NULL,
+            UNIQUE(version_id, path)
+        )",
     ];
 
     for stmt in &statements {

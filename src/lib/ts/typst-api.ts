@@ -20,6 +20,35 @@ export async function compileTypst(text: string, document_id?: string): Promise<
 	return await res.json();
 }
 
+export async function compileSpace(space_id: string, files: Record<string, string>): Promise<CompileResponse> {
+	const res = await fetch('/api/compile', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ space_id, files }),
+	});
+	return await res.json();
+}
+
+export function exportSpace(space_id: string, files: Record<string, string>, format: 'pdf' | 'png' | 'svg', title: string = 'document') {
+	return fetch(`/api/export/${format}`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ space_id, files }),
+	})
+		.then((res) => {
+			if (!res.ok) throw new Error('Export failed');
+			return res.blob();
+		})
+		.then((blob) => {
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `${title}.${format}`;
+			a.click();
+			URL.revokeObjectURL(url);
+		});
+}
+
 export function exportTypst(text: string, format: 'pdf' | 'png' | 'svg', title: string = 'document', document_id?: string) {
 	const form = document.createElement('form');
 	form.method = 'POST';

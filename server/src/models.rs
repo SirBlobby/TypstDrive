@@ -72,6 +72,93 @@ pub struct Document {
     pub updated_at: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct Space {
+    pub id: String,
+    pub owner_id: String,
+    pub folder_id: Option<String>,
+    pub name: String,
+    pub entrypoint: String,
+    pub thumbnail_svg: Option<String>,
+    pub public_role: Option<String>,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub effective_role: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct SpaceFile {
+    pub id: String,
+    pub space_id: String,
+    pub path: String,
+    pub kind: String,
+    #[serde(skip_serializing)]
+    #[sqlx(default)]
+    pub content: Option<Vec<u8>>,
+    pub mime_type: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct Package {
+    pub id: String,
+    pub owner_id: String,
+    pub namespace: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: String,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub owner_name: Option<String>,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub latest_version: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct PackageVersion {
+    pub id: String,
+    pub package_id: String,
+    pub version: String,
+    pub entrypoint: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateSpaceRequest {
+    pub name: String,
+    pub folder_id: Option<String>,
+    pub template: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateSpaceRequest {
+    pub name: Option<String>,
+    pub folder_id: Option<String>,
+    pub entrypoint: Option<String>,
+    pub public_role: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateSpaceFileRequest {
+    pub path: String,
+    pub kind: Option<String>,
+    pub content: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateSpaceFileRequest {
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublishPackageRequest {
+    pub space_id: String,
+    pub version: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegisterRequest {
     pub username: String,

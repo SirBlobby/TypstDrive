@@ -50,6 +50,28 @@ fn extract_frame_text(frame: &Frame, text: &mut String) {
     }
 }
 
+pub struct ProjectInput {
+    pub entrypoint: String,
+    pub files: HashMap<String, Vec<u8>>,
+    pub packages: HashMap<String, HashMap<String, Vec<u8>>>,
+}
+
+impl ProjectInput {
+    pub fn single(text: String, files: HashMap<String, Vec<u8>>) -> Self {
+        let mut project_files = files;
+        project_files.insert("main.typ".to_string(), text.into_bytes());
+        Self {
+            entrypoint: "main.typ".to_string(),
+            files: project_files,
+            packages: HashMap::new(),
+        }
+    }
+
+    fn into_world(self) -> MemoryWorld {
+        MemoryWorld::new_project(self.entrypoint, self.files, self.packages)
+    }
+}
+
 pub struct TypstCompiler;
 
 impl TypstCompiler {
@@ -59,13 +81,12 @@ impl TypstCompiler {
 
     pub fn compile_svg(
         &self,
-        text: String,
-        files: HashMap<String, Vec<u8>>,
+        input: ProjectInput,
     ) -> Result<
         (Vec<String>, String, DocumentStats),
         Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>,
     > {
-        let world = MemoryWorld::new(text, files);
+        let world = input.into_world();
         match typst::compile::<PagedDocument>(&world) {
             Warned {
                 output: Ok(doc),
@@ -104,10 +125,9 @@ impl TypstCompiler {
 
     pub fn export_pdf(
         &self,
-        text: String,
-        files: HashMap<String, Vec<u8>>,
+        input: ProjectInput,
     ) -> Result<Vec<u8>, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
-        let world = MemoryWorld::new(text, files);
+        let world = input.into_world();
         match typst::compile::<PagedDocument>(&world) {
             Warned {
                 output: Ok(doc),
@@ -137,10 +157,9 @@ impl TypstCompiler {
 
     pub fn export_png(
         &self,
-        text: String,
-        files: HashMap<String, Vec<u8>>,
+        input: ProjectInput,
     ) -> Result<Vec<u8>, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
-        let world = MemoryWorld::new(text, files);
+        let world = input.into_world();
         match typst::compile::<PagedDocument>(&world) {
             Warned {
                 output: Ok(doc),

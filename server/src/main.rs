@@ -22,8 +22,10 @@ mod folders;
 mod files;
 mod handlers;
 mod models;
+mod packages;
 mod public_api;
 mod setup;
+mod spaces;
 mod world;
 mod collab;
 
@@ -127,7 +129,16 @@ async fn main() {
         .route("/keys", get(api_keys::list_keys).post(api_keys::create_key))
         .route("/keys/usage", get(api_keys::get_aggregate_usage))
         .route("/keys/{id}", delete(api_keys::delete_key))
-        .route("/keys/{id}/regenerate", post(api_keys::regenerate_key));
+        .route("/keys/{id}/regenerate", post(api_keys::regenerate_key))
+        .route("/spaces/shared", get(spaces::list_shared_spaces))
+        .route("/spaces", get(spaces::list_spaces).post(spaces::create_space))
+        .route("/spaces/{id}", get(spaces::get_space).delete(spaces::delete_space).patch(spaces::update_space))
+        .route("/spaces/{id}/files", get(spaces::list_space_files).post(spaces::create_space_file))
+        .route("/spaces/{id}/files/upload", post(spaces::upload_space_file))
+        .route("/spaces/{id}/files/{fid}", get(spaces::get_space_file).patch(spaces::update_space_file).delete(spaces::delete_space_file))
+        .route("/packages", get(packages::list_packages))
+        .route("/packages/publish", post(packages::publish_package))
+        .route("/packages/{name}", get(packages::list_versions).delete(packages::delete_package));
 
     let v1_routes = Router::new()
         .route("/render", post(public_api::render_handler));

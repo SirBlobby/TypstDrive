@@ -50,11 +50,29 @@ impl Stream for ViewerFilterStream {
 
 #[derive(Deserialize)]
 pub struct CompileRequest {
-    pub text: String,
+    #[serde(default)]
+    pub text: Option<String>,
     pub document_id: Option<String>,
+    pub space_id: Option<String>,
+    #[serde(default)]
+    pub files: Option<std::collections::HashMap<String, String>>,
 }
 
-use crate::compiler::DocumentStats;
+use crate::compiler::{DocumentStats, ProjectInput};
+
+fn map_diagnostics(
+    diags: Vec<(typst::diag::SourceDiagnostic, Option<std::ops::Range<usize>>)>,
+) -> Vec<Diagnostic> {
+    diags
+        .into_iter()
+        .map(|(d, range)| Diagnostic {
+            message: d.message.to_string(),
+            severity: format!("{:?}", d.severity),
+            from: range.as_ref().map(|r| r.start),
+            to: range.as_ref().map(|r| r.end),
+        })
+        .collect()
+}
 
 #[derive(Serialize)]
 pub struct CompileResponse {
@@ -79,34 +97,59 @@ pub async fn yjs_handler(
 ) -> impl IntoResponse {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
-    let doc_info = sqlx::query_as::<_, Document>(
-        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await;
-
     let mut is_viewer = true;
-    if let Ok(Some(ref d)) = doc_info {
-        if let Some(uid) = &user_id_opt {
-            if &d.owner_id == uid {
-                is_viewer = false;
-            } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ? AND role = 'editor'")
-                .bind(&id)
-                .bind(uid)
+    let mut initial_content: Option<Vec<u8>> = None;
+    // (table, row_id) the autosave task persists into; None means no persistence.
+    let mut save_target: Option<(&'static str, String)> = None;
+
+    if let Some(rest) = id.strip_prefix("space:") {
+        if let Some((space_id, file_id)) = rest.split_once(':') {
+            if let Some((_space, role)) = crate::spaces::space_role(&state, space_id, &user_id_opt).await {
+                is_viewer = role == "viewer";
+                if let Ok(Some((content,))) = sqlx::query_as::<_, (Option<Vec<u8>>,)>(
+                    "SELECT content FROM space_files WHERE id = ? AND space_id = ?"
+                )
+                .bind(file_id)
+                .bind(space_id)
                 .fetch_optional(&state.db)
                 .await
-            {
-                is_viewer = false;
+                {
+                    initial_content = content;
+                }
+                save_target = Some(("space_files", file_id.to_string()));
             }
         }
-        if is_viewer {
-            if let Some(pr) = &d.public_role {
-                if pr == "editor" {
+    } else {
+        let doc_info = sqlx::query_as::<_, Document>(
+            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
+        )
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await;
+
+        if let Ok(Some(ref d)) = doc_info {
+            if let Some(uid) = &user_id_opt {
+                if &d.owner_id == uid {
+                    is_viewer = false;
+                } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ? AND role = 'editor'")
+                    .bind(&id)
+                    .bind(uid)
+                    .fetch_optional(&state.db)
+                    .await
+                {
                     is_viewer = false;
                 }
             }
+            if is_viewer {
+                if let Some(pr) = &d.public_role {
+                    if pr == "editor" {
+                        is_viewer = false;
+                    }
+                }
+            }
+            initial_content = d.content.clone();
         }
+        save_target = Some(("documents", id.clone()));
     }
 
     let mut bcast_map = state.bcast_map.lock().await;
@@ -115,11 +158,9 @@ pub async fn yjs_handler(
     } else {
         let ydoc = Doc::new();
 
-        if let Ok(Some(db_doc)) = doc_info {
-            if let Some(content) = db_doc.content {
-                if let Ok(update) = Update::decode_v1(&content) {
-                    ydoc.transact_mut().apply_update(update);
-                }
+        if let Some(content) = initial_content {
+            if let Ok(update) = Update::decode_v1(&content) {
+                ydoc.transact_mut().apply_update(update);
             }
         }
 
@@ -127,22 +168,28 @@ pub async fn yjs_handler(
         let new_bcast = Arc::new(BroadcastGroup::new(awareness.clone(), 10).await);
         bcast_map.insert(id.clone(), new_bcast.clone());
 
-        let save_db = state.db.clone();
-        let save_id = id.clone();
-        let save_awareness = awareness.clone();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
-            loop {
-                interval.tick().await;
-                let doc = save_awareness.read().await;
-                let content = doc.doc().transact().encode_state_as_update_v1(&yrs::StateVector::default());
-                let _ = sqlx::query("UPDATE documents SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                    .bind(content)
-                    .bind(&save_id)
-                    .execute(&save_db)
-                    .await;
-            }
-        });
+        if let Some((table, row_id)) = save_target {
+            let save_db = state.db.clone();
+            let save_awareness = awareness.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+                loop {
+                    interval.tick().await;
+                    let doc = save_awareness.read().await;
+                    let content = doc.doc().transact().encode_state_as_update_v1(&yrs::StateVector::default());
+                    let query = if table == "space_files" {
+                        "UPDATE space_files SET content = ? WHERE id = ?"
+                    } else {
+                        "UPDATE documents SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                    };
+                    let _ = sqlx::query(query)
+                        .bind(content)
+                        .bind(&row_id)
+                        .execute(&save_db)
+                        .await;
+                }
+            });
+        }
 
         new_bcast
     };
@@ -174,6 +221,54 @@ pub async fn compile_handler(
     let mut files_map = std::collections::HashMap::new();
     let mut can_save_thumbnail = false;
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
+
+    if let Some(space_id) = &payload.space_id {
+        let (space, role) = match crate::spaces::space_role(&state, space_id, &user_id_opt).await {
+            Some(v) => v,
+            None => {
+                return Json(CompileResponse {
+                    svgs: None,
+                    errors: Some(vec![Diagnostic {
+                        message: "Unauthorized".to_string(),
+                        severity: "Error".to_string(),
+                        from: None,
+                        to: None,
+                    }]),
+                    stats: None,
+                });
+            }
+        };
+
+        let overrides = payload.files.clone().unwrap_or_default();
+        let input = crate::spaces::assemble_project(&state, &space, overrides).await;
+        let can_save = role == "owner" || role == "editor";
+
+        let compiler = state.compiler.lock().await;
+        let result = compiler.compile_svg(input);
+        drop(compiler);
+
+        return match result {
+            Ok((svgs, thumbnail, stats)) => {
+                if can_save {
+                    let _ = sqlx::query("UPDATE spaces SET thumbnail_svg = ? WHERE id = ?")
+                        .bind(&thumbnail)
+                        .bind(&space.id)
+                        .execute(&state.db)
+                        .await;
+                }
+                Json(CompileResponse {
+                    svgs: Some(svgs),
+                    errors: None,
+                    stats: Some(stats),
+                })
+            }
+            Err(diags) => Json(CompileResponse {
+                svgs: None,
+                errors: Some(map_diagnostics(diags)),
+                stats: None,
+            }),
+        };
+    }
 
     if let Some(doc_id) = &payload.document_id {
         if let Ok(doc) = sqlx::query_as::<_, crate::models::Document>(
@@ -234,7 +329,7 @@ pub async fn compile_handler(
     }
 
     let compiler = state.compiler.lock().await;
-    match compiler.compile_svg(payload.text, files_map) {
+    match compiler.compile_svg(ProjectInput::single(payload.text.clone().unwrap_or_default(), files_map)) {
         Ok((svgs, thumbnail, stats)) => {
             if let Some(doc_id) = &payload.document_id {
                 if can_save_thumbnail {
@@ -335,10 +430,22 @@ pub async fn export_handler(
         }
     }
 
+    let input = if let Some(space_id) = &payload.space_id {
+        match crate::spaces::space_role(&state, space_id, &user_id_opt).await {
+            Some((space, _)) => {
+                let overrides = payload.files.clone().unwrap_or_default();
+                crate::spaces::assemble_project(&state, &space, overrides).await
+            }
+            None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+        }
+    } else {
+        ProjectInput::single(payload.text.clone().unwrap_or_default(), files_map)
+    };
+
     let compiler = state.compiler.lock().await;
 
     match format.as_str() {
-        "pdf" => match compiler.export_pdf(payload.text, files_map.clone()) {
+        "pdf" => match compiler.export_pdf(input) {
             Ok(bytes) => (
                 StatusCode::OK,
                 [(header::CONTENT_TYPE, "application/pdf")],
@@ -347,7 +454,7 @@ pub async fn export_handler(
                 .into_response(),
             Err(_) => (StatusCode::BAD_REQUEST, "Compilation failed").into_response(),
         },
-        "png" => match compiler.export_png(payload.text, files_map.clone()) {
+        "png" => match compiler.export_png(input) {
             Ok(bytes) => (
                 StatusCode::OK,
                 [(header::CONTENT_TYPE, "image/png")],
@@ -356,7 +463,7 @@ pub async fn export_handler(
                 .into_response(),
             Err(_) => (StatusCode::BAD_REQUEST, "Compilation failed").into_response(),
         },
-        "svg" => match compiler.compile_svg(payload.text, files_map.clone()) {
+        "svg" => match compiler.compile_svg(input) {
             Ok((svgs, _, _)) => {
                 let mut combined = String::new();
                 for svg in svgs {
@@ -408,7 +515,7 @@ pub async fn pandoc_export_handler(
     };
 
     let mut stdin = child.stdin.take().unwrap();
-    let text = payload.text.clone();
+    let text = payload.text.clone().unwrap_or_default();
     tokio::spawn(async move {
         use tokio::io::AsyncWriteExt;
         let _ = stdin.write_all(text.as_bytes()).await;

@@ -23,7 +23,14 @@
         </div>
         <div class="h-6 w-px bg-gray-300 dark:bg-white/20"></div>
 
-        
+        <a href="/spaces" class="text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 px-3 py-2 rounded-lg flex items-center gap-2 border border-transparent dark:border-white/10" title="Spaces">
+            <Icon icon="mdi:folder-multiple-outline" class="text-xl" />
+        </a>
+        <a href="/packages" class="text-sm font-medium text-gray-600 hover:text-purple-600 dark:text-gray-300 dark:hover:text-purple-400 transition-colors bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 px-3 py-2 rounded-lg flex items-center gap-2 border border-transparent dark:border-white/10" title="Packages">
+            <Icon icon="mdi:package-variant-closed" class="text-xl" />
+        </a>
+
+
         <a href="/api-docs" class="text-sm font-medium text-gray-600 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400 transition-colors bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 px-3 py-2 rounded-lg flex items-center gap-2 border border-transparent dark:border-white/10" title="API Docs">
             <Icon icon="mdi:api" class="text-xl" />
         </a>
