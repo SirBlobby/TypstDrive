@@ -31,6 +31,7 @@ impl MemoryWorld {
         entrypoint: String,
         files: HashMap<String, Vec<u8>>,
         local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
+        enable_html: bool,
     ) -> Self {
         let main = FileId::new(RootedPath::new(
             VirtualRoot::Project,
@@ -62,8 +63,16 @@ impl MemoryWorld {
             }
         }
 
+        let library = if enable_html {
+            Library::builder()
+                .with_features([typst::Feature::Html].into_iter().collect())
+                .build()
+        } else {
+            Library::builder().build()
+        };
+
         Self {
-            library: typst::utils::LazyHash::new(Library::builder().build()),
+            library: typst::utils::LazyHash::new(library),
             main,
             files,
             local_packages,

@@ -89,8 +89,8 @@ pub async fn render_handler(
         None => return (StatusCode::UNAUTHORIZED, "Missing or invalid Authorization header. Use: Authorization: Bearer <api-key>").into_response(),
     };
 
-    if payload.format != "png" && payload.format != "pdf" {
-        return (StatusCode::BAD_REQUEST, "Invalid format. Must be 'png' or 'pdf'").into_response();
+    if payload.format != "png" && payload.format != "pdf" && payload.format != "html" {
+        return (StatusCode::BAD_REQUEST, "Invalid format. Must be 'png', 'pdf', or 'html'").into_response();
     }
 
     if payload.code.trim().is_empty() {
@@ -170,7 +170,11 @@ pub async fn render_handler(
 
     // Check cache
     let cache_key = compute_cache_key(&payload.format, &payload.code, &payload.files);
-    let content_type: &'static str = if payload.format == "pdf" { "application/pdf" } else { "image/png" };
+    let content_type: &'static str = match payload.format.as_str() {
+        "pdf" => "application/pdf",
+        "html" => "text/html; charset=utf-8",
+        _ => "image/png",
+    };
 
     if let Ok(Some((data, created_at))) = sqlx::query_as::<_, (Vec<u8>, String)>(
         "SELECT data, created_at FROM api_render_cache WHERE content_hash = ? AND format = ?"
@@ -216,6 +220,9 @@ pub async fn render_handler(
     let result = match payload.format.as_str() {
         "pdf" => compiler.export_pdf(ProjectInput::single(payload.code.clone(), files_map)),
         "png" => compiler.export_png(ProjectInput::single(payload.code.clone(), files_map)),
+        "html" => compiler
+            .export_html(ProjectInput::single(payload.code.clone(), files_map))
+            .map(|html| html.into_bytes()),
         _ => unreachable!(),
     };
     drop(compiler);

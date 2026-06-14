@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "1.4.7"
+version = "1.4.8"
 edition = "2021"
 
 [dependencies]
@@ -25,6 +25,7 @@ typst-kit = { path = "../typst/crates/typst-kit", features = ["system-downloader
 typst-pdf = { path = "../typst/crates/typst-pdf" }
 typst-render = { path = "../typst/crates/typst-render" }
 typst-svg = { path = "../typst/crates/typst-svg" }
+typst-html = { path = "../typst/crates/typst-html" }
 typst-layout = { path = "../typst/crates/typst-layout" }
 
 yrs = "0.18.8"

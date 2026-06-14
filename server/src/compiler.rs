@@ -3,6 +3,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use typst::diag::{SourceDiagnostic, Warned};
 use typst::layout::{Frame, FrameItem};
+use typst_html::HtmlDocument;
 use typst_layout::PagedDocument;
 use typst_pdf::{pdf, PdfOptions};
 use typst_render::{render, RenderOptions};
@@ -67,8 +68,8 @@ impl ProjectInput {
         }
     }
 
-    fn into_world(self) -> MemoryWorld {
-        MemoryWorld::new_project(self.entrypoint, self.files, self.packages)
+    fn into_world(self, enable_html: bool) -> MemoryWorld {
+        MemoryWorld::new_project(self.entrypoint, self.files, self.packages, enable_html)
     }
 }
 
@@ -86,7 +87,7 @@ impl TypstCompiler {
         (Vec<String>, String, DocumentStats),
         Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>,
     > {
-        let world = input.into_world();
+        let world = input.into_world(false);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
                 output: Ok(doc),
@@ -127,7 +128,7 @@ impl TypstCompiler {
         &self,
         input: ProjectInput,
     ) -> Result<Vec<u8>, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
-        let world = input.into_world();
+        let world = input.into_world(false);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
                 output: Ok(doc),
@@ -159,7 +160,7 @@ impl TypstCompiler {
         &self,
         input: ProjectInput,
     ) -> Result<Vec<u8>, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
-        let world = input.into_world();
+        let world = input.into_world(false);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
                 output: Ok(doc),
@@ -181,6 +182,46 @@ impl TypstCompiler {
                 output: Err(errors),
                 warnings: _,
             } => {
+                use typst::WorldExt;
+                Err(errors
+                    .into_iter()
+                    .map(|d| {
+                        let range = world.range(d.span);
+                        (d, range)
+                    })
+                    .collect())
+            }
+        }
+    }
+
+    pub fn export_html(
+        &self,
+        input: ProjectInput,
+    ) -> Result<String, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
+        let world = input.into_world(true);
+        let document = match typst::compile::<HtmlDocument>(&world) {
+            Warned {
+                output: Ok(document),
+                warnings: _,
+            } => document,
+            Warned {
+                output: Err(errors),
+                warnings: _,
+            } => {
+                use typst::WorldExt;
+                return Err(errors
+                    .into_iter()
+                    .map(|d| {
+                        let range = world.range(d.span);
+                        (d, range)
+                    })
+                    .collect());
+            }
+        };
+
+        match typst_html::html(&document) {
+            Ok(html) => Ok(html),
+            Err(errors) => {
                 use typst::WorldExt;
                 Err(errors
                     .into_iter()

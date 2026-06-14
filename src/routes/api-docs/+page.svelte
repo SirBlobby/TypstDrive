@@ -31,6 +31,12 @@
   -d '{"code":"= My Report\\n\\nSome body text.","format":"pdf"}' \\
   --output report.pdf`);
 
+    let curlHtml = $derived(`curl -X POST ${baseUrl}/v1/render \\
+  -H "Authorization: Bearer td_your_api_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{"code":"= My Report\\n\\nSome body text.","format":"html"}' \\
+  --output report.html`);
+
     let jsExample = $derived(`const response = await fetch('${baseUrl}/v1/render', {
   method: 'POST',
   headers: {
@@ -87,12 +93,12 @@ with open("output.png", "wb") as f:
     f.write(response.content)`);
 
     const requestSchemaJson = `{
-  "code":   "string",          // Typst markup (required)
-  "format": "png" | "pdf",    // Output format (required)
-  "files":  [                  // Optional inline assets
+  "code":   "string",                 // Typst markup (required)
+  "format": "png" | "pdf" | "html",   // Output format (required)
+  "files":  [                         // Optional inline assets
     {
-      "name": "string",        // Filename used in Typst code
-      "data": "string"         // Base64-encoded file content
+      "name": "string",               // Filename used in Typst code
+      "data": "string"                // Base64-encoded file content
     }
   ]
 }`;
@@ -112,6 +118,7 @@ with open("output.png", "wb") as f:
     // Highlighted versions (derived so they update if baseUrl changes)
     let hCurlPng    = $derived(hljs.highlight(curlPng,          { language: 'bash'       }).value);
     let hCurlPdf    = $derived(hljs.highlight(curlPdf,          { language: 'bash'       }).value);
+    let hCurlHtml   = $derived(hljs.highlight(curlHtml,         { language: 'bash'       }).value);
     let hJs         = $derived(hljs.highlight(jsExample,        { language: 'javascript' }).value);
     let hPython     = $derived(hljs.highlight(pythonExample,    { language: 'python'     }).value);
     let hFiles      = $derived(hljs.highlight(filesExample,     { language: 'python'     }).value);
@@ -290,7 +297,7 @@ with open("output.png", "wb") as f:
                             <code class="font-mono text-sm text-gray-800 dark:text-gray-200">/v1/render</code>
                         </div>
                         <p class="text-sm text-gray-600 dark:text-gray-400">
-                            Compile Typst markup and return rendered binary output as PNG or PDF.
+                            Compile Typst markup and return rendered output as PNG, PDF, or HTML.
                             Results are cached for 1 hour — identical inputs return the cached result without recompiling.
                         </p>
                     </div>
@@ -330,7 +337,7 @@ with open("output.png", "wb") as f:
                         <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">Response</p>
                         <div class="p-3 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/30 text-sm">
                             <span class="font-mono text-xs font-bold text-green-700 dark:text-green-400">200 OK</span>
-                            <span class="text-gray-600 dark:text-gray-400 ml-2">Binary body with <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">Content-Type: image/png</code> or <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">application/pdf</code></span>
+                            <span class="text-gray-600 dark:text-gray-400 ml-2">Response body with <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">Content-Type: image/png</code>, <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">application/pdf</code>, or <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">text/html</code></span>
                         </div>
                     </div>
 
@@ -360,6 +367,7 @@ with open("output.png", "wb") as f:
                     {#each [
                         { id: 'curl-png', label: 'cURL — render PNG',         icon: 'mdi:bash',                iconColor: 'text-gray-400', code: hCurlPng,  raw: curlPng     },
                         { id: 'curl-pdf', label: 'cURL — render PDF',         icon: 'mdi:bash',                iconColor: 'text-gray-400', code: hCurlPdf,  raw: curlPdf     },
+                        { id: 'curl-html', label: 'cURL — render HTML',       icon: 'mdi:bash',                iconColor: 'text-gray-400', code: hCurlHtml, raw: curlHtml    },
                         { id: 'js',       label: 'JavaScript / TypeScript',   icon: 'mdi:language-javascript', iconColor: 'text-yellow-400', code: hJs,      raw: jsExample   },
                         { id: 'python',   label: 'Python (httpx)',             icon: 'mdi:language-python',     iconColor: 'text-blue-400',  code: hPython,  raw: pythonExample},
                         { id: 'files',    label: 'Python — with inline files', icon: 'mdi:file-image-outline',  iconColor: 'text-purple-400', code: hFiles,  raw: filesExample },
