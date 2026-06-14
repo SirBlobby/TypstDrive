@@ -1,6 +1,6 @@
 # TypstDrive
 
-[![Version](https://img.shields.io/badge/version-1.4.7-blue.svg)](https://github.com/your-username/typstdrive)
+[![Version](https://img.shields.io/badge/version-1.4.8-blue.svg)](https://github.com/your-username/typstdrive)
 [![Typst Version](https://img.shields.io/badge/Typst-0.14.2-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.82+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte)](https://kit.svelte.dev/)
@@ -21,7 +21,7 @@ TypstDrive is a collaborative web editor for Typst. With built-in dark mode, mul
 - **Document Sharing**: Invite collaborators by email with Editor or Viewer roles. Collaborators' uploaded fonts and images are available to the compiler. A dedicated "Shared with me" folder on the dashboard surfaces all documents others have shared with you. Manage and remove collaborators directly from the Share modal in the editor.
 - **Spaces**: Multi-file editor workspaces, each with its own `typst.toml` and any number of `.typ`, `.bib`, and asset files that import and reference one another. The Space editor has full parity with the document editor — formatting tools, font selector, page settings, zoom, themes, presentation mode, and PDF/PNG/SVG/Pandoc export — plus a file tree, per-file real-time collaboration (live cursors), TOML syntax highlighting, and your account's uploaded fonts and images. Create and edit text files like `refs.bib` directly in the browser — everything a full template (e.g. an IEEE paper) needs. Create one from the `+` menu on the dashboard or manage them at `/spaces`.
 - **Global Packages**: Publish any Space as an instance-local Typst package, immutably versioned and importable everywhere as `@typstdrive/<name>:<version>` (e.g. `#import "@typstdrive/charged-ieee:0.1.4": ieee`). The name, version, and entrypoint are read from the Space's `typst.toml`. Browse published packages at `/packages`.
-- **Public REST API**: Programmatically render Typst documents to PNG or PDF via `POST /v1/render`. Compilation failures return a `422` with a JSON body detailing each Typst error, including its message and source line and column. Manage API keys from the Settings panel, with a live usage chart supporting 1-hour, 1-day, and 1-week views. Full API reference available at `/api-docs`.
+- **Public REST API**: Programmatically render Typst documents to PNG, PDF, or HTML via `POST /v1/render`. Compilation failures return a `422` with a JSON body detailing each Typst error, including its message and source line and column. Manage API keys from the Settings panel, with a live usage chart supporting 1-hour, 1-day, and 1-week views. Full API reference available at `/api-docs`.
 - **Admin System**: First-run setup wizard creates an admin account. Admins can manage all users, create new accounts with temporary passwords, toggle admin privileges, and delete accounts from the Settings panel.
 - **Presentation Mode**: Turn your documents into instant slideshows with built-in slide controls and a live drawing/annotation tool overlay.
 - **Asset Management**: Upload and seamlessly use custom fonts and images directly within your documents.
