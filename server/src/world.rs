@@ -1,5 +1,6 @@
 use chrono::Datelike;
 use std::collections::HashMap;
+use std::io::Read;
 
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Datetime, Duration};
@@ -22,8 +23,42 @@ pub struct MemoryWorld {
 
 const LOCAL_NAMESPACE: &str = "typstdrive";
 
+const REMOTE_FETCH_TIMEOUT_SECS: u64 = 15;
+const REMOTE_MAX_BYTES: u64 = 50 * 1024 * 1024;
+
 fn normalize_path(path: &str) -> String {
     path.trim_start_matches('/').replace('\\', "/")
+}
+
+fn remote_url(path: &str) -> Option<String> {
+    for scheme in ["https", "http"] {
+        let prefix = format!("{scheme}:/");
+        if let Some(rest) = path.strip_prefix(&prefix) {
+            let host_and_path = rest.trim_start_matches('/');
+            return Some(format!("{scheme}://{host_and_path}"));
+        }
+    }
+    None
+}
+
+fn fetch_remote(url: &str) -> FileResult<Vec<u8>> {
+    let agent = ureq::AgentBuilder::new()
+        .timeout(std::time::Duration::from_secs(REMOTE_FETCH_TIMEOUT_SECS))
+        .build();
+
+    let response = agent
+        .get(url)
+        .call()
+        .map_err(|e| FileError::Other(Some(format!("failed to fetch {url}: {e}").into())))?;
+
+    let mut bytes = Vec::new();
+    response
+        .into_reader()
+        .take(REMOTE_MAX_BYTES)
+        .read_to_end(&mut bytes)
+        .map_err(|e| FileError::Other(Some(format!("failed to read {url}: {e}").into())))?;
+
+    Ok(bytes)
 }
 
 impl MemoryWorld {
@@ -101,6 +136,10 @@ impl MemoryWorld {
                 .obtain(package)
                 .map_err(|e| FileError::Other(Some(e.to_string().into())))?;
             return root.load(id.vpath()).map(|bytes| bytes.to_vec());
+        }
+
+        if let Some(url) = remote_url(&path) {
+            return fetch_remote(&url);
         }
 
         self.files

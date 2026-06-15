@@ -65,6 +65,12 @@ Uploaded images can be referenced natively using the `#image` function in Typst.
 #image("logo.png", width: 50%)
 ```
 
+You can also reference remote images directly by their `http://` or `https://` URL — TypstDrive fetches them at compile time.
+
+```typst
+#image("https://example.com/logo.png", width: 50%)
+```
+
 ## Self-Hosting
 
 TypstDrive is completely self-hostable. A Docker image packages both the Rust backend and the SvelteKit frontend into a single container.
