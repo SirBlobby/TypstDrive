@@ -1,0 +1,702 @@
+use axum::{
+    extract::{Path, Query, State},
+    http::{HeaderMap, StatusCode},
+    Json,
+};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use uuid::Uuid;
+
+use argon2::{
+    password_hash::{PasswordHash, PasswordVerifier},
+    Argon2,
+};
+
+use crate::{
+    models::{Space, User},
+    spaces::{decode_text_blob, encode_text_blob},
+    AppState,
+};
+
+const TEXT_EXTENSIONS: [&str; 10] = [
+    ".typ", ".toml", ".bib", ".csl", ".yml", ".yaml", ".json", ".md", ".txt", ".csv",
+];
+
+fn is_text_path(path: &str) -> bool {
+    let lower = path.to_lowercase();
+    TEXT_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
+}
+
+fn content_hash(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+fn hash_token(token: &str) -> String {
+    format!("{:x}", Sha256::digest(token.as_bytes()))
+}
+
+fn generate_token() -> String {
+    format!(
+        "tdd_{}{}",
+        Uuid::new_v4().to_string().replace("-", ""),
+        Uuid::new_v4().to_string().replace("-", "")
+    )
+}
+
+fn bearer_token(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get("Authorization")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| value.starts_with("Bearer "))
+        .map(|value| value[7..].to_string())
+}
+
+pub async fn authenticate(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<String, (StatusCode, String)> {
+    let token = bearer_token(headers).ok_or((
+        StatusCode::UNAUTHORIZED,
+        "Missing Authorization header. Use: Authorization: Bearer <device-token>".to_string(),
+    ))?;
+
+    let row = sqlx::query_as::<_, (String, String)>(
+        "SELECT id, user_id FROM device_tokens WHERE token_hash = ?",
+    )
+    .bind(hash_token(&token))
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let (token_id, user_id) =
+        row.ok_or((StatusCode::UNAUTHORIZED, "Invalid device token".to_string()))?;
+
+    let _ = sqlx::query("UPDATE device_tokens SET last_used_at = ? WHERE id = ?")
+        .bind(chrono::Utc::now().to_rfc3339())
+        .bind(&token_id)
+        .execute(&state.db)
+        .await;
+
+    Ok(user_id)
+}
+
+async fn owned_space(
+    state: &AppState,
+    space_id: &str,
+    user_id: &str,
+) -> Result<Space, (StatusCode, String)> {
+    let space = sqlx::query_as::<_, Space>(
+        "SELECT s.id, s.owner_id, s.folder_id, s.name, s.entrypoint, s.thumbnail_svg, \
+         s.public_role, s.created_at, s.updated_at FROM spaces s \
+         WHERE s.id = ? AND (s.owner_id = ? OR EXISTS ( \
+           SELECT 1 FROM space_collaborators c \
+           WHERE c.space_id = s.id AND c.user_id = ? AND c.role = 'editor'))",
+    )
+    .bind(space_id)
+    .bind(user_id)
+    .bind(user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    space.ok_or((
+        StatusCode::NOT_FOUND,
+        "Space not found or not writable".to_string(),
+    ))
+}
+
+#[derive(Deserialize)]
+pub struct DeviceLoginRequest {
+    pub email: String,
+    pub password: String,
+    pub device_name: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct DeviceLoginResponse {
+    pub token: String,
+    pub user_id: String,
+    pub username: String,
+    pub email: String,
+}
+
+pub async fn login(
+    State(state): State<AppState>,
+    Json(payload): Json<DeviceLoginRequest>,
+) -> Result<Json<DeviceLoginResponse>, (StatusCode, String)> {
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, username, email, password_hash, is_admin FROM users WHERE email = ?",
+    )
+    .bind(&payload.email)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((
+        StatusCode::UNAUTHORIZED,
+        "Invalid email or password".to_string(),
+    ))?;
+
+    let parsed_hash = PasswordHash::new(&user.password_hash)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if Argon2::default()
+        .verify_password(payload.password.as_bytes(), &parsed_hash)
+        .is_err()
+    {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            "Invalid email or password".to_string(),
+        ));
+    }
+
+    let token = generate_token();
+    let device_name = payload
+        .device_name
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or_else(|| "Typst Desktop".to_string());
+
+    sqlx::query(
+        "INSERT INTO device_tokens (id, user_id, name, token_hash, created_at) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(Uuid::new_v4().to_string())
+    .bind(&user.id)
+    .bind(&device_name)
+    .bind(hash_token(&token))
+    .bind(chrono::Utc::now().to_rfc3339())
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(DeviceLoginResponse {
+        token,
+        user_id: user.id,
+        username: user.username,
+        email: user.email,
+    }))
+}
+
+#[derive(Serialize)]
+pub struct DeviceUser {
+    pub user_id: String,
+    pub username: String,
+    pub email: String,
+}
+
+pub async fn me(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<DeviceUser>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, username, email, password_hash, is_admin FROM users WHERE id = ?",
+    )
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
+
+    Ok(Json(DeviceUser {
+        user_id: user.id,
+        username: user.username,
+        email: user.email,
+    }))
+}
+
+pub async fn logout(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let token = bearer_token(&headers).ok_or((
+        StatusCode::UNAUTHORIZED,
+        "Missing Authorization header".to_string(),
+    ))?;
+
+    sqlx::query("DELETE FROM device_tokens WHERE token_hash = ?")
+        .bind(hash_token(&token))
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Serialize)]
+pub struct SpaceSummary {
+    pub id: String,
+    pub name: String,
+    pub entrypoint: String,
+    pub role: String,
+    pub updated_at: String,
+}
+
+pub async fn list_spaces(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<SpaceSummary>>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let owned = sqlx::query_as::<_, (String, String, String, String)>(
+        "SELECT id, name, entrypoint, updated_at FROM spaces WHERE owner_id = ? ORDER BY updated_at DESC",
+    )
+    .bind(&user_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let shared = sqlx::query_as::<_, (String, String, String, String, String)>(
+        "SELECT s.id, s.name, s.entrypoint, s.updated_at, c.role FROM spaces s \
+         INNER JOIN space_collaborators c ON c.space_id = s.id AND c.user_id = ? \
+         ORDER BY s.updated_at DESC",
+    )
+    .bind(&user_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let mut spaces: Vec<SpaceSummary> = owned
+        .into_iter()
+        .map(|(id, name, entrypoint, updated_at)| SpaceSummary {
+            id,
+            name,
+            entrypoint,
+            role: "owner".to_string(),
+            updated_at,
+        })
+        .collect();
+
+    spaces.extend(
+        shared
+            .into_iter()
+            .map(|(id, name, entrypoint, updated_at, role)| SpaceSummary {
+                id,
+                name,
+                entrypoint,
+                role,
+                updated_at,
+            }),
+    );
+
+    Ok(Json(spaces))
+}
+
+#[derive(Deserialize)]
+pub struct CreateSpaceBody {
+    pub name: String,
+    pub entrypoint: Option<String>,
+}
+
+pub async fn create_space(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<CreateSpaceBody>,
+) -> Result<Json<SpaceSummary>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    if payload.name.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
+    }
+
+    let space_id = Uuid::new_v4().to_string();
+    let entrypoint = payload
+        .entrypoint
+        .unwrap_or_else(|| "main.typ".to_string());
+
+    let space = sqlx::query_as::<_, Space>(
+        "INSERT INTO spaces (id, owner_id, name, entrypoint) VALUES (?, ?, ?, ?) \
+         RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at",
+    )
+    .bind(&space_id)
+    .bind(&user_id)
+    .bind(payload.name.trim())
+    .bind(&entrypoint)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(SpaceSummary {
+        id: space.id,
+        name: space.name,
+        entrypoint: space.entrypoint,
+        role: "owner".to_string(),
+        updated_at: space.updated_at,
+    }))
+}
+
+pub async fn delete_space(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(space_id): Path<String>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let _ = sqlx::query("DELETE FROM space_files WHERE space_id = ?")
+        .bind(&space_id)
+        .execute(&state.db)
+        .await;
+
+    let result = sqlx::query("DELETE FROM spaces WHERE id = ? AND owner_id = ?")
+        .bind(&space_id)
+        .bind(&user_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "Space not found".to_string()));
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Serialize)]
+pub struct ManifestEntry {
+    pub path: String,
+    pub kind: String,
+    pub hash: String,
+    pub size: usize,
+    pub updated_at: String,
+}
+
+#[derive(Serialize)]
+pub struct SpaceManifest {
+    pub space_id: String,
+    pub name: String,
+    pub entrypoint: String,
+    pub updated_at: String,
+    pub files: Vec<ManifestEntry>,
+}
+
+async fn plain_contents(
+    state: &AppState,
+    space_id: &str,
+) -> Result<Vec<(String, String, Vec<u8>, String)>, (StatusCode, String)> {
+    let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>, Option<String>)>(
+        "SELECT path, kind, content, updated_at FROM space_files WHERE space_id = ? ORDER BY path ASC",
+    )
+    .bind(space_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .map(|(path, kind, content, updated_at)| {
+            let raw = content.unwrap_or_default();
+            let plain = if kind == "binary" {
+                raw
+            } else {
+                decode_text_blob(&raw).into_bytes()
+            };
+            (path, kind, plain, updated_at.unwrap_or_default())
+        })
+        .collect())
+}
+
+pub async fn get_manifest(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(space_id): Path<String>,
+) -> Result<Json<SpaceManifest>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    let space = owned_space(&state, &space_id, &user_id).await?;
+
+    let files = plain_contents(&state, &space_id)
+        .await?
+        .into_iter()
+        .map(|(path, kind, plain, updated_at)| ManifestEntry {
+            path,
+            kind,
+            hash: content_hash(&plain),
+            size: plain.len(),
+            updated_at,
+        })
+        .collect();
+
+    Ok(Json(SpaceManifest {
+        space_id: space.id,
+        name: space.name,
+        entrypoint: space.entrypoint,
+        updated_at: space.updated_at,
+        files,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct PathQuery {
+    pub path: String,
+}
+
+#[derive(Serialize)]
+pub struct FileContent {
+    pub path: String,
+    pub kind: String,
+    pub hash: String,
+    pub encoding: String,
+    pub content: String,
+}
+
+fn encode_for_transport(kind: &str, plain: Vec<u8>) -> (String, String) {
+    if kind == "binary" {
+        ("base64".to_string(), BASE64.encode(&plain))
+    } else {
+        (
+            "utf8".to_string(),
+            String::from_utf8_lossy(&plain).to_string(),
+        )
+    }
+}
+
+pub async fn pull_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(space_id): Path<String>,
+    Query(query): Query<PathQuery>,
+) -> Result<Json<FileContent>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    owned_space(&state, &space_id, &user_id).await?;
+
+    let row = sqlx::query_as::<_, (String, Option<Vec<u8>>)>(
+        "SELECT kind, content FROM space_files WHERE space_id = ? AND path = ?",
+    )
+    .bind(&space_id)
+    .bind(&query.path)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
+
+    let (kind, content) = row;
+    let raw = content.unwrap_or_default();
+    let plain = if kind == "binary" {
+        raw
+    } else {
+        decode_text_blob(&raw).into_bytes()
+    };
+
+    let hash = content_hash(&plain);
+    let (encoding, content) = encode_for_transport(&kind, plain);
+
+    Ok(Json(FileContent {
+        path: query.path,
+        kind,
+        hash,
+        encoding,
+        content,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct PushFileRequest {
+    pub path: String,
+    pub content: String,
+    pub encoding: Option<String>,
+    pub base_hash: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct PushFileResponse {
+    pub path: String,
+    pub hash: String,
+    pub updated_at: String,
+}
+
+#[derive(Serialize)]
+pub struct ConflictResponse {
+    pub conflict: bool,
+    pub path: String,
+    pub server_hash: String,
+    pub base_hash: Option<String>,
+    pub encoding: String,
+    pub server_content: String,
+}
+
+pub enum PushOutcome {
+    Applied(Json<PushFileResponse>),
+    Conflict(Json<ConflictResponse>),
+}
+
+impl axum::response::IntoResponse for PushOutcome {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            PushOutcome::Applied(body) => (StatusCode::OK, body).into_response(),
+            PushOutcome::Conflict(body) => (StatusCode::CONFLICT, body).into_response(),
+        }
+    }
+}
+
+pub async fn push_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(space_id): Path<String>,
+    Json(payload): Json<PushFileRequest>,
+) -> Result<PushOutcome, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    owned_space(&state, &space_id, &user_id).await?;
+
+    let incoming = match payload.encoding.as_deref() {
+        Some("base64") => BASE64
+            .decode(payload.content.as_bytes())
+            .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid base64: {}", e)))?,
+        _ => payload.content.clone().into_bytes(),
+    };
+
+    let existing = sqlx::query_as::<_, (String, Option<Vec<u8>>)>(
+        "SELECT kind, content FROM space_files WHERE space_id = ? AND path = ?",
+    )
+    .bind(&space_id)
+    .bind(&payload.path)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if let Some((existing_kind, existing_content)) = &existing {
+        let raw = existing_content.clone().unwrap_or_default();
+        let plain = if existing_kind == "binary" {
+            raw
+        } else {
+            decode_text_blob(&raw).into_bytes()
+        };
+        let server_hash = content_hash(&plain);
+
+        let safe = match &payload.base_hash {
+            Some(base) => base == &server_hash,
+            None => false,
+        };
+
+        if !safe && server_hash != content_hash(&incoming) {
+            let (encoding, server_content) = encode_for_transport(existing_kind, plain);
+            return Ok(PushOutcome::Conflict(Json(ConflictResponse {
+                conflict: true,
+                path: payload.path,
+                server_hash,
+                base_hash: payload.base_hash,
+                encoding,
+                server_content,
+            })));
+        }
+    }
+
+    let kind = if payload.encoding.as_deref() == Some("base64") && !is_text_path(&payload.path) {
+        "binary"
+    } else {
+        "text"
+    };
+
+    let stored = if kind == "binary" {
+        incoming.clone()
+    } else {
+        encode_text_blob(&String::from_utf8_lossy(&incoming))
+    };
+
+    let mime_type = if kind == "binary" {
+        "application/octet-stream"
+    } else {
+        "text/plain"
+    };
+
+    let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    sqlx::query(
+        "INSERT INTO space_files (id, space_id, path, kind, content, mime_type, updated_at) \
+         VALUES (?, ?, ?, ?, ?, ?, ?) \
+         ON CONFLICT (space_id, path) DO UPDATE SET content = excluded.content, \
+         kind = excluded.kind, mime_type = excluded.mime_type, updated_at = excluded.updated_at",
+    )
+    .bind(Uuid::new_v4().to_string())
+    .bind(&space_id)
+    .bind(&payload.path)
+    .bind(kind)
+    .bind(&stored)
+    .bind(mime_type)
+    .bind(&now)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let _ = sqlx::query("UPDATE spaces SET updated_at = ? WHERE id = ?")
+        .bind(&now)
+        .bind(&space_id)
+        .execute(&state.db)
+        .await;
+
+    Ok(PushOutcome::Applied(Json(PushFileResponse {
+        path: payload.path,
+        hash: content_hash(&incoming),
+        updated_at: now,
+    })))
+}
+
+pub async fn delete_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(space_id): Path<String>,
+    Query(query): Query<PathQuery>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    owned_space(&state, &space_id, &user_id).await?;
+
+    let result = sqlx::query("DELETE FROM space_files WHERE space_id = ? AND path = ?")
+        .bind(&space_id)
+        .bind(&query.path)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "File not found".to_string()));
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Serialize)]
+pub struct BundleFile {
+    pub path: String,
+    pub kind: String,
+    pub hash: String,
+    pub encoding: String,
+    pub content: String,
+}
+
+#[derive(Serialize)]
+pub struct SpaceBundle {
+    pub space_id: String,
+    pub name: String,
+    pub entrypoint: String,
+    pub files: Vec<BundleFile>,
+}
+
+pub async fn pull_space(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(space_id): Path<String>,
+) -> Result<Json<SpaceBundle>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    let space = owned_space(&state, &space_id, &user_id).await?;
+
+    let files = plain_contents(&state, &space_id)
+        .await?
+        .into_iter()
+        .map(|(path, kind, plain, _)| {
+            let hash = content_hash(&plain);
+            let (encoding, content) = encode_for_transport(&kind, plain);
+            BundleFile {
+                path,
+                kind,
+                hash,
+                encoding,
+                content,
+            }
+        })
+        .collect();
+
+    Ok(Json(SpaceBundle {
+        space_id: space.id,
+        name: space.name,
+        entrypoint: space.entrypoint,
+        files,
+    }))
+}

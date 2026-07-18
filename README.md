@@ -25,6 +25,7 @@ TypstDrive is a collaborative web editor for Typst. With built-in dark mode, mul
 - **Admin System**: First-run setup wizard creates an admin account. Admins can manage all users, create new accounts with temporary passwords, toggle admin privileges, and delete accounts from the Settings panel.
 - **Presentation Mode**: Turn your documents into instant slideshows with built-in slide controls and a live drawing/annotation tool overlay.
 - **Asset Management**: Upload and seamlessly use custom fonts and images directly within your documents.
+- **Desktop Sync API**: A dedicated API under `/api/desktop` lets [Typst Desktop](../typst-desktop) keep local projects in sync with your Spaces, with device-token authentication and hash-based conflict detection.
 
 ## Fonts & Images
 
@@ -70,6 +71,28 @@ You can also reference remote images directly by their `http://` or `https://` U
 ```typst
 #image("https://example.com/logo.png", width: 50%)
 ```
+
+## Desktop Sync API
+
+The desktop app authenticates with a **device token** rather than a session cookie. Sign in once with `POST /api/desktop/auth/login`, then send the returned token as `Authorization: Bearer <token>` on every request. Tokens are stored hashed and can be revoked from the app by signing out.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/desktop/auth/login` | Exchange email and password for a device token. |
+| `POST` | `/api/desktop/auth/logout` | Revoke the current device token. |
+| `GET` | `/api/desktop/auth/me` | Account the token belongs to. |
+| `GET` | `/api/desktop/spaces` | Spaces the account owns or collaborates on. |
+| `POST` | `/api/desktop/spaces` | Create a Space. |
+| `GET` | `/api/desktop/spaces/{id}` | Full Space contents in one response. |
+| `DELETE` | `/api/desktop/spaces/{id}` | Delete a Space. |
+| `GET` | `/api/desktop/spaces/{id}/manifest` | Every file with its content hash, for change detection. |
+| `GET` | `/api/desktop/spaces/{id}/file?path=` | Read one file. |
+| `PUT` | `/api/desktop/spaces/{id}/file` | Write one file. |
+| `DELETE` | `/api/desktop/spaces/{id}/file?path=` | Delete one file. |
+
+### Conflict Detection
+
+A write sends the `base_hash` the client last saw. If the file on the server no longer matches that hash, the write is rejected with `409` and a body containing the server's current content, so the client can merge instead of overwriting. Text files are stored in the same Yjs format the web editor uses, so a desktop push and a browser edit stay compatible.
 
 ## Self-Hosting
 

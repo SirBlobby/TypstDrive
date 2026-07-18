@@ -159,6 +159,14 @@ pub async fn init_schema(pool: &AnyPool) {
             data BYTEA NOT NULL,
             UNIQUE(version_id, path)
         )",
+        "CREATE TABLE IF NOT EXISTS device_tokens (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            last_used_at TEXT
+        )",
     ];
 
     for stmt in &statements {
@@ -173,6 +181,7 @@ pub async fn init_schema(pool: &AnyPool) {
         "ALTER TABLE documents ADD COLUMN IF NOT EXISTS public_role TEXT",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')",
+        "ALTER TABLE space_files ADD COLUMN IF NOT EXISTS updated_at TEXT DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')",
     ];
     for stmt in &migrations {
         sqlx::query(stmt).execute(pool).await.unwrap_or_else(|_| Default::default());

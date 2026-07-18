@@ -17,6 +17,7 @@ mod api_keys;
 mod auth;
 mod compiler;
 mod db;
+mod desktop;
 mod docs;
 mod folders;
 mod files;
@@ -140,6 +141,15 @@ async fn main() {
         .route("/packages/publish", post(packages::publish_package))
         .route("/packages/{name}", get(packages::list_versions).delete(packages::delete_package));
 
+    let desktop_routes = Router::new()
+        .route("/auth/login", post(desktop::login))
+        .route("/auth/logout", post(desktop::logout))
+        .route("/auth/me", get(desktop::me))
+        .route("/spaces", get(desktop::list_spaces).post(desktop::create_space))
+        .route("/spaces/{id}", get(desktop::pull_space).delete(desktop::delete_space))
+        .route("/spaces/{id}/manifest", get(desktop::get_manifest))
+        .route("/spaces/{id}/file", get(desktop::pull_file).put(desktop::push_file).delete(desktop::delete_file));
+
     let v1_routes = Router::new()
         .route("/render", post(public_api::render_handler));
 
@@ -149,7 +159,7 @@ async fn main() {
     let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "../build".to_string());
 
     let app = Router::new()
-        .nest("/api", api_routes.layer(TraceLayer::new_for_http()))
+        .nest("/api", api_routes.nest("/desktop", desktop_routes).layer(TraceLayer::new_for_http()))
         .nest("/v1", v1_routes.layer(TraceLayer::new_for_http()))
         .nest("/yjs", yjs_routes.layer(TraceLayer::new_for_http()))
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))

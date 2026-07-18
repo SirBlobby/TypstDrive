@@ -164,6 +164,14 @@ pub async fn init_schema(pool: &AnyPool) {
             data BLOB NOT NULL,
             UNIQUE(version_id, path)
         )",
+        "CREATE TABLE IF NOT EXISTS device_tokens (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            last_used_at TEXT
+        )",
     ];
 
     for stmt in &statements {
@@ -177,6 +185,7 @@ pub async fn init_schema(pool: &AnyPool) {
     let migrations = [
         "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))",
+        "ALTER TABLE space_files ADD COLUMN updated_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))",
     ];
     for stmt in &migrations {
         let _ = sqlx::query(stmt).execute(pool).await;
