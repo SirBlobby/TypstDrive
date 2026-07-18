@@ -973,3 +973,86 @@ pub async fn push_document(
         updated_at: now,
     })))
 }
+
+#[derive(Serialize)]
+pub struct CloudFile {
+    pub id: String,
+    pub name: String,
+    pub mime_type: String,
+    pub folder_id: Option<String>,
+    pub created_at: String,
+}
+
+pub async fn list_account_files(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<FolderQuery>,
+) -> Result<Json<Vec<CloudFile>>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let rows = match &query.folder_id {
+        Some(folder_id) => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
+            "SELECT id, name, mime_type, folder_id, created_at FROM files \
+             WHERE owner_id = ? AND folder_id = ? ORDER BY name ASC",
+        )
+        .bind(&user_id)
+        .bind(folder_id)
+        .fetch_all(&state.db)
+        .await,
+        None => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
+            "SELECT id, name, mime_type, folder_id, created_at FROM files \
+             WHERE owner_id = ? AND folder_id IS NULL ORDER BY name ASC",
+        )
+        .bind(&user_id)
+        .fetch_all(&state.db)
+        .await,
+    }
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(
+        rows.into_iter()
+            .map(|(id, name, mime_type, folder_id, created_at)| CloudFile {
+                id,
+                name,
+                mime_type,
+                folder_id,
+                created_at,
+            })
+            .collect(),
+    ))
+}
+
+#[derive(Serialize)]
+pub struct CloudFileContent {
+    pub name: String,
+    pub mime_type: String,
+    pub encoding: String,
+    pub content: String,
+}
+
+pub async fn pull_account_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<CloudFileContent>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let row = sqlx::query_as::<_, (String, String, Vec<u8>)>(
+        "SELECT name, mime_type, data FROM files WHERE id = ? AND owner_id = ?",
+    )
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
+
+    let (name, mime_type, data) = row;
+
+    Ok(Json(CloudFileContent {
+        name,
+        mime_type,
+        encoding: "base64".to_string(),
+        content: BASE64.encode(&data),
+    }))
+}

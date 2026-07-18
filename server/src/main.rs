@@ -152,6 +152,8 @@ async fn main() {
         .route("/documents", get(desktop::list_documents))
         .route("/documents/{id}", get(desktop::pull_document).put(desktop::push_document))
         .route("/shared", get(desktop::list_shared))
+        .route("/files", get(desktop::list_account_files))
+        .route("/files/{id}", get(desktop::pull_account_file))
         .route("/spaces/{id}/file", get(desktop::pull_file).put(desktop::push_file).delete(desktop::delete_file));
 
     let v1_routes = Router::new()
