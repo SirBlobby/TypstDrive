@@ -700,3 +700,276 @@ pub async fn pull_space(
         files,
     }))
 }
+
+#[derive(Serialize)]
+pub struct CloudFolder {
+    pub id: String,
+    pub name: String,
+    pub parent_id: Option<String>,
+}
+
+pub async fn list_folders(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<CloudFolder>>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
+        "SELECT id, name, parent_id FROM folders WHERE owner_id = ? ORDER BY name ASC",
+    )
+    .bind(&user_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(
+        rows.into_iter()
+            .map(|(id, name, parent_id)| CloudFolder {
+                id,
+                name,
+                parent_id,
+            })
+            .collect(),
+    ))
+}
+
+#[derive(Serialize)]
+pub struct CloudDocument {
+    pub id: String,
+    pub title: String,
+    pub folder_id: Option<String>,
+    pub role: String,
+    pub updated_at: String,
+}
+
+#[derive(Deserialize)]
+pub struct FolderQuery {
+    pub folder_id: Option<String>,
+}
+
+pub async fn list_documents(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<FolderQuery>,
+) -> Result<Json<Vec<CloudDocument>>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let rows = match &query.folder_id {
+        Some(folder_id) => sqlx::query_as::<_, (String, String, Option<String>, String)>(
+            "SELECT id, title, folder_id, updated_at FROM documents \
+             WHERE owner_id = ? AND folder_id = ? ORDER BY updated_at DESC",
+        )
+        .bind(&user_id)
+        .bind(folder_id)
+        .fetch_all(&state.db)
+        .await,
+        None => sqlx::query_as::<_, (String, String, Option<String>, String)>(
+            "SELECT id, title, folder_id, updated_at FROM documents \
+             WHERE owner_id = ? AND folder_id IS NULL ORDER BY updated_at DESC",
+        )
+        .bind(&user_id)
+        .fetch_all(&state.db)
+        .await,
+    }
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(
+        rows.into_iter()
+            .map(|(id, title, folder_id, updated_at)| CloudDocument {
+                id,
+                title,
+                folder_id,
+                role: "owner".to_string(),
+                updated_at,
+            })
+            .collect(),
+    ))
+}
+
+#[derive(Serialize)]
+pub struct SharedItems {
+    pub documents: Vec<CloudDocument>,
+    pub spaces: Vec<SpaceSummary>,
+}
+
+pub async fn list_shared(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<SharedItems>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let documents = sqlx::query_as::<_, (String, String, Option<String>, String, String)>(
+        "SELECT d.id, d.title, d.folder_id, d.updated_at, c.role FROM documents d \
+         INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = ? \
+         ORDER BY d.updated_at DESC",
+    )
+    .bind(&user_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let spaces = sqlx::query_as::<_, (String, String, String, String, String)>(
+        "SELECT s.id, s.name, s.entrypoint, s.updated_at, c.role FROM spaces s \
+         INNER JOIN space_collaborators c ON c.space_id = s.id AND c.user_id = ? \
+         ORDER BY s.updated_at DESC",
+    )
+    .bind(&user_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(SharedItems {
+        documents: documents
+            .into_iter()
+            .map(|(id, title, folder_id, updated_at, role)| CloudDocument {
+                id,
+                title,
+                folder_id,
+                role,
+                updated_at,
+            })
+            .collect(),
+        spaces: spaces
+            .into_iter()
+            .map(|(id, name, entrypoint, updated_at, role)| SpaceSummary {
+                id,
+                name,
+                entrypoint,
+                role,
+                updated_at,
+            })
+            .collect(),
+    }))
+}
+
+async fn document_role(
+    state: &AppState,
+    document_id: &str,
+    user_id: &str,
+) -> Result<(String, String, String), (StatusCode, String)> {
+    let row = sqlx::query_as::<_, (String, String, Option<Vec<u8>>, Option<String>)>(
+        "SELECT owner_id, title, content, public_role FROM documents WHERE id = ?",
+    )
+    .bind(document_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
+
+    let (owner_id, title, content, public_role) = row;
+
+    let mut role = if owner_id == user_id {
+        "owner".to_string()
+    } else {
+        "none".to_string()
+    };
+
+    if role == "none" {
+        if let Ok(Some((collaborator_role,))) = sqlx::query_as::<_, (String,)>(
+            "SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?",
+        )
+        .bind(document_id)
+        .bind(user_id)
+        .fetch_optional(&state.db)
+        .await
+        {
+            role = collaborator_role;
+        }
+    }
+
+    if role == "none" {
+        if let Some(public) = public_role {
+            if public == "viewer" || public == "editor" {
+                role = public;
+            }
+        }
+    }
+
+    if role == "none" {
+        return Err((StatusCode::FORBIDDEN, "No access to this document".to_string()));
+    }
+
+    let text = decode_text_blob(&content.unwrap_or_default());
+    Ok((role, title, text))
+}
+
+#[derive(Serialize)]
+pub struct DocumentContent {
+    pub id: String,
+    pub title: String,
+    pub role: String,
+    pub hash: String,
+    pub content: String,
+}
+
+pub async fn pull_document(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<DocumentContent>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    let (role, title, content) = document_role(&state, &id, &user_id).await?;
+
+    Ok(Json(DocumentContent {
+        id,
+        title,
+        role,
+        hash: content_hash(content.as_bytes()),
+        content,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct PushDocumentRequest {
+    pub content: String,
+    pub base_hash: Option<String>,
+}
+
+pub async fn push_document(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<PushDocumentRequest>,
+) -> Result<PushOutcome, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    let (role, _, current) = document_role(&state, &id, &user_id).await?;
+
+    if role != "owner" && role != "editor" {
+        return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
+    }
+
+    let server_hash = content_hash(current.as_bytes());
+    let incoming_hash = content_hash(payload.content.as_bytes());
+
+    let safe = match &payload.base_hash {
+        Some(base) => base == &server_hash,
+        None => false,
+    };
+
+    if !safe && server_hash != incoming_hash {
+        return Ok(PushOutcome::Conflict(Json(ConflictResponse {
+            conflict: true,
+            path: id,
+            server_hash,
+            base_hash: payload.base_hash,
+            encoding: "utf8".to_string(),
+            server_content: current,
+        })));
+    }
+
+    let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    sqlx::query("UPDATE documents SET content = ?, updated_at = ? WHERE id = ?")
+        .bind(encode_text_blob(&payload.content))
+        .bind(&now)
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(PushOutcome::Applied(Json(PushFileResponse {
+        path: id,
+        hash: incoming_hash,
+        updated_at: now,
+    })))
+}
