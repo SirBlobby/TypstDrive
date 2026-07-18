@@ -1,6 +1,6 @@
 # TypstDrive
 
-[![Version](https://img.shields.io/badge/version-1.4.8-blue.svg)](https://github.com/your-username/typstdrive)
+[![Version](https://img.shields.io/badge/version-1.4.8-blue.svg)](https://github.com/sirblobby/typstdrive)
 [![Typst Version](https://img.shields.io/badge/Typst-0.14.2-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.82+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte)](https://kit.svelte.dev/)
@@ -105,20 +105,59 @@ TypstDrive is completely self-hostable. A Docker image packages both the Rust ba
 
 ### Getting Started
 
-1. Clone the repository:
+1. Pull the image:
    ```bash
-   git clone https://github.com/your-username/typstdrive.git
-   cd typstdrive
+   docker pull ghcr.io/sirblobby/typstdrive:latest
    ```
 
-2. Start the application:
+2. Save this as `docker-compose.yml`:
+   ```yaml
+   services:
+     app:
+       image: ghcr.io/sirblobby/typstdrive:latest
+       container_name: typstdrive
+       restart: unless-stopped
+       ports:
+         - "3000:3000"
+       environment:
+         - DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
+         - DB_TYPE=sqlite
+         # Generate with: openssl rand -hex 64
+         - COOKIE_SECRET=your-64-plus-byte-secret-here
+         - ALLOW_REGISTRATION=false
+         - RUST_LOG=info
+       volumes:
+         - appdata:/data
+
+   volumes:
+     appdata:
+   ```
+
+3. Start it:
    ```bash
    docker compose up -d
    ```
 
-3. Open your browser and navigate to `http://localhost:3000`.
+4. Open your browser and navigate to `http://localhost:3000`.
 
 On first launch with no users in the database, you will be redirected to the **Setup** page to create the initial admin account.
+
+To update, pull the new image and recreate the container:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+### Building from Source
+
+To build the image yourself instead of pulling it, clone the repository and use the bundled compose file, which builds from the local `Dockerfile`:
+
+```bash
+git clone https://github.com/sirblobby/typstdrive.git
+cd typstdrive
+docker compose up -d
+```
 
 ### Data Storage
 
