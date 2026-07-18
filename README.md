@@ -205,6 +205,24 @@ The first account created via the setup wizard is automatically an administrator
 - **Toggle Admin** — promote or demote any other user
 - **Delete User** — permanently remove any account other than your own
 
+## Continuous Integration
+
+Workflows live in `.gitea/workflows` for Gitea Actions and `.github/workflows` for GitHub Actions.
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| `ci.yml` | push to `main` or `dev`, pull requests | Type checks and builds the frontend, then checks the backend. |
+| `docker-publish.yml` | push to `main`, `v*` tags, releases | Builds the multi-architecture image and pushes it to the registry. |
+
+The Gitea publish workflow needs two repository secrets, since Gitea's built-in token only grants access to its own registry:
+
+| Secret | Value |
+|---|---|
+| `REGISTRY_USERNAME` | Your GitHub username. |
+| `REGISTRY_TOKEN` | A GitHub personal access token with the `write:packages` scope. |
+
+Set the image name with the `IMAGE_NAME` variable at the top of the workflow if you publish somewhere other than `ghcr.io/sirblobby/typstdrive`.
+
 ## Contributing & Local Development
 
 Clone the official Typst compiler into the `typst/` folder before building the backend:
