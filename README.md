@@ -223,6 +223,17 @@ The Gitea publish workflow needs two repository secrets, since Gitea's built-in 
 
 Set the image name with the `IMAGE_NAME` variable at the top of the workflow if you publish somewhere other than `ghcr.io/sirblobby/typstdrive`.
 
+The Gitea runner needs access to the Docker daemon from inside job containers. In the runner's `config.yaml`:
+
+```yaml
+container:
+  privileged: true
+  # Must not be "-", which disables the daemon socket inside jobs.
+  docker_host: ""
+```
+
+Builds target `linux/amd64` by default. Other architectures build under emulation and require `privileged: true`; pass them through the `platforms` input when running the workflow manually.
+
 ## Contributing & Local Development
 
 Clone the official Typst compiler into the `typst/` folder before building the backend:
