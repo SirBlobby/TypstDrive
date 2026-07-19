@@ -25,7 +25,7 @@ TypstDrive is a collaborative web editor for Typst. With built-in dark mode, mul
 - **Admin System**: First-run setup wizard creates an admin account. Admins can manage all users, create new accounts with temporary passwords, toggle admin privileges, and delete accounts from the Settings panel.
 - **Presentation Mode**: Turn your documents into instant slideshows with built-in slide controls and a live drawing/annotation tool overlay.
 - **Asset Management**: Upload and seamlessly use custom fonts and images directly within your documents.
-- **Desktop Sync API**: A dedicated API under `/api/desktop` lets [Typst Desktop](../typst-desktop) keep local projects in sync with your Spaces, with device-token authentication and hash-based conflict detection.
+- **Desktop Sync API**: A dedicated API under `/api/desktop` lets [Typst Desktop](https://github.com/SirBlobby/typst-desktop) browse your folders, documents, Spaces, shared items, and uploaded assets, and keep them in sync locally. Device-token authentication, role-aware permissions, and hash-based conflict detection.
 
 ## Fonts & Images
 
@@ -89,6 +89,17 @@ The desktop app authenticates with a **device token** rather than a session cook
 | `GET` | `/api/desktop/spaces/{id}/file?path=` | Read one file. |
 | `PUT` | `/api/desktop/spaces/{id}/file` | Write one file. |
 | `DELETE` | `/api/desktop/spaces/{id}/file?path=` | Delete one file. |
+| `GET` | `/api/desktop/folders` | Every folder the account owns. |
+| `GET` | `/api/desktop/documents?folder_id=` | Documents in a folder, or at the root. |
+| `GET` | `/api/desktop/documents/{id}` | Read a document, with the caller's role. |
+| `PUT` | `/api/desktop/documents/{id}` | Write a document. |
+| `GET` | `/api/desktop/shared` | Documents and Spaces shared with the account. |
+| `GET` | `/api/desktop/files?folder_id=` | Uploaded images and fonts in a folder. |
+| `GET` | `/api/desktop/files/{id}` | Read an uploaded file, base64-encoded. |
+
+### Permissions
+
+Every response carries the caller's `role` for the item. Owners and editors may write; viewers are refused with `403`. Space endpoints require owner or editor access, so a read-only Space is not writable from the desktop app.
 
 ### Conflict Detection
 
