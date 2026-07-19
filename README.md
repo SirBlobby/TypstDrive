@@ -218,19 +218,19 @@ The first account created via the setup wizard is automatically an administrator
 
 ## Continuous Integration
 
-Workflows live in `.gitea/workflows` for Gitea Actions and `.github/workflows` for GitHub Actions.
+Workflows live in `.gitea/workflows` and run on Gitea Actions.
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | push to `main` or `dev`, pull requests | Type checks and builds the frontend, then checks the backend. |
-| `docker-publish.yml` | push to `main`, `v*` tags, releases | Builds the multi-architecture image and pushes it to the registry. |
+| `docker-publish.yml` | push to `main`, `v*` tags, releases | Builds the image and pushes it to the registry, always updating the `latest` tag. |
 
-The Gitea publish workflow needs two repository secrets, since Gitea's built-in token only grants access to its own registry:
+The publish workflow needs two repository secrets, since Gitea's built-in token only grants access to its own registry:
 
 | Secret | Value |
 |---|---|
 | `REGISTRY_USERNAME` | Your GitHub username. |
-| `REGISTRY_TOKEN` | A GitHub personal access token with the `write:packages` scope. |
+| `REGISTRY_TOKEN` | A classic GitHub personal access token with the `write:packages` and `read:packages` scopes. Fine-grained tokens cannot publish to `ghcr.io`. |
 
 Set the image name with the `IMAGE_NAME` variable at the top of the workflow if you publish somewhere other than `ghcr.io/sirblobby/typstdrive`.
 
