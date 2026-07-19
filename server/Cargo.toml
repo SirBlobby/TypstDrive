@@ -20,7 +20,7 @@ argon2 = "0.5"
 futures-util = "0.3"
 ecow = "0.2"
 
-typst = { version = "0.14.2", path = "../typst/crates/typst" }
+typst = { version = "0.15.1", path = "../typst/crates/typst" }
 typst-kit = { path = "../typst/crates/typst-kit", features = ["system-downloader", "system-packages", "embedded-fonts"] }
 typst-pdf = { path = "../typst/crates/typst-pdf" }
 typst-render = { path = "../typst/crates/typst-render" }
@@ -31,7 +31,7 @@ typst-layout = { path = "../typst/crates/typst-layout" }
 yrs = "0.18.8"
 yrs-axum = "0.8"
 
-typst-assets = { version = "0.14.2", features = ["fonts"] }
+typst-assets = { version = "0.15.1", features = ["fonts"] }
 tokio-stream = "0.1.18"
 tempfile = "3.27.0"
 sha2 = "0.10"

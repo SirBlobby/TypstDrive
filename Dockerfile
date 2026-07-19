@@ -14,7 +14,7 @@ FROM rust:alpine AS backend-builder
 WORKDIR /app
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig git
 RUN git clone https://github.com/typst/typst.git typst \
-    && git -C typst checkout 44b3f78ed37fedea75e911dde2269ef86c45316f
+    && git -C typst checkout 9dfd3a08500b7896045f907433cf7b4b02434fad
 COPY server/Cargo.* server/
 COPY server/src server/src
 WORKDIR /app/server

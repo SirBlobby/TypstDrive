@@ -3,7 +3,8 @@ use serde::Serialize;
 use std::collections::HashMap;
 use typst::diag::{SourceDiagnostic, Warned};
 use typst::layout::{Frame, FrameItem};
-use typst_html::HtmlDocument;
+use typst::utils::Scalar;
+use typst_html::{HtmlDocument, HtmlOptions};
 use typst_layout::PagedDocument;
 use typst_pdf::{pdf, PdfOptions};
 use typst_render::{render, RenderOptions};
@@ -168,7 +169,7 @@ impl TypstCompiler {
             } => {
                 if let Some(page) = doc.pages().first() {
                     let options = RenderOptions {
-                        pixel_per_pt: 2.0,
+                        pixel_per_pt: Scalar::new(2.0),
                         ..RenderOptions::default()
                     };
                     let pixmap = render(page, &options);
@@ -219,7 +220,7 @@ impl TypstCompiler {
             }
         };
 
-        match typst_html::html(&document) {
+        match typst_html::html(&document, &HtmlOptions::default()) {
             Ok(html) => Ok(html),
             Err(errors) => {
                 use typst::WorldExt;
