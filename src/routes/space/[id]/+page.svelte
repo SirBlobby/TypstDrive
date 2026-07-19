@@ -19,7 +19,7 @@
 		kind: string;
 	}
 
-	const spaceId = $page.params.id;
+	const spaceId = $page.params.id as string;
 
 	let spaceName = $state('Space');
 	let entrypoint = $state('main.typ');

@@ -31,7 +31,7 @@
 		onSetEntry: (file: SpaceFile) => void;
 	} = $props();
 
-	let fileInput: HTMLInputElement;
+	let fileInput: HTMLInputElement = $state()!;
 
 	function iconFor(path: string): string {
 		const lower = path.toLowerCase();
@@ -77,7 +77,9 @@
 					<Icon icon={iconFor(file.path)} class="text-base flex-shrink-0" />
 					<span class="truncate">{file.path}</span>
 					{#if file.path === entrypoint}
-						<Icon icon="mdi:star" class="text-amber-500 text-xs flex-shrink-0" title="Entrypoint" />
+						<span title="Entrypoint">
+							<Icon icon="mdi:star" class="text-amber-500 text-xs flex-shrink-0" />
+						</span>
 					{/if}
 				</button>
 				{#if !readOnly}
