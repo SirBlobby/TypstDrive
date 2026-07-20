@@ -142,6 +142,7 @@ async fn main() {
         .route("/packages/{name}", get(packages::list_versions).delete(packages::delete_package));
 
     let desktop_routes = Router::new()
+        .route("/version", get(desktop::version_info))
         .route("/auth/login", post(desktop::login))
         .route("/auth/logout", post(desktop::logout))
         .route("/auth/me", get(desktop::me))
@@ -150,10 +151,10 @@ async fn main() {
         .route("/projects/{id}/manifest", get(desktop::get_manifest))
         .route("/folders", get(desktop::list_folders))
         .route("/documents", get(desktop::list_documents).post(desktop::create_document))
-        .route("/documents/{id}", get(desktop::pull_document).put(desktop::push_document))
+        .route("/documents/{id}", get(desktop::pull_document).put(desktop::push_document).delete(desktop::delete_document))
         .route("/shared", get(desktop::list_shared))
         .route("/files", get(desktop::list_account_files))
-        .route("/files/{id}", get(desktop::pull_account_file))
+        .route("/files/{id}", get(desktop::pull_account_file).delete(desktop::delete_account_file))
         .route("/projects/{id}/file", get(desktop::pull_file).put(desktop::push_file).delete(desktop::delete_file));
 
     let v1_routes = Router::new()

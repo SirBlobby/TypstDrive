@@ -23,6 +23,34 @@ const TEXT_EXTENSIONS: [&str; 10] = [
     ".typ", ".toml", ".bib", ".csl", ".yml", ".yaml", ".json", ".md", ".txt", ".csv",
 ];
 
+pub const MIN_DESKTOP_VERSION: &str = "1.0.0";
+
+fn parse_version(version: &str) -> (u32, u32, u32) {
+    let mut parts = version.trim().split('.').map(|part| part.parse::<u32>().unwrap_or(0));
+    (
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+    )
+}
+
+fn version_at_least(actual: &str, required: &str) -> bool {
+    parse_version(actual) >= parse_version(required)
+}
+
+#[derive(Serialize)]
+pub struct ServerVersionInfo {
+    pub server_version: String,
+    pub min_desktop_version: String,
+}
+
+pub async fn version_info() -> Json<ServerVersionInfo> {
+    Json(ServerVersionInfo {
+        server_version: env!("CARGO_PKG_VERSION").to_string(),
+        min_desktop_version: MIN_DESKTOP_VERSION.to_string(),
+    })
+}
+
 fn is_text_path(path: &str) -> bool {
     let lower = path.to_lowercase();
     TEXT_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
@@ -111,6 +139,7 @@ pub struct DeviceLoginRequest {
     pub email: String,
     pub password: String,
     pub device_name: Option<String>,
+    pub client_version: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -125,6 +154,18 @@ pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<DeviceLoginRequest>,
 ) -> Result<Json<DeviceLoginResponse>, (StatusCode, String)> {
+    if let Some(client_version) = &payload.client_version {
+        if !version_at_least(client_version, MIN_DESKTOP_VERSION) {
+            return Err((
+                StatusCode::UPGRADE_REQUIRED,
+                format!(
+                    "This server requires typst-desktop v{} or newer (you have v{}). Please update the app.",
+                    MIN_DESKTOP_VERSION, client_version
+                ),
+            ));
+        }
+    }
+
     let user = sqlx::query_as::<_, User>(
         "SELECT id, username, email, password_hash, is_admin FROM users WHERE email = ?",
     )
@@ -1010,6 +1051,27 @@ pub async fn create_document(
     }))
 }
 
+pub async fn delete_document(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let result = sqlx::query("DELETE FROM documents WHERE id = ? AND owner_id = ?")
+        .bind(&id)
+        .bind(&user_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "Document not found or unauthorized".to_string()));
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[derive(Serialize)]
 pub struct CloudFile {
     pub id: String,
@@ -1091,4 +1153,25 @@ pub async fn pull_account_file(
         encoding: "base64".to_string(),
         content: BASE64.encode(&data),
     }))
+}
+
+pub async fn delete_account_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let result = sqlx::query("DELETE FROM files WHERE id = ? AND owner_id = ?")
+        .bind(&id)
+        .bind(&user_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "File not found or unauthorized".to_string()));
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
