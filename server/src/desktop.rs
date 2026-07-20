@@ -14,8 +14,8 @@ use argon2::{
 };
 
 use crate::{
-    models::{Space, User},
-    spaces::{decode_text_blob, encode_text_blob},
+    models::{Project, User},
+    projects::{decode_text_blob, encode_text_blob},
     AppState,
 };
 
@@ -81,28 +81,28 @@ pub async fn authenticate(
     Ok(user_id)
 }
 
-async fn owned_space(
+async fn owned_project(
     state: &AppState,
-    space_id: &str,
+    project_id: &str,
     user_id: &str,
-) -> Result<Space, (StatusCode, String)> {
-    let space = sqlx::query_as::<_, Space>(
-        "SELECT s.id, s.owner_id, s.folder_id, s.name, s.entrypoint, s.thumbnail_svg, \
-         s.public_role, s.created_at, s.updated_at FROM spaces s \
-         WHERE s.id = ? AND (s.owner_id = ? OR EXISTS ( \
-           SELECT 1 FROM space_collaborators c \
-           WHERE c.space_id = s.id AND c.user_id = ? AND c.role = 'editor'))",
+) -> Result<Project, (StatusCode, String)> {
+    let project = sqlx::query_as::<_, Project>(
+        "SELECT p.id, p.owner_id, p.folder_id, p.name, p.entrypoint, p.thumbnail_svg, \
+         p.public_role, p.created_at, p.updated_at FROM projects p \
+         WHERE p.id = ? AND (p.owner_id = ? OR EXISTS ( \
+           SELECT 1 FROM project_collaborators c \
+           WHERE c.project_id = p.id AND c.user_id = ? AND c.role = 'editor'))",
     )
-    .bind(space_id)
+    .bind(project_id)
     .bind(user_id)
     .bind(user_id)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    space.ok_or((
+    project.ok_or((
         StatusCode::NOT_FOUND,
-        "Space not found or not writable".to_string(),
+        "Project not found or not writable".to_string(),
     ))
 }
 
@@ -224,7 +224,7 @@ pub async fn logout(
 }
 
 #[derive(Serialize)]
-pub struct SpaceSummary {
+pub struct ProjectSummary {
     pub id: String,
     pub name: String,
     pub entrypoint: String,
@@ -232,14 +232,14 @@ pub struct SpaceSummary {
     pub updated_at: String,
 }
 
-pub async fn list_spaces(
+pub async fn list_projects(
     State(state): State<AppState>,
     headers: HeaderMap,
-) -> Result<Json<Vec<SpaceSummary>>, (StatusCode, String)> {
+) -> Result<Json<Vec<ProjectSummary>>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
     let owned = sqlx::query_as::<_, (String, String, String, String)>(
-        "SELECT id, name, entrypoint, updated_at FROM spaces WHERE owner_id = ? ORDER BY updated_at DESC",
+        "SELECT id, name, entrypoint, updated_at FROM projects WHERE owner_id = ? ORDER BY updated_at DESC",
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -247,18 +247,18 @@ pub async fn list_spaces(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let shared = sqlx::query_as::<_, (String, String, String, String, String)>(
-        "SELECT s.id, s.name, s.entrypoint, s.updated_at, c.role FROM spaces s \
-         INNER JOIN space_collaborators c ON c.space_id = s.id AND c.user_id = ? \
-         ORDER BY s.updated_at DESC",
+        "SELECT p.id, p.name, p.entrypoint, p.updated_at, c.role FROM projects p \
+         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = ? \
+         ORDER BY p.updated_at DESC",
     )
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let mut spaces: Vec<SpaceSummary> = owned
+    let mut projects: Vec<ProjectSummary> = owned
         .into_iter()
-        .map(|(id, name, entrypoint, updated_at)| SpaceSummary {
+        .map(|(id, name, entrypoint, updated_at)| ProjectSummary {
             id,
             name,
             entrypoint,
@@ -267,10 +267,10 @@ pub async fn list_spaces(
         })
         .collect();
 
-    spaces.extend(
+    projects.extend(
         shared
             .into_iter()
-            .map(|(id, name, entrypoint, updated_at, role)| SpaceSummary {
+            .map(|(id, name, entrypoint, updated_at, role)| ProjectSummary {
                 id,
                 name,
                 entrypoint,
@@ -279,36 +279,36 @@ pub async fn list_spaces(
             }),
     );
 
-    Ok(Json(spaces))
+    Ok(Json(projects))
 }
 
 #[derive(Deserialize)]
-pub struct CreateSpaceBody {
+pub struct CreateProjectBody {
     pub name: String,
     pub entrypoint: Option<String>,
 }
 
-pub async fn create_space(
+pub async fn create_project(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(payload): Json<CreateSpaceBody>,
-) -> Result<Json<SpaceSummary>, (StatusCode, String)> {
+    Json(payload): Json<CreateProjectBody>,
+) -> Result<Json<ProjectSummary>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
     if payload.name.trim().is_empty() {
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
     }
 
-    let space_id = Uuid::new_v4().to_string();
+    let project_id = Uuid::new_v4().to_string();
     let entrypoint = payload
         .entrypoint
         .unwrap_or_else(|| "main.typ".to_string());
 
-    let space = sqlx::query_as::<_, Space>(
-        "INSERT INTO spaces (id, owner_id, name, entrypoint) VALUES (?, ?, ?, ?) \
+    let project = sqlx::query_as::<_, Project>(
+        "INSERT INTO projects (id, owner_id, name, entrypoint) VALUES (?, ?, ?, ?) \
          RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at",
     )
-    .bind(&space_id)
+    .bind(&project_id)
     .bind(&user_id)
     .bind(payload.name.trim())
     .bind(&entrypoint)
@@ -316,36 +316,36 @@ pub async fn create_space(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(SpaceSummary {
-        id: space.id,
-        name: space.name,
-        entrypoint: space.entrypoint,
+    Ok(Json(ProjectSummary {
+        id: project.id,
+        name: project.name,
+        entrypoint: project.entrypoint,
         role: "owner".to_string(),
-        updated_at: space.updated_at,
+        updated_at: project.updated_at,
     }))
 }
 
-pub async fn delete_space(
+pub async fn delete_project(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(space_id): Path<String>,
+    Path(project_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let _ = sqlx::query("DELETE FROM space_files WHERE space_id = ?")
-        .bind(&space_id)
+    let _ = sqlx::query("DELETE FROM project_files WHERE project_id = ?")
+        .bind(&project_id)
         .execute(&state.db)
         .await;
 
-    let result = sqlx::query("DELETE FROM spaces WHERE id = ? AND owner_id = ?")
-        .bind(&space_id)
+    let result = sqlx::query("DELETE FROM projects WHERE id = ? AND owner_id = ?")
+        .bind(&project_id)
         .bind(&user_id)
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "Space not found".to_string()));
+        return Err((StatusCode::NOT_FOUND, "Project not found".to_string()));
     }
 
     Ok(StatusCode::NO_CONTENT)
@@ -361,8 +361,8 @@ pub struct ManifestEntry {
 }
 
 #[derive(Serialize)]
-pub struct SpaceManifest {
-    pub space_id: String,
+pub struct ProjectManifest {
+    pub project_id: String,
     pub name: String,
     pub entrypoint: String,
     pub updated_at: String,
@@ -371,12 +371,12 @@ pub struct SpaceManifest {
 
 async fn plain_contents(
     state: &AppState,
-    space_id: &str,
+    project_id: &str,
 ) -> Result<Vec<(String, String, Vec<u8>, String)>, (StatusCode, String)> {
     let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>, Option<String>)>(
-        "SELECT path, kind, content, updated_at FROM space_files WHERE space_id = ? ORDER BY path ASC",
+        "SELECT path, kind, content, updated_at FROM project_files WHERE project_id = ? ORDER BY path ASC",
     )
-    .bind(space_id)
+    .bind(project_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -398,12 +398,12 @@ async fn plain_contents(
 pub async fn get_manifest(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(space_id): Path<String>,
-) -> Result<Json<SpaceManifest>, (StatusCode, String)> {
+    Path(project_id): Path<String>,
+) -> Result<Json<ProjectManifest>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    let space = owned_space(&state, &space_id, &user_id).await?;
+    let project = owned_project(&state, &project_id, &user_id).await?;
 
-    let files = plain_contents(&state, &space_id)
+    let files = plain_contents(&state, &project_id)
         .await?
         .into_iter()
         .map(|(path, kind, plain, updated_at)| ManifestEntry {
@@ -415,11 +415,11 @@ pub async fn get_manifest(
         })
         .collect();
 
-    Ok(Json(SpaceManifest {
-        space_id: space.id,
-        name: space.name,
-        entrypoint: space.entrypoint,
-        updated_at: space.updated_at,
+    Ok(Json(ProjectManifest {
+        project_id: project.id,
+        name: project.name,
+        entrypoint: project.entrypoint,
+        updated_at: project.updated_at,
         files,
     }))
 }
@@ -452,16 +452,16 @@ fn encode_for_transport(kind: &str, plain: Vec<u8>) -> (String, String) {
 pub async fn pull_file(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(space_id): Path<String>,
+    Path(project_id): Path<String>,
     Query(query): Query<PathQuery>,
 ) -> Result<Json<FileContent>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    owned_space(&state, &space_id, &user_id).await?;
+    owned_project(&state, &project_id, &user_id).await?;
 
     let row = sqlx::query_as::<_, (String, Option<Vec<u8>>)>(
-        "SELECT kind, content FROM space_files WHERE space_id = ? AND path = ?",
+        "SELECT kind, content FROM project_files WHERE project_id = ? AND path = ?",
     )
-    .bind(&space_id)
+    .bind(&project_id)
     .bind(&query.path)
     .fetch_optional(&state.db)
     .await
@@ -530,11 +530,11 @@ impl axum::response::IntoResponse for PushOutcome {
 pub async fn push_file(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(space_id): Path<String>,
+    Path(project_id): Path<String>,
     Json(payload): Json<PushFileRequest>,
 ) -> Result<PushOutcome, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    owned_space(&state, &space_id, &user_id).await?;
+    owned_project(&state, &project_id, &user_id).await?;
 
     let incoming = match payload.encoding.as_deref() {
         Some("base64") => BASE64
@@ -544,9 +544,9 @@ pub async fn push_file(
     };
 
     let existing = sqlx::query_as::<_, (String, Option<Vec<u8>>)>(
-        "SELECT kind, content FROM space_files WHERE space_id = ? AND path = ?",
+        "SELECT kind, content FROM project_files WHERE project_id = ? AND path = ?",
     )
-    .bind(&space_id)
+    .bind(&project_id)
     .bind(&payload.path)
     .fetch_optional(&state.db)
     .await
@@ -600,13 +600,13 @@ pub async fn push_file(
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
     sqlx::query(
-        "INSERT INTO space_files (id, space_id, path, kind, content, mime_type, updated_at) \
+        "INSERT INTO project_files (id, project_id, path, kind, content, mime_type, updated_at) \
          VALUES (?, ?, ?, ?, ?, ?, ?) \
-         ON CONFLICT (space_id, path) DO UPDATE SET content = excluded.content, \
+         ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, \
          kind = excluded.kind, mime_type = excluded.mime_type, updated_at = excluded.updated_at",
     )
     .bind(Uuid::new_v4().to_string())
-    .bind(&space_id)
+    .bind(&project_id)
     .bind(&payload.path)
     .bind(kind)
     .bind(&stored)
@@ -616,9 +616,9 @@ pub async fn push_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let _ = sqlx::query("UPDATE spaces SET updated_at = ? WHERE id = ?")
+    let _ = sqlx::query("UPDATE projects SET updated_at = ? WHERE id = ?")
         .bind(&now)
-        .bind(&space_id)
+        .bind(&project_id)
         .execute(&state.db)
         .await;
 
@@ -632,14 +632,14 @@ pub async fn push_file(
 pub async fn delete_file(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(space_id): Path<String>,
+    Path(project_id): Path<String>,
     Query(query): Query<PathQuery>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    owned_space(&state, &space_id, &user_id).await?;
+    owned_project(&state, &project_id, &user_id).await?;
 
-    let result = sqlx::query("DELETE FROM space_files WHERE space_id = ? AND path = ?")
-        .bind(&space_id)
+    let result = sqlx::query("DELETE FROM project_files WHERE project_id = ? AND path = ?")
+        .bind(&project_id)
         .bind(&query.path)
         .execute(&state.db)
         .await
@@ -662,22 +662,22 @@ pub struct BundleFile {
 }
 
 #[derive(Serialize)]
-pub struct SpaceBundle {
-    pub space_id: String,
+pub struct ProjectBundle {
+    pub project_id: String,
     pub name: String,
     pub entrypoint: String,
     pub files: Vec<BundleFile>,
 }
 
-pub async fn pull_space(
+pub async fn pull_project(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(space_id): Path<String>,
-) -> Result<Json<SpaceBundle>, (StatusCode, String)> {
+    Path(project_id): Path<String>,
+) -> Result<Json<ProjectBundle>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    let space = owned_space(&state, &space_id, &user_id).await?;
+    let project = owned_project(&state, &project_id, &user_id).await?;
 
-    let files = plain_contents(&state, &space_id)
+    let files = plain_contents(&state, &project_id)
         .await?
         .into_iter()
         .map(|(path, kind, plain, _)| {
@@ -693,10 +693,10 @@ pub async fn pull_space(
         })
         .collect();
 
-    Ok(Json(SpaceBundle {
-        space_id: space.id,
-        name: space.name,
-        entrypoint: space.entrypoint,
+    Ok(Json(ProjectBundle {
+        project_id: project.id,
+        name: project.name,
+        entrypoint: project.entrypoint,
         files,
     }))
 }
@@ -789,7 +789,7 @@ pub async fn list_documents(
 #[derive(Serialize)]
 pub struct SharedItems {
     pub documents: Vec<CloudDocument>,
-    pub spaces: Vec<SpaceSummary>,
+    pub projects: Vec<ProjectSummary>,
 }
 
 pub async fn list_shared(
@@ -808,10 +808,10 @@ pub async fn list_shared(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let spaces = sqlx::query_as::<_, (String, String, String, String, String)>(
-        "SELECT s.id, s.name, s.entrypoint, s.updated_at, c.role FROM spaces s \
-         INNER JOIN space_collaborators c ON c.space_id = s.id AND c.user_id = ? \
-         ORDER BY s.updated_at DESC",
+    let projects = sqlx::query_as::<_, (String, String, String, String, String)>(
+        "SELECT p.id, p.name, p.entrypoint, p.updated_at, c.role FROM projects p \
+         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = ? \
+         ORDER BY p.updated_at DESC",
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -829,9 +829,9 @@ pub async fn list_shared(
                 updated_at,
             })
             .collect(),
-        spaces: spaces
+        projects: projects
             .into_iter()
-            .map(|(id, name, entrypoint, updated_at, role)| SpaceSummary {
+            .map(|(id, name, entrypoint, updated_at, role)| ProjectSummary {
                 id,
                 name,
                 entrypoint,
@@ -972,6 +972,42 @@ pub async fn push_document(
         hash: incoming_hash,
         updated_at: now,
     })))
+}
+
+#[derive(Deserialize)]
+pub struct CreateDocumentRequest {
+    pub title: String,
+    pub content: String,
+    pub folder_id: Option<String>,
+}
+
+pub async fn create_document(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<CreateDocumentRequest>,
+) -> Result<Json<DocumentContent>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    let document_id = Uuid::new_v4().to_string();
+
+    sqlx::query(
+        "INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(&document_id)
+    .bind(&user_id)
+    .bind(&payload.folder_id)
+    .bind(&payload.title)
+    .bind(encode_text_blob(&payload.content))
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(DocumentContent {
+        id: document_id,
+        title: payload.title,
+        role: "owner".to_string(),
+        hash: content_hash(payload.content.as_bytes()),
+        content: payload.content,
+    }))
 }
 
 #[derive(Serialize)]

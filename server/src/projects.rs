@@ -14,8 +14,8 @@ use yrs::Update;
 use crate::{
     compiler::ProjectInput,
     models::{
-        CreateSpaceFileRequest, CreateSpaceRequest, Space, SpaceFile, UpdateSpaceFileRequest,
-        UpdateSpaceRequest,
+        CreateProjectFileRequest, CreateProjectRequest, Project, ProjectFile, UpdateProjectFileRequest,
+        UpdateProjectRequest,
     },
     AppState,
 };
@@ -61,44 +61,44 @@ fn slugify(name: &str) -> String {
         .collect();
     let trimmed = slug.trim_matches('-').replace("--", "-");
     if trimmed.is_empty() {
-        "my-space".to_string()
+        "my-project".to_string()
     } else {
         trimmed
     }
 }
 
-pub async fn space_role(
+pub async fn project_role(
     state: &AppState,
-    space_id: &str,
+    project_id: &str,
     user_id_opt: &Option<String>,
-) -> Option<(Space, String)> {
-    let space = sqlx::query_as::<_, Space>(
-        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM spaces WHERE id = ?"
+) -> Option<(Project, String)> {
+    let project = sqlx::query_as::<_, Project>(
+        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = ?"
     )
-    .bind(space_id)
+    .bind(project_id)
     .fetch_optional(&state.db)
     .await
     .ok()??;
 
     if let Some(uid) = user_id_opt {
-        if &space.owner_id == uid {
-            return Some((space, "owner".to_string()));
+        if &project.owner_id == uid {
+            return Some((project, "owner".to_string()));
         }
         if let Ok(Some((role,))) = sqlx::query_as::<_, (String,)>(
-            "SELECT role FROM space_collaborators WHERE space_id = ? AND user_id = ?",
+            "SELECT role FROM project_collaborators WHERE project_id = ? AND user_id = ?",
         )
-        .bind(space_id)
+        .bind(project_id)
         .bind(uid)
         .fetch_optional(&state.db)
         .await
         {
-            return Some((space, role));
+            return Some((project, role));
         }
     }
 
-    if let Some(pr) = space.public_role.clone() {
+    if let Some(pr) = project.public_role.clone() {
         if pr == "viewer" || pr == "editor" {
-            return Some((space, pr));
+            return Some((project, pr));
         }
     }
 
@@ -128,17 +128,17 @@ pub async fn load_local_packages(state: &AppState) -> HashMap<String, HashMap<St
 
 pub async fn assemble_project(
     state: &AppState,
-    space: &Space,
+    project: &Project,
     overrides: HashMap<String, String>,
 ) -> ProjectInput {
     let mut files: HashMap<String, Vec<u8>> = HashMap::new();
 
     // Account-level uploaded files (fonts, images) come first as a base layer so
-    // they are available inside spaces; space files below override them by name.
+    // they are available inside projects; project files below override them by name.
     if let Ok(account_files) = sqlx::query_as::<_, (String, Vec<u8>)>(
         "SELECT name, data FROM files WHERE owner_id = ?",
     )
-    .bind(&space.owner_id)
+    .bind(&project.owner_id)
     .fetch_all(&state.db)
     .await
     {
@@ -148,9 +148,9 @@ pub async fn assemble_project(
     }
 
     let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT path, kind, content FROM space_files WHERE space_id = ?",
+        "SELECT path, kind, content FROM project_files WHERE project_id = ?",
     )
-    .bind(&space.id)
+    .bind(&project.id)
     .fetch_all(&state.db)
     .await
     .unwrap_or_default();
@@ -170,36 +170,36 @@ pub async fn assemble_project(
     }
 
     ProjectInput {
-        entrypoint: space.entrypoint.clone(),
+        entrypoint: project.entrypoint.clone(),
         files,
         packages: load_local_packages(state).await,
     }
 }
 
 #[derive(serde::Deserialize)]
-pub struct ListSpacesQuery {
+pub struct ListProjectsQuery {
     pub folder_id: Option<String>,
 }
 
-pub async fn list_spaces(
-    Query(query): Query<ListSpacesQuery>,
+pub async fn list_projects(
+    Query(query): Query<ListProjectsQuery>,
     State(state): State<AppState>,
     jar: SignedCookieJar,
-) -> Result<Json<Vec<Space>>, (StatusCode, String)> {
+) -> Result<Json<Vec<Project>>, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let spaces = if let Some(folder_id) = query.folder_id {
-        sqlx::query_as::<_, Space>(
-            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM spaces WHERE owner_id = ? AND folder_id = ? ORDER BY updated_at DESC"
+    let projects = if let Some(folder_id) = query.folder_id {
+        sqlx::query_as::<_, Project>(
+            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE owner_id = ? AND folder_id = ? ORDER BY updated_at DESC"
         )
         .bind(&user_id)
         .bind(&folder_id)
         .fetch_all(&state.db)
         .await
     } else {
-        sqlx::query_as::<_, Space>(
-            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM spaces WHERE owner_id = ? AND folder_id IS NULL ORDER BY updated_at DESC"
+        sqlx::query_as::<_, Project>(
+            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE owner_id = ? AND folder_id IS NULL ORDER BY updated_at DESC"
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -207,45 +207,45 @@ pub async fn list_spaces(
     }
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(spaces))
+    Ok(Json(projects))
 }
 
-pub async fn list_shared_spaces(
+pub async fn list_shared_projects(
     State(state): State<AppState>,
     jar: SignedCookieJar,
-) -> Result<Json<Vec<Space>>, (StatusCode, String)> {
+) -> Result<Json<Vec<Project>>, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let spaces = sqlx::query_as::<_, Space>(
-        "SELECT s.id, s.owner_id, s.folder_id, s.name, s.entrypoint, s.thumbnail_svg, \
-         s.public_role, s.created_at, s.updated_at, c.role as effective_role \
-         FROM spaces s \
-         INNER JOIN space_collaborators c ON c.space_id = s.id AND c.user_id = ? \
-         ORDER BY s.updated_at DESC"
+    let projects = sqlx::query_as::<_, Project>(
+        "SELECT p.id, p.owner_id, p.folder_id, p.name, p.entrypoint, p.thumbnail_svg, \
+         p.public_role, p.created_at, p.updated_at, c.role as effective_role \
+         FROM projects p \
+         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = ? \
+         ORDER BY p.updated_at DESC"
     )
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(spaces))
+    Ok(Json(projects))
 }
 
-pub async fn create_space(
+pub async fn create_project(
     State(state): State<AppState>,
     jar: SignedCookieJar,
-    Json(payload): Json<CreateSpaceRequest>,
-) -> Result<Json<Space>, (StatusCode, String)> {
+    Json(payload): Json<CreateProjectRequest>,
+) -> Result<Json<Project>, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let space_id = Uuid::new_v4().to_string();
+    let project_id = Uuid::new_v4().to_string();
 
-    let space = sqlx::query_as::<_, Space>(
-        "INSERT INTO spaces (id, owner_id, folder_id, name, entrypoint) VALUES (?, ?, ?, ?, 'main.typ') RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at"
+    let project = sqlx::query_as::<_, Project>(
+        "INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES (?, ?, ?, ?, 'main.typ') RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at"
     )
-    .bind(&space_id)
+    .bind(&project_id)
     .bind(&user_id)
     .bind(&payload.folder_id)
     .bind(&payload.name)
@@ -255,91 +255,91 @@ pub async fn create_space(
 
     let seeds = [
         ("typst.toml", default_manifest(&slugify(&payload.name))),
-        ("main.typ", "= New Space\n\nStart writing here.\n".to_string()),
+        ("main.typ", "= New Project\n\nStart writing here.\n".to_string()),
     ];
     for (path, content) in seeds {
         let _ = sqlx::query(
-            "INSERT INTO space_files (id, space_id, path, kind, content, mime_type) VALUES (?, ?, ?, 'text', ?, 'text/plain')"
+            "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES (?, ?, ?, 'text', ?, 'text/plain')"
         )
         .bind(Uuid::new_v4().to_string())
-        .bind(&space_id)
+        .bind(&project_id)
         .bind(path)
         .bind(encode_text_blob(&content))
         .execute(&state.db)
         .await;
     }
 
-    Ok(Json(space))
+    Ok(Json(project))
 }
 
-pub async fn get_space(
+pub async fn get_project(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
-) -> Result<Json<Space>, (StatusCode, String)> {
+) -> Result<Json<Project>, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
-    let (mut space, role) = space_role(&state, &id, &user_id_opt)
+    let (mut project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
 
-    space.effective_role = Some(role);
-    Ok(Json(space))
+    project.effective_role = Some(role);
+    Ok(Json(project))
 }
 
-pub async fn update_space(
+pub async fn update_project(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
-    Json(payload): Json<UpdateSpaceRequest>,
-) -> Result<Json<Space>, (StatusCode, String)> {
+    Json(payload): Json<UpdateProjectRequest>,
+) -> Result<Json<Project>, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let mut space = sqlx::query_as::<_, Space>(
-        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM spaces WHERE id = ? AND owner_id = ?"
+    let mut project = sqlx::query_as::<_, Project>(
+        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = ? AND owner_id = ?"
     )
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::NOT_FOUND, "Space not found".to_string()))?;
+    .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
 
     if let Some(name) = payload.name {
-        space.name = name;
+        project.name = name;
     }
     if let Some(entrypoint) = payload.entrypoint {
-        space.entrypoint = entrypoint;
+        project.entrypoint = entrypoint;
     }
     if let Some(folder_id) = payload.folder_id {
-        space.folder_id = if folder_id.is_empty() { None } else { Some(folder_id) };
+        project.folder_id = if folder_id.is_empty() { None } else { Some(folder_id) };
     }
     if let Some(public_role) = payload.public_role {
-        space.public_role = if public_role == "none" || public_role.is_empty() {
+        project.public_role = if public_role == "none" || public_role.is_empty() {
             None
         } else {
             Some(public_role)
         };
     }
 
-    let space = sqlx::query_as::<_, Space>(
-        "UPDATE spaces SET name = ?, entrypoint = ?, folder_id = ?, public_role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND owner_id = ? RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at"
+    let project = sqlx::query_as::<_, Project>(
+        "UPDATE projects SET name = ?, entrypoint = ?, folder_id = ?, public_role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND owner_id = ? RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at"
     )
-    .bind(&space.name)
-    .bind(&space.entrypoint)
-    .bind(&space.folder_id)
-    .bind(&space.public_role)
+    .bind(&project.name)
+    .bind(&project.entrypoint)
+    .bind(&project.folder_id)
+    .bind(&project.public_role)
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(space))
+    Ok(Json(project))
 }
 
-pub async fn delete_space(
+pub async fn delete_project(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
@@ -347,12 +347,12 @@ pub async fn delete_space(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let _ = sqlx::query("DELETE FROM space_files WHERE space_id = ?")
+    let _ = sqlx::query("DELETE FROM project_files WHERE project_id = ?")
         .bind(&id)
         .execute(&state.db)
         .await;
 
-    let result = sqlx::query("DELETE FROM spaces WHERE id = ? AND owner_id = ?")
+    let result = sqlx::query("DELETE FROM projects WHERE id = ? AND owner_id = ?")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -360,24 +360,24 @@ pub async fn delete_space(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "Space not found or unauthorized".to_string()));
+        return Err((StatusCode::NOT_FOUND, "Project not found or unauthorized".to_string()));
     }
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn list_space_files(
+pub async fn list_project_files(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
-) -> Result<Json<Vec<SpaceFile>>, (StatusCode, String)> {
+) -> Result<Json<Vec<ProjectFile>>, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    space_role(&state, &id, &user_id_opt)
+    project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
 
-    let files = sqlx::query_as::<_, SpaceFile>(
-        "SELECT id, space_id, path, kind, mime_type, created_at FROM space_files WHERE space_id = ? ORDER BY path ASC"
+    let files = sqlx::query_as::<_, ProjectFile>(
+        "SELECT id, project_id, path, kind, mime_type, created_at FROM project_files WHERE project_id = ? ORDER BY path ASC"
     )
     .bind(&id)
     .fetch_all(&state.db)
@@ -387,14 +387,14 @@ pub async fn list_space_files(
     Ok(Json(files))
 }
 
-pub async fn create_space_file(
+pub async fn create_project_file(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
-    Json(payload): Json<CreateSpaceFileRequest>,
-) -> Result<Json<SpaceFile>, (StatusCode, String)> {
+    Json(payload): Json<CreateProjectFileRequest>,
+) -> Result<Json<ProjectFile>, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (_, role) = space_role(&state, &id, &user_id_opt)
+    let (_, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     if role == "viewer" {
@@ -405,8 +405,8 @@ pub async fn create_space_file(
     let content = payload.content.unwrap_or_default();
     let file_id = Uuid::new_v4().to_string();
 
-    let file = sqlx::query_as::<_, SpaceFile>(
-        "INSERT INTO space_files (id, space_id, path, kind, content, mime_type) VALUES (?, ?, ?, ?, ?, 'text/plain') RETURNING id, space_id, path, kind, mime_type, created_at"
+    let file = sqlx::query_as::<_, ProjectFile>(
+        "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES (?, ?, ?, ?, ?, 'text/plain') RETURNING id, project_id, path, kind, mime_type, created_at"
     )
     .bind(&file_id)
     .bind(&id)
@@ -420,14 +420,14 @@ pub async fn create_space_file(
     Ok(Json(file))
 }
 
-pub async fn upload_space_file(
+pub async fn upload_project_file(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
     mut multipart: Multipart,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (_, role) = space_role(&state, &id, &user_id_opt)
+    let (_, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     if role == "viewer" {
@@ -449,8 +449,8 @@ pub async fn upload_space_file(
         };
 
         let _ = sqlx::query(
-            "INSERT INTO space_files (id, space_id, path, kind, content, mime_type) VALUES (?, ?, ?, ?, ?, ?) \
-             ON CONFLICT (space_id, path) DO UPDATE SET content = excluded.content, kind = excluded.kind, mime_type = excluded.mime_type"
+            "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES (?, ?, ?, ?, ?, ?) \
+             ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, kind = excluded.kind, mime_type = excluded.mime_type"
         )
         .bind(Uuid::new_v4().to_string())
         .bind(&id)
@@ -468,18 +468,18 @@ pub async fn upload_space_file(
     Ok(Json(serde_json::json!({ "files": uploaded })))
 }
 
-pub async fn get_space_file(
+pub async fn get_project_file(
     State(state): State<AppState>,
     Path((id, file_id)): Path<(String, String)>,
     jar: SignedCookieJar,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    space_role(&state, &id, &user_id_opt)
+    project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
 
     let file = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT kind, mime_type, content FROM space_files WHERE id = ? AND space_id = ?"
+        "SELECT kind, mime_type, content FROM project_files WHERE id = ? AND project_id = ?"
     )
     .bind(&file_id)
     .bind(&id)
@@ -498,21 +498,21 @@ pub async fn get_space_file(
     }
 }
 
-pub async fn update_space_file(
+pub async fn update_project_file(
     State(state): State<AppState>,
     Path((id, file_id)): Path<(String, String)>,
     jar: SignedCookieJar,
-    Json(payload): Json<UpdateSpaceFileRequest>,
+    Json(payload): Json<UpdateProjectFileRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (_, role) = space_role(&state, &id, &user_id_opt)
+    let (_, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     if role == "viewer" {
         return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
     }
 
-    let result = sqlx::query("UPDATE space_files SET path = ? WHERE id = ? AND space_id = ?")
+    let result = sqlx::query("UPDATE project_files SET path = ? WHERE id = ? AND project_id = ?")
         .bind(&payload.path)
         .bind(&file_id)
         .bind(&id)
@@ -527,20 +527,20 @@ pub async fn update_space_file(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn delete_space_file(
+pub async fn delete_project_file(
     State(state): State<AppState>,
     Path((id, file_id)): Path<(String, String)>,
     jar: SignedCookieJar,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (_, role) = space_role(&state, &id, &user_id_opt)
+    let (_, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     if role == "viewer" {
         return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
     }
 
-    let result = sqlx::query("DELETE FROM space_files WHERE id = ? AND space_id = ?")
+    let result = sqlx::query("DELETE FROM project_files WHERE id = ? AND project_id = ?")
         .bind(&file_id)
         .bind(&id)
         .execute(&state.db)

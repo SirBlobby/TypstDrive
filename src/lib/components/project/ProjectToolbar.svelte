@@ -9,14 +9,14 @@
 		documentZoomStore,
 		previewOpenStore
 	} from '../../ts/store';
-	import { exportSpace } from '../../ts/typst-api';
+	import { exportProject } from '../../ts/typst-api';
 	import ThemePicker from '../ThemePicker.svelte';
 	import PageSettingsModal from '../PageSettingsModal.svelte';
 	import PresentationMode from '../PresentationMode.svelte';
 
 	let {
-		spaceName = 'Space',
-		spaceId,
+		projectName = 'Project',
+		projectId,
 		entrypoint = 'main.typ',
 		role = 'owner',
 		activeText = null,
@@ -25,8 +25,8 @@
 		onPublish,
 		onFilesChanged
 	}: {
-		spaceName?: string;
-		spaceId: string;
+		projectName?: string;
+		projectId: string;
 		entrypoint?: string;
 		role?: string;
 		activeText?: any;
@@ -55,10 +55,10 @@
 	let showDeleteModal = $state(false);
 	let renameName = $state('');
 
-	$effect(() => { renameName = spaceName; });
+	$effect(() => { renameName = projectName; });
 
 	function safeName() {
-		return spaceName.replace(/[^a-z0-9_-]/gi, '_');
+		return projectName.replace(/[^a-z0-9_-]/gi, '_');
 	}
 
 	function handleExport(format: 'pdf' | 'png' | 'svg' | 'typ') {
@@ -73,7 +73,7 @@
 			URL.revokeObjectURL(url);
 			return;
 		}
-		exportSpace(spaceId, getAllText(), format, safeName()).catch((e) => {
+		exportProject(projectId, getAllText(), format, safeName()).catch((e) => {
 			console.error(`Export to ${format} failed:`, e);
 			alert(`Failed to export as ${format.toUpperCase()}`);
 		});
@@ -83,7 +83,7 @@
 		fetch(`/api/export/pdf`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ space_id: spaceId, files: getAllText() })
+			body: JSON.stringify({ project_id: projectId, files: getAllText() })
 		})
 			.then((res) => {
 				if (!res.ok) throw new Error('Print failed');
@@ -225,7 +225,7 @@
 		const file = target.files[0];
 		const form = new FormData();
 		form.append('file', file);
-		fetch(`/api/spaces/${spaceId}/files/upload`, { method: 'POST', body: form })
+		fetch(`/api/projects/${projectId}/files/upload`, { method: 'POST', body: form })
 			.then((res) => res.json())
 			.then(() => {
 				const lower = file.name.toLowerCase();
@@ -259,8 +259,8 @@
 
 	function submitRename(e: Event) {
 		e.preventDefault();
-		if (renameName && renameName !== spaceName) {
-			fetch(`/api/spaces/${spaceId}`, {
+		if (renameName && renameName !== projectName) {
+			fetch(`/api/projects/${projectId}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ name: renameName })
@@ -270,8 +270,8 @@
 	}
 
 	function confirmDelete() {
-		fetch(`/api/spaces/${spaceId}`, { method: 'DELETE' }).then((res) => {
-			if (res.ok) goto('/spaces');
+		fetch(`/api/projects/${projectId}`, { method: 'DELETE' }).then((res) => {
+			if (res.ok) goto('/projects');
 		});
 	}
 
@@ -289,14 +289,14 @@
 <header class="flex flex-col border-b border-[var(--theme-border)] bg-[var(--theme-bg)] text-[var(--theme-text)] select-none w-full relative z-[70]">
 	<div class="flex items-center justify-between px-4 py-2.5">
 		<div class="flex items-center gap-3">
-			<button onclick={() => goto('/spaces')} class="p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors" title="Spaces">
+			<button onclick={() => goto('/projects')} class="p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors" title="Projects">
 				<Icon icon="mdi:arrow-left" class="text-xl" />
 			</button>
 
 			<div class="flex flex-col gap-0.5">
 				<div class="flex items-center gap-2">
 					<Icon icon="mdi:folder-multiple-outline" class="text-blue-500 text-base" />
-					<h1 class="text-[16px] font-semibold text-gray-900 dark:text-white tracking-tight truncate max-w-[200px] md:max-w-xs" title={spaceName}>{spaceName}</h1>
+					<h1 class="text-[16px] font-semibold text-gray-900 dark:text-white tracking-tight truncate max-w-[200px] md:max-w-xs" title={projectName}>{projectName}</h1>
 				</div>
 
 				<div class="flex items-center gap-0.5 text-[13px] font-medium text-gray-600 dark:text-gray-300 -ml-1 action-menu-container">
@@ -304,11 +304,11 @@
 						<button onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'file' ? null : 'file'; }} class="px-2 py-0.5 rounded transition-colors {activeMenu === 'file' ? 'bg-[var(--theme-border)]' : 'hover:bg-[var(--theme-border)]'}">File</button>
 						{#if activeMenu === 'file'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100] max-h-[calc(100vh-8rem)] overflow-y-auto">
-								<button onclick={() => { activeMenu = null; goto('/spaces'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">All Spaces</button>
-								<button onclick={() => { activeMenu = null; showInfoModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Space Info</button>
+								<button onclick={() => { activeMenu = null; goto('/projects'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">All Projects</button>
+								<button onclick={() => { activeMenu = null; showInfoModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Project Info</button>
 								{#if !isViewer}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
-									<button onclick={() => { activeMenu = null; renameName = spaceName; showRenameModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Rename</button>
+									<button onclick={() => { activeMenu = null; renameName = projectName; showRenameModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Rename</button>
 									<button onclick={() => { activeMenu = null; isPageSettingsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Page Settings</button>
 									{#if role === 'owner'}
 										<button onclick={() => { activeMenu = null; onPublish(); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Publish as Package</button>
@@ -329,7 +329,7 @@
 								<button onclick={() => { activeMenu = null; handlePandocExport('html'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)]">HTML (.html)</button>
 								{#if role === 'owner'}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
-									<button onclick={() => { activeMenu = null; showDeleteModal = true; }} class="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-red-500/10">Delete Space</button>
+									<button onclick={() => { activeMenu = null; showDeleteModal = true; }} class="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-red-500/10">Delete Project</button>
 								{/if}
 							</div>
 						{/if}
@@ -427,8 +427,8 @@
 		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
 
 		<div class="flex items-center gap-2">
-			<label for="space-font-select" class="text-[11px] font-semibold uppercase tracking-wider opacity-60">Font</label>
-			<select id="space-font-select" onchange={(e) => insertTypstConfig('text', `font: "${e.currentTarget.value}"`)} class="bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] text-xs rounded shadow-sm block py-1 pl-2 pr-6 appearance-none cursor-pointer">
+			<label for="project-font-select" class="text-[11px] font-semibold uppercase tracking-wider opacity-60">Font</label>
+			<select id="project-font-select" onchange={(e) => insertTypstConfig('text', `font: "${e.currentTarget.value}"`)} class="bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] text-xs rounded shadow-sm block py-1 pl-2 pr-6 appearance-none cursor-pointer">
 				<option value="New Computer Modern">Default (New CM)</option>
 				<option value="Libertinus Serif">Libertinus Serif</option>
 				<option value="PT Sans">PT Sans</option>
@@ -478,10 +478,10 @@
 		<div class="bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-sm overflow-hidden" onclick={(e) => e.stopPropagation()} role="presentation">
 			<div class="p-6 border-b border-gray-100 dark:border-white/10 flex items-center gap-3">
 				<Icon icon="mdi:folder-multiple-outline" class="text-xl text-blue-500" />
-				<h3 class="text-lg font-semibold flex-grow truncate">{spaceName}</h3>
+				<h3 class="text-lg font-semibold flex-grow truncate">{projectName}</h3>
 			</div>
 			<div class="p-6 space-y-4 text-sm">
-				<div><p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Type</p><p>Space (multi-file)</p></div>
+				<div><p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Type</p><p>Project (multi-file)</p></div>
 				<div><p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Entrypoint</p><p class="font-mono">{entrypoint}</p></div>
 				<div><p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Your role</p><p class="capitalize">{role}</p></div>
 			</div>
@@ -496,7 +496,7 @@
 	<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onclick={() => showRenameModal = false} role="presentation">
 		<div class="bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-sm overflow-hidden" onclick={(e) => e.stopPropagation()} role="presentation">
 			<form onsubmit={submitRename} class="p-6">
-				<h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><Icon icon="mdi:pencil-outline" class="text-yellow-500" /> Rename Space</h3>
+				<h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><Icon icon="mdi:pencil-outline" class="text-yellow-500" /> Rename Project</h3>
 				<input type="text" required bind:value={renameName} class="w-full bg-transparent border border-gray-300 dark:border-white/20 text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
 				<div class="pt-6 flex justify-end gap-3">
 					<button type="button" onclick={() => showRenameModal = false} class="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Cancel</button>
@@ -511,8 +511,8 @@
 	<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onclick={() => showDeleteModal = false} role="presentation">
 		<div class="bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-sm overflow-hidden" onclick={(e) => e.stopPropagation()} role="presentation">
 			<div class="p-6">
-				<h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><Icon icon="mdi:trash-can-outline" class="text-red-500" /> Delete Space</h3>
-				<p class="text-gray-600 dark:text-gray-300 text-sm mb-6">Delete this space and all its files? This cannot be undone.</p>
+				<h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><Icon icon="mdi:trash-can-outline" class="text-red-500" /> Delete Project</h3>
+				<p class="text-gray-600 dark:text-gray-300 text-sm mb-6">Delete this project and all its files? This cannot be undone.</p>
 				<div class="flex justify-end gap-3">
 					<button type="button" onclick={() => showDeleteModal = false} class="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Cancel</button>
 					<button type="button" onclick={confirmDelete} class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-medium">Delete</button>

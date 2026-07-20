@@ -73,7 +73,7 @@ pub struct Document {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct Space {
+pub struct Project {
     pub id: String,
     pub owner_id: String,
     pub folder_id: Option<String>,
@@ -89,9 +89,9 @@ pub struct Space {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct SpaceFile {
+pub struct ProjectFile {
     pub id: String,
-    pub space_id: String,
+    pub project_id: String,
     pub path: String,
     pub kind: String,
     #[serde(skip_serializing)]
@@ -127,14 +127,14 @@ pub struct PackageVersion {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateSpaceRequest {
+pub struct CreateProjectRequest {
     pub name: String,
     pub folder_id: Option<String>,
     pub template: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateSpaceRequest {
+pub struct UpdateProjectRequest {
     pub name: Option<String>,
     pub folder_id: Option<String>,
     pub entrypoint: Option<String>,
@@ -142,20 +142,20 @@ pub struct UpdateSpaceRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateSpaceFileRequest {
+pub struct CreateProjectFileRequest {
     pub path: String,
     pub kind: Option<String>,
     pub content: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateSpaceFileRequest {
+pub struct UpdateProjectFileRequest {
     pub path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublishPackageRequest {
-    pub space_id: String,
+    pub project_id: String,
     pub version: Option<String>,
 }
 

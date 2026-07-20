@@ -5,26 +5,26 @@
 	import Preview from '$lib/components/Preview.svelte';
 	import ErrorBanner from '$lib/components/ErrorBanner.svelte';
 	import DocFooter from '$lib/components/DocFooter.svelte';
-	import FileTree from '$lib/components/space/FileTree.svelte';
-	import SpaceToolbar from '$lib/components/space/SpaceToolbar.svelte';
+	import FileTree from '$lib/components/project/FileTree.svelte';
+	import ProjectToolbar from '$lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '$lib/components/PublishPackageModal.svelte';
-	import { compileSpace } from '$lib/ts/typst-api';
+	import { compileProject } from '$lib/ts/typst-api';
 	import type { Diagnostic } from '$lib/ts/typst-api';
 	import { editorErrors, documentStatsStore, previewOpenStore, editorViewStore } from '$lib/ts/store';
-	import { setSpace, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupSpace } from '$lib/ts/yjs-space';
+	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject } from '$lib/ts/yjs-project';
 
-	interface SpaceFile {
+	interface ProjectFile {
 		id: string;
 		path: string;
 		kind: string;
 	}
 
-	const spaceId = $page.params.id as string;
+	const projectId = $page.params.id as string;
 
-	let spaceName = $state('Space');
+	let projectName = $state('Project');
 	let entrypoint = $state('main.typ');
 	let role = $state('owner');
-	let files = $state<SpaceFile[]>([]);
+	let files = $state<ProjectFile[]>([]);
 	let activeFileId = $state('');
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -45,7 +45,7 @@
 
 	function triggerCompile() {
 		if (!$previewOpenStore) return;
-		compileSpace(spaceId, getAllText())
+		compileProject(projectId, getAllText())
 			.then((res) => {
 				if (res.stats) $documentStatsStore = res.stats;
 				if (res.svgs) {
@@ -58,12 +58,12 @@
 				}
 			})
 			.catch(() => {
-				errors = [{ message: 'Network or server error compiling space.', severity: 'error' }];
+				errors = [{ message: 'Network or server error compiling project.', severity: 'error' }];
 			});
 	}
 
 	async function loadFiles() {
-		const res = await fetch(`/api/spaces/${spaceId}/files`);
+		const res = await fetch(`/api/projects/${projectId}/files`);
 		if (!res.ok) return;
 		files = await res.json();
 
@@ -80,13 +80,13 @@
 		}
 	}
 
-	function selectFile(file: SpaceFile) {
+	function selectFile(file: ProjectFile) {
 		if (file.kind !== 'text') return;
 		activeFileId = file.id;
 	}
 
 	async function createFile(path: string) {
-		const res = await fetch(`/api/spaces/${spaceId}/files`, {
+		const res = await fetch(`/api/projects/${projectId}/files`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ path, kind: 'text', content: '' })
@@ -103,15 +103,15 @@
 	async function uploadFiles(fileList: FileList) {
 		const form = new FormData();
 		for (const f of fileList) form.append('file', f);
-		const res = await fetch(`/api/spaces/${spaceId}/files/upload`, { method: 'POST', body: form });
+		const res = await fetch(`/api/projects/${projectId}/files/upload`, { method: 'POST', body: form });
 		if (res.ok) {
 			await loadFiles();
 			triggerCompile();
 		}
 	}
 
-	async function renameFile(file: SpaceFile, path: string) {
-		const res = await fetch(`/api/spaces/${spaceId}/files/${file.id}`, {
+	async function renameFile(file: ProjectFile, path: string) {
+		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ path })
@@ -123,9 +123,9 @@
 		}
 	}
 
-	async function deleteFile(file: SpaceFile) {
+	async function deleteFile(file: ProjectFile) {
 		if (!confirm(`Delete ${file.path}?`)) return;
-		const res = await fetch(`/api/spaces/${spaceId}/files/${file.id}`, { method: 'DELETE' });
+		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, { method: 'DELETE' });
 		if (res.ok) {
 			closeFile(file.id);
 			files = files.filter((f) => f.id !== file.id);
@@ -136,8 +136,8 @@
 		}
 	}
 
-	async function setEntry(file: SpaceFile) {
-		const res = await fetch(`/api/spaces/${spaceId}`, {
+	async function setEntry(file: ProjectFile) {
+		const res = await fetch(`/api/projects/${projectId}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ entrypoint: file.path })
@@ -166,38 +166,38 @@
 	}
 
 	onMount(() => {
-		setSpace(spaceId);
-		fetch(`/api/spaces/${spaceId}`)
+		setProject(projectId);
+		fetch(`/api/projects/${projectId}`)
 			.then((r) => r.json())
-			.then((s) => {
-				if (s && s.name) spaceName = s.name;
-				if (s && s.entrypoint) entrypoint = s.entrypoint;
-				if (s && s.effective_role) role = s.effective_role;
+			.then((p) => {
+				if (p && p.name) projectName = p.name;
+				if (p && p.entrypoint) entrypoint = p.entrypoint;
+				if (p && p.effective_role) role = p.effective_role;
 			})
 			.then(loadFiles)
 			.then(() => {
 				ready = true;
 				triggerCompile();
 			})
-			.catch((e) => console.error('Failed to load space', e));
+			.catch((e) => console.error('Failed to load project', e));
 
 		return () => {
 			if (timeoutId) clearTimeout(timeoutId);
-			cleanupSpace();
+			cleanupProject();
 		};
 	});
 </script>
 
 <svelte:head>
-	<title>{spaceName} - TypstDrive</title>
+	<title>{projectName} - TypstDrive</title>
 </svelte:head>
 
 <svelte:window onclick={closeContextMenu} />
 
 <div class="flex flex-col h-screen relative">
-	<SpaceToolbar
-		{spaceName}
-		{spaceId}
+	<ProjectToolbar
+		{projectName}
+		{projectId}
 		{entrypoint}
 		{role}
 		activeText={activeEntry?.text ?? null}
@@ -254,5 +254,5 @@
 {/if}
 
 {#if showPublish}
-	<PublishPackageModal {spaceId} onClose={() => (showPublish = false)} />
+	<PublishPackageModal {projectId} onClose={() => (showPublish = false)} />
 {/if}

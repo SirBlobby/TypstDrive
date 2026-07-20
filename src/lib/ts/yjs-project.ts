@@ -19,18 +19,18 @@ const userColors = [
 ];
 
 const open = new Map<string, OpenFile>();
-let spaceId: string | null = null;
+let projectId: string | null = null;
 
 const TEXT_NAME = 'typst';
 
-export function setSpace(id: string) {
-	spaceId = id;
+export function setProject(id: string) {
+	projectId = id;
 }
 
 export function openFile(fileId: string, path: string): OpenFile {
 	const existing = open.get(fileId);
 	if (existing) return existing;
-	if (!spaceId) throw new Error('Space not set');
+	if (!projectId) throw new Error('Project not set');
 
 	const doc = new Y.Doc();
 	const text = doc.getText(TEXT_NAME);
@@ -40,7 +40,7 @@ export function openFile(fileId: string, path: string): OpenFile {
 
 	connectionStatus.set('connecting');
 
-	const provider = new WebsocketProvider(`${protocol}//${host}/yjs`, `space:${spaceId}:${fileId}`, doc);
+	const provider = new WebsocketProvider(`${protocol}//${host}/yjs`, `project:${projectId}:${fileId}`, doc);
 
 	const user = get(userStore);
 	const color = userColors[Math.floor(Math.random() * userColors.length)];
@@ -104,11 +104,11 @@ export function getAllText(): Record<string, string> {
 	return result;
 }
 
-export function cleanupSpace() {
+export function cleanupProject() {
 	for (const fileId of Array.from(open.keys())) {
 		closeFile(fileId);
 	}
-	spaceId = null;
+	projectId = null;
 	connectionStatus.set('disconnected');
 	connectedUsers.set([]);
 }

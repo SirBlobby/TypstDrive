@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 
-	interface SpaceFile {
+	interface ProjectFile {
 		id: string;
 		path: string;
 		kind: string;
@@ -19,16 +19,16 @@
 		onDelete,
 		onSetEntry
 	}: {
-		files?: SpaceFile[];
+		files?: ProjectFile[];
 		activeFileId?: string;
 		entrypoint?: string;
 		readOnly?: boolean;
-		onSelect: (file: SpaceFile) => void;
+		onSelect: (file: ProjectFile) => void;
 		onCreate: (path: string) => void;
 		onUpload: (fileList: FileList) => void;
-		onRename: (file: SpaceFile, path: string) => void;
-		onDelete: (file: SpaceFile) => void;
-		onSetEntry: (file: SpaceFile) => void;
+		onRename: (file: ProjectFile, path: string) => void;
+		onDelete: (file: ProjectFile) => void;
+		onSetEntry: (file: ProjectFile) => void;
 	} = $props();
 
 	let fileInput: HTMLInputElement = $state()!;
@@ -48,7 +48,7 @@
 		if (path && path.trim()) onCreate(path.trim());
 	}
 
-	function handleRename(file: SpaceFile) {
+	function handleRename(file: ProjectFile) {
 		const path = prompt('Rename file to:', file.path);
 		if (path && path.trim() && path.trim() !== file.path) onRename(file, path.trim());
 	}

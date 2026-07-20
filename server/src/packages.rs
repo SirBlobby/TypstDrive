@@ -8,8 +8,8 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    models::{Package, PackageVersion, PublishPackageRequest, Space},
-    spaces::decode_text_blob,
+    models::{Package, PackageVersion, Project, PublishPackageRequest},
+    projects::decode_text_blob,
     AppState,
 };
 
@@ -45,20 +45,20 @@ pub async fn publish_package(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let space = sqlx::query_as::<_, Space>(
-        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM spaces WHERE id = ? AND owner_id = ?"
+    let project = sqlx::query_as::<_, Project>(
+        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = ? AND owner_id = ?"
     )
-    .bind(&payload.space_id)
+    .bind(&payload.project_id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::NOT_FOUND, "Space not found".to_string()))?;
+    .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
 
     let files = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT path, kind, content FROM space_files WHERE space_id = ?"
+        "SELECT path, kind, content FROM project_files WHERE project_id = ?"
     )
-    .bind(&space.id)
+    .bind(&project.id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -78,7 +78,7 @@ pub async fn publish_package(
     }
 
     let manifest_text = manifest_text
-        .ok_or((StatusCode::BAD_REQUEST, "Space has no typst.toml manifest".to_string()))?;
+        .ok_or((StatusCode::BAD_REQUEST, "Project has no typst.toml manifest".to_string()))?;
     let manifest: Manifest = toml::from_str(&manifest_text)
         .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid typst.toml: {}", e)))?;
 

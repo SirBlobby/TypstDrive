@@ -2,10 +2,10 @@
 	import Icon from '@iconify/svelte';
 
 	let {
-		spaceId,
+		projectId,
 		onClose
 	}: {
-		spaceId: string;
+		projectId: string;
 		onClose: () => void;
 	} = $props();
 
@@ -22,7 +22,7 @@
 			const res = await fetch('/api/packages/publish', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ space_id: spaceId, version: version.trim() || undefined })
+				body: JSON.stringify({ project_id: projectId, version: version.trim() || undefined })
 			});
 			if (!res.ok) {
 				error = await res.text();
@@ -45,7 +45,7 @@
 		</div>
 
 		<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-			Snapshots this space's files into an immutable package version, importable instance-wide as
+			Snapshots this project's files into an immutable package version, importable instance-wide as
 			<code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">@typstdrive/&lt;name&gt;:&lt;version&gt;</code>.
 			The name, version and entrypoint come from your <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">typst.toml</code>.
 		</p>

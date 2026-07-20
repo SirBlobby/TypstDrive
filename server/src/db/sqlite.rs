@@ -6,6 +6,21 @@ pub async fn init_schema(pool: &AnyPool) {
         .await
         .expect("Failed to enable SQLite foreign keys");
 
+    // Rename the legacy "space" tables/columns to the "project" vocabulary on
+    // existing databases. Best-effort: on a fresh database (or one already
+    // migrated) the old names don't exist, so these fail silently and the
+    // CREATE TABLE IF NOT EXISTS statements below take over.
+    let rename_migrations = [
+        "ALTER TABLE spaces RENAME TO projects",
+        "ALTER TABLE space_files RENAME TO project_files",
+        "ALTER TABLE space_collaborators RENAME TO project_collaborators",
+        "ALTER TABLE project_files RENAME COLUMN space_id TO project_id",
+        "ALTER TABLE project_collaborators RENAME COLUMN space_id TO project_id",
+    ];
+    for stmt in &rename_migrations {
+        let _ = sqlx::query(stmt).execute(pool).await;
+    }
+
     let statements = [
         "CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
@@ -110,7 +125,7 @@ pub async fn init_schema(pool: &AnyPool) {
             count INTEGER NOT NULL DEFAULT 1,
             PRIMARY KEY(key_id, minute)
         )",
-        "CREATE TABLE IF NOT EXISTS spaces (
+        "CREATE TABLE IF NOT EXISTS projects (
             id TEXT PRIMARY KEY,
             owner_id TEXT NOT NULL REFERENCES users(id),
             folder_id TEXT REFERENCES folders(id),
@@ -121,23 +136,23 @@ pub async fn init_schema(pool: &AnyPool) {
             created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
             updated_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
         )",
-        "CREATE TABLE IF NOT EXISTS space_files (
+        "CREATE TABLE IF NOT EXISTS project_files (
             id TEXT PRIMARY KEY,
-            space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
             path TEXT NOT NULL,
             kind TEXT NOT NULL DEFAULT 'text',
             content BLOB,
             mime_type TEXT NOT NULL DEFAULT 'text/plain',
             created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
-            UNIQUE(space_id, path)
+            UNIQUE(project_id, path)
         )",
-        "CREATE TABLE IF NOT EXISTS space_collaborators (
+        "CREATE TABLE IF NOT EXISTS project_collaborators (
             id TEXT PRIMARY KEY,
-            space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
             user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             role TEXT NOT NULL,
             created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
-            UNIQUE(space_id, user_id)
+            UNIQUE(project_id, user_id)
         )",
         "CREATE TABLE IF NOT EXISTS packages (
             id TEXT PRIMARY KEY,
@@ -185,7 +200,7 @@ pub async fn init_schema(pool: &AnyPool) {
     let migrations = [
         "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))",
-        "ALTER TABLE space_files ADD COLUMN updated_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))",
+        "ALTER TABLE project_files ADD COLUMN updated_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))",
     ];
     for stmt in &migrations {
         let _ = sqlx::query(stmt).execute(pool).await;

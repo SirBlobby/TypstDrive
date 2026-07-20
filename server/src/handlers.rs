@@ -53,7 +53,7 @@ pub struct CompileRequest {
     #[serde(default)]
     pub text: Option<String>,
     pub document_id: Option<String>,
-    pub space_id: Option<String>,
+    pub project_id: Option<String>,
     #[serde(default)]
     pub files: Option<std::collections::HashMap<String, String>>,
 }
@@ -102,21 +102,21 @@ pub async fn yjs_handler(
     // (table, row_id) the autosave task persists into; None means no persistence.
     let mut save_target: Option<(&'static str, String)> = None;
 
-    if let Some(rest) = id.strip_prefix("space:") {
-        if let Some((space_id, file_id)) = rest.split_once(':') {
-            if let Some((_space, role)) = crate::spaces::space_role(&state, space_id, &user_id_opt).await {
+    if let Some(rest) = id.strip_prefix("project:") {
+        if let Some((project_id, file_id)) = rest.split_once(':') {
+            if let Some((_project, role)) = crate::projects::project_role(&state, project_id, &user_id_opt).await {
                 is_viewer = role == "viewer";
                 if let Ok(Some((content,))) = sqlx::query_as::<_, (Option<Vec<u8>>,)>(
-                    "SELECT content FROM space_files WHERE id = ? AND space_id = ?"
+                    "SELECT content FROM project_files WHERE id = ? AND project_id = ?"
                 )
                 .bind(file_id)
-                .bind(space_id)
+                .bind(project_id)
                 .fetch_optional(&state.db)
                 .await
                 {
                     initial_content = content;
                 }
-                save_target = Some(("space_files", file_id.to_string()));
+                save_target = Some(("project_files", file_id.to_string()));
             }
         }
     } else {
@@ -177,8 +177,8 @@ pub async fn yjs_handler(
                     interval.tick().await;
                     let doc = save_awareness.read().await;
                     let content = doc.doc().transact().encode_state_as_update_v1(&yrs::StateVector::default());
-                    let query = if table == "space_files" {
-                        "UPDATE space_files SET content = ? WHERE id = ?"
+                    let query = if table == "project_files" {
+                        "UPDATE project_files SET content = ? WHERE id = ?"
                     } else {
                         "UPDATE documents SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
                     };
@@ -222,8 +222,8 @@ pub async fn compile_handler(
     let mut can_save_thumbnail = false;
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
-    if let Some(space_id) = &payload.space_id {
-        let (space, role) = match crate::spaces::space_role(&state, space_id, &user_id_opt).await {
+    if let Some(project_id) = &payload.project_id {
+        let (project, role) = match crate::projects::project_role(&state, project_id, &user_id_opt).await {
             Some(v) => v,
             None => {
                 return Json(CompileResponse {
@@ -240,7 +240,7 @@ pub async fn compile_handler(
         };
 
         let overrides = payload.files.clone().unwrap_or_default();
-        let input = crate::spaces::assemble_project(&state, &space, overrides).await;
+        let input = crate::projects::assemble_project(&state, &project, overrides).await;
         let can_save = role == "owner" || role == "editor";
 
         let compiler = state.compiler.lock().await;
@@ -250,9 +250,9 @@ pub async fn compile_handler(
         return match result {
             Ok((svgs, thumbnail, stats)) => {
                 if can_save {
-                    let _ = sqlx::query("UPDATE spaces SET thumbnail_svg = ? WHERE id = ?")
+                    let _ = sqlx::query("UPDATE projects SET thumbnail_svg = ? WHERE id = ?")
                         .bind(&thumbnail)
-                        .bind(&space.id)
+                        .bind(&project.id)
                         .execute(&state.db)
                         .await;
                 }
@@ -430,11 +430,11 @@ pub async fn export_handler(
         }
     }
 
-    let input = if let Some(space_id) = &payload.space_id {
-        match crate::spaces::space_role(&state, space_id, &user_id_opt).await {
-            Some((space, _)) => {
+    let input = if let Some(project_id) = &payload.project_id {
+        match crate::projects::project_role(&state, project_id, &user_id_opt).await {
+            Some((project, _)) => {
                 let overrides = payload.files.clone().unwrap_or_default();
-                crate::spaces::assemble_project(&state, &space, overrides).await
+                crate::projects::assemble_project(&state, &project, overrides).await
             }
             None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
         }

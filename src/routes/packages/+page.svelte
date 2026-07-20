@@ -60,7 +60,7 @@
 				Packages
 			</h2>
 			<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-				Instance-local Typst packages, published from Spaces and importable as
+				Instance-local Typst packages, published from Projects and importable as
 				<code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">@typstdrive/&lt;name&gt;:&lt;version&gt;</code>.
 			</p>
 		</div>
@@ -70,7 +70,7 @@
 		{:else if packages.length === 0}
 			<div class="text-center py-16 text-gray-500 dark:text-gray-400">
 				<Icon icon="mdi:package-variant" class="text-5xl mx-auto mb-3 opacity-50" />
-				<p>No packages published yet. Open a Space and use “Publish” to create one.</p>
+				<p>No packages published yet. Open a Project and use “Publish” to create one.</p>
 			</div>
 		{:else}
 			<div class="space-y-3">

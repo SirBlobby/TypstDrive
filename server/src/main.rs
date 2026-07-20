@@ -24,9 +24,9 @@ mod files;
 mod handlers;
 mod models;
 mod packages;
+mod projects;
 mod public_api;
 mod setup;
-mod spaces;
 mod world;
 mod collab;
 
@@ -131,12 +131,12 @@ async fn main() {
         .route("/keys/usage", get(api_keys::get_aggregate_usage))
         .route("/keys/{id}", delete(api_keys::delete_key))
         .route("/keys/{id}/regenerate", post(api_keys::regenerate_key))
-        .route("/spaces/shared", get(spaces::list_shared_spaces))
-        .route("/spaces", get(spaces::list_spaces).post(spaces::create_space))
-        .route("/spaces/{id}", get(spaces::get_space).delete(spaces::delete_space).patch(spaces::update_space))
-        .route("/spaces/{id}/files", get(spaces::list_space_files).post(spaces::create_space_file))
-        .route("/spaces/{id}/files/upload", post(spaces::upload_space_file))
-        .route("/spaces/{id}/files/{fid}", get(spaces::get_space_file).patch(spaces::update_space_file).delete(spaces::delete_space_file))
+        .route("/projects/shared", get(projects::list_shared_projects))
+        .route("/projects", get(projects::list_projects).post(projects::create_project))
+        .route("/projects/{id}", get(projects::get_project).delete(projects::delete_project).patch(projects::update_project))
+        .route("/projects/{id}/files", get(projects::list_project_files).post(projects::create_project_file))
+        .route("/projects/{id}/files/upload", post(projects::upload_project_file))
+        .route("/projects/{id}/files/{fid}", get(projects::get_project_file).patch(projects::update_project_file).delete(projects::delete_project_file))
         .route("/packages", get(packages::list_packages))
         .route("/packages/publish", post(packages::publish_package))
         .route("/packages/{name}", get(packages::list_versions).delete(packages::delete_package));
@@ -145,16 +145,16 @@ async fn main() {
         .route("/auth/login", post(desktop::login))
         .route("/auth/logout", post(desktop::logout))
         .route("/auth/me", get(desktop::me))
-        .route("/spaces", get(desktop::list_spaces).post(desktop::create_space))
-        .route("/spaces/{id}", get(desktop::pull_space).delete(desktop::delete_space))
-        .route("/spaces/{id}/manifest", get(desktop::get_manifest))
+        .route("/projects", get(desktop::list_projects).post(desktop::create_project))
+        .route("/projects/{id}", get(desktop::pull_project).delete(desktop::delete_project))
+        .route("/projects/{id}/manifest", get(desktop::get_manifest))
         .route("/folders", get(desktop::list_folders))
-        .route("/documents", get(desktop::list_documents))
+        .route("/documents", get(desktop::list_documents).post(desktop::create_document))
         .route("/documents/{id}", get(desktop::pull_document).put(desktop::push_document))
         .route("/shared", get(desktop::list_shared))
         .route("/files", get(desktop::list_account_files))
         .route("/files/{id}", get(desktop::pull_account_file))
-        .route("/spaces/{id}/file", get(desktop::pull_file).put(desktop::push_file).delete(desktop::delete_file));
+        .route("/projects/{id}/file", get(desktop::pull_file).put(desktop::push_file).delete(desktop::delete_file));
 
     let v1_routes = Router::new()
         .route("/render", post(public_api::render_handler));
