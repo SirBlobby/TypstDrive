@@ -269,6 +269,7 @@ pub struct ProjectSummary {
     pub id: String,
     pub name: String,
     pub entrypoint: String,
+    pub folder_id: Option<String>,
     pub role: String,
     pub updated_at: String,
 }
@@ -279,16 +280,16 @@ pub async fn list_projects(
 ) -> Result<Json<Vec<ProjectSummary>>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let owned = sqlx::query_as::<_, (String, String, String, String)>(
-        "SELECT id, name, entrypoint, updated_at FROM projects WHERE owner_id = ? ORDER BY updated_at DESC",
+    let owned = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
+        "SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE owner_id = ? ORDER BY updated_at DESC",
     )
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let shared = sqlx::query_as::<_, (String, String, String, String, String)>(
-        "SELECT p.id, p.name, p.entrypoint, p.updated_at, c.role FROM projects p \
+    let shared = sqlx::query_as::<_, (String, String, String, Option<String>, String, String)>(
+        "SELECT p.id, p.name, p.entrypoint, p.folder_id, p.updated_at, c.role FROM projects p \
          INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = ? \
          ORDER BY p.updated_at DESC",
     )
@@ -299,10 +300,11 @@ pub async fn list_projects(
 
     let mut projects: Vec<ProjectSummary> = owned
         .into_iter()
-        .map(|(id, name, entrypoint, updated_at)| ProjectSummary {
+        .map(|(id, name, entrypoint, folder_id, updated_at)| ProjectSummary {
             id,
             name,
             entrypoint,
+            folder_id,
             role: "owner".to_string(),
             updated_at,
         })
@@ -311,10 +313,11 @@ pub async fn list_projects(
     projects.extend(
         shared
             .into_iter()
-            .map(|(id, name, entrypoint, updated_at, role)| ProjectSummary {
+            .map(|(id, name, entrypoint, folder_id, updated_at, role)| ProjectSummary {
                 id,
                 name,
                 entrypoint,
+                folder_id,
                 role,
                 updated_at,
             }),
@@ -327,6 +330,7 @@ pub async fn list_projects(
 pub struct CreateProjectBody {
     pub name: String,
     pub entrypoint: Option<String>,
+    pub folder_id: Option<String>,
 }
 
 pub async fn create_project(
@@ -340,17 +344,22 @@ pub async fn create_project(
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
     }
 
+    if let Some(folder_id) = &payload.folder_id {
+        owned_folder(&state, folder_id, &user_id).await?;
+    }
+
     let project_id = Uuid::new_v4().to_string();
     let entrypoint = payload
         .entrypoint
         .unwrap_or_else(|| "main.typ".to_string());
 
     let project = sqlx::query_as::<_, Project>(
-        "INSERT INTO projects (id, owner_id, name, entrypoint) VALUES (?, ?, ?, ?) \
+        "INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES (?, ?, ?, ?, ?) \
          RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at",
     )
     .bind(&project_id)
     .bind(&user_id)
+    .bind(&payload.folder_id)
     .bind(payload.name.trim())
     .bind(&entrypoint)
     .fetch_one(&state.db)
@@ -361,6 +370,7 @@ pub async fn create_project(
         id: project.id,
         name: project.name,
         entrypoint: project.entrypoint,
+        folder_id: project.folder_id,
         role: "owner".to_string(),
         updated_at: project.updated_at,
     }))
@@ -774,6 +784,276 @@ pub async fn list_folders(
     ))
 }
 
+async fn owned_folder(
+    state: &AppState,
+    folder_id: &str,
+    user_id: &str,
+) -> Result<(), (StatusCode, String)> {
+    let row = sqlx::query_as::<_, (i64,)>(
+        "SELECT COUNT(*) FROM folders WHERE id = ? AND owner_id = ?",
+    )
+    .bind(folder_id)
+    .bind(user_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if row.0 == 0 {
+        return Err((StatusCode::NOT_FOUND, "Folder not found".to_string()));
+    }
+
+    Ok(())
+}
+
+#[derive(Deserialize)]
+pub struct CreateFolderBody {
+    pub name: String,
+    pub parent_id: Option<String>,
+}
+
+pub async fn create_folder(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<CreateFolderBody>,
+) -> Result<Json<CloudFolder>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    if payload.name.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
+    }
+
+    if let Some(parent_id) = &payload.parent_id {
+        owned_folder(&state, parent_id, &user_id).await?;
+    }
+
+    let folder_id = Uuid::new_v4().to_string();
+    let name = payload.name.trim().to_string();
+
+    sqlx::query("INSERT INTO folders (id, owner_id, parent_id, name) VALUES (?, ?, ?, ?)")
+        .bind(&folder_id)
+        .bind(&user_id)
+        .bind(&payload.parent_id)
+        .bind(&name)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(CloudFolder {
+        id: folder_id,
+        name,
+        parent_id: payload.parent_id,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct RenameFolderBody {
+    pub name: String,
+}
+
+pub async fn rename_folder(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<RenameFolderBody>,
+) -> Result<Json<CloudFolder>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    if payload.name.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
+    }
+
+    let row = sqlx::query_as::<_, (String, Option<String>)>(
+        "UPDATE folders SET name = ? WHERE id = ? AND owner_id = ? RETURNING name, parent_id",
+    )
+    .bind(payload.name.trim())
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Folder not found".to_string()))?;
+
+    Ok(Json(CloudFolder {
+        id,
+        name: row.0,
+        parent_id: row.1,
+    }))
+}
+
+async fn creates_cycle(
+    state: &AppState,
+    folder_id: &str,
+    new_parent_id: &str,
+    user_id: &str,
+) -> Result<bool, (StatusCode, String)> {
+    let mut current = new_parent_id.to_string();
+
+    for _ in 0..1000 {
+        if current == folder_id {
+            return Ok(true);
+        }
+
+        let parent = sqlx::query_as::<_, (Option<String>,)>(
+            "SELECT parent_id FROM folders WHERE id = ? AND owner_id = ?",
+        )
+        .bind(&current)
+        .bind(user_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .and_then(|row| row.0);
+
+        match parent {
+            Some(next) => current = next,
+            None => return Ok(false),
+        }
+    }
+
+    Ok(true)
+}
+
+#[derive(Deserialize)]
+pub struct MoveFolderBody {
+    pub parent_id: Option<String>,
+}
+
+pub async fn move_folder(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<MoveFolderBody>,
+) -> Result<Json<CloudFolder>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    owned_folder(&state, &id, &user_id).await?;
+
+    if let Some(parent_id) = &payload.parent_id {
+        if parent_id == &id {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "A folder cannot be moved into itself".to_string(),
+            ));
+        }
+
+        owned_folder(&state, parent_id, &user_id).await?;
+
+        if creates_cycle(&state, &id, parent_id, &user_id).await? {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "Cannot move a folder into one of its own subfolders".to_string(),
+            ));
+        }
+    }
+
+    let row = sqlx::query_as::<_, (String, Option<String>)>(
+        "UPDATE folders SET parent_id = ? WHERE id = ? AND owner_id = ? RETURNING name, parent_id",
+    )
+    .bind(&payload.parent_id)
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Folder not found".to_string()))?;
+
+    Ok(Json(CloudFolder {
+        id,
+        name: row.0,
+        parent_id: row.1,
+    }))
+}
+
+async fn folder_is_empty(
+    state: &AppState,
+    folder_id: &str,
+    user_id: &str,
+) -> Result<bool, (StatusCode, String)> {
+    let row = sqlx::query_as::<_, (i64, i64, i64)>(
+        "SELECT \
+           (SELECT COUNT(*) FROM folders WHERE parent_id = ? AND owner_id = ?), \
+           (SELECT COUNT(*) FROM projects WHERE folder_id = ? AND owner_id = ?), \
+           (SELECT COUNT(*) FROM documents WHERE folder_id = ? AND owner_id = ?)",
+    )
+    .bind(folder_id)
+    .bind(user_id)
+    .bind(folder_id)
+    .bind(user_id)
+    .bind(folder_id)
+    .bind(user_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(row.0 == 0 && row.1 == 0 && row.2 == 0)
+}
+
+pub async fn delete_folder(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+    owned_folder(&state, &id, &user_id).await?;
+
+    if !folder_is_empty(&state, &id, &user_id).await? {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Move or delete everything inside this folder first".to_string(),
+        ));
+    }
+
+    let result = sqlx::query("DELETE FROM folders WHERE id = ? AND owner_id = ?")
+        .bind(&id)
+        .bind(&user_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "Folder not found or unauthorized".to_string()));
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+pub struct MoveProjectBody {
+    pub folder_id: Option<String>,
+}
+
+pub async fn move_project(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(project_id): Path<String>,
+    Json(payload): Json<MoveProjectBody>,
+) -> Result<Json<ProjectSummary>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    if let Some(folder_id) = &payload.folder_id {
+        owned_folder(&state, folder_id, &user_id).await?;
+    }
+
+    let row = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
+        "UPDATE projects SET folder_id = ? WHERE id = ? AND owner_id = ? \
+         RETURNING id, name, entrypoint, folder_id, updated_at",
+    )
+    .bind(&payload.folder_id)
+    .bind(&project_id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
+
+    Ok(Json(ProjectSummary {
+        id: row.0,
+        name: row.1,
+        entrypoint: row.2,
+        folder_id: row.3,
+        role: "owner".to_string(),
+        updated_at: row.4,
+    }))
+}
+
 #[derive(Serialize)]
 pub struct CloudDocument {
     pub id: String,
@@ -876,6 +1156,7 @@ pub async fn list_shared(
                 id,
                 name,
                 entrypoint,
+                folder_id: None,
                 role,
                 updated_at,
             })
@@ -1051,6 +1332,44 @@ pub async fn create_document(
     }))
 }
 
+#[derive(Deserialize)]
+pub struct MoveDocumentBody {
+    pub folder_id: Option<String>,
+}
+
+pub async fn move_document(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<MoveDocumentBody>,
+) -> Result<Json<CloudDocument>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    if let Some(folder_id) = &payload.folder_id {
+        owned_folder(&state, folder_id, &user_id).await?;
+    }
+
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
+        "UPDATE documents SET folder_id = ? WHERE id = ? AND owner_id = ? \
+         RETURNING id, title, folder_id, updated_at",
+    )
+    .bind(&payload.folder_id)
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
+
+    Ok(Json(CloudDocument {
+        id: row.0,
+        title: row.1,
+        folder_id: row.2,
+        role: "owner".to_string(),
+        updated_at: row.3,
+    }))
+}
+
 pub async fn delete_document(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -1118,6 +1437,139 @@ pub async fn list_account_files(
             })
             .collect(),
     ))
+}
+
+#[derive(Deserialize)]
+pub struct UploadFileBody {
+    pub name: String,
+    pub mime_type: String,
+    pub encoding: String,
+    pub content: String,
+    pub folder_id: Option<String>,
+}
+
+pub async fn upload_account_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<UploadFileBody>,
+) -> Result<Json<CloudFile>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    if payload.name.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
+    }
+
+    if let Some(folder_id) = &payload.folder_id {
+        owned_folder(&state, folder_id, &user_id).await?;
+    }
+
+    let data = match payload.encoding.as_str() {
+        "base64" => BASE64
+            .decode(payload.content.as_bytes())
+            .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid base64: {}", e)))?,
+        _ => payload.content.into_bytes(),
+    };
+
+    let file_id = Uuid::new_v4().to_string();
+    let name = payload.name.trim().to_string();
+
+    let row = sqlx::query_as::<_, (String,)>(
+        "INSERT INTO files (id, owner_id, folder_id, name, mime_type, data) \
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING created_at",
+    )
+    .bind(&file_id)
+    .bind(&user_id)
+    .bind(&payload.folder_id)
+    .bind(&name)
+    .bind(&payload.mime_type)
+    .bind(&data)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(CloudFile {
+        id: file_id,
+        name,
+        mime_type: payload.mime_type,
+        folder_id: payload.folder_id,
+        created_at: row.0,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct RenameFileBody {
+    pub name: String,
+}
+
+pub async fn rename_account_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<RenameFileBody>,
+) -> Result<Json<CloudFile>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    if payload.name.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
+    }
+
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
+        "UPDATE files SET name = ? WHERE id = ? AND owner_id = ? \
+         RETURNING name, mime_type, folder_id, created_at",
+    )
+    .bind(payload.name.trim())
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
+
+    Ok(Json(CloudFile {
+        id,
+        name: row.0,
+        mime_type: row.1,
+        folder_id: row.2,
+        created_at: row.3,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct MoveFileBody {
+    pub folder_id: Option<String>,
+}
+
+pub async fn move_account_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<MoveFileBody>,
+) -> Result<Json<CloudFile>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    if let Some(folder_id) = &payload.folder_id {
+        owned_folder(&state, folder_id, &user_id).await?;
+    }
+
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
+        "UPDATE files SET folder_id = ? WHERE id = ? AND owner_id = ? \
+         RETURNING name, mime_type, folder_id, created_at",
+    )
+    .bind(&payload.folder_id)
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
+
+    Ok(Json(CloudFile {
+        id,
+        name: row.0,
+        mime_type: row.1,
+        folder_id: row.2,
+        created_at: row.3,
+    }))
 }
 
 #[derive(Serialize)]
