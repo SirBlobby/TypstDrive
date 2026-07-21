@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { exportTypst } from '../ts/typst-api';
 	import { text } from '../ts/yjs-setup';
-	import { connectionStatus, connectedUsers, themeStore, darkModeStore, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen, triggerLspReconnect, documentStatsStore, previewOpenStore } from '../ts/store';
+	import { connectionStatus, connectedUsers, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen, triggerLspReconnect, documentStatsStore, previewOpenStore } from '../ts/store';
 	import { themes } from '../ts/themes';
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
-	import ThemePicker from './ThemePicker.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
 	import CommentsSidebar from "./CommentsSidebar.svelte";
 	import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
@@ -494,11 +493,6 @@
 								<button onclick={() => { activeMenu = null; $versionHistoryOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
 									Version History
 								</button>
-								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; $darkModeStore = !$darkModeStore; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
-									Dark Mode
-									<Icon icon={$darkModeStore ? "mdi:check" : ""} class="text-sm" />
-								</button>
 							</div>
 						{/if}
 					</div>
@@ -702,12 +696,6 @@
 			>
 				<Icon icon="mdi:plus" class="text-sm" />
 			</button>
-		</div>
-
-		<div class="w-px h-4 bg-[var(--color-line)]"></div>
-
-		<div class="flex items-center gap-2">
-			<ThemePicker />
 		</div>
 
 		<div class="flex-grow"></div>

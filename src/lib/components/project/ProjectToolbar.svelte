@@ -4,13 +4,11 @@
 	import { undo, redo } from '@codemirror/commands';
 	import {
 		connectedUsers,
-		darkModeStore,
 		editorViewStore,
 		documentZoomStore,
 		previewOpenStore
 	} from '../../ts/store';
 	import { exportProject } from '../../ts/typst-api';
-	import ThemePicker from '../ThemePicker.svelte';
 	import PageSettingsModal from '../PageSettingsModal.svelte';
 	import PresentationMode from '../PresentationMode.svelte';
 	import Modal from '../Modal.svelte';
@@ -354,7 +352,6 @@
 						{#if activeMenu === 'view'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
 								<button onclick={() => { activeMenu = null; $previewOpenStore = !$previewOpenStore; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between">Preview<Icon icon={$previewOpenStore ? 'mdi:check' : ''} class="text-sm" /></button>
-								<button onclick={() => { activeMenu = null; $darkModeStore = !$darkModeStore; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between">Dark Mode<Icon icon={$darkModeStore ? 'mdi:check' : ''} class="text-sm" /></button>
 							</div>
 						{/if}
 					</div>
@@ -460,9 +457,6 @@
 			<button onclick={() => $documentZoomStore = Math.min(500, $documentZoomStore + 10)} class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors" title="Zoom In"><Icon icon="mdi:plus" class="text-sm" /></button>
 		</div>
 
-		<div class="w-px h-4 bg-[var(--color-line)]"></div>
-
-		<ThemePicker />
 		<div class="flex-grow"></div>
 	</div>
 </header>
