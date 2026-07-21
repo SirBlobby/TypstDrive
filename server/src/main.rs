@@ -6,8 +6,10 @@ use axum_extra::extract::cookie::Key;
 use sqlx::AnyPool;
 use std::sync::Arc;
 use std::collections::HashMap;
-use tokio::sync::Mutex;
+use tokio::sync::{broadcast, Mutex};
 use yrs_axum::broadcast::BroadcastGroup;
+
+use devices::{DeviceEvent, DevicePresence};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -18,6 +20,7 @@ mod auth;
 mod compiler;
 mod db;
 mod desktop;
+mod devices;
 mod docs;
 mod folders;
 mod files;
@@ -43,6 +46,8 @@ pub struct AppState {
     pub key: Key,
     pub registration_enabled: bool,
     pub rate_limiter: RateLimiterMap,
+    pub device_presence: Arc<Mutex<HashMap<String, DevicePresence>>>,
+    pub device_events: Arc<Mutex<HashMap<String, broadcast::Sender<DeviceEvent>>>>,
 }
 
 impl axum::extract::FromRef<AppState> for Key {
@@ -93,6 +98,8 @@ async fn main() {
         key,
         registration_enabled,
         rate_limiter: Arc::new(Mutex::new(HashMap::new())),
+        device_presence: Arc::new(Mutex::new(HashMap::new())),
+        device_events: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let api_routes = Router::new()
@@ -139,7 +146,9 @@ async fn main() {
         .route("/projects/{id}/files/{fid}", get(projects::get_project_file).patch(projects::update_project_file).delete(projects::delete_project_file))
         .route("/packages", get(packages::list_packages))
         .route("/packages/publish", post(packages::publish_package))
-        .route("/packages/{name}", get(packages::list_versions).delete(packages::delete_package));
+        .route("/packages/{name}", get(packages::list_versions).delete(packages::delete_package))
+        .route("/devices", get(devices::list_devices))
+        .route("/devices/{id}", delete(devices::revoke_device));
 
     let desktop_routes = Router::new()
         .route("/version", get(desktop::version_info))
@@ -158,7 +167,8 @@ async fn main() {
         .route("/files", get(desktop::list_account_files).post(desktop::upload_account_file))
         .route("/files/{id}", get(desktop::pull_account_file).patch(desktop::rename_account_file).delete(desktop::delete_account_file))
         .route("/files/{id}/move", patch(desktop::move_account_file))
-        .route("/projects/{id}/file", get(desktop::pull_file).put(desktop::push_file).delete(desktop::delete_file));
+        .route("/projects/{id}/file", get(desktop::pull_file).put(desktop::push_file).delete(desktop::delete_file))
+        .route("/ws", get(devices::ws_handler));
 
     let v1_routes = Router::new()
         .route("/render", post(public_api::render_handler));

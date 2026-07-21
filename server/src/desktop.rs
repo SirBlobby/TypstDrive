@@ -14,6 +14,7 @@ use argon2::{
 };
 
 use crate::{
+    devices::{notify_devices, DeviceEvent},
     models::{Project, User},
     projects::{decode_text_blob, encode_text_blob},
     AppState,
@@ -366,6 +367,8 @@ pub async fn create_project(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+
     Ok(Json(ProjectSummary {
         id: project.id,
         name: project.name,
@@ -398,6 +401,8 @@ pub async fn delete_project(
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Project not found".to_string()));
     }
+
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -673,6 +678,8 @@ pub async fn push_file(
         .execute(&state.db)
         .await;
 
+    notify_devices(&state, &user_id, DeviceEvent::project(&project_id)).await;
+
     Ok(PushOutcome::Applied(Json(PushFileResponse {
         path: payload.path,
         hash: content_hash(&incoming),
@@ -699,6 +706,8 @@ pub async fn delete_file(
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "File not found".to_string()));
     }
+
+    notify_devices(&state, &user_id, DeviceEvent::project(&project_id)).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -838,6 +847,8 @@ pub async fn create_folder(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+
     Ok(Json(CloudFolder {
         id: folder_id,
         name,
@@ -872,6 +883,8 @@ pub async fn rename_folder(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Folder not found".to_string()))?;
+
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(Json(CloudFolder {
         id,
@@ -955,6 +968,8 @@ pub async fn move_folder(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Folder not found".to_string()))?;
 
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+
     Ok(Json(CloudFolder {
         id,
         name: row.0,
@@ -1012,6 +1027,8 @@ pub async fn delete_folder(
         return Err((StatusCode::NOT_FOUND, "Folder not found or unauthorized".to_string()));
     }
 
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -1043,6 +1060,8 @@ pub async fn move_project(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
+
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(Json(ProjectSummary {
         id: row.0,
@@ -1289,6 +1308,8 @@ pub async fn push_document(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    notify_devices(&state, &user_id, DeviceEvent::document(&id)).await;
+
     Ok(PushOutcome::Applied(Json(PushFileResponse {
         path: id,
         hash: incoming_hash,
@@ -1322,6 +1343,8 @@ pub async fn create_document(
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(Json(DocumentContent {
         id: document_id,
@@ -1361,6 +1384,8 @@ pub async fn move_document(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
 
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+
     Ok(Json(CloudDocument {
         id: row.0,
         title: row.1,
@@ -1387,6 +1412,8 @@ pub async fn delete_document(
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Document not found or unauthorized".to_string()));
     }
+
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -1487,6 +1514,8 @@ pub async fn upload_account_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+
     Ok(Json(CloudFile {
         id: file_id,
         name,
@@ -1525,6 +1554,8 @@ pub async fn rename_account_file(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+
     Ok(Json(CloudFile {
         id,
         name: row.0,
@@ -1562,6 +1593,8 @@ pub async fn move_account_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
+
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(Json(CloudFile {
         id,
@@ -1624,6 +1657,8 @@ pub async fn delete_account_file(
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "File not found or unauthorized".to_string()));
     }
+
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
 }

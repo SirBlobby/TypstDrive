@@ -25,6 +25,15 @@
         rate_limit: number;
     };
 
+    type Device = {
+        id: string;
+        name: string;
+        created_at: string;
+        last_used_at: string | null;
+        connected: boolean;
+        connected_since: string | null;
+    };
+
     let activeSection = $state('account');
 
     let username = $state('');
@@ -61,6 +70,12 @@
     let copiedKey = $state(false);
     let confirmRegenerateId = $state<string | null>(null);
     let regeneratingKeyId = $state<string | null>(null);
+
+    let devices = $state<Device[]>([]);
+    let devicesLoading = $state(false);
+    let devicesError = $state('');
+    let confirmRevokeDeviceId = $state<string | null>(null);
+    let revokingDeviceId = $state<string | null>(null);
 
     type UsagePoint = { date: string; count: number };
     type UsagePeriod = '1hr' | '1day' | '1week';
@@ -159,6 +174,34 @@
         } catch {}
         deletingKeyId = null;
         confirmDeleteKeyId = null;
+    }
+
+    async function loadDevices() {
+        devicesLoading = true;
+        devicesError = '';
+        try {
+            const res = await fetch('/api/devices');
+            if (res.ok) {
+                devices = await res.json();
+            } else {
+                devicesError = 'Failed to load devices.';
+            }
+        } catch {
+            devicesError = 'Network error.';
+        }
+        devicesLoading = false;
+    }
+
+    async function revokeDevice(id: string) {
+        revokingDeviceId = id;
+        try {
+            const res = await fetch(`/api/devices/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                devices = devices.filter(d => d.id !== id);
+            }
+        } catch {}
+        revokingDeviceId = null;
+        confirmRevokeDeviceId = null;
     }
 
     async function copyKey(key: string) {
@@ -300,6 +343,12 @@
         }
     });
 
+    $effect(() => {
+        if (activeSection === 'devices') {
+            loadDevices();
+        }
+    });
+
     async function toggleAdmin(user: AdminUser) {
         const res = await fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
@@ -408,6 +457,7 @@
         { id: 'theme', label: 'Theme', icon: 'mdi:palette-outline' },
         { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
         { id: 'api-keys', label: 'API Keys', icon: 'mdi:key-outline' },
+        { id: 'devices', label: 'Devices', icon: 'mdi:devices' },
         ...($userStore?.is_admin ? [{ id: 'admin', label: 'Admin', icon: 'mdi:shield-crown-outline' }] : [])
     ]);
 </script>
@@ -797,6 +847,89 @@
                                                 <button
                                                     onclick={() => { confirmDeleteKeyId = key.id; confirmRegenerateId = null; }}
                                                     title="Revoke key"
+                                                    class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
+                                                >
+                                                    <Icon icon="mdi:delete-outline" class="text-lg" />
+                                                </button>
+                                            {/if}
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+            {/if}
+
+            {#if activeSection === 'devices'}
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] overflow-hidden">
+                    <div class="p-6 sm:p-8">
+                        <h2 class="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2 mb-2">
+                            <Icon icon="mdi:devices" class="text-2xl text-[var(--color-accent)]" />
+                            Devices
+                        </h2>
+                        <p class="text-sm text-[var(--color-ink-muted)] mb-6">
+                            Typst Desktop apps signed in to your account. A device stays connected while it is running with live sync; revoke a device to sign it out immediately.
+                        </p>
+
+                        {#if devicesError}
+                            <div class="bg-[var(--color-danger)]/10 text-[var(--color-danger)] p-3 rounded-md text-sm mb-4">{devicesError}</div>
+                        {/if}
+
+                        {#if devicesLoading}
+                            <div class="flex items-center justify-center py-12 text-[var(--color-ink-muted)]">
+                                <Icon icon="mdi:loading" class="animate-spin text-2xl mr-2" />
+                                Loading devices...
+                            </div>
+                        {:else if devices.length === 0}
+                            <div class="text-center py-12 text-[var(--color-ink-muted)]">
+                                <Icon icon="mdi:devices" class="text-4xl mb-2 opacity-40" />
+                                <p class="text-sm">No devices signed in yet.</p>
+                            </div>
+                        {:else}
+                            <div class="space-y-2">
+                                {#each devices as device (device.id)}
+                                    <div class="flex items-center gap-4 px-4 py-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-muted)]">
+                                        <div class="h-9 w-9 rounded-full bg-[var(--color-accent-soft)] flex items-center justify-center text-[var(--color-accent)] flex-shrink-0">
+                                            <Icon icon="mdi:laptop" class="text-lg" />
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-[var(--color-ink)] truncate flex items-center gap-2">
+                                                {device.name}
+                                                {#if device.connected}
+                                                    <span class="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-success)]">
+                                                        <span class="h-1.5 w-1.5 rounded-full bg-[var(--color-success)]"></span>
+                                                        Connected
+                                                    </span>
+                                                {/if}
+                                            </p>
+                                            <p class="text-xs text-[var(--color-ink-muted)]">{device.last_used_at ? `Last used ${formatDate(device.last_used_at)}` : 'Never used'}</p>
+                                        </div>
+                                        <div class="text-right flex-shrink-0 hidden sm:block">
+                                            <p class="text-xs text-[var(--color-ink-muted)]">Added {formatDate(device.created_at)}</p>
+                                        </div>
+                                        <div class="flex items-center gap-1 flex-shrink-0">
+                                            {#if confirmRevokeDeviceId === device.id}
+                                                <div class="flex items-center gap-1">
+                                                    <span class="text-xs text-[var(--color-ink-muted)]">Revoke?</span>
+                                                    <button
+                                                        onclick={() => revokeDevice(device.id)}
+                                                        disabled={revokingDeviceId === device.id}
+                                                        class="text-xs px-2 py-1 rounded-md bg-[var(--color-danger)] hover:opacity-90 text-white font-semibold transition-colors disabled:opacity-50"
+                                                    >
+                                                        {revokingDeviceId === device.id ? '...' : 'Yes'}
+                                                    </button>
+                                                    <button
+                                                        onclick={() => confirmRevokeDeviceId = null}
+                                                        class="text-xs px-2 py-1 rounded-md bg-[var(--color-surface-sunken)] hover:opacity-90 text-[var(--color-ink-muted)] font-semibold transition-colors"
+                                                    >
+                                                        No
+                                                    </button>
+                                                </div>
+                                            {:else}
+                                                <button
+                                                    onclick={() => confirmRevokeDeviceId = device.id}
+                                                    title="Revoke device"
                                                     class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
                                                 >
                                                     <Icon icon="mdi:delete-outline" class="text-lg" />

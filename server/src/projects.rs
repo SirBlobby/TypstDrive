@@ -13,6 +13,7 @@ use yrs::Update;
 
 use crate::{
     compiler::ProjectInput,
+    devices::{notify_devices, DeviceEvent},
     models::{
         CreateProjectFileRequest, CreateProjectRequest, Project, ProjectFile, UpdateProjectFileRequest,
         UpdateProjectRequest,
@@ -336,6 +337,8 @@ pub async fn update_project(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+
     Ok(Json(project))
 }
 
@@ -362,6 +365,8 @@ pub async fn delete_project(
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Project not found or unauthorized".to_string()));
     }
+
+    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -394,7 +399,7 @@ pub async fn create_project_file(
     Json(payload): Json<CreateProjectFileRequest>,
 ) -> Result<Json<ProjectFile>, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (_, role) = project_role(&state, &id, &user_id_opt)
+    let (project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     if role == "viewer" {
@@ -417,6 +422,8 @@ pub async fn create_project_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
+
     Ok(Json(file))
 }
 
@@ -427,7 +434,7 @@ pub async fn upload_project_file(
     mut multipart: Multipart,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (_, role) = project_role(&state, &id, &user_id_opt)
+    let (project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     if role == "viewer" {
@@ -464,6 +471,8 @@ pub async fn upload_project_file(
 
         uploaded.push(path);
     }
+
+    notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
     Ok(Json(serde_json::json!({ "files": uploaded })))
 }
@@ -505,7 +514,7 @@ pub async fn update_project_file(
     Json(payload): Json<UpdateProjectFileRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (_, role) = project_role(&state, &id, &user_id_opt)
+    let (project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     if role == "viewer" {
@@ -524,6 +533,8 @@ pub async fn update_project_file(
         return Err((StatusCode::NOT_FOUND, "File not found".to_string()));
     }
 
+    notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -533,7 +544,7 @@ pub async fn delete_project_file(
     jar: SignedCookieJar,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (_, role) = project_role(&state, &id, &user_id_opt)
+    let (project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     if role == "viewer" {
@@ -550,6 +561,8 @@ pub async fn delete_project_file(
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "File not found".to_string()));
     }
+
+    notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
