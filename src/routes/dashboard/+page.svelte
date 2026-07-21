@@ -10,12 +10,9 @@
     import DocCard from '$lib/components/dashboard/DocCard.svelte';
     import FileCard from '$lib/components/dashboard/FileCard.svelte';
     import ShareModal from '$lib/components/ShareModal.svelte';
-    import DeleteModal from '$lib/components/dashboard/DeleteModal.svelte';
+    import PromptModal from '$lib/components/PromptModal.svelte';
+    import ConfirmModal from '$lib/components/ConfirmModal.svelte';
     import InfoModal from '$lib/components/dashboard/InfoModal.svelte';
-    import RenameModal from '$lib/components/dashboard/RenameModal.svelte';
-    import CreateDocModal from '$lib/components/dashboard/CreateDocModal.svelte';
-    import CreateProjectModal from '$lib/components/dashboard/CreateProjectModal.svelte';
-    import CreateFolderModal from '$lib/components/dashboard/CreateFolderModal.svelte';
     import Footer from '$lib/components/Footer.svelte';
 
     let documents = $state<any[]>([]);
@@ -424,33 +421,33 @@
     
     <main class="max-w-7xl w-full mx-auto py-10 px-4 sm:px-6 lg:px-8 grow block">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">My Documents</h2>
-            
+            <h2 class="text-3xl font-bold text-[var(--color-ink)] tracking-tight">My Documents</h2>
+
             <div class="relative plus-dropdown-container">
-                <button onclick={() => showPlusDropdown = !showPlusDropdown} class="flex items-center justify-center text-[var(--theme-text)] bg-[var(--theme-border)] opacity-90 hover:opacity-100 w-10 h-10 rounded-full shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 border border-white/10 dark:border-black/20">
+                <button onclick={() => showPlusDropdown = !showPlusDropdown} class="flex items-center justify-center text-white bg-[var(--color-accent)] hover:opacity-90 w-10 h-10 rounded-full shadow-md transition">
                     <Icon icon="mdi:plus" class="text-2xl" />
                 </button>
 
                 {#if showPlusDropdown}
-                    <div class="absolute right-0 mt-2 w-48 bg-[var(--theme-bg)] rounded-lg shadow-xl border border-gray-200 dark:border-white/10 py-1 z-20">
-                        <button onclick={openCreateModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
+                    <div class="absolute right-0 mt-2 w-48 bg-[var(--color-surface)] rounded-md shadow-xl border border-[var(--color-line)] py-1 z-20">
+                        <button onclick={openCreateModal} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                             <Icon icon="mdi:file-document-plus" class="text-lg text-blue-500" />
                             New Document
                         </button>
-                        <button onclick={openCreateProjectModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
+                        <button onclick={openCreateProjectModal} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                             <Icon icon="mdi:folder-multiple-plus" class="text-lg text-indigo-500" />
                             New Project
                         </button>
-                        <button onclick={openCreateFolderModal} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
+                        <button onclick={openCreateFolderModal} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                             <Icon icon="mdi:folder-plus" class="text-lg text-yellow-500" />
                             New Folder
                         </button>
-                        <button onclick={() => { showPlusDropdown = false; fileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2">
+                        <button onclick={() => { showPlusDropdown = false; fileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                             <Icon icon="mdi:upload" class="text-lg text-green-500" />
                             Upload File
                         </button>
-                        <div class="h-px bg-gray-200 dark:bg-white/10 my-1"></div>
-                        <button onclick={() => { showPlusDropdown = false; importFileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2" disabled={isImporting}>
+                        <div class="h-px bg-[var(--color-line)] my-1"></div>
+                        <button onclick={() => { showPlusDropdown = false; importFileInput?.click(); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2" disabled={isImporting}>
                             {#if isImporting}
                                 <Icon icon="mdi:loading" class="text-lg text-purple-500 animate-spin" />
                                 Importing...
@@ -467,29 +464,29 @@
         </div>
 
         
-        <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-6 bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-gray-200 dark:border-white/10">
+        <div class="flex items-center gap-2 text-sm text-[var(--color-ink-muted)] mb-6 bg-[var(--color-surface)] p-3 rounded-md border border-[var(--color-line)]">
             <button
                 onclick={() => navigateToBreadcrumb(-1)}
                 ondragover={(e) => { e.preventDefault(); dragOverBreadcrumbIndex = -1; }}
                 ondragleave={() => dragOverBreadcrumbIndex = null}
                 ondrop={(e) => handleDrop(e, null)}
-                class="hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded {dragOverBreadcrumbIndex === -1 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}">
+                class="hover:text-[var(--color-accent)] font-medium transition-colors px-2 py-1 rounded {dragOverBreadcrumbIndex === -1 ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' : ''}">
                 <Icon icon="mdi:home" class="text-lg inline-block pb-0.5" /> Home
             </button>
             {#if inSharedDrive}
-                <Icon icon="mdi:chevron-right" class="text-lg text-gray-400" />
-                <span class="font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1 px-2 py-1">
+                <Icon icon="mdi:chevron-right" class="text-lg text-[var(--color-ink-muted)]" />
+                <span class="font-medium text-[var(--color-accent)] flex items-center gap-1 px-2 py-1">
                     <Icon icon="mdi:folder-account" class="text-base" /> Shared with me
                 </span>
             {:else}
                 {#each folderPath as folder, index}
-                    <Icon icon="mdi:chevron-right" class="text-lg text-gray-400" />
+                    <Icon icon="mdi:chevron-right" class="text-lg text-[var(--color-ink-muted)]" />
                     <button
                         onclick={() => navigateToBreadcrumb(index)}
                         ondragover={(e) => { e.preventDefault(); dragOverBreadcrumbIndex = index; }}
                         ondragleave={() => dragOverBreadcrumbIndex = null}
                         ondrop={(e) => handleDrop(e, folder.id)}
-                        class="hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded {dragOverBreadcrumbIndex === index ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}">
+                        class="hover:text-[var(--color-accent)] font-medium transition-colors px-2 py-1 rounded {dragOverBreadcrumbIndex === index ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' : ''}">
                         {folder.name}
                     </button>
                 {/each}
@@ -499,19 +496,19 @@
         {#if inSharedDrive}
             {#if sharedDocsLoading}
                 <div class="min-h-[50vh] flex items-center justify-center">
-                    <div class="flex flex-col items-center gap-4 text-gray-500 dark:text-gray-400 animate-pulse">
+                    <div class="flex flex-col items-center gap-4 text-[var(--color-ink-muted)] animate-pulse">
                         <Icon icon="mdi:loading" class="text-4xl animate-spin" />
                         <p class="text-lg font-medium">Loading shared documents...</p>
                     </div>
                 </div>
             {:else if sharedDocs.length === 0}
                 <div class="min-h-[50vh] flex items-center justify-center">
-                    <div class="text-center p-12 bg-white/50 dark:bg-black/20 rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 max-w-md w-full">
-                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-purple-100/50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 mb-6">
+                    <div class="text-center p-12 bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] max-w-md w-full">
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] mb-6">
                             <Icon icon="mdi:folder-account-outline" class="text-4xl" />
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">No shared documents</h3>
-                        <p class="text-gray-500 dark:text-gray-400">Documents shared with you by other users will appear here.</p>
+                        <h3 class="text-xl font-bold text-[var(--color-ink)] mb-2">No shared documents</h3>
+                        <p class="text-[var(--color-ink-muted)]">Documents shared with you by other users will appear here.</p>
                     </div>
                 </div>
             {:else}
@@ -532,7 +529,7 @@
 
         {:else if loading}
             <div class="min-h-[50vh] flex items-center justify-center">
-                <div class="flex flex-col items-center gap-4 text-gray-500 dark:text-gray-400 animate-pulse">
+                <div class="flex flex-col items-center gap-4 text-[var(--color-ink-muted)] animate-pulse">
                     <Icon icon="mdi:loading" class="text-4xl animate-spin" />
                     <p class="text-lg font-medium">Loading your workspace...</p>
                 </div>
@@ -540,20 +537,20 @@
         {:else}
             {#if currentFolderId === null || folders.length > 0}
                 <div class="mb-8">
-                    <div class="px-2 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Folders</div>
+                    <div class="px-2 py-3 text-sm font-semibold text-[var(--color-ink-muted)]">Folders</div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {#if currentFolderId === null}
                             <div
-                                class="flex flex-row items-center p-3 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl shadow-sm hover:shadow-md cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-300 dark:hover:border-purple-500/30"
+                                class="flex flex-row items-center p-3 bg-[var(--color-surface)] border border-[var(--color-line)] rounded-lg shadow-sm hover:border-[var(--color-accent)] cursor-pointer group transition"
                                 role="button"
                                 tabindex="0"
                                 onclick={enterSharedDrive}
                                 onkeydown={(e) => e.key === 'Enter' && enterSharedDrive()}
                             >
-                                <div class="flex items-center justify-center w-10 h-10 bg-purple-50 dark:bg-purple-500/10 rounded-lg group-hover:scale-105 transition-transform pointer-events-none shrink-0 mr-3">
-                                    <Icon icon="mdi:folder-account" class="text-2xl text-purple-500" />
+                                <div class="flex items-center justify-center w-10 h-10 bg-[var(--color-accent-soft)] rounded-md group-hover:scale-105 transition-transform pointer-events-none shrink-0 mr-3">
+                                    <Icon icon="mdi:folder-account" class="text-2xl text-[var(--color-accent)]" />
                                 </div>
-                                <span class="font-medium text-gray-900 dark:text-white text-sm truncate w-full pointer-events-none">Shared with me</span>
+                                <span class="font-medium text-[var(--color-ink)] text-sm truncate w-full pointer-events-none">Shared with me</span>
                             </div>
                         {/if}
                         {#each folders as folder}
@@ -591,16 +588,16 @@
 
             {#if documents.length === 0 && files.length === 0 && currentFolderId !== null && folders.length === 0}
                 <div class="min-h-[30vh] flex items-center justify-center">
-                    <p class="text-gray-500 dark:text-gray-400">This folder is empty.</p>
+                    <p class="text-[var(--color-ink-muted)]">This folder is empty.</p>
                 </div>
             {:else if documents.length === 0 && files.length === 0 && folders.length === 0 && currentFolderId === null}
                 <div class="text-center py-12">
-                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 mb-4">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] mb-4">
                         <Icon icon="mdi:file-document-outline" class="text-3xl" />
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">No documents yet</h3>
-                    <p class="text-gray-500 dark:text-gray-400 mb-6 text-sm">Create your first Typst document to get started.</p>
-                    <button onclick={openCreateModal} class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm text-sm font-medium transition-colors">
+                    <h3 class="text-lg font-bold text-[var(--color-ink)] mb-1">No documents yet</h3>
+                    <p class="text-[var(--color-ink-muted)] mb-6 text-sm">Create your first Typst document to get started.</p>
+                    <button onclick={openCreateModal} class="inline-flex items-center gap-2 bg-[var(--color-accent)] hover:opacity-90 text-white px-5 py-2.5 rounded-md shadow-sm text-sm font-medium transition">
                         <Icon icon="mdi:plus" class="text-lg" />
                         Create Document
                     </button>
@@ -614,7 +611,13 @@
 {/if}
 
 {#if showDeleteModal && deleteTarget}
-    <DeleteModal {deleteTarget} {confirmDelete} onClose={() => showDeleteModal = false} />
+    <ConfirmModal
+        title={`Delete ${deleteTarget.type}`}
+        message={`Are you sure you want to delete '${deleteTarget.name}'? ${deleteTarget.type === 'folder' ? 'This will also delete all of its contents. ' : ''}This action cannot be undone.`}
+        confirmLabel="Delete"
+        onconfirm={confirmDelete}
+        onclose={() => showDeleteModal = false}
+    />
 {/if}
 
 {#if showInfoModal && selectedInfo}
@@ -622,19 +625,51 @@
 {/if}
 
 {#if showRenameModal}
-    <RenameModal initialTitle={renameTitle} {handleRename} onClose={() => showRenameModal = false} />
+    <PromptModal
+        title="Rename"
+        label="New name"
+        icon="ph:pencil-simple"
+        value={renameTitle}
+        confirmLabel="Save"
+        onsubmit={handleRename}
+        onclose={() => showRenameModal = false}
+    />
 {/if}
 
 {#if showCreateModal}
-    <CreateDocModal {createDoc} onClose={() => showCreateModal = false} />
+    <PromptModal
+        title="Create document"
+        label="Document title"
+        icon="ph:file-plus"
+        value="Untitled Document"
+        confirmLabel="Create"
+        onsubmit={createDoc}
+        onclose={() => showCreateModal = false}
+    />
 {/if}
 
 {#if showCreateProjectModal}
-    <CreateProjectModal {createProject} onClose={() => showCreateProjectModal = false} />
+    <PromptModal
+        title="Create project"
+        label="Project name"
+        icon="ph:folder-star"
+        value="Untitled Project"
+        confirmLabel="Create"
+        onsubmit={createProject}
+        onclose={() => showCreateProjectModal = false}
+    />
 {/if}
 
 {#if showCreateFolderModal}
-    <CreateFolderModal {createFolder} onClose={() => showCreateFolderModal = false} />
+    <PromptModal
+        title="Create folder"
+        label="Folder name"
+        icon="ph:folder-plus"
+        value="New Folder"
+        confirmLabel="Create"
+        onsubmit={createFolder}
+        onclose={() => showCreateFolderModal = false}
+    />
 {/if}
 
     </main>

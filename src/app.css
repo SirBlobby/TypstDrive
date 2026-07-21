@@ -6,12 +6,101 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+:root {
+  color-scheme: light;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eff1f5;
+  --color-surface-sunken: #dce0e8;
+  --color-line: #ccd0da;
+  --color-ink: #11111b;
+  --color-ink-muted: #5c5f77;
+  --color-accent: #1e66f5;
+  --color-accent-soft: #dce8fd;
+  --color-danger: #d5382f;
+  --color-success: #1f8a4c;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-surface: #181825;
+  --color-surface-muted: #1e1e2e;
+  --color-surface-sunken: #45475a;
+  --color-line: #313244;
+  --color-ink: #cdd6f4;
+  --color-ink-muted: #6c7086;
+  --color-accent: #89b4fa;
+  --color-accent-soft: #1e2f4d;
+  --color-danger: #f4736a;
+  --color-success: #4cc47f;
+}
+
+:root[data-color-theme='Cerberus'] {
+  --color-surface: #ffffff;
+  --color-surface-muted: #ffffff;
+  --color-surface-sunken: #f4f4f5;
+  --color-line: #d4d4d4;
+  --color-ink: #000000;
+  --color-ink-muted: #52525b;
+  --color-accent: #4338ca;
+  --color-accent-soft: #e0e7ff;
+}
+
+:root[data-color-theme='Cerberus'][data-theme='dark'] {
+  --color-surface: #121212;
+  --color-surface-muted: #171717;
+  --color-surface-sunken: #1f1f1f;
+  --color-line: #262626;
+  --color-ink: #f5f5f5;
+  --color-ink-muted: #737373;
+  --color-accent: #818cf8;
+  --color-accent-soft: #262244;
+}
+
+:root[data-color-theme='Arch Linux'] {
+  --color-surface: #ffffff;
+  --color-surface-muted: #ffffff;
+  --color-surface-sunken: #f6f8fa;
+  --color-line: #d0d7de;
+  --color-ink: #0d1117;
+  --color-ink-muted: #57606a;
+  --color-accent: #0550ae;
+  --color-accent-soft: #dbeafe;
+}
+
+:root[data-color-theme='Arch Linux'][data-theme='dark'] {
+  --color-surface: #010409;
+  --color-surface-muted: #0d1117;
+  --color-surface-sunken: #161b22;
+  --color-line: #21262d;
+  --color-ink: #c9d1d9;
+  --color-ink-muted: #6e7681;
+  --color-accent: #1793d1;
+  --color-accent-soft: #0d2b3d;
+}
+
+:root {
+  --theme-bg: var(--color-surface-muted);
+  --theme-text: var(--color-ink);
+  --theme-border: var(--color-line);
+  --theme-cursor: var(--color-accent);
+}
+
 html, body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
 }
 
+body {
+  background-color: var(--color-surface-muted);
+  color: var(--color-ink);
+}
+
 html.dark {
   color-scheme: dark;
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
 }

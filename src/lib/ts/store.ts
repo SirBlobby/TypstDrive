@@ -29,19 +29,19 @@ if (typeof window !== 'undefined') {
     const savedTheme = localStorage.getItem('editor-theme');
     const savedDark = localStorage.getItem('editor-dark-mode');
     const savedZoom = localStorage.getItem('editor-document-zoom');
-    
+
     if (savedTheme) themeStore.set(savedTheme);
     if (savedDark !== null) darkModeStore.set(savedDark === 'true');
     if (savedZoom !== null) documentZoomStore.set(parseInt(savedZoom, 10));
-    
-    themeStore.subscribe(value => localStorage.setItem('editor-theme', value));
+
+    themeStore.subscribe(value => {
+        localStorage.setItem('editor-theme', value);
+        document.documentElement.dataset.colorTheme = value;
+    });
     darkModeStore.subscribe(value => {
         localStorage.setItem('editor-dark-mode', value.toString());
-        if (value) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        document.documentElement.dataset.theme = value ? 'dark' : 'light';
+        document.documentElement.classList.toggle('dark', value);
     });
     documentZoomStore.subscribe(value => localStorage.setItem('editor-document-zoom', value.toString()));
 }

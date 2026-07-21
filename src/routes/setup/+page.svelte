@@ -51,84 +51,84 @@
     <title>Setup - TypstDrive</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center px-4 py-16">
+<div class="min-h-screen flex items-center justify-center px-4 py-16 bg-[var(--color-surface-muted)]">
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white mb-4 shadow-lg">
-                <Icon icon="mdi:shield-crown-outline" class="text-3xl" />
+            <div class="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-[var(--color-accent)] text-white mb-4 shadow-lg">
+                <img src="/favicon.png" alt="TypstDrive" class="h-14 w-14" />
             </div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Welcome to TypstDrive</h1>
-            <p class="mt-2 text-gray-500 dark:text-gray-400">Create your admin account to get started.</p>
+            <h1 class="text-3xl font-bold text-[var(--color-ink)]">Welcome to TypstDrive</h1>
+            <p class="mt-2 text-[var(--color-ink-muted)]">Create your admin account to get started.</p>
         </div>
 
-        <div class="bg-white dark:bg-black/20 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 p-8">
-            <div class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm px-4 py-3 rounded-lg mb-6 border border-blue-200 dark:border-blue-800/50">
+        <div class="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-8 shadow-xl">
+            <div class="flex items-center gap-2 bg-[var(--color-accent-soft)] text-[var(--color-accent)] text-sm px-4 py-3 rounded-md mb-6">
                 <Icon icon="mdi:information-outline" class="text-lg flex-shrink-0" />
                 <span>This is a one-time setup. The account you create here will have full admin privileges.</span>
             </div>
 
             {#if errorMsg}
-                <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm mb-5 border border-red-200 dark:border-red-800/50">
+                <div class="bg-[var(--color-danger)]/10 text-[var(--color-danger)] px-4 py-3 rounded-md text-sm mb-5 border border-[var(--color-danger)]/20">
                     {errorMsg}
                 </div>
             {/if}
 
             <form onsubmit={handleSetup} class="space-y-4">
                 <div>
-                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
+                    <label for="username" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">Username</label>
                     <input
                         id="username"
                         type="text"
                         required
                         bind:value={username}
-                        class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2.5 focus:border-[var(--color-accent)] focus:outline-none transition-colors"
                         placeholder="admin"
                     />
                 </div>
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                    <label for="email" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">Email</label>
                     <input
                         id="email"
                         type="email"
                         required
                         bind:value={email}
-                        class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2.5 focus:border-[var(--color-accent)] focus:outline-none transition-colors"
                         placeholder="admin@example.com"
                     />
                 </div>
                 <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                    <label for="password" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">Password</label>
                     <input
                         id="password"
                         type="password"
                         required
                         bind:value={password}
-                        class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2.5 focus:border-[var(--color-accent)] focus:outline-none transition-colors"
                         placeholder="Min. 8 characters"
                     />
                 </div>
                 <div>
-                    <label for="confirm-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
+                    <label for="confirm-password" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">Confirm password</label>
                     <input
                         id="confirm-password"
                         type="password"
                         required
                         bind:value={confirmPassword}
-                        class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2.5 focus:border-[var(--color-accent)] focus:outline-none transition-colors"
                         placeholder="Repeat password"
                     />
                 </div>
                 <button
                     type="submit"
                     disabled={loading}
-                    class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors mt-2 shadow-sm"
+                    class="w-full flex items-center justify-center gap-2 bg-[var(--color-accent)] hover:opacity-90 disabled:opacity-60 text-white font-semibold py-2.5 rounded-md transition mt-2"
                 >
                     {#if loading}
                         <Icon icon="mdi:loading" class="animate-spin text-lg" />
                         Creating account...
                     {:else}
                         <Icon icon="mdi:shield-check-outline" class="text-lg" />
-                        Create Admin Account
+                        Create admin account
                     {/if}
                 </button>
             </form>

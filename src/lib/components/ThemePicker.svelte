@@ -5,32 +5,47 @@
 
     let { class: className = '' } = $props();
 
-    const themeOptions = Object.keys(themes).flatMap(themeName => [
-        { name: `${themeName} Light`, theme: themeName, isDark: false },
-        { name: `${themeName} Dark`, theme: themeName, isDark: true }
-    ]);
-
-    function handleChange(e: Event) {
-        const val = (e.target as HTMLSelectElement).value;
-        const opt = themeOptions.find(o => o.name === val);
-        if (opt) {
-            $themeStore = opt.theme;
-            $darkModeStore = opt.isDark;
-        }
-    }
-
-    let selectedValue = $derived(`${$themeStore} ${$darkModeStore ? 'Dark' : 'Light'}`);
+    const themeNames = Object.keys(themes);
 </script>
 
 <div class="flex items-center gap-2 {className}">
-    <Icon icon={themes[$themeStore]?.icon || 'mdi:palette'} class="text-xl text-[var(--theme-text)] opacity-70" />
-    <select 
-        value={selectedValue}
-        onchange={handleChange}
-        class="bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] text-sm font-medium rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 block py-1.5 pl-3 pr-8 appearance-none cursor-pointer transition-colors outline-none"
-    >
-        {#each themeOptions as opt}
-            <option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value={opt.name}>{opt.name}</option>
+    <div class="flex rounded-lg bg-[var(--color-surface-sunken)] p-0.5 text-xs font-medium">
+        {#each themeNames as name}
+            <button
+                class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition
+                    {$themeStore === name
+                    ? 'bg-[var(--color-surface)] text-[var(--color-accent)] shadow-sm'
+                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'}"
+                onclick={() => ($themeStore = name)}
+            >
+                <Icon icon={themes[name].icon} class="text-sm" />
+                {name}
+            </button>
         {/each}
-    </select>
+    </div>
+
+    <div class="flex rounded-lg bg-[var(--color-surface-sunken)] p-0.5 text-xs font-medium">
+        <button
+            class="flex items-center rounded-md px-2.5 py-1.5 transition
+                {!$darkModeStore
+                ? 'bg-[var(--color-surface)] text-[var(--color-ink)] shadow-sm'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'}"
+            onclick={() => ($darkModeStore = false)}
+            aria-label="Light mode"
+            title="Light mode"
+        >
+            <Icon icon="ph:sun" class="text-sm" />
+        </button>
+        <button
+            class="flex items-center rounded-md px-2.5 py-1.5 transition
+                {$darkModeStore
+                ? 'bg-[var(--color-surface)] text-[var(--color-ink)] shadow-sm'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'}"
+            onclick={() => ($darkModeStore = true)}
+            aria-label="Dark mode"
+            title="Dark mode"
+        >
+            <Icon icon="ph:moon" class="text-sm" />
+        </button>
+    </div>
 </div>

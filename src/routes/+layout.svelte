@@ -40,21 +40,11 @@
 </svelte:head>
 
 {#if loaded}
-	<div 
-		class="min-h-screen w-full flex flex-col font-sans transition-colors duration-200"
-		style="
-			background-color: {currentColors.background}; 
-			color: {currentColors.text}; 
-			--theme-bg: {currentColors.background};
-			--theme-text: {currentColors.text};
-			--theme-border: {currentColors.selection};
-			--theme-cursor: {currentColors.cursor};
-		"
-	>
+	<div class="min-h-screen w-full flex flex-col bg-[var(--color-surface-muted)] text-[var(--color-ink)] font-sans transition-colors duration-200">
 		{@render children()}
 	</div>
 {:else}
-	<div class="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-zinc-950">
-		<div class="text-gray-500 dark:text-gray-400 font-medium animate-pulse">Loading TypstDrive...</div>
+	<div class="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface-muted)]">
+		<div class="text-[var(--color-ink-muted)] font-medium animate-pulse">Loading TypstDrive...</div>
 	</div>
 {/if}

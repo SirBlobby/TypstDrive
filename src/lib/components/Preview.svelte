@@ -14,7 +14,7 @@
 				</div>
 			{/each}
 		{:else}
-			<div class="text-gray-400 flex flex-col items-center justify-center h-full">
+			<div class="text-[var(--color-ink-muted)] flex flex-col items-center justify-center h-full">
 				<p>Document is empty or compiling...</p>
 			</div>
 		{/if}

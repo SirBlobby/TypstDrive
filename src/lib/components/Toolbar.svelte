@@ -10,6 +10,9 @@
 	import PresentationMode from "./PresentationMode.svelte";
 	import CommentsSidebar from "./CommentsSidebar.svelte";
 	import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
+	import Modal from './Modal.svelte';
+	import PromptModal from './PromptModal.svelte';
+	import ConfirmModal from './ConfirmModal.svelte';
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
 
@@ -348,13 +351,12 @@
 		showRenameModal = true;
 	}
 
-	function submitRename(e: Event) {
-		e.preventDefault();
-		if (renameTitle && renameTitle !== title) {
+	function submitRename(newTitle: string) {
+		if (newTitle && newTitle !== title) {
 			fetch(`/api/docs/${docId}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ title: renameTitle })
+				body: JSON.stringify({ title: newTitle })
 			}).then(res => {
 				if (res.ok) {
 					window.location.reload();
@@ -401,7 +403,7 @@
 		<div class="flex items-center gap-3">
 			<button 
 				onclick={() => goto('/dashboard')} 
-				class="p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+				class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors"
 				aria-label="Back to dashboard"
 				title="Dashboard"
 			>
@@ -410,14 +412,14 @@
 			
 			<div class="flex flex-col gap-0.5">
 				<div class="flex items-center gap-2">
-					<h1 class="text-[16px] font-semibold text-gray-900 dark:text-white tracking-tight truncate max-w-[200px] md:max-w-xs" title={title}>
+					<h1 class="text-[16px] font-semibold text-[var(--color-ink)] tracking-tight truncate max-w-[200px] md:max-w-xs" title={title}>
 						{title}
 					</h1>
 
 				</div>
 
 				
-				<div class="flex items-center gap-0.5 text-[13px] font-medium text-gray-600 dark:text-gray-300 -ml-1 action-menu-container">
+				<div class="flex items-center gap-0.5 text-[13px] font-medium text-[var(--color-ink-muted)] -ml-1 action-menu-container">
 					<div class="relative">
 						<button 
 							onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'file' ? null : 'file'; }} 
@@ -453,7 +455,7 @@
 								<button onclick={() => { activeMenu = null; handlePandocExport('html'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">HTML (.html)</button>
 								{#if !isViewer}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; deleteDoc(); }} class="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-red-500/10">Delete</button>
+								<button onclick={() => { activeMenu = null; deleteDoc(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10">Delete</button>
 								{/if}
 							</div>
 						{/if}
@@ -493,7 +495,7 @@
 									Version History
 								</button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; $darkModeStore = !$darkModeStore; document.documentElement.classList.toggle('dark', $darkModeStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
+								<button onclick={() => { activeMenu = null; $darkModeStore = !$darkModeStore; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
 									Dark Mode
 									<Icon icon={$darkModeStore ? "mdi:check" : ""} class="text-sm" />
 								</button>
@@ -510,7 +512,7 @@
 				<div class="flex items-center -space-x-2 mr-2">
 					{#each $connectedUsers as user}
 						<div 
-							class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white dark:border-zinc-950 shadow-sm"
+							class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-[var(--color-surface)] shadow-sm"
 							style="background-color: {user.color}; z-index: {user.isLocal ? 10 : 1};"
 							title={user.name + (user.isLocal ? ' (You)' : '')}
 						>
@@ -522,21 +524,21 @@
 
 			
 			<div class="flex items-center gap-1.5 px-2">
-				<a href="https://typst.app/docs/" target="_blank" rel="noopener noreferrer" class="p-1.5 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors" title="Typst Docs">
+				<a href="https://typst.app/docs/" target="_blank" rel="noopener noreferrer" class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors" title="Typst Docs">
 					<Icon icon="mdi:book-open-page-variant-outline" class="text-[18px]" />
 				</a>
-				<a href="https://typst.app/universe/" target="_blank" rel="noopener noreferrer" class="p-1.5 text-gray-500 hover:text-purple-500 dark:text-gray-400 dark:hover:text-purple-400 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors" title="Typst Universe">
+				<a href="https://typst.app/universe/" target="_blank" rel="noopener noreferrer" class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors" title="Typst Universe">
 					<Icon icon="mdi:earth" class="text-[18px]" />
 				</a>
 			</div>
 			
-			<div class="w-px h-5 bg-gray-300 dark:bg-white/10"></div>
+			<div class="w-px h-5 bg-[var(--color-line)]"></div>
 
 			
 			{#if !isViewer}
 			<button
 				onclick={() => (isPresentationOpen = true)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10 rounded-md transition-colors"
+				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors"
 			>
 				<Icon icon="mdi:presentation-play" class="text-[16px]" />
 				Present
@@ -544,7 +546,7 @@
 
 			<button
 				onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10 rounded-md transition-colors"
+				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors"
 			>
 				<Icon icon="mdi:comment-outline" class="text-[16px]" />
 				Comments
@@ -552,27 +554,27 @@
 
 			<button
 				onclick={() => (isShareModalOpen = true)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10 rounded-md transition-colors"
+				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
 				Share
 			</button>
 			{/if}
 
-			<div class="w-px h-5 bg-gray-300 dark:bg-white/10"></div>
+			<div class="w-px h-5 bg-[var(--color-line)]"></div>
 
 			<button
 				onclick={() => ($previewOpenStore = !$previewOpenStore)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium transition-colors rounded-md {$previewOpenStore ? 'text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10' : 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40'}"
+				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium transition-colors rounded-md {$previewOpenStore ? 'text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)]' : 'text-[var(--color-accent)] bg-[var(--color-accent-soft)] hover:opacity-90'}"
 				title={$previewOpenStore ? 'Hide preview' : 'Show preview'}
 			>
 				<Icon icon={$previewOpenStore ? 'mdi:eye-off-outline' : 'mdi:eye-outline'} class="text-[16px]" />
 				Preview
 			</button>
 
-			<div class="w-px h-5 bg-gray-300 dark:bg-white/10"></div>
+			<div class="w-px h-5 bg-[var(--color-line)]"></div>
 
-			<button onclick={handlePrint} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-black/20 dark:hover:bg-white/10 rounded-md transition-colors" title="Print Document">
+			<button onclick={handlePrint} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Print Document">
 				<Icon icon="mdi:printer" class="text-[16px]" />
 				Print
 			</button>
@@ -580,7 +582,7 @@
 			<div class="relative action-menu-container">
 				<button
 					onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'export' ? null : 'export'; }}
-					class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-md transition-colors {activeMenu === 'export' ? 'ring-2 ring-blue-500/30' : ''}"
+					class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-soft)] hover:opacity-90 rounded-md transition-colors {activeMenu === 'export' ? 'ring-2 ring-[var(--color-accent)]/30' : ''}"
 				>
 					<Icon icon="mdi:export-variant" class="text-[16px]" />
 					Export
@@ -607,50 +609,50 @@
 	</div>
 
 	
-	<div class="flex items-center px-4 py-1.5 bg-white/50 dark:bg-black/10 border-t border-gray-200/60 dark:border-white/10 gap-4 overflow-x-auto no-scrollbar">
+	<div class="flex items-center px-4 py-1.5 bg-[var(--color-surface-muted)] border-t border-[var(--color-line)] gap-4 overflow-x-auto no-scrollbar">
 		
 		
 		<div class="flex items-center gap-1">
-			<button onclick={() => applyFormat('*', '*', 'bold')} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Bold">
+			<button onclick={() => applyFormat('*', '*', 'bold')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Bold">
 				<Icon icon="mdi:format-bold" class="text-lg" />
 			</button>
-			<button onclick={() => applyFormat('_', '_', 'italic')} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Italic">
+			<button onclick={() => applyFormat('_', '_', 'italic')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Italic">
 				<Icon icon="mdi:format-italic" class="text-lg" />
 			</button>
-			<button onclick={() => applyFormat('`', '`', 'code')} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Code">
+			<button onclick={() => applyFormat('`', '`', 'code')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Code">
 				<Icon icon="mdi:code-tags" class="text-lg" />
 			</button>
-			<div class="w-px h-4 mx-1 bg-gray-300 dark:bg-white/10"></div>
-			<button onclick={() => applyFormat('$ ', ' $', 'x = y')} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Math (Inline)">
+			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
+			<button onclick={() => applyFormat('$ ', ' $', 'x = y')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Math (Inline)">
 				<Icon icon="mdi:sigma" class="text-lg" />
 			</button>
-			<button onclick={() => applyFormat('$ \n  ', '\n$ ', 'x = y')} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Math (Block)">
+			<button onclick={() => applyFormat('$ \n  ', '\n$ ', 'x = y')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Math (Block)">
 				<Icon icon="mdi:math-integral" class="text-lg" />
 			</button>
-			<div class="w-px h-4 mx-1 bg-gray-300 dark:bg-white/10"></div>
-			<button onclick={() => applyFormat('- ', '', 'List item')} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Bullet List">
+			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
+			<button onclick={() => applyFormat('- ', '', 'List item')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Bullet List">
 				<Icon icon="mdi:format-list-bulleted" class="text-lg" />
 			</button>
-			<button onclick={() => applyFormat('+ ', '', 'Numbered item')} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Numbered List">
+			<button onclick={() => applyFormat('+ ', '', 'Numbered item')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Numbered List">
 				<Icon icon="mdi:format-list-numbered" class="text-lg" />
 			</button>
-			<div class="w-px h-4 mx-1 bg-gray-300 dark:bg-white/10"></div>
+			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
 			<input type="file" bind:this={fileInput} onchange={handleImageUpload} class="hidden" accept="image/*,.ttf,.otf" />
 			{#if !isViewer}
-			<button onclick={() => fileInput?.click()} class="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded transition-colors" title="Upload Image / Font">
+			<button onclick={() => fileInput?.click()} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Upload Image / Font">
 				<Icon icon="mdi:image-plus" class="text-lg" />
 			</button>
 			{/if}
 		</div>
 
-		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
+		<div class="w-px h-4 bg-[var(--color-line)]"></div>
 
 		<div class="flex items-center gap-2">
 			<label for="font-select" class="text-[11px] font-semibold uppercase tracking-wider opacity-60">Font</label>
 			<select 
 				id="font-select"
 				onchange={(e) => insertTypstConfig('text', `font: "${e.currentTarget.value}"`)}
-				class="bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] text-xs rounded shadow-sm focus:ring-blue-500 focus:border-blue-500 block py-1 pl-2 pr-6 appearance-none cursor-pointer transition-colors"
+				class="bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] text-xs rounded shadow-sm focus:border-[var(--color-accent)] focus:outline-none block py-1 pl-2 pr-6 appearance-none cursor-pointer transition-colors"
 			>
 				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="New Computer Modern">Default (New CM)</option>
 				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="Libertinus Serif">Libertinus Serif</option>
@@ -666,7 +668,7 @@
 			</select>
 		</div>
 
-		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
+		<div class="w-px h-4 bg-[var(--color-line)]"></div>
 
 		<div class="flex items-center gap-2">
 			{#if !isViewer}
@@ -680,29 +682,29 @@
 			{/if}
 		</div>
 
-		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
+		<div class="w-px h-4 bg-[var(--color-line)]"></div>
 
-		<div class="flex items-center gap-1 bg-white dark:bg-black/20 border border-gray-300 dark:border-white/20 rounded shadow-sm overflow-hidden">
-			<button 
-				onclick={() => $documentZoomStore = Math.max(10, $documentZoomStore - 10)} 
-				class="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors"
+		<div class="flex items-center gap-1 bg-[var(--color-surface)] border border-[var(--color-line)] rounded shadow-sm overflow-hidden">
+			<button
+				onclick={() => $documentZoomStore = Math.max(10, $documentZoomStore - 10)}
+				class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors"
 				title="Zoom Out"
 			>
 				<Icon icon="mdi:minus" class="text-sm" />
 			</button>
-			<span role="button" tabindex="0" onkeydown={(e) => { if (e.key === "Enter") $documentZoomStore = 100; }} class="text-[11px] font-semibold text-gray-700 dark:text-gray-200 min-w-[3rem] text-center select-none" ondblclick={() => $documentZoomStore = 100}>
+			<span role="button" tabindex="0" onkeydown={(e) => { if (e.key === "Enter") $documentZoomStore = 100; }} class="text-[11px] font-semibold text-[var(--color-ink-muted)] min-w-[3rem] text-center select-none" ondblclick={() => $documentZoomStore = 100}>
 				{$documentZoomStore}%
 			</span>
-			<button 
-				onclick={() => $documentZoomStore = Math.min(500, $documentZoomStore + 10)} 
-				class="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors"
+			<button
+				onclick={() => $documentZoomStore = Math.min(500, $documentZoomStore + 10)}
+				class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors"
 				title="Zoom In"
 			>
 				<Icon icon="mdi:plus" class="text-sm" />
 			</button>
 		</div>
 
-		<div class="w-px h-4 bg-gray-300 dark:bg-white/10"></div>
+		<div class="w-px h-4 bg-[var(--color-line)]"></div>
 
 		<div class="flex items-center gap-2">
 			<ThemePicker />
@@ -735,105 +737,52 @@
 {/if}
 
 {#if showInfoModal}
-	
-	<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-opacity" onclick={() => showInfoModal = false} role="presentation" onkeydown={(e) => { if (e.key === "Enter") { showInfoModal = false; } }}>
-		<div class="bg-white/90 dark:bg-black/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 w-full max-w-sm overflow-hidden transform transition-all" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" onkeydown={(e) => e.stopPropagation()}>
-			<div class="p-6 border-b border-gray-100 dark:border-white/10">
-				<div class="flex items-center gap-3">
-					<div class="p-2 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg">
-						<Icon icon="mdi:file-document" class="text-xl" />
-					</div>
-					<h3 class="text-lg font-semibold text-gray-900 dark:text-white flex-grow truncate">{docInfo?.title || title}</h3>
-				</div>
+	<Modal title={docInfo?.title || title} icon="ph:file-text" onclose={() => showInfoModal = false}>
+		<div class="flex flex-col gap-4 text-xs">
+			<div>
+				<p class="mb-1 font-medium text-[var(--color-ink-muted)]">Type</p>
+				<p class="text-sm text-[var(--color-ink)] capitalize">Document</p>
 			</div>
-			<div class="p-6 space-y-4">
+			{#if docInfo?.created_at}
 				<div>
-					<p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Type</p>
-					<p class="text-sm text-gray-900 dark:text-gray-100 capitalize">Document</p>
+					<p class="mb-1 font-medium text-[var(--color-ink-muted)]">Created</p>
+					<p class="text-sm text-[var(--color-ink)]">{new Date(docInfo.created_at).toLocaleString()}</p>
 				</div>
-				{#if docInfo?.created_at}
-					<div>
-						<p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Created At</p>
-						<p class="text-sm text-gray-900 dark:text-gray-100">{new Date(docInfo.created_at).toLocaleString()}</p>
-					</div>
-				{/if}
-				{#if docInfo?.updated_at}
-					<div>
-						<p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Last Modified</p>
-						<p class="text-sm text-gray-900 dark:text-gray-100">{new Date(docInfo.updated_at).toLocaleString()}</p>
-					</div>
-				{/if}
-			</div>
-			<div class="p-4 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/10 flex justify-end">
-				<button type="button" onclick={() => showInfoModal = false} class="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
-					Close
-				</button>
-			</div>
+			{/if}
+			{#if docInfo?.updated_at}
+				<div>
+					<p class="mb-1 font-medium text-[var(--color-ink-muted)]">Last modified</p>
+					<p class="text-sm text-[var(--color-ink)]">{new Date(docInfo.updated_at).toLocaleString()}</p>
+				</div>
+			{/if}
 		</div>
-	</div>
+
+		{#snippet footer()}
+			<button type="button" onclick={() => showInfoModal = false} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90">
+				Close
+			</button>
+		{/snippet}
+	</Modal>
 {/if}
 
 {#if showRenameModal}
-	
-	<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-opacity" onclick={() => showRenameModal = false} role="presentation" onkeydown={(e) => { if (e.key === "Enter") { showRenameModal = false; } }}>
-		<div class="bg-white/90 dark:bg-black/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 w-full max-w-sm overflow-hidden transform transition-all" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" onkeydown={(e) => e.stopPropagation()}>
-			<form onsubmit={submitRename} class="p-6">
-				<div class="flex items-center gap-3 mb-6">
-					<div class="p-2 bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-lg">
-						<Icon icon="mdi:pencil-outline" class="text-xl" />
-					</div>
-					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Rename</h3>
-				</div>
-				
-				<div class="space-y-4">
-					
-					<input 
-						type="text"
-						required
-						bind:value={renameTitle}
-						class="w-full bg-transparent border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-						placeholder="Enter new name"
-					/>
-				</div>
-				
-				<div class="pt-6 flex justify-end gap-3">
-					<button type="button" onclick={() => showRenameModal = false} class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors">
-						Cancel
-					</button>
-					<button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
-						Save
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
+	<PromptModal
+		title="Rename"
+		label="New name"
+		icon="ph:pencil-simple"
+		value={renameTitle}
+		confirmLabel="Save"
+		onsubmit={submitRename}
+		onclose={() => showRenameModal = false}
+	/>
 {/if}
 
 {#if showDeleteModal}
-	
-	<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-opacity" onclick={() => showDeleteModal = false} role="presentation" onkeydown={(e) => { if (e.key === "Enter") { showDeleteModal = false; } }}>
-		<div class="bg-white/90 dark:bg-black/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 w-full max-w-sm overflow-hidden transform transition-all" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" onkeydown={(e) => e.stopPropagation()}>
-			<div class="p-6">
-				<div class="flex items-center gap-3 mb-6">
-					<div class="p-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg">
-						<Icon icon="mdi:trash-can-outline" class="text-xl" />
-					</div>
-					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Delete Document</h3>
-				</div>
-				
-				<p class="text-gray-600 dark:text-gray-300 text-sm mb-6">
-					Are you sure you want to delete this document? This action cannot be undone.
-				</p>
-				
-				<div class="flex justify-end gap-3">
-					<button type="button" onclick={() => showDeleteModal = false} class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors">
-						Cancel
-					</button>
-					<button type="button" onclick={confirmDelete} class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
-						Delete
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
+	<ConfirmModal
+		title="Delete document"
+		message="Are you sure you want to delete this document? This action cannot be undone."
+		confirmLabel="Delete"
+		onconfirm={confirmDelete}
+		onclose={() => showDeleteModal = false}
+	/>
 {/if}

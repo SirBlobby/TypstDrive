@@ -418,12 +418,12 @@
 </svelte:head>
 
 <div class="min-h-screen flex flex-col">
-    <nav class="bg-[var(--theme-bg)] shadow-sm border-b border-gray-200 dark:border-white/10 px-6 py-4 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200 flex-shrink-0">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            <Icon icon="mdi:cog" class="text-blue-600 dark:text-blue-400 text-3xl" />
+    <nav class="bg-[var(--color-surface)] shadow-sm border-b border-[var(--color-line)] px-6 py-4 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200 flex-shrink-0">
+        <h1 class="text-2xl font-bold text-[var(--color-ink)] flex items-center gap-3">
+            <Icon icon="mdi:cog" class="text-[var(--color-accent)] text-3xl" />
             Settings
         </h1>
-        <button onclick={() => goto('/dashboard')} class="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 px-4 py-2 rounded-lg flex items-center gap-2">
+        <button onclick={() => goto('/dashboard')} class="text-sm font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition-colors bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] px-4 py-2 rounded-md flex items-center gap-2">
             <Icon icon="mdi:arrow-left" class="text-lg" />
             Back to Dashboard
         </button>
@@ -435,9 +435,9 @@
                 {#each navItems as item}
                     <button
                         onclick={() => activeSection = item.id}
-                        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 {activeSection === item.id
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'}"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-colors {activeSection === item.id
+                            ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                            : 'text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-muted)]'}"
                     >
                         <Icon icon={item.icon} class="text-lg flex-shrink-0" />
                         {item.label}
@@ -447,8 +447,8 @@
                     </button>
                 {/each}
 
-                <div class="pt-4 mt-4 border-t border-gray-200 dark:border-white/10">
-                    <button onclick={logout} class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-150">
+                <div class="pt-4 mt-4 border-t border-[var(--color-line)]">
+                    <button onclick={logout} class="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors">
                         <Icon icon="mdi:logout" class="text-lg flex-shrink-0" />
                         Sign Out
                     </button>
@@ -459,20 +459,20 @@
         <main class="flex-1 min-w-0 space-y-6 pb-16">
 
             {#if activeSection === 'account'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] overflow-hidden">
                     <div class="p-6 sm:p-8">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                            <Icon icon="mdi:account-outline" class="text-2xl text-blue-500 dark:text-blue-400" />
+                        <h2 class="text-xl font-bold text-[var(--color-ink)] mb-6 flex items-center gap-2">
+                            <Icon icon="mdi:account-outline" class="text-2xl text-[var(--color-accent)]" />
                             Account Settings
                         </h2>
 
                         <div class="flex items-center gap-4 mb-6">
-                            <div class="h-14 w-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl font-bold border border-blue-500/20 flex-shrink-0">
+                            <div class="h-14 w-14 rounded-full bg-[var(--color-accent-soft)] flex items-center justify-center text-[var(--color-accent)] text-2xl font-bold flex-shrink-0">
                                 {$userStore?.username?.[0]?.toUpperCase() || '?'}
                             </div>
                             <div>
-                                <p class="text-base font-bold text-gray-900 dark:text-white">{$userStore?.username}</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">{$userStore?.email}</p>
+                                <p class="text-base font-bold text-[var(--color-ink)]">{$userStore?.username}</p>
+                                <p class="text-sm text-[var(--color-ink-muted)]">{$userStore?.email}</p>
                                 {#if $userStore?.is_admin}
                                     <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 mt-1">
                                         <Icon icon="mdi:shield-crown-outline" class="text-sm" />
@@ -482,27 +482,27 @@
                             </div>
                         </div>
 
-                        <div class="h-px bg-gray-200 dark:bg-white/10 mb-6"></div>
+                        <div class="h-px bg-[var(--color-line)] mb-6"></div>
 
-                        <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-4">Profile</h3>
+                        <h3 class="text-sm font-bold text-[var(--color-ink)] mb-4">Profile</h3>
 
                         {#if profileError}
-                            <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-4">{profileError}</div>
+                            <div class="bg-[var(--color-danger)]/10 text-[var(--color-danger)] p-3 rounded-md text-sm mb-4">{profileError}</div>
                         {/if}
                         {#if profileSuccess}
-                            <div class="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 p-3 rounded-lg text-sm mb-4">Profile updated successfully.</div>
+                            <div class="bg-[var(--color-success)]/10 text-[var(--color-success)] p-3 rounded-md text-sm mb-4">Profile updated successfully.</div>
                         {/if}
 
                         <div class="space-y-4">
                             <div>
-                                <label for="username-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
-                                <input id="username-input" type="text" bind:value={username} class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                                <label for="username-input" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">Username</label>
+                                <input id="username-input" type="text" bind:value={username} class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2 focus:border-[var(--color-accent)] focus:outline-none transition-colors" />
                             </div>
                             <div>
-                                <label for="email-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                <input id="email-input" type="email" bind:value={email} class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                                <label for="email-input" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">Email address</label>
+                                <input id="email-input" type="email" bind:value={email} class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2 focus:border-[var(--color-accent)] focus:outline-none transition-colors" />
                             </div>
-                            <button onclick={saveProfile} disabled={isSaving || (username === $userStore?.username && email === $userStore?.email)} class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm">
+                            <button onclick={saveProfile} disabled={isSaving || (username === $userStore?.username && email === $userStore?.email)} class="bg-[var(--color-accent)] hover:opacity-90 text-white px-5 py-2 rounded-md text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2 shadow-sm">
                                 {#if isSaving}
                                     <Icon icon="mdi:loading" class="animate-spin text-lg" />
                                     Saving...
@@ -513,31 +513,31 @@
                             </button>
                         </div>
 
-                        <div class="h-px bg-gray-200 dark:bg-white/10 my-6"></div>
+                        <div class="h-px bg-[var(--color-line)] my-6"></div>
 
-                        <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-4">Change Password</h3>
+                        <h3 class="text-sm font-bold text-[var(--color-ink)] mb-4">Change Password</h3>
 
                         {#if passwordError}
-                            <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-4">{passwordError}</div>
+                            <div class="bg-[var(--color-danger)]/10 text-[var(--color-danger)] p-3 rounded-md text-sm mb-4">{passwordError}</div>
                         {/if}
                         {#if passwordSuccess}
-                            <div class="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 p-3 rounded-lg text-sm mb-4">Password changed successfully.</div>
+                            <div class="bg-[var(--color-success)]/10 text-[var(--color-success)] p-3 rounded-md text-sm mb-4">Password changed successfully.</div>
                         {/if}
 
                         <div class="space-y-4">
                             <div>
-                                <label for="current-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
-                                <input id="current-password" type="password" bind:value={currentPassword} class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                                <label for="current-password" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">Current password</label>
+                                <input id="current-password" type="password" bind:value={currentPassword} class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2 focus:border-[var(--color-accent)] focus:outline-none transition-colors" />
                             </div>
                             <div>
-                                <label for="new-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
-                                <input id="new-password" type="password" bind:value={newPassword} class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                                <label for="new-password" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">New password</label>
+                                <input id="new-password" type="password" bind:value={newPassword} class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2 focus:border-[var(--color-accent)] focus:outline-none transition-colors" />
                             </div>
                             <div>
-                                <label for="confirm-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
-                                <input id="confirm-password" type="password" bind:value={confirmPassword} class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                                <label for="confirm-password" class="block text-sm font-medium text-[var(--color-ink-muted)] mb-1">Confirm new password</label>
+                                <input id="confirm-password" type="password" bind:value={confirmPassword} class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-4 py-2 focus:border-[var(--color-accent)] focus:outline-none transition-colors" />
                             </div>
-                            <button onclick={changePassword} disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword} class="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2">
+                            <button onclick={changePassword} disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword} class="bg-[var(--color-surface-sunken)] hover:opacity-90 text-[var(--color-ink)] px-5 py-2 rounded-md text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2">
                                 {#if isSavingPassword}
                                     <Icon icon="mdi:loading" class="animate-spin text-lg" />
                                     Updating...
@@ -552,46 +552,46 @@
             {/if}
 
             {#if activeSection === 'theme'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] overflow-hidden">
                     <div class="p-6 sm:p-8">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                            <Icon icon="mdi:palette-outline" class="text-2xl text-blue-500 dark:text-blue-400" />
+                        <h2 class="text-xl font-bold text-[var(--color-ink)] mb-2 flex items-center gap-2">
+                            <Icon icon="mdi:palette-outline" class="text-2xl text-[var(--color-accent)]" />
                             Theme Settings
                         </h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Customize the appearance of your editor and dashboard. These settings are saved to your browser.</p>
+                        <p class="text-sm text-[var(--color-ink-muted)] mb-6">Customize the appearance of your editor and dashboard. These settings are saved to your browser.</p>
                         <ThemePicker />
                     </div>
                 </div>
             {/if}
 
             {#if activeSection === 'storage'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] overflow-hidden">
                     <div class="p-6 sm:p-8">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                            <Icon icon="mdi:harddisk" class="text-2xl text-blue-500 dark:text-blue-400" />
+                        <h2 class="text-xl font-bold text-[var(--color-ink)] mb-6 flex items-center gap-2">
+                            <Icon icon="mdi:harddisk" class="text-2xl text-[var(--color-accent)]" />
                             Storage
                         </h2>
                         <div class="mb-4 flex justify-between items-end">
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Total Space Used</span>
-                            <span class="text-sm font-bold text-gray-900 dark:text-white">
+                            <span class="text-sm font-medium text-[var(--color-ink-muted)]">Total space used</span>
+                            <span class="text-sm font-bold text-[var(--color-ink)]">
                                 {storageStats ? formatBytes(storageStats.total_size_bytes) : 'Loading...'}
                             </span>
                         </div>
                         <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div class="bg-gray-50 dark:bg-black/30 p-4 rounded-xl border border-gray-200 dark:border-white/10 flex items-center gap-3">
-                                <div class="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></div>
+                            <div class="bg-[var(--color-surface-muted)] p-4 rounded-lg border border-[var(--color-line)] flex items-center gap-3">
+                                <div class="w-3 h-3 rounded-full bg-[var(--color-accent)] flex-shrink-0"></div>
                                 <div>
-                                    <p class="text-gray-500 dark:text-gray-400 text-xs">Documents</p>
-                                    <p class="font-semibold text-gray-900 dark:text-white">
+                                    <p class="text-[var(--color-ink-muted)] text-xs">Documents</p>
+                                    <p class="font-semibold text-[var(--color-ink)]">
                                         {storageStats ? formatBytes(storageStats.documents_size_bytes) : '...'}
                                     </p>
                                 </div>
                             </div>
-                            <div class="bg-gray-50 dark:bg-black/30 p-4 rounded-xl border border-gray-200 dark:border-white/10 flex items-center gap-3">
+                            <div class="bg-[var(--color-surface-muted)] p-4 rounded-lg border border-[var(--color-line)] flex items-center gap-3">
                                 <div class="w-3 h-3 rounded-full bg-purple-500 flex-shrink-0"></div>
                                 <div>
-                                    <p class="text-gray-500 dark:text-gray-400 text-xs">Images & Assets</p>
-                                    <p class="font-semibold text-gray-900 dark:text-white">
+                                    <p class="text-[var(--color-ink-muted)] text-xs">Images & assets</p>
+                                    <p class="font-semibold text-[var(--color-ink)]">
                                         {storageStats ? formatBytes(storageStats.files_size_bytes) : '...'}
                                     </p>
                                 </div>
@@ -602,33 +602,33 @@
             {/if}
 
             {#if activeSection === 'api-keys'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] overflow-hidden">
                     <div class="p-6 sm:p-8">
                         <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <Icon icon="mdi:key-outline" class="text-2xl text-blue-500 dark:text-blue-400" />
+                            <h2 class="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2">
+                                <Icon icon="mdi:key-outline" class="text-2xl text-[var(--color-accent)]" />
                                 API Keys
                             </h2>
                             <button
                                 onclick={() => { showCreateKeyForm = !showCreateKeyForm; createKeyError = ''; newlyCreatedKey = null; }}
-                                class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors {showCreateKeyForm ? 'bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'}"
+                                class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors {showCreateKeyForm ? 'bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]' : 'bg-[var(--color-accent)] hover:opacity-90 text-white shadow-sm'}"
                             >
                                 <Icon icon={showCreateKeyForm ? 'mdi:close' : 'mdi:plus'} class="text-base" />
                                 {showCreateKeyForm ? 'Cancel' : 'New Key'}
                             </button>
                         </div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                            Use API keys to render Typst documents programmatically via <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">POST /v1/render</code>.
+                        <p class="text-sm text-[var(--color-ink-muted)] mb-4">
+                            Use API keys to render Typst documents programmatically via <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">POST /v1/render</code>.
                             Each key allows up to 60 requests/minute.
-                            <a href="/api-docs" class="text-blue-600 dark:text-blue-400 hover:underline ml-1">View API docs →</a>
+                            <a href="/api-docs" class="text-[var(--color-accent)] hover:underline ml-1">View API docs →</a>
                         </p>
 
-                        <div class="mb-6 p-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/30">
+                        <div class="mb-6 p-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-muted)]">
                             <div class="flex items-center justify-between mb-3">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
                                     Requests — {usagePeriod === '1hr' ? 'Last 60 Min' : usagePeriod === '1day' ? 'Last 24 Hours' : 'Last 7 Days'}
                                     {#if usageData.length > 0}
-                                        <span class="ml-2 normal-case font-normal text-gray-400 dark:text-gray-500">
+                                        <span class="ml-2 normal-case font-normal text-[var(--color-ink-muted)]">
                                             ({usageData.reduce((s, p) => s + p.count, 0)} total)
                                         </span>
                                     {/if}
@@ -637,18 +637,18 @@
                                     {#each ([['1hr', '1 hr'], ['1day', '1 day'], ['1week', '1 week']] as const) as [val, label]}
                                         <button
                                             onclick={() => usagePeriod = val}
-                                            class="px-2 py-0.5 text-xs font-semibold rounded-md transition-colors {usagePeriod === val ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}"
+                                            class="px-2 py-0.5 text-xs font-semibold rounded-md transition-colors {usagePeriod === val ? 'bg-[var(--color-accent)] text-white' : 'text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]'}"
                                         >{label}</button>
                                     {/each}
                                 </div>
                             </div>
                             <div class="h-32">
                                 {#if usageLoading}
-                                    <div class="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
+                                    <div class="h-full flex items-center justify-center text-[var(--color-ink-muted)] text-sm">
                                         <Icon icon="mdi:loading" class="animate-spin mr-2" /> Loading...
                                     </div>
                                 {:else if usageData.length === 0}
-                                    <div class="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
+                                    <div class="h-full flex items-center justify-center text-[var(--color-ink-muted)] text-sm">
                                         No usage yet — make your first API call to see data here.
                                     </div>
                                 {:else}
@@ -658,24 +658,24 @@
                         </div>
 
                         {#if newlyCreatedKey}
-                            <div class="mb-6 p-4 rounded-xl border border-green-200 dark:border-green-700/50 bg-green-50 dark:bg-green-900/10">
+                            <div class="mb-6 p-4 rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success)]/10">
                                 <div class="flex items-start justify-between gap-4 mb-2">
                                     <div>
-                                        <p class="text-sm font-bold text-green-800 dark:text-green-300 flex items-center gap-2">
+                                        <p class="text-sm font-bold text-[var(--color-success)] flex items-center gap-2">
                                             <Icon icon="mdi:check-circle" class="text-lg" />
                                             Key created: {newlyCreatedKey.name}
                                         </p>
-                                        <p class="text-xs text-green-700 dark:text-green-400 mt-0.5">Copy this key now — it will not be shown again.</p>
+                                        <p class="text-xs text-[var(--color-success)] mt-0.5 opacity-90">Copy this key now — it will not be shown again.</p>
                                     </div>
-                                    <button onclick={() => newlyCreatedKey = null} class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 flex-shrink-0">
+                                    <button onclick={() => newlyCreatedKey = null} class="text-[var(--color-success)] hover:opacity-70 flex-shrink-0">
                                         <Icon icon="mdi:close" class="text-lg" />
                                     </button>
                                 </div>
                                 <div class="flex items-center gap-2 mt-3">
-                                    <code class="flex-1 font-mono text-xs bg-white dark:bg-black/40 border border-green-200 dark:border-green-700/50 text-gray-800 dark:text-gray-200 px-3 py-2 rounded-lg break-all">{newlyCreatedKey.key}</code>
+                                    <code class="flex-1 font-mono text-xs bg-[var(--color-surface)] border border-[var(--color-success)]/30 text-[var(--color-ink)] px-3 py-2 rounded-md break-all">{newlyCreatedKey.key}</code>
                                     <button
                                         onclick={() => copyKey(newlyCreatedKey!.key)}
-                                        class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg transition-colors {copiedKey ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300'}"
+                                        class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-md transition-colors {copiedKey ? 'bg-[var(--color-success)] text-white' : 'bg-[var(--color-surface-sunken)] hover:opacity-90 text-[var(--color-ink-muted)]'}"
                                     >
                                         <Icon icon={copiedKey ? 'mdi:check' : 'mdi:content-copy'} class="text-base" />
                                         {copiedKey ? 'Copied!' : 'Copy'}
@@ -685,29 +685,30 @@
                         {/if}
 
                         {#if showCreateKeyForm}
-                            <form onsubmit={createApiKey} class="mb-6 p-4 rounded-xl border border-blue-200 dark:border-blue-800/50 bg-blue-50/50 dark:bg-blue-900/10 space-y-3">
-                                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Icon icon="mdi:key-plus" class="text-blue-500" />
+                            <form onsubmit={createApiKey} class="mb-6 p-4 rounded-lg border border-[var(--color-accent)]/30 bg-[var(--color-accent-soft)] space-y-3">
+                                <h3 class="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
+                                    <Icon icon="mdi:key-plus" class="text-[var(--color-accent)]" />
                                     Create API Key
                                 </h3>
                                 {#if createKeyError}
-                                    <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-lg text-sm">{createKeyError}</div>
+                                    <div class="bg-[var(--color-danger)]/10 text-[var(--color-danger)] px-3 py-2 rounded-md text-sm">{createKeyError}</div>
                                 {/if}
                                 <div class="flex items-end gap-3">
                                     <div class="flex-1">
-                                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Key Name</label>
+                                        <label for="create-key-name" class="block text-xs font-medium text-[var(--color-ink-muted)] mb-1">Key name</label>
                                         <input
+                                            id="create-key-name"
                                             type="text"
                                             required
                                             bind:value={createKeyName}
                                             placeholder="e.g. My App, CI Pipeline"
-                                            class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none transition-colors"
                                         />
                                     </div>
                                     <button
                                         type="submit"
                                         disabled={createKeyLoading || !createKeyName.trim()}
-                                        class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                                        class="flex items-center gap-2 px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 disabled:opacity-50 text-white text-sm font-semibold rounded-md transition shadow-sm"
                                     >
                                         {#if createKeyLoading}
                                             <Icon icon="mdi:loading" class="animate-spin text-base" />
@@ -722,38 +723,38 @@
                         {/if}
 
                         {#if apiKeysError}
-                            <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-4">{apiKeysError}</div>
+                            <div class="bg-[var(--color-danger)]/10 text-[var(--color-danger)] p-3 rounded-md text-sm mb-4">{apiKeysError}</div>
                         {/if}
 
                         {#if apiKeysLoading}
-                            <div class="flex items-center justify-center py-12 text-gray-400 dark:text-gray-500">
+                            <div class="flex items-center justify-center py-12 text-[var(--color-ink-muted)]">
                                 <Icon icon="mdi:loading" class="animate-spin text-2xl mr-2" />
                                 Loading keys...
                             </div>
                         {:else if apiKeys.length === 0}
-                            <div class="text-center py-12 text-gray-400 dark:text-gray-500">
+                            <div class="text-center py-12 text-[var(--color-ink-muted)]">
                                 <Icon icon="mdi:key-outline" class="text-4xl mb-2 opacity-40" />
                                 <p class="text-sm">No API keys yet. Create one to get started.</p>
                             </div>
                         {:else}
                             <div class="space-y-2">
                                 {#each apiKeys as key (key.id)}
-                                    <div class="flex items-center gap-4 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20">
-                                        <div class="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0">
+                                    <div class="flex items-center gap-4 px-4 py-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-muted)]">
+                                        <div class="h-9 w-9 rounded-full bg-[var(--color-accent-soft)] flex items-center justify-center text-[var(--color-accent)] flex-shrink-0">
                                             <Icon icon="mdi:key" class="text-lg" />
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{key.name}</p>
-                                            <p class="text-xs font-mono text-gray-500 dark:text-gray-400">{key.key_prefix}... · {key.rate_limit}/min</p>
+                                            <p class="text-sm font-semibold text-[var(--color-ink)] truncate">{key.name}</p>
+                                            <p class="text-xs font-mono text-[var(--color-ink-muted)]">{key.key_prefix}... · {key.rate_limit}/min</p>
                                         </div>
                                         <div class="text-right flex-shrink-0 hidden sm:block">
-                                            <p class="text-xs text-gray-400 dark:text-gray-500">Created {formatDate(key.created_at)}</p>
-                                            <p class="text-xs text-gray-400 dark:text-gray-500">{key.last_used_at ? `Last used ${formatDate(key.last_used_at)}` : 'Never used'}</p>
+                                            <p class="text-xs text-[var(--color-ink-muted)]">Created {formatDate(key.created_at)}</p>
+                                            <p class="text-xs text-[var(--color-ink-muted)]">{key.last_used_at ? `Last used ${formatDate(key.last_used_at)}` : 'Never used'}</p>
                                         </div>
                                         <div class="flex items-center gap-1 flex-shrink-0">
                                             {#if confirmRegenerateId === key.id}
                                                 <div class="flex items-center gap-1">
-                                                    <span class="text-xs text-gray-500 dark:text-gray-400">Regenerate?</span>
+                                                    <span class="text-xs text-[var(--color-ink-muted)]">Regenerate?</span>
                                                     <button
                                                         onclick={() => regenerateApiKey(key.id)}
                                                         disabled={regeneratingKeyId === key.id}
@@ -763,24 +764,24 @@
                                                     </button>
                                                     <button
                                                         onclick={() => confirmRegenerateId = null}
-                                                        class="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-semibold transition-colors"
+                                                        class="text-xs px-2 py-1 rounded-md bg-[var(--color-surface-sunken)] hover:opacity-90 text-[var(--color-ink-muted)] font-semibold transition-colors"
                                                     >
                                                         No
                                                     </button>
                                                 </div>
                                             {:else if confirmDeleteKeyId === key.id}
                                                 <div class="flex items-center gap-1">
-                                                    <span class="text-xs text-gray-500 dark:text-gray-400">Delete?</span>
+                                                    <span class="text-xs text-[var(--color-ink-muted)]">Delete?</span>
                                                     <button
                                                         onclick={() => deleteApiKey(key.id)}
                                                         disabled={deletingKeyId === key.id}
-                                                        class="text-xs px-2 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50"
+                                                        class="text-xs px-2 py-1 rounded-md bg-[var(--color-danger)] hover:opacity-90 text-white font-semibold transition-colors disabled:opacity-50"
                                                     >
                                                         {deletingKeyId === key.id ? '...' : 'Yes'}
                                                     </button>
                                                     <button
                                                         onclick={() => confirmDeleteKeyId = null}
-                                                        class="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-semibold transition-colors"
+                                                        class="text-xs px-2 py-1 rounded-md bg-[var(--color-surface-sunken)] hover:opacity-90 text-[var(--color-ink-muted)] font-semibold transition-colors"
                                                     >
                                                         No
                                                     </button>
@@ -789,14 +790,14 @@
                                                 <button
                                                     onclick={() => { confirmRegenerateId = key.id; confirmDeleteKeyId = null; }}
                                                     title="Regenerate key"
-                                                    class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                                                    class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
                                                 >
                                                     <Icon icon="mdi:refresh" class="text-lg" />
                                                 </button>
                                                 <button
                                                     onclick={() => { confirmDeleteKeyId = key.id; confirmRegenerateId = null; }}
                                                     title="Revoke key"
-                                                    class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                                    class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
                                                 >
                                                     <Icon icon="mdi:delete-outline" class="text-lg" />
                                                 </button>
@@ -811,18 +812,18 @@
             {/if}
 
             {#if activeSection === 'admin' && $userStore?.is_admin}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] overflow-hidden">
                     <div class="p-6 sm:p-8">
                         <div class="flex items-center justify-between mb-6">
-                            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <h2 class="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2">
                                 <Icon icon="mdi:shield-crown-outline" class="text-2xl text-amber-500 dark:text-amber-400" />
                                 User Management
                             </h2>
                             <div class="flex items-center gap-3">
-                                <span class="text-sm text-gray-500 dark:text-gray-400">{adminUsers.length} user{adminUsers.length !== 1 ? 's' : ''}</span>
+                                <span class="text-sm text-[var(--color-ink-muted)]">{adminUsers.length} user{adminUsers.length !== 1 ? 's' : ''}</span>
                                 <button
                                     onclick={() => { showCreateForm = !showCreateForm; createError = ''; }}
-                                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors {showCreateForm ? 'bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'}"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors {showCreateForm ? 'bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]' : 'bg-[var(--color-accent)] hover:opacity-90 text-white shadow-sm'}"
                                 >
                                     <Icon icon={showCreateForm ? 'mdi:close' : 'mdi:account-plus-outline'} class="text-base" />
                                     {showCreateForm ? 'Cancel' : 'New User'}
@@ -831,52 +832,55 @@
                         </div>
 
                         {#if showCreateForm}
-                            <form onsubmit={createUser} class="mb-6 p-4 rounded-xl border border-blue-200 dark:border-blue-800/50 bg-blue-50/50 dark:bg-blue-900/10 space-y-3">
-                                <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                    <Icon icon="mdi:account-plus-outline" class="text-blue-500" />
+                            <form onsubmit={createUser} class="mb-6 p-4 rounded-lg border border-[var(--color-accent)]/30 bg-[var(--color-accent-soft)] space-y-3">
+                                <h3 class="text-sm font-bold text-[var(--color-ink)] mb-3 flex items-center gap-2">
+                                    <Icon icon="mdi:account-plus-outline" class="text-[var(--color-accent)]" />
                                     Create New User
                                 </h3>
 
                                 {#if createError}
-                                    <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-lg text-sm">{createError}</div>
+                                    <div class="bg-[var(--color-danger)]/10 text-[var(--color-danger)] px-3 py-2 rounded-md text-sm">{createError}</div>
                                 {/if}
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
+                                        <label for="create-username" class="block text-xs font-medium text-[var(--color-ink-muted)] mb-1">Username</label>
                                         <input
+                                            id="create-username"
                                             type="text"
                                             required
                                             bind:value={createUsername}
                                             placeholder="username"
-                                            class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none transition-colors"
                                         />
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                                        <label for="create-email" class="block text-xs font-medium text-[var(--color-ink-muted)] mb-1">Email</label>
                                         <input
+                                            id="create-email"
                                             type="email"
                                             required
                                             bind:value={createEmail}
                                             placeholder="user@example.com"
-                                            class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none transition-colors"
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Temporary Password</label>
+                                    <label for="create-password" class="block text-xs font-medium text-[var(--color-ink-muted)] mb-1">Temporary password</label>
                                     <input
+                                        id="create-password"
                                         type="text"
                                         required
                                         bind:value={createPassword}
                                         placeholder="Set a password the user can change later"
-                                        class="w-full bg-white dark:bg-black/40 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors font-mono"
+                                        class="w-full bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] rounded-md px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none transition-colors font-mono"
                                     />
                                 </div>
                                 <div class="flex items-center justify-between pt-1">
                                     <label class="flex items-center gap-2 cursor-pointer select-none">
                                         <input type="checkbox" bind:checked={createIsAdmin} class="w-4 h-4 rounded accent-amber-500" />
-                                        <span class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                        <span class="text-sm text-[var(--color-ink-muted)] flex items-center gap-1">
                                             <Icon icon="mdi:shield-crown-outline" class="text-amber-500 text-base" />
                                             Grant admin privileges
                                         </span>
@@ -884,7 +888,7 @@
                                     <button
                                         type="submit"
                                         disabled={createLoading}
-                                        class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                                        class="flex items-center gap-2 px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 disabled:opacity-50 text-white text-sm font-semibold rounded-md transition shadow-sm"
                                     >
                                         {#if createLoading}
                                             <Icon icon="mdi:loading" class="animate-spin text-base" />
@@ -899,56 +903,56 @@
                         {/if}
 
                         {#if adminError}
-                            <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-4">{adminError}</div>
+                            <div class="bg-[var(--color-danger)]/10 text-[var(--color-danger)] p-3 rounded-md text-sm mb-4">{adminError}</div>
                         {/if}
 
                         {#if adminLoading}
-                            <div class="flex items-center justify-center py-12 text-gray-400 dark:text-gray-500">
+                            <div class="flex items-center justify-center py-12 text-[var(--color-ink-muted)]">
                                 <Icon icon="mdi:loading" class="animate-spin text-2xl mr-2" />
                                 Loading users...
                             </div>
                         {:else}
                             <div class="space-y-2">
                                 {#each adminUsers as user (user.id)}
-                                    <div class="flex items-center gap-4 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 group">
-                                        <div class="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm flex-shrink-0">
+                                    <div class="flex items-center gap-4 px-4 py-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-muted)] group">
+                                        <div class="h-9 w-9 rounded-full bg-[var(--color-accent-soft)] flex items-center justify-center text-[var(--color-accent)] font-bold text-sm flex-shrink-0">
                                             {user.username[0].toUpperCase()}
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center gap-2">
-                                                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.username}</p>
+                                                <p class="text-sm font-semibold text-[var(--color-ink)] truncate">{user.username}</p>
                                                 {#if user.is_admin}
                                                     <span class="text-xs font-bold px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 flex-shrink-0">Admin</span>
                                                 {/if}
                                                 {#if user.id === $userStore?.id}
-                                                    <span class="text-xs px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 flex-shrink-0">You</span>
+                                                    <span class="text-xs px-1.5 py-0.5 rounded-md bg-[var(--color-accent-soft)] text-[var(--color-accent)] flex-shrink-0">You</span>
                                                 {/if}
                                             </div>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                                            <p class="text-xs text-[var(--color-ink-muted)] truncate">{user.email}</p>
                                         </div>
-                                        <p class="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 hidden sm:block">{formatDate(user.created_at)}</p>
+                                        <p class="text-xs text-[var(--color-ink-muted)] flex-shrink-0 hidden sm:block">{formatDate(user.created_at)}</p>
                                         <div class="flex items-center gap-2 flex-shrink-0">
                                             {#if user.id !== $userStore?.id}
                                                 <button
                                                     onclick={() => toggleAdmin(user)}
                                                     title={user.is_admin ? 'Revoke admin' : 'Grant admin'}
-                                                    class="p-1.5 rounded-lg transition-colors {user.is_admin ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10' : 'text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10'}"
+                                                    class="p-1.5 rounded-md transition-colors {user.is_admin ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10' : 'text-[var(--color-ink-muted)] hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10'}"
                                                 >
                                                     <Icon icon={user.is_admin ? 'mdi:shield-crown' : 'mdi:shield-crown-outline'} class="text-lg" />
                                                 </button>
                                                 {#if confirmDeleteId === user.id}
                                                     <div class="flex items-center gap-1">
-                                                        <span class="text-xs text-gray-500 dark:text-gray-400">Delete?</span>
+                                                        <span class="text-xs text-[var(--color-ink-muted)]">Delete?</span>
                                                         <button
                                                             onclick={() => deleteUser(user.id)}
                                                             disabled={deletingUserId === user.id}
-                                                            class="text-xs px-2 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50"
+                                                            class="text-xs px-2 py-1 rounded-md bg-[var(--color-danger)] hover:opacity-90 text-white font-semibold transition-colors disabled:opacity-50"
                                                         >
                                                             {deletingUserId === user.id ? '...' : 'Yes'}
                                                         </button>
                                                         <button
                                                             onclick={() => confirmDeleteId = null}
-                                                            class="text-xs px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-semibold transition-colors"
+                                                            class="text-xs px-2 py-1 rounded-md bg-[var(--color-surface-sunken)] hover:opacity-90 text-[var(--color-ink-muted)] font-semibold transition-colors"
                                                         >
                                                             No
                                                         </button>
@@ -957,7 +961,7 @@
                                                     <button
                                                         onclick={() => confirmDeleteId = user.id}
                                                         title="Delete user"
-                                                        class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                                        class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
                                                     >
                                                         <Icon icon="mdi:delete-outline" class="text-lg" />
                                                     </button>

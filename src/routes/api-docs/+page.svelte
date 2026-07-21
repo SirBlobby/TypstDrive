@@ -170,12 +170,12 @@ with open("output.png", "wb") as f:
 </style>
 
 <div class="min-h-screen flex flex-col">
-    <nav class="bg-[var(--theme-bg)] shadow-sm border-b border-gray-200 dark:border-white/10 px-6 py-4 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200 flex-shrink-0">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            <Icon icon="mdi:api" class="text-blue-600 dark:text-blue-400 text-3xl" />
+    <nav class="bg-[var(--color-surface)] shadow-sm border-b border-[var(--color-line)] px-6 py-4 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200 flex-shrink-0">
+        <h1 class="text-2xl font-bold text-[var(--color-ink)] flex items-center gap-3">
+            <Icon icon="mdi:api" class="text-[var(--color-accent)] text-3xl" />
             API Reference
         </h1>
-        <button onclick={() => goto('/dashboard')} class="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 px-4 py-2 rounded-lg flex items-center gap-2">
+        <button onclick={() => goto('/dashboard')} class="text-sm font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition-colors bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] px-4 py-2 rounded-md flex items-center gap-2">
             <Icon icon="mdi:arrow-left" class="text-lg" />
             Back to Dashboard
         </button>
@@ -187,16 +187,16 @@ with open("output.png", "wb") as f:
                 {#each navSections as section}
                     <button
                         onclick={() => activeSection = section.id}
-                        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 {activeSection === section.id
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'}"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-colors {activeSection === section.id
+                            ? 'bg-[var(--color-accent)] text-white shadow-sm'
+                            : 'text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-muted)]'}"
                     >
                         <Icon icon={section.icon} class="text-lg flex-shrink-0" />
                         {section.label}
                     </button>
                 {/each}
-                <div class="pt-4 mt-4 border-t border-gray-200 dark:border-white/10">
-                    <a href="/settings" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-all duration-150">
+                <div class="pt-4 mt-4 border-t border-[var(--color-line)]">
+                    <a href="/settings" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-muted)] transition-colors">
                         <Icon icon="mdi:key-plus" class="text-lg flex-shrink-0" />
                         Manage API Keys
                     </a>
@@ -210,7 +210,7 @@ with open("output.png", "wb") as f:
                 {#each navSections as section}
                     <button
                         onclick={() => activeSection = section.id}
-                        class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors {activeSection === section.id ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'}"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {activeSection === section.id ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]'}"
                     >
                         {section.label}
                     </button>
@@ -218,51 +218,51 @@ with open("output.png", "wb") as f:
             </div>
 
             {#if activeSection === 'overview'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 sm:p-8">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <Icon icon="mdi:book-open-outline" class="text-2xl text-blue-500" />
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] p-6 sm:p-8">
+                    <h2 class="text-xl font-bold text-[var(--color-ink)] mb-4 flex items-center gap-2">
+                        <Icon icon="mdi:book-open-outline" class="text-2xl text-[var(--color-accent)]" />
                         Overview
                     </h2>
-                    <p class="text-gray-600 dark:text-gray-300 mb-6">
+                    <p class="text-[var(--color-ink-muted)] mb-6">
                         The TypstDrive Render API lets you compile Typst markup into PNG images or PDF documents programmatically.
                         Authenticate with an API key and POST Typst code — get back binary output.
                     </p>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                         <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30">
-                            <Icon icon="mdi:image-outline" class="text-2xl text-blue-500 mb-2" />
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">PNG output</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">First page rendered at 2× scale</p>
+                            <Icon icon="mdi:image-outline" class="text-2xl text-[var(--color-accent)] mb-2" />
+                            <p class="text-sm font-semibold text-[var(--color-ink)]">PNG output</p>
+                            <p class="text-xs text-[var(--color-ink-muted)] mt-1">First page rendered at 2× scale</p>
                         </div>
                         <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/30">
                             <Icon icon="mdi:file-pdf-box" class="text-2xl text-purple-500 mb-2" />
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">PDF output</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Full multi-page PDF document</p>
+                            <p class="text-sm font-semibold text-[var(--color-ink)]">PDF output</p>
+                            <p class="text-xs text-[var(--color-ink-muted)] mt-1">Full multi-page PDF document</p>
                         </div>
-                        <div class="p-4 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/30">
+                        <div class="p-4 rounded-xl bg-[var(--color-success)]/10 border border-[var(--color-success)]/20">
                             <Icon icon="mdi:lightning-bolt" class="text-2xl text-green-500 mb-2" />
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Cached results</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Identical inputs skip recompilation</p>
+                            <p class="text-sm font-semibold text-[var(--color-ink)]">Cached results</p>
+                            <p class="text-xs text-[var(--color-ink-muted)] mt-1">Identical inputs skip recompilation</p>
                         </div>
                     </div>
-                    <div class="bg-gray-50 dark:bg-black/30 rounded-xl p-4 border border-gray-200 dark:border-white/10">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Base URL</p>
-                        <code class="font-mono text-sm text-blue-600 dark:text-blue-400">{baseUrl}</code>
+                    <div class="bg-[var(--color-surface-muted)] rounded-xl p-4 border border-[var(--color-line)]">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)] mb-1">Base URL</p>
+                        <code class="font-mono text-sm text-[var(--color-accent)]">{baseUrl}</code>
                     </div>
                 </div>
             {/if}
 
             {#if activeSection === 'auth'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 sm:p-8">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <Icon icon="mdi:key-outline" class="text-2xl text-blue-500" />
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] p-6 sm:p-8">
+                    <h2 class="text-xl font-bold text-[var(--color-ink)] mb-4 flex items-center gap-2">
+                        <Icon icon="mdi:key-outline" class="text-2xl text-[var(--color-accent)]" />
                         Authentication
                     </h2>
-                    <p class="text-gray-600 dark:text-gray-300 mb-6">
-                        All requests must include an API key in the <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">Authorization</code> header.
+                    <p class="text-[var(--color-ink-muted)] mb-6">
+                        All requests must include an API key in the <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">Authorization</code> header.
                     </p>
                     <div class="space-y-4">
                         <div>
-                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Header format</p>
+                            <p class="text-sm font-semibold text-[var(--color-ink-muted)] mb-2">Header format</p>
                             <pre class="rounded-xl border border-gray-700 overflow-x-auto"><code class="hljs block px-4 py-3 text-xs font-mono leading-relaxed rounded-xl">{@html hljs.highlight('Authorization: Bearer td_your_api_key_here', { language: 'bash' }).value}</code></pre>
                         </div>
                         <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/30 flex gap-3">
@@ -273,10 +273,10 @@ with open("output.png", "wb") as f:
                             </div>
                         </div>
                         <div>
-                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Managing keys</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                            <p class="text-sm font-semibold text-[var(--color-ink-muted)] mb-1">Managing keys</p>
+                            <p class="text-sm text-[var(--color-ink-muted)]">
                                 Create, regenerate, and revoke keys in
-                                <a href="/settings" class="text-blue-600 dark:text-blue-400 hover:underline">Settings → API Keys</a>.
+                                <a href="/settings" class="text-[var(--color-accent)] hover:underline">Settings → API Keys</a>.
                                 The full key is shown only once at creation time.
                             </p>
                         </div>
@@ -285,43 +285,43 @@ with open("output.png", "wb") as f:
             {/if}
 
             {#if activeSection === 'endpoint'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 sm:p-8 space-y-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Icon icon="mdi:api" class="text-2xl text-blue-500" />
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] p-6 sm:p-8 space-y-6">
+                    <h2 class="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2">
+                        <Icon icon="mdi:api" class="text-2xl text-[var(--color-accent)]" />
                         POST /v1/render
                     </h2>
 
                     <div>
                         <div class="flex items-center gap-2 mb-3">
-                            <span class="px-2 py-0.5 text-xs font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-md">POST</span>
-                            <code class="font-mono text-sm text-gray-800 dark:text-gray-200">/v1/render</code>
+                            <span class="px-2 py-0.5 text-xs font-bold bg-green-100 dark:bg-green-900/30 text-[var(--color-success)] rounded-md">POST</span>
+                            <code class="font-mono text-sm text-[var(--color-ink)]">/v1/render</code>
                         </div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                        <p class="text-sm text-[var(--color-ink-muted)]">
                             Compile Typst markup and return rendered output as PNG, PDF, or HTML.
                             Results are cached for 1 hour — identical inputs return the cached result without recompiling.
                         </p>
                     </div>
 
-                    <div class="h-px bg-gray-200 dark:bg-white/10"></div>
+                    <div class="h-px bg-[var(--color-line)]"></div>
 
                     <div>
-                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">Request headers</p>
+                        <p class="text-sm font-bold text-[var(--color-ink)] mb-3">Request headers</p>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead>
-                                    <tr class="border-b border-gray-200 dark:border-white/10">
-                                        <th class="text-left py-2 pr-4 font-semibold text-gray-700 dark:text-gray-300 w-40">Header</th>
-                                        <th class="text-left py-2 font-semibold text-gray-700 dark:text-gray-300">Value</th>
+                                    <tr class="border-b border-[var(--color-line)]">
+                                        <th class="text-left py-2 pr-4 font-semibold text-[var(--color-ink-muted)] w-40">Header</th>
+                                        <th class="text-left py-2 font-semibold text-[var(--color-ink-muted)]">Value</th>
                                     </tr>
                                 </thead>
-                                <tbody class="text-gray-600 dark:text-gray-400">
-                                    <tr class="border-b border-gray-100 dark:border-white/5">
+                                <tbody class="text-[var(--color-ink-muted)]">
+                                    <tr class="border-b border-[var(--color-line)]">
                                         <td class="py-2 pr-4 font-mono text-xs">Authorization</td>
-                                        <td class="py-2"><code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">Bearer &lt;api-key&gt;</code> — required</td>
+                                        <td class="py-2"><code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">Bearer &lt;api-key&gt;</code> — required</td>
                                     </tr>
                                     <tr>
                                         <td class="py-2 pr-4 font-mono text-xs">Content-Type</td>
-                                        <td class="py-2"><code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">application/json</code> — required</td>
+                                        <td class="py-2"><code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">application/json</code> — required</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -329,23 +329,23 @@ with open("output.png", "wb") as f:
                     </div>
 
                     <div>
-                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">Request body</p>
+                        <p class="text-sm font-bold text-[var(--color-ink)] mb-3">Request body</p>
                         <pre class="rounded-xl border border-gray-700 overflow-x-auto"><code class="hljs block px-4 py-4 text-xs font-mono leading-relaxed rounded-xl">{@html hSchema}</code></pre>
                     </div>
 
                     <div>
-                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">Response</p>
-                        <div class="p-3 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/30 text-sm">
-                            <span class="font-mono text-xs font-bold text-green-700 dark:text-green-400">200 OK</span>
-                            <span class="text-gray-600 dark:text-gray-400 ml-2">Response body with <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">Content-Type: image/png</code>, <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">application/pdf</code>, or <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">text/html</code></span>
+                        <p class="text-sm font-bold text-[var(--color-ink)] mb-3">Response</p>
+                        <div class="p-3 rounded-lg bg-[var(--color-success)]/10 border border-[var(--color-success)]/20 text-sm">
+                            <span class="font-mono text-xs font-bold text-[var(--color-success)]">200 OK</span>
+                            <span class="text-[var(--color-ink-muted)] ml-2">Response body with <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-2 rounded">Content-Type: image/png</code>, <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-2 rounded">application/pdf</code>, or <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-2 rounded">text/html</code></span>
                         </div>
                     </div>
 
                     <div>
-                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">Compilation errors</p>
-                        <div class="p-3 mb-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 text-sm">
-                            <span class="font-mono text-xs font-bold text-red-700 dark:text-red-400">422 Unprocessable Entity</span>
-                            <span class="text-gray-600 dark:text-gray-400 ml-2">JSON body describing every Typst error. <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">error</code> is a readable summary; <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-2 rounded">details</code> lists each diagnostic with its message, severity, and source line and column.</span>
+                        <p class="text-sm font-bold text-[var(--color-ink)] mb-3">Compilation errors</p>
+                        <div class="p-3 mb-3 rounded-lg bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 text-sm">
+                            <span class="font-mono text-xs font-bold text-[var(--color-danger)]">422 Unprocessable Entity</span>
+                            <span class="text-[var(--color-ink-muted)] ml-2">JSON body describing every Typst error. <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-2 rounded">error</code> is a readable summary; <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-2 rounded">details</code> lists each diagnostic with its message, severity, and source line and column.</span>
                         </div>
                         <pre class="rounded-xl border border-gray-700 overflow-x-auto"><code class="hljs block px-4 py-4 text-xs font-mono leading-relaxed rounded-xl">{@html hCompileErr}</code></pre>
                     </div>
@@ -358,9 +358,9 @@ with open("output.png", "wb") as f:
             {/if}
 
             {#if activeSection === 'examples'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 sm:p-8 space-y-8">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Icon icon="mdi:code-braces" class="text-2xl text-blue-500" />
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] p-6 sm:p-8 space-y-8">
+                    <h2 class="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2">
+                        <Icon icon="mdi:code-braces" class="text-2xl text-[var(--color-accent)]" />
                         Examples
                     </h2>
 
@@ -374,11 +374,11 @@ with open("output.png", "wb") as f:
                     ] as ex}
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <p class="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <p class="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
                                     <Icon icon={ex.icon} class="text-lg {ex.iconColor}" />
                                     {ex.label}
                                 </p>
-                                <button onclick={() => copy(ex.id, ex.raw)} class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-white/10">
+                                <button onclick={() => copy(ex.id, ex.raw)} class="flex items-center gap-1 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] transition-colors px-2 py-1 rounded-md hover:bg-[var(--color-surface-sunken)]">
                                     <Icon icon={copiedSnippet === ex.id ? 'mdi:check' : 'mdi:content-copy'} class="text-sm" />
                                     {copiedSnippet === ex.id ? 'Copied!' : 'Copy'}
                                 </button>
@@ -390,19 +390,19 @@ with open("output.png", "wb") as f:
             {/if}
 
             {#if activeSection === 'rate-limits'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 sm:p-8">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                        <Icon icon="mdi:speedometer" class="text-2xl text-blue-500" />
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] p-6 sm:p-8">
+                    <h2 class="text-xl font-bold text-[var(--color-ink)] mb-6 flex items-center gap-2">
+                        <Icon icon="mdi:speedometer" class="text-2xl text-[var(--color-accent)]" />
                         Rate Limits
                     </h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10">
-                            <p class="text-2xl font-bold text-gray-900 dark:text-white">60</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">requests / minute per key</p>
+                        <div class="p-4 rounded-xl bg-[var(--color-surface-muted)] border border-[var(--color-line)]">
+                            <p class="text-2xl font-bold text-[var(--color-ink)]">60</p>
+                            <p class="text-sm text-[var(--color-ink-muted)] mt-1">requests / minute per key</p>
                         </div>
-                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10">
-                            <p class="text-2xl font-bold text-gray-900 dark:text-white">10</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">API keys per account</p>
+                        <div class="p-4 rounded-xl bg-[var(--color-surface-muted)] border border-[var(--color-line)]">
+                            <p class="text-2xl font-bold text-[var(--color-ink)]">10</p>
+                            <p class="text-sm text-[var(--color-ink-muted)] mt-1">API keys per account</p>
                         </div>
                     </div>
                     <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/30 text-sm text-amber-800 dark:text-amber-300 mb-4">
@@ -410,19 +410,19 @@ with open("output.png", "wb") as f:
                         <p>Identical inputs (same code + files) skip recompilation and are served from cache for up to 1 hour. Cached responses return instantly and do not consume your rate limit.</p>
                     </div>
                     <div>
-                        <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">When exceeded</p>
-                        <div class="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 text-sm">
-                            <code class="font-mono text-xs font-bold text-red-700 dark:text-red-400">429 Too Many Requests</code>
-                            <span class="text-gray-600 dark:text-gray-400 ml-2">— wait for the current 60-second window to reset.</span>
+                        <p class="text-sm font-semibold text-[var(--color-ink-muted)] mb-2">When exceeded</p>
+                        <div class="p-3 rounded-lg bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 text-sm">
+                            <code class="font-mono text-xs font-bold text-[var(--color-danger)]">429 Too Many Requests</code>
+                            <span class="text-[var(--color-ink-muted)] ml-2">— wait for the current 60-second window to reset.</span>
                         </div>
                     </div>
                 </div>
             {/if}
 
             {#if activeSection === 'errors'}
-                <div class="bg-white dark:bg-black/20 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 sm:p-8">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                        <Icon icon="mdi:alert-circle-outline" class="text-2xl text-blue-500" />
+                <div class="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-line)] p-6 sm:p-8">
+                    <h2 class="text-xl font-bold text-[var(--color-ink)] mb-6 flex items-center gap-2">
+                        <Icon icon="mdi:alert-circle-outline" class="text-2xl text-[var(--color-accent)]" />
                         Error Reference
                     </h2>
                     <div class="space-y-3">
@@ -433,18 +433,18 @@ with open("output.png", "wb") as f:
                             { code: '429', name: 'Too Many Requests',     desc: 'Rate limit exceeded. Wait for the current 60-second window to reset.'                   },
                             { code: '500', name: 'Internal Server Error', desc: 'Unexpected server error. Try again after a short delay.'                                },
                         ] as err}
-                            <div class="flex items-start gap-4 p-4 rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-black/20">
-                                <code class="font-mono text-sm font-bold text-gray-800 dark:text-gray-200 flex-shrink-0 w-8">{err.code}</code>
+                            <div class="flex items-start gap-4 p-4 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-muted)]">
+                                <code class="font-mono text-sm font-bold text-[var(--color-ink)] flex-shrink-0 w-8">{err.code}</code>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{err.name}</p>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{err.desc}</p>
+                                    <p class="text-sm font-semibold text-[var(--color-ink)]">{err.name}</p>
+                                    <p class="text-sm text-[var(--color-ink-muted)] mt-0.5">{err.desc}</p>
                                 </div>
                             </div>
                         {/each}
                     </div>
-                    <div class="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10">
-                        <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Error body</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Compilation failures (<code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">422</code>) return a JSON body with an <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">error</code> summary and a <code class="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">details</code> array. All other errors return plain text describing the issue.</p>
+                    <div class="mt-6 p-4 rounded-xl bg-[var(--color-surface-muted)] border border-[var(--color-line)]">
+                        <p class="text-sm font-semibold text-[var(--color-ink-muted)] mb-1">Error body</p>
+                        <p class="text-sm text-[var(--color-ink-muted)]">Compilation failures (<code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">422</code>) return a JSON body with an <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">error</code> summary and a <code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">details</code> array. All other errors return plain text describing the issue.</p>
                     </div>
                 </div>
             {/if}

@@ -4,6 +4,9 @@
 	import Icon from '@iconify/svelte';
 	import Navbar from '$lib/components/dashboard/Navbar.svelte';
 	import ProjectCard from '$lib/components/dashboard/ProjectCard.svelte';
+	import PromptModal from '$lib/components/PromptModal.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 
 	interface Project {
 		id: string;
@@ -18,7 +21,6 @@
 	let shared = $state<Project[]>([]);
 	let loading = $state(true);
 	let showCreate = $state(false);
-	let newName = $state('');
 	let creating = $state(false);
 
 	let activeMenu = $state<string | null>(null);
@@ -27,21 +29,20 @@
 	let renameName = $state('');
 	let showInfo = $state(false);
 	let infoProject = $state<Project | null>(null);
+	let deleteTarget = $state<{ id: string; name: string } | null>(null);
 
 	function setActiveMenu(id: string | null) { activeMenu = id; }
 	function openInfo(project: Project) { activeMenu = null; infoProject = project; showInfo = true; }
 	function openRename(id: string, name: string) { activeMenu = null; renameId = id; renameName = name; showRename = true; }
 
-	async function submitRename(e: Event) {
-		e.preventDefault();
-		if (!renameName.trim()) return;
+	async function submitRename(name: string) {
 		const res = await fetch(`/api/projects/${renameId}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name: renameName.trim() })
+			body: JSON.stringify({ name })
 		});
 		if (res.ok) {
-			projects = projects.map((p) => (p.id === renameId ? { ...p, name: renameName.trim() } : p));
+			projects = projects.map((p) => (p.id === renameId ? { ...p, name } : p));
 		}
 		showRename = false;
 	}
@@ -62,13 +63,12 @@
 		loading = false;
 	}
 
-	async function create() {
-		if (!newName.trim()) return;
+	async function create(name: string) {
 		creating = true;
 		const res = await fetch('/api/projects', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name: newName.trim() })
+			body: JSON.stringify({ name })
 		});
 		creating = false;
 		if (res.ok) {
@@ -77,10 +77,16 @@
 		}
 	}
 
-	async function remove(id: string, name: string) {
-		if (!confirm(`Delete project "${name}"? This cannot be undone.`)) return;
-		const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
-		if (res.ok) projects = projects.filter((p) => p.id !== id);
+	function requestDelete(id: string, name: string) {
+		activeMenu = null;
+		deleteTarget = { id, name };
+	}
+
+	async function confirmDeleteProject() {
+		if (!deleteTarget) return;
+		const res = await fetch(`/api/projects/${deleteTarget.id}`, { method: 'DELETE' });
+		if (res.ok) projects = projects.filter((p) => p.id !== deleteTarget!.id);
+		deleteTarget = null;
 	}
 
 	onMount(load);
@@ -92,32 +98,32 @@
 
 <svelte:window onclick={handleWindowClick} />
 
-<div class="min-h-screen bg-gray-50 dark:bg-[var(--theme-bg)]">
+<div class="min-h-screen bg-[var(--color-surface-muted)]">
 	<Navbar />
 
 	<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 		<div class="flex items-center justify-between mb-6">
 			<div>
-				<button onclick={() => goto('/dashboard')} class="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors mb-2 flex items-center gap-1.5">
+				<button onclick={() => goto('/dashboard')} class="text-sm font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition-colors mb-2 flex items-center gap-1.5">
 					<Icon icon="mdi:arrow-left" class="text-lg" />
 					Back to Dashboard
 				</button>
-				<h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-					<Icon icon="mdi:folder-multiple-outline" class="text-blue-500" />
+				<h2 class="text-2xl font-bold text-[var(--color-ink)] flex items-center gap-2">
+					<Icon icon="mdi:folder-multiple-outline" class="text-[var(--color-accent)]" />
 					Projects
 				</h2>
-				<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Multi-file Typst workspaces with their own <code class="font-mono text-xs">typst.toml</code>.</p>
+				<p class="text-sm text-[var(--color-ink-muted)] mt-1">Multi-file Typst workspaces with their own <code class="font-mono text-xs">typst.toml</code>.</p>
 			</div>
-			<button onclick={() => { showCreate = true; newName = ''; }} class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
+			<button onclick={() => (showCreate = true)} class="px-4 py-2 text-sm rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition flex items-center gap-2">
 				<Icon icon="mdi:plus" class="text-lg" /> New Project
 			</button>
 		</div>
 
 		{#if loading}
-			<p class="text-gray-500 dark:text-gray-400">Loading…</p>
+			<p class="text-[var(--color-ink-muted)]">Loading…</p>
 		{:else}
 			{#if projects.length === 0}
-				<div class="text-center py-16 text-gray-500 dark:text-gray-400">
+				<div class="text-center py-16 text-[var(--color-ink-muted)]">
 					<Icon icon="mdi:folder-multiple-outline" class="text-5xl mx-auto mb-3 opacity-50" />
 					<p>No projects yet. Create one to start a multi-file project.</p>
 				</div>
@@ -130,29 +136,29 @@
 							{setActiveMenu}
 							{openInfo}
 							{openRename}
-							deleteProject={remove}
+							deleteProject={requestDelete}
 						/>
 					{/each}
 				</div>
 			{/if}
 
 			{#if shared.length > 0}
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mt-10 mb-4 flex items-center gap-2">
-					<Icon icon="mdi:account-group-outline" class="text-blue-500" /> Shared with me
+				<h3 class="text-lg font-semibold text-[var(--color-ink)] mt-10 mb-4 flex items-center gap-2">
+					<Icon icon="mdi:account-group-outline" class="text-[var(--color-accent)]" /> Shared with me
 				</h3>
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 					{#each shared as project (project.id)}
-						<button onclick={() => goto(`/project/${project.id}`)} class="text-left bg-white dark:bg-black/20 rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden hover:shadow-md transition-shadow">
-							<div class="h-32 bg-gray-50 dark:bg-black/30 flex items-center justify-center overflow-hidden border-b border-gray-100 dark:border-white/5">
+						<button onclick={() => goto(`/project/${project.id}`)} class="text-left bg-[var(--color-surface)] rounded-lg border border-[var(--color-line)] overflow-hidden hover:border-[var(--color-accent)] transition">
+							<div class="h-32 bg-[var(--color-surface-muted)] flex items-center justify-center overflow-hidden border-b border-[var(--color-line)]">
 								{#if project.thumbnail_svg}
 									{@html project.thumbnail_svg}
 								{:else}
-									<Icon icon="mdi:folder-multiple-outline" class="text-4xl text-gray-300 dark:text-gray-600" />
+									<Icon icon="mdi:folder-multiple-outline" class="text-4xl text-[var(--color-ink-muted)]" />
 								{/if}
 							</div>
 							<div class="p-3">
-								<p class="font-medium text-gray-900 dark:text-white truncate">{project.name}</p>
-								<p class="text-xs text-gray-400 mt-0.5">{project.effective_role}</p>
+								<p class="font-medium text-[var(--color-ink)] truncate">{project.name}</p>
+								<p class="text-xs text-[var(--color-ink-muted)] mt-0.5">{project.effective_role}</p>
 							</div>
 						</button>
 					{/each}
@@ -163,45 +169,59 @@
 </div>
 
 {#if showCreate}
-	<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onclick={() => (showCreate = false)} role="presentation">
-		<div class="bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-md p-6" onclick={(e) => e.stopPropagation()} role="presentation">
-			<h2 class="text-lg font-bold mb-4 flex items-center gap-2"><Icon icon="mdi:folder-plus-outline" class="text-blue-500" /> New Project</h2>
-			<input bind:value={newName} placeholder="Project name" onkeydown={(e) => e.key === 'Enter' && create()} class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-transparent text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-			<div class="flex justify-end gap-2">
-				<button onclick={() => (showCreate = false)} class="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10">Cancel</button>
-				<button onclick={create} disabled={creating} class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">Create</button>
-			</div>
-		</div>
-	</div>
+	<PromptModal
+		title="New project"
+		label="Project name"
+		icon="ph:folder-star"
+		placeholder="Untitled Project"
+		confirmLabel="Create"
+		onsubmit={create}
+		onclose={() => (showCreate = false)}
+	/>
 {/if}
 
 {#if showRename}
-	<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onclick={() => (showRename = false)} role="presentation">
-		<form onsubmit={submitRename} class="bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-md p-6" onclick={(e) => e.stopPropagation()}>
-			<h2 class="text-lg font-bold mb-4 flex items-center gap-2"><Icon icon="mdi:pencil-outline" class="text-yellow-500" /> Rename Project</h2>
-			<input bind:value={renameName} class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-transparent text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-			<div class="flex justify-end gap-2">
-				<button type="button" onclick={() => (showRename = false)} class="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10">Cancel</button>
-				<button type="submit" class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Save</button>
-			</div>
-		</form>
-	</div>
+	<PromptModal
+		title="Rename project"
+		label="Project name"
+		icon="ph:pencil-simple"
+		value={renameName}
+		confirmLabel="Save"
+		onsubmit={submitRename}
+		onclose={() => (showRename = false)}
+	/>
 {/if}
 
 {#if showInfo && infoProject}
-	<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onclick={() => (showInfo = false)} role="presentation">
-		<div class="bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-sm overflow-hidden" onclick={(e) => e.stopPropagation()} role="presentation">
-			<div class="p-6 border-b border-gray-100 dark:border-white/10 flex items-center gap-3">
-				<Icon icon="mdi:folder-multiple-outline" class="text-xl text-blue-500" />
-				<h3 class="text-lg font-semibold flex-grow truncate">{infoProject.name}</h3>
+	<Modal title={infoProject.name} icon="ph:folder-star" onclose={() => (showInfo = false)}>
+		<div class="flex flex-col gap-4 text-xs">
+			<div>
+				<p class="mb-1 font-medium text-[var(--color-ink-muted)]">Entrypoint</p>
+				<p class="font-mono text-sm text-[var(--color-ink)]">{infoProject.entrypoint}</p>
 			</div>
-			<div class="p-6 space-y-4 text-sm">
-				<div><p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Entrypoint</p><p class="font-mono">{infoProject.entrypoint}</p></div>
-				<div><p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Last Modified</p><p>{new Date(infoProject.updated_at.endsWith('Z') ? infoProject.updated_at : infoProject.updated_at + 'Z').toLocaleString()}</p></div>
-			</div>
-			<div class="p-4 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/10 flex justify-end">
-				<button onclick={() => (showInfo = false)} class="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Close</button>
+			<div>
+				<p class="mb-1 font-medium text-[var(--color-ink-muted)]">Last modified</p>
+				<p class="text-sm text-[var(--color-ink)]">{new Date(infoProject.updated_at.endsWith('Z') ? infoProject.updated_at : infoProject.updated_at + 'Z').toLocaleString()}</p>
 			</div>
 		</div>
-	</div>
+
+		{#snippet footer()}
+			<button
+				onclick={() => (showInfo = false)}
+				class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+			>
+				Close
+			</button>
+		{/snippet}
+	</Modal>
+{/if}
+
+{#if deleteTarget}
+	<ConfirmModal
+		title="Delete project"
+		message={`'${deleteTarget.name}' will be permanently deleted. This cannot be undone.`}
+		confirmLabel="Delete"
+		onconfirm={confirmDeleteProject}
+		onclose={() => (deleteTarget = null)}
+	/>
 {/if}

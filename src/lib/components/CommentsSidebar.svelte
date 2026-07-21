@@ -102,7 +102,7 @@
 			<h2 class="text-sm font-semibold text-[var(--theme-text)]">Comments</h2>
 			<span class="text-[10px] font-bold px-2 py-0.5 rounded-full">{comments.length}</span>
 		</div>
-		<button onclick={onClose} class="p-1.5 hover:text-gray-600 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 rounded-md transition-colors" title="Close Comments">
+		<button onclick={onClose} class="p-1.5 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Close Comments">
 			<Icon icon="mdi:close" class="text-lg" />
 		</button>
 	</div>
@@ -113,7 +113,7 @@
 				<Icon icon="mdi:loading" class="animate-spin text-2xl" />
 			</div>
 		{:else if error}
-			<div class="text-red-500 text-sm text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-900/30">
+			<div class="text-[var(--color-danger)] text-sm text-center p-4 bg-[var(--color-danger)]/10 rounded-md border border-[var(--color-danger)]/20">
 				{error}
 			</div>
 		{:else if comments.length === 0}
@@ -126,7 +126,7 @@
 				<div class="group flex flex-col gap-2 p-3 border rounded-xl shadow-sm hover:shadow-md transition-all {comment.resolved ? 'opacity-60' : ''} bg-[var(--theme-bg)] text-[var(--theme-text)] border-[var(--theme-border)]">
 					<div class="flex justify-between items-start">
 						<div class="flex items-center gap-2">
-							<div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold">
+							<div class="w-6 h-6 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] flex items-center justify-center text-xs font-bold">
 								{(comment.author_name || 'A').substring(0, 1).toUpperCase()}
 							</div>
 							<div>
@@ -137,11 +137,11 @@
 						
 						<div class="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
 							{#if $userStore?.id === comment.user_id}
-								<button onclick={() => deleteComment(comment.id)} class="p-1 hover:text-red-500 rounded hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors" title="Delete">
+								<button onclick={() => deleteComment(comment.id)} class="p-1 hover:text-[var(--color-danger)] rounded hover:bg-[var(--color-danger)]/10 transition-colors" title="Delete">
 									<Icon icon="mdi:trash-can-outline" class="text-xs" />
 								</button>
 							{/if}
-							<button onclick={() => toggleResolve(comment)} class="p-1 hover:text-emerald-500 rounded hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors" title={comment.resolved ? "Reopen" : "Resolve"}>
+							<button onclick={() => toggleResolve(comment)} class="p-1 hover:text-[var(--color-success)] rounded hover:bg-[var(--color-success)]/10 transition-colors" title={comment.resolved ? "Reopen" : "Resolve"}>
 								<Icon icon={comment.resolved ? "mdi:check-circle" : "mdi:check-circle-outline"} class="text-xs" />
 							</button>
 						</div>
@@ -157,7 +157,7 @@
 			<textarea
 				bind:value={newCommentContent}
 				placeholder="Add a comment..."
-				class="w-full border text-[var(--theme-text)] text-sm rounded-xl px-3 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none min-h-[80px] bg-[var(--theme-bg)] border-[var(--theme-border)]"
+				class="w-full border text-[var(--theme-text)] text-sm rounded-md px-3 py-2.5 pr-10 focus:outline-none focus:border-[var(--color-accent)] resize-none min-h-[80px] bg-[var(--theme-bg)] border-[var(--theme-border)]"
 				onkeydown={(e) => {
 					if (e.key === 'Enter' && !e.shiftKey) {
 						e.preventDefault();
@@ -168,7 +168,7 @@
 			<button 
 				onclick={postComment}
 				disabled={!newCommentContent.trim()}
-				class="absolute bottom-2.5 right-2.5 p-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-zinc-700 disabled:text-gray-500 rounded-lg transition-colors"
+				class="absolute bottom-2.5 right-2.5 p-1.5 bg-[var(--color-accent)] hover:opacity-90 disabled:bg-[var(--color-surface-sunken)] disabled:text-[var(--color-ink-muted)] rounded-md transition-colors"
 				title="Post (Enter)"
 			>
 				<Icon icon="mdi:send" class="text-sm" />

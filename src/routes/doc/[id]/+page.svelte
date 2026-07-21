@@ -129,7 +129,7 @@
 	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative" oncontextmenu={handleContextMenu}>
 
 		{#if !isViewer}
-		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 shadow-[1px_0_10px_rgba(0,0,0,0.05)] dark:shadow-[1px_0_10px_rgba(0,0,0,0.2)] {$previewOpenStore ? 'w-full md:w-1/2 border-r border-gray-200 dark:border-white/10' : 'w-full'}">
+		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 {$previewOpenStore ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'w-full'}">
 			{#if initialized}
 				<Editor />
 			{/if}
@@ -137,7 +137,7 @@
 		{/if}
 
 		{#if $previewOpenStore || isViewer}
-		<div class="{isViewer ? 'w-full' : 'w-full md:w-1/2'} relative bg-white/50 dark:bg-black/20 min-h-[50%] md:min-h-0 flex flex-col">
+		<div class="{isViewer ? 'w-full' : 'w-full md:w-1/2'} relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
 			<Preview {svgs} />
 			<ErrorBanner {errors} />
 		</div>
@@ -158,7 +158,7 @@
 		</button>
 		<div class="h-px bg-[var(--theme-border)] my-1"></div>
 		<button onclick={() => { navigator.clipboard.writeText(contextMenu.text); closeContextMenu(); }} class="w-full text-left px-4 py-2 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2">
-			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--color-ink-muted)]"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
 			Copy Text
 		</button>
 	</div>

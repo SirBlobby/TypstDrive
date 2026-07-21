@@ -224,7 +224,7 @@
 		</aside>
 
 		{#if !readOnly}
-			<div class="flex flex-col min-h-0 {$previewOpenStore ? 'w-full md:w-1/2 border-r border-gray-200 dark:border-white/10' : 'flex-1'}">
+			<div class="flex flex-col min-h-0 {$previewOpenStore ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'flex-1'}">
 				{#if ready && activeEntry}
 					{#key activeFileId}
 						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} enableLsp={false} />
@@ -234,7 +234,7 @@
 		{/if}
 
 		{#if $previewOpenStore || readOnly}
-			<div class="{readOnly ? 'flex-1' : 'w-full md:w-1/2'} relative bg-white/50 dark:bg-black/20 flex flex-col">
+			<div class="{readOnly ? 'flex-1' : 'w-full md:w-1/2'} relative bg-[var(--color-surface)] flex flex-col">
 				<Preview {svgs} />
 				<ErrorBanner {errors} />
 			</div>
@@ -247,7 +247,7 @@
 {#if contextMenu.show}
 	<div class="fixed z-[9999] bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-lg shadow-xl border border-[var(--theme-border)] py-1 min-w-[180px] overflow-hidden" style="left: {contextMenu.x}px; top: {contextMenu.y}px;">
 		<button onclick={() => { navigator.clipboard.writeText(contextMenu.text); closeContextMenu(); }} class="w-full text-left px-4 py-2 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2">
-			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--color-ink-muted)]"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
 			Copy Text
 		</button>
 	</div>

@@ -17,6 +17,6 @@
 	<meta name="description" content="Collaborative Typst Editor." />
 </svelte:head>
 
-<div class="h-full flex items-center justify-center text-gray-500">
+<div class="h-full flex items-center justify-center text-[var(--color-ink-muted)]">
     Redirecting...
 </div>

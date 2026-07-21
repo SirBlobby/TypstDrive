@@ -55,13 +55,13 @@
 </script>
 
 <div class="fixed right-0 top-0 bottom-0 w-80 bg-[var(--theme-bg)] backdrop-blur-xl border-l shadow-2xl flex flex-col z-[70] transform transition-transform duration-300 border-[var(--theme-border)]">
-	<div class="flex items-center justify-between px-4 py-3 border-b bg-gray-50/50 bg-[var(--theme-bg)] text-[var(--theme-text)] border-[var(--theme-border)]">
+	<div class="flex items-center justify-between px-4 py-3 border-b bg-[var(--theme-bg)] text-[var(--theme-text)] border-[var(--theme-border)]">
 		<div class="flex items-center gap-2">
 			<Icon icon="mdi:history" class="text-lg" />
 			<h2 class="text-sm font-semibold text-[var(--theme-text)]">Version History</h2>
 			<span class="text-[10px] font-bold px-2 py-0.5 rounded-full">{versions.length}</span>
 		</div>
-		<button onclick={onClose} class="p-1.5 hover:text-gray-600 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 rounded-md transition-colors" title="Close Version History">
+		<button onclick={onClose} class="p-1.5 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Close Version History">
 			<Icon icon="mdi:close" class="text-lg" />
 		</button>
 	</div>
@@ -72,7 +72,7 @@
 				<Icon icon="mdi:loading" class="animate-spin text-2xl" />
 			</div>
 		{:else if error}
-			<div class="text-red-500 text-sm text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-900/30">
+			<div class="text-[var(--color-danger)] text-sm text-center p-4 bg-[var(--color-danger)]/10 rounded-md border border-[var(--color-danger)]/20">
 				{error}
 			</div>
 		{:else if versions.length === 0}
@@ -96,11 +96,11 @@
 					</div>
 					
 					<div class="flex gap-2 mt-2">
-						<button onclick={() => previewVersion = version} class="flex-1 px-3 py-1.5 hover:bg-gray-200 dark:hover:bg-white/20 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5">
+						<button onclick={() => previewVersion = version} class="flex-1 px-3 py-1.5 hover:bg-[var(--color-surface-sunken)] text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5">
 							<Icon icon="mdi:eye" class="text-sm" />
 							Preview
 						</button>
-						<button onclick={() => restoreVersion(version)} class="flex-1 px-3 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/40 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5">
+						<button onclick={() => restoreVersion(version)} class="flex-1 px-3 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/40 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5">
 							<Icon icon="mdi:restore" class="text-sm" />
 							Restore
 						</button>
@@ -120,17 +120,17 @@
 					<h3 class="text-lg font-semibold text-[var(--theme-text)]">Previewing Version</h3>
 					<span class="text-sm">{formatDate(previewVersion.created_at)}</span>
 				</div>
-				<button onclick={() => previewVersion = null} class="p-1.5 hover:text-gray-600 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 rounded-md transition-colors" title="Close Preview">
+				<button onclick={() => previewVersion = null} class="p-1.5 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Close Preview">
 					<Icon icon="mdi:close" class="text-xl" />
 				</button>
 			</div>
-			
-			<div class="flex-1 overflow-auto p-6 bg-gray-50/50 bg-[var(--theme-bg)] text-[var(--theme-text)]">
+
+			<div class="flex-1 overflow-auto p-6 bg-[var(--theme-bg)] text-[var(--theme-text)]">
 				<pre class="text-sm font-mono whitespace-pre-wrap word-break-break-word">{previewVersion.content}</pre>
 			</div>
-			
-			<div class="p-4 border-t flex justify-end gap-3 bg-white/50 rounded-b-2xl border-[var(--theme-border)]">
-				<button onclick={() => previewVersion = null} class="px-4 py-2 text-sm font-medium hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors">
+
+			<div class="p-4 border-t flex justify-end gap-3 bg-[var(--color-surface)] rounded-b-2xl border-[var(--theme-border)]">
+				<button onclick={() => previewVersion = null} class="px-4 py-2 text-sm font-medium hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors">
 					Close
 				</button>
 				<button onclick={() => restoreVersion(previewVersion!)} class="bg-purple-600 hover:bg-purple-700 px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
