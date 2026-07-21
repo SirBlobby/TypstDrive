@@ -61,7 +61,7 @@ fn content_hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
-fn hash_token(token: &str) -> String {
+pub(crate) fn hash_token(token: &str) -> String {
     format!("{:x}", Sha256::digest(token.as_bytes()))
 }
 
@@ -108,6 +108,26 @@ pub async fn authenticate(
         .await;
 
     Ok(user_id)
+}
+
+pub(crate) async fn user_id_for_token(state: &AppState, token: &str) -> Option<String> {
+    let row = sqlx::query_as::<_, (String, String)>(
+        "SELECT id, user_id FROM device_tokens WHERE token_hash = ?",
+    )
+    .bind(hash_token(token))
+    .fetch_optional(&state.db)
+    .await
+    .ok()??;
+
+    let (token_id, user_id) = row;
+
+    let _ = sqlx::query("UPDATE device_tokens SET last_used_at = ? WHERE id = ?")
+        .bind(chrono::Utc::now().to_rfc3339())
+        .bind(&token_id)
+        .execute(&state.db)
+        .await;
+
+    Some(user_id)
 }
 
 async fn owned_project(
@@ -409,6 +429,7 @@ pub async fn delete_project(
 
 #[derive(Serialize)]
 pub struct ManifestEntry {
+    pub id: String,
     pub path: String,
     pub kind: String,
     pub hash: String,
@@ -428,9 +449,9 @@ pub struct ProjectManifest {
 async fn plain_contents(
     state: &AppState,
     project_id: &str,
-) -> Result<Vec<(String, String, Vec<u8>, String)>, (StatusCode, String)> {
-    let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>, Option<String>)>(
-        "SELECT path, kind, content, updated_at FROM project_files WHERE project_id = ? ORDER BY path ASC",
+) -> Result<Vec<(String, String, String, Vec<u8>, String)>, (StatusCode, String)> {
+    let rows = sqlx::query_as::<_, (String, String, String, Option<Vec<u8>>, Option<String>)>(
+        "SELECT id, path, kind, content, updated_at FROM project_files WHERE project_id = ? ORDER BY path ASC",
     )
     .bind(project_id)
     .fetch_all(&state.db)
@@ -439,14 +460,14 @@ async fn plain_contents(
 
     Ok(rows
         .into_iter()
-        .map(|(path, kind, content, updated_at)| {
+        .map(|(id, path, kind, content, updated_at)| {
             let raw = content.unwrap_or_default();
             let plain = if kind == "binary" {
                 raw
             } else {
                 decode_text_blob(&raw).into_bytes()
             };
-            (path, kind, plain, updated_at.unwrap_or_default())
+            (id, path, kind, plain, updated_at.unwrap_or_default())
         })
         .collect())
 }
@@ -462,7 +483,8 @@ pub async fn get_manifest(
     let files = plain_contents(&state, &project_id)
         .await?
         .into_iter()
-        .map(|(path, kind, plain, updated_at)| ManifestEntry {
+        .map(|(id, path, kind, plain, updated_at)| ManifestEntry {
+            id,
             path,
             kind,
             hash: content_hash(&plain),
@@ -740,7 +762,7 @@ pub async fn pull_project(
     let files = plain_contents(&state, &project_id)
         .await?
         .into_iter()
-        .map(|(path, kind, plain, _)| {
+        .map(|(_, path, kind, plain, _)| {
             let hash = content_hash(&plain);
             let (encoding, content) = encode_for_transport(&kind, plain);
             BundleFile {

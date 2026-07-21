@@ -1,10 +1,11 @@
 use axum::{
-    extract::{Path, State, Multipart},
+    extract::{Path, Query, State, Multipart},
     http::{header, StatusCode},
     response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use yrs_axum::ws::AxumSink;
@@ -14,6 +15,7 @@ use yrs::{Doc, ReadTxn, Transact, Update};
 use yrs::updates::decoder::Decode;
 use futures_util::stream::{StreamExt, Stream};
 use crate::AppState;
+use crate::devices::{notify_devices, DeviceEvent};
 use crate::models::Document;
 
 pub struct ViewerFilterStream {
@@ -89,22 +91,35 @@ pub struct Diagnostic {
     pub to: Option<usize>,
 }
 
+struct YjsSaveTarget {
+    table: &'static str,
+    row_id: String,
+    owner_id: String,
+    event: DeviceEvent,
+}
+
 pub async fn yjs_handler(
     ws: axum::extract::ws::WebSocketUpgrade,
     Path(id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
     State(state): State<AppState>,
     jar: axum_extra::extract::cookie::SignedCookieJar,
 ) -> impl IntoResponse {
-    let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
+    let user_id_opt = match jar.get("session_user_id").map(|c| c.value().to_string()) {
+        Some(uid) => Some(uid),
+        None => match params.get("token") {
+            Some(token) => crate::desktop::user_id_for_token(&state, token).await,
+            None => None,
+        },
+    };
 
     let mut is_viewer = true;
     let mut initial_content: Option<Vec<u8>> = None;
-    // (table, row_id) the autosave task persists into; None means no persistence.
-    let mut save_target: Option<(&'static str, String)> = None;
+    let mut save_target: Option<YjsSaveTarget> = None;
 
     if let Some(rest) = id.strip_prefix("project:") {
         if let Some((project_id, file_id)) = rest.split_once(':') {
-            if let Some((_project, role)) = crate::projects::project_role(&state, project_id, &user_id_opt).await {
+            if let Some((project, role)) = crate::projects::project_role(&state, project_id, &user_id_opt).await {
                 is_viewer = role == "viewer";
                 if let Ok(Some((content,))) = sqlx::query_as::<_, (Option<Vec<u8>>,)>(
                     "SELECT content FROM project_files WHERE id = ? AND project_id = ?"
@@ -116,7 +131,12 @@ pub async fn yjs_handler(
                 {
                     initial_content = content;
                 }
-                save_target = Some(("project_files", file_id.to_string()));
+                save_target = Some(YjsSaveTarget {
+                    table: "project_files",
+                    row_id: file_id.to_string(),
+                    owner_id: project.owner_id,
+                    event: DeviceEvent::project(project_id),
+                });
             }
         }
     } else {
@@ -148,8 +168,13 @@ pub async fn yjs_handler(
                 }
             }
             initial_content = d.content.clone();
+            save_target = Some(YjsSaveTarget {
+                table: "documents",
+                row_id: id.clone(),
+                owner_id: d.owner_id.clone(),
+                event: DeviceEvent::document(&id),
+            });
         }
-        save_target = Some(("documents", id.clone()));
     }
 
     let mut bcast_map = state.bcast_map.lock().await;
@@ -168,25 +193,38 @@ pub async fn yjs_handler(
         let new_bcast = Arc::new(BroadcastGroup::new(awareness.clone(), 10).await);
         bcast_map.insert(id.clone(), new_bcast.clone());
 
-        if let Some((table, row_id)) = save_target {
+        if let Some(target) = save_target {
             let save_db = state.db.clone();
             let save_awareness = awareness.clone();
+            let save_state = state.clone();
             tokio::spawn(async move {
                 let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+                let mut last_content: Option<Vec<u8>> = None;
                 loop {
                     interval.tick().await;
                     let doc = save_awareness.read().await;
                     let content = doc.doc().transact().encode_state_as_update_v1(&yrs::StateVector::default());
-                    let query = if table == "project_files" {
+                    drop(doc);
+
+                    if last_content.as_ref() == Some(&content) {
+                        continue;
+                    }
+
+                    let query = if target.table == "project_files" {
                         "UPDATE project_files SET content = ? WHERE id = ?"
                     } else {
                         "UPDATE documents SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
                     };
-                    let _ = sqlx::query(query)
-                        .bind(content)
-                        .bind(&row_id)
+                    let result = sqlx::query(query)
+                        .bind(&content)
+                        .bind(&target.row_id)
                         .execute(&save_db)
                         .await;
+
+                    if result.is_ok() {
+                        last_content = Some(content);
+                        notify_devices(&save_state, &target.owner_id, target.event.clone()).await;
+                    }
                 }
             });
         }
