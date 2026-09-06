@@ -14,6 +14,7 @@
 	import { page } from '$app/stores';
 	import { LSPClient, languageServerExtensions } from "@codemirror/lsp-client";
 	import { setDiagnostics, lintGutter } from '@codemirror/lint';
+	import { bracketExtensions, typstBracketSettings } from '../ts/editor-brackets';
 
 	let {
 		ytext = undefined,
@@ -168,7 +169,7 @@
 		);
 
 		const isToml = (filePath ?? '').toLowerCase().endsWith('.toml');
-		const languageExtension = isToml ? StreamLanguage.define(toml) : myLang;
+		const languageExtension = isToml ? StreamLanguage.define(toml) : [myLang, typstBracketSettings(myLang)];
 		const completionExtensions = isToml ? [] : [autocompletion({ override: [typstCompletions] })];
 
 		state = EditorState.create({
@@ -177,6 +178,7 @@
 				lineNumbers(),
 				lintGutter(),
 				history(),
+				...bracketExtensions,
 				keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab] as any),
 				languageExtension,
 				yCollab(activeText, activeProvider.awareness),
