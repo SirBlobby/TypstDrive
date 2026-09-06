@@ -2,9 +2,7 @@
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import { userStore } from '$lib/ts/auth';
-    import { themeStore, darkModeStore } from '$lib/ts/store';
     import Icon from '@iconify/svelte';
-    import ThemePicker from '$lib/components/ThemePicker.svelte';
     import Navbar from '$lib/components/dashboard/Navbar.svelte';
     import FolderRow from '$lib/components/dashboard/FolderRow.svelte';
     import DocCard from '$lib/components/dashboard/DocCard.svelte';

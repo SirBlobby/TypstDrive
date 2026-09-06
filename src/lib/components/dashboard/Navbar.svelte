@@ -2,7 +2,6 @@
     import { goto } from '$app/navigation';
     import { userStore } from '$lib/ts/auth';
     import Icon from '@iconify/svelte';
-    import ThemePicker from '$lib/components/ThemePicker.svelte';
 
     async function logout() {
         await fetch('/api/auth/logout', { method: 'POST' });
@@ -42,8 +41,6 @@
             <Icon icon="mdi:earth" class="text-lg" />
         </a>
         <div class="h-5 w-px bg-[var(--color-line)]"></div>
-
-        <ThemePicker />
 
         <button onclick={() => goto('/settings')} class="text-sm font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition-colors bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] px-2 py-1.5 rounded-md flex items-center gap-2" title="Settings">
             <Icon icon="mdi:cog" class="text-lg" />
