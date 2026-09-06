@@ -726,8 +726,10 @@ pub async fn lsp_handler(
             .arg("--font-path")
             .arg(temp_dir.path())
             .current_dir(temp_dir.path())
+            .env("RUST_LOG", "warn")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
+            .kill_on_drop(true)
             .spawn()
             .expect("Failed to start tinymist lsp");
 
@@ -745,7 +747,7 @@ pub async fn lsp_handler(
         use futures_util::SinkExt;
         let _ = ws_tx.send(axum::extract::ws::Message::Text(init_msg.to_string().into())).await;
 
-        let ws_to_lsp = tokio::spawn(async move {
+        let mut ws_to_lsp = tokio::spawn(async move {
             while let Some(Ok(axum::extract::ws::Message::Text(msg))) = ws_rx.next().await {
                 let content_length = format!("Content-Length: {}\r\n\r\n", msg.len());
                 if stdin.write_all(content_length.as_bytes()).await.is_err() {
@@ -757,7 +759,7 @@ pub async fn lsp_handler(
             }
         });
 
-        let lsp_to_ws = tokio::spawn(async move {
+        let mut lsp_to_ws = tokio::spawn(async move {
             loop {
                 let mut content_length = 0;
                 let mut header = String::new();
@@ -797,9 +799,13 @@ pub async fn lsp_handler(
         });
 
         tokio::select! {
-            _ = ws_to_lsp => {}
-            _ = lsp_to_ws => {}
+            _ = &mut ws_to_lsp => {}
+            _ = &mut lsp_to_ws => {}
             _ = child.wait() => {}
         }
+
+        ws_to_lsp.abort();
+        lsp_to_ws.abort();
+        let _ = child.kill().await;
     })
 }

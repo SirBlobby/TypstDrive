@@ -31,6 +31,7 @@
 	let showPublish = $state(false);
 	let ready = $state(false);
 	let timeoutId: number | undefined;
+	let lastCompiledSources: string | null = null;
 
 	let contextMenu = $state({ show: false, x: 0, y: 0, text: '' });
 
@@ -43,9 +44,18 @@
 		timeoutId = window.setTimeout(triggerCompile, 500);
 	}
 
+	function recompileAfterFileChange() {
+		lastCompiledSources = null;
+		scheduleCompile();
+	}
+
 	function triggerCompile() {
 		if (!$previewOpenStore) return;
-		compileProject(projectId, getAllText())
+		const sources = getAllText();
+		const fingerprint = JSON.stringify(sources);
+		if (fingerprint === lastCompiledSources) return;
+		lastCompiledSources = fingerprint;
+		compileProject(projectId, sources)
 			.then((res) => {
 				if (res.stats) $documentStatsStore = res.stats;
 				if (res.svgs) {
@@ -58,6 +68,7 @@
 				}
 			})
 			.catch(() => {
+				lastCompiledSources = null;
 				errors = [{ message: 'Network or server error compiling project.', severity: 'error' }];
 			});
 	}
@@ -106,7 +117,7 @@
 		const res = await fetch(`/api/projects/${projectId}/files/upload`, { method: 'POST', body: form });
 		if (res.ok) {
 			await loadFiles();
-			triggerCompile();
+			recompileAfterFileChange();
 		}
 	}
 
@@ -119,7 +130,7 @@
 		if (res.ok) {
 			files = files.map((f) => (f.id === file.id ? { ...f, path } : f));
 			renameOpenFile(file.id, path);
-			scheduleCompile();
+			recompileAfterFileChange();
 		}
 	}
 
@@ -132,7 +143,7 @@
 			if (activeFileId === file.id) {
 				activeFileId = files.find((f) => f.kind === 'text')?.id ?? '';
 			}
-			scheduleCompile();
+			recompileAfterFileChange();
 		}
 	}
 
@@ -144,7 +155,7 @@
 		});
 		if (res.ok) {
 			entrypoint = file.path;
-			scheduleCompile();
+			recompileAfterFileChange();
 		}
 	}
 

@@ -14,6 +14,7 @@
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
 	let timeoutId: number | undefined;
+	let lastCompiledContent: string | null = null;
 	let initialized = $state(false);
 	let documentTitle = $state('Untitled Document');
 	let isViewer = $state(false);
@@ -54,6 +55,8 @@
 	function triggerCompile() {
 		if (!text || !$previewOpenStore) return;
 		const content = text.toString();
+		if (content === lastCompiledContent) return;
+		lastCompiledContent = content;
 		const docId = $page.params.id;
 		compileTypst(content, docId)
 			.then((res) => {
@@ -71,6 +74,7 @@
 			})
 			.catch((e) => {
 				console.error('Compilation fetch failed', e);
+				lastCompiledContent = null;
 				errors = [{ message: 'Network or Server Error compiling document.', severity: 'error' }];
 			});
 	}
@@ -105,8 +109,6 @@
 			if (timeoutId) clearTimeout(timeoutId);
 			timeoutId = window.setTimeout(triggerCompile, 500);
 		});
-
-		triggerCompile();
 
 		return () => {
 			if (timeoutId) clearTimeout(timeoutId);

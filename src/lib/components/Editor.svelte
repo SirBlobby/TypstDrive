@@ -12,7 +12,8 @@
 	import { getThemeExtension } from '../ts/themes';
 	import { themeStore, darkModeStore, editorViewStore, editorErrors, triggerLspReconnect } from '../ts/store';
 	import { page } from '$app/stores';
-	import { LSPClient, languageServerExtensions } from "@codemirror/lsp-client";
+	import { LSPClient } from "@codemirror/lsp-client";
+	import { typstLspExtensions } from '../ts/editor-lsp';
 	import { setDiagnostics, lintGutter } from '@codemirror/lint';
 	import { bracketExtensions, typstBracketSettings } from '../ts/editor-brackets';
 
@@ -202,6 +203,7 @@
 		
 		editorViewStore.set(view);
 
+		let lastCompilerDiagnostics = '';
 		unsubscribeErrors = editorErrors.subscribe((errors) => {
 			if (view) {
 				const docLen = view.state.doc.length;
@@ -218,6 +220,9 @@
 						message: e.message
 					};
 				});
+				const snapshot = JSON.stringify(safeDiagnostics);
+				if (snapshot === lastCompilerDiagnostics) return;
+				lastCompilerDiagnostics = snapshot;
 				view.dispatch(setDiagnostics(view.state, safeDiagnostics));
 			}
 		});
@@ -246,6 +251,7 @@
 
 		let lsHandlers: ((value: string) => void)[] = [];
 		let lspInitialized = false;
+		let lastServerDiagnostics = '';
 
 		const transport = {
 			send(message: string) { if (lsSocket?.readyState === WebSocket.OPEN) lsSocket.send(message); },
@@ -261,6 +267,7 @@
 			
 			lspInitialized = false;
 			lsHandlers = [];
+			lastServerDiagnostics = '';
 			
 			lsSocket = new WebSocket(`${protocol}//${host}/api/lsp/${docId}`);
 
@@ -274,7 +281,7 @@
 							client = new LSPClient({
 								rootUri: msg.rootUri,
 								timeout: 10000,
-								extensions: languageServerExtensions()
+								extensions: typstLspExtensions()
 							}).connect(transport);
 
 							view.dispatch({
@@ -292,6 +299,10 @@
 						if (msg.method === 'textDocument/publishDiagnostics' && msg.params && msg.params.diagnostics) {
 							msg.params.diagnostics = msg.params.diagnostics.filter((d: any) => !d.message.toLowerCase().includes('unknown font family'));
 							processedData = JSON.stringify(msg);
+
+							const snapshot = `${msg.params.uri}:${msg.params.version ?? ''}:${JSON.stringify(msg.params.diagnostics)}`;
+							if (snapshot === lastServerDiagnostics) return;
+							lastServerDiagnostics = snapshot;
 						}
 					} catch (err) {}
 				}
