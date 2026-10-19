@@ -1,13 +1,13 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
     Json,
 };
 use axum_extra::extract::cookie::SignedCookieJar;
-use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    access::{self, Resource},
     models::{Collaborator, CollaboratorView, Comment, CreateCommentRequest, Invitation, InviteRequest, UpdateCommentRequest},
     AppState,
 };
@@ -21,7 +21,7 @@ pub async fn invite_collaborator(
     let inviter_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let doc_exists = sqlx::query_as::<_, (String,)>("SELECT id FROM documents WHERE id = ? AND owner_id = ?")
+    let doc_exists = sqlx::query_as::<_, (String,)>("SELECT id FROM documents WHERE id = $1 AND owner_id = $2")
         .bind(&doc_id)
         .bind(&inviter_id)
         .fetch_optional(&state.db)
@@ -32,7 +32,11 @@ pub async fn invite_collaborator(
         return Err((StatusCode::FORBIDDEN, "Only the owner can invite collaborators".to_string()));
     }
 
-    let invited_user = sqlx::query_as::<_, crate::models::User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = ?")
+    if payload.role != "viewer" && payload.role != "editor" {
+        return Err((StatusCode::BAD_REQUEST, "Role must be viewer or editor".to_string()));
+    }
+
+    let invited_user = sqlx::query_as::<_, crate::models::User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1")
         .bind(&payload.email)
         .fetch_optional(&state.db)
         .await
@@ -41,7 +45,7 @@ pub async fn invite_collaborator(
     if let Some(user) = invited_user {
         let collab_id = Uuid::new_v4().to_string();
         let _collab = sqlx::query_as::<_, Collaborator>(
-            "INSERT INTO collaborators (id, document_id, user_id, role) VALUES (?, ?, ?, ?) ON CONFLICT (document_id, user_id) DO UPDATE SET role = excluded.role RETURNING id, document_id, user_id, role, created_at"
+            "INSERT INTO collaborators (id, document_id, user_id, role) VALUES ($1, $2, $3, $4) ON CONFLICT (document_id, user_id) DO UPDATE SET role = excluded.role RETURNING id, document_id, user_id, role, created_at"
         )
         .bind(&collab_id)
         .bind(&doc_id)
@@ -50,6 +54,8 @@ pub async fn invite_collaborator(
         .fetch_one(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        access::revalidate_resource(&state, Resource::Document(doc_id.clone())).await;
 
         let inv = Invitation {
             id: Uuid::new_v4().to_string(),
@@ -65,44 +71,6 @@ pub async fn invite_collaborator(
     }
 }
 
-#[derive(Deserialize)]
-pub struct AcceptInviteQuery {
-    pub token: String,
-}
-
-pub async fn accept_invite(
-    State(state): State<AppState>,
-    jar: SignedCookieJar,
-    Query(query): Query<AcceptInviteQuery>,
-) -> Result<Json<Collaborator>, (StatusCode, String)> {
-    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
-        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
-
-    let invitation = sqlx::query_as::<_, Invitation>(
-        "SELECT id, document_id, role, token, created_at, expires_at FROM invitations WHERE token = ?"
-    )
-    .bind(&query.token)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::NOT_FOUND, "Invalid or expired invitation".to_string()))?;
-
-    let collab_id = Uuid::new_v4().to_string();
-
-    let collab = sqlx::query_as::<_, Collaborator>(
-        "INSERT INTO collaborators (id, document_id, user_id, role) VALUES (?, ?, ?, ?) ON CONFLICT (document_id, user_id) DO UPDATE SET role = excluded.role RETURNING id, document_id, user_id, role, created_at"
-    )
-    .bind(&collab_id)
-    .bind(&invitation.document_id)
-    .bind(&user_id)
-    .bind(&invitation.role)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(collab))
-}
-
 pub async fn list_collaborators(
     State(state): State<AppState>,
     Path(doc_id): Path<String>,
@@ -113,8 +81,8 @@ pub async fn list_collaborators(
 
     // Only owner or collaborators on the document can see the list
     let has_access = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM documents WHERE id = ? AND owner_id = ? \
-         UNION ALL SELECT COUNT(*) FROM collaborators WHERE document_id = ? AND user_id = ?"
+        "SELECT COUNT(*) FROM documents WHERE id = $1 AND owner_id = $2 \
+         UNION ALL SELECT COUNT(*) FROM collaborators WHERE document_id = $3 AND user_id = $4"
     )
     .bind(&doc_id).bind(&user_id).bind(&doc_id).bind(&user_id)
     .fetch_all(&state.db)
@@ -130,7 +98,7 @@ pub async fn list_collaborators(
         "SELECT c.id, c.user_id, u.username, u.email, c.role, c.created_at \
          FROM collaborators c \
          INNER JOIN users u ON u.id = c.user_id \
-         WHERE c.document_id = ? \
+         WHERE c.document_id = $1 \
          ORDER BY c.created_at ASC"
     )
     .bind(&doc_id)
@@ -151,7 +119,7 @@ pub async fn remove_collaborator(
 
     // Only the document owner can remove collaborators
     let is_owner = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM documents WHERE id = ? AND owner_id = ?"
+        "SELECT COUNT(*) FROM documents WHERE id = $1 AND owner_id = $2"
     )
     .bind(&doc_id)
     .bind(&user_id)
@@ -164,7 +132,7 @@ pub async fn remove_collaborator(
     }
 
     let result = sqlx::query(
-        "DELETE FROM collaborators WHERE id = ? AND document_id = ?"
+        "DELETE FROM collaborators WHERE id = $1 AND document_id = $2"
     )
     .bind(&collab_id)
     .bind(&doc_id)
@@ -176,6 +144,8 @@ pub async fn remove_collaborator(
         return Err((StatusCode::NOT_FOUND, "Collaborator not found".to_string()));
     }
 
+    access::revalidate_resource(&state, Resource::Document(doc_id.clone())).await;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -184,14 +154,18 @@ pub async fn get_comments(
     Path(doc_id): Path<String>,
     jar: SignedCookieJar,
 ) -> Result<Json<Vec<Comment>>, (StatusCode, String)> {
-    let _user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    access::document_role(&state, &doc_id, &Some(user_id))
+        .await
+        .ok_or_else(access::forbidden)?;
 
     let comments = sqlx::query_as::<_, Comment>(
         "SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
          FROM comments c \
          LEFT JOIN users u ON c.user_id = u.id \
-         WHERE c.document_id = ? \
+         WHERE c.document_id = $1 \
          ORDER BY c.created_at ASC"
     )
     .bind(&doc_id)
@@ -211,9 +185,16 @@ pub async fn add_comment(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
+    let (_, role) = access::document_role(&state, &doc_id, &Some(user_id.clone()))
+        .await
+        .ok_or_else(access::forbidden)?;
+    if !role.can_edit() {
+        return Err(access::forbidden());
+    }
+
     let comment_id = Uuid::new_v4().to_string();
 
-    sqlx::query("INSERT INTO comments (id, document_id, user_id, content) VALUES (?, ?, ?, ?)")
+    sqlx::query("INSERT INTO comments (id, document_id, user_id, content) VALUES ($1, $2, $3, $4)")
         .bind(&comment_id)
         .bind(&doc_id)
         .bind(&user_id)
@@ -226,7 +207,7 @@ pub async fn add_comment(
         "SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
          FROM comments c \
          LEFT JOIN users u ON c.user_id = u.id \
-         WHERE c.id = ?"
+         WHERE c.id = $1"
     )
     .bind(&comment_id)
     .fetch_one(&state.db)
@@ -245,30 +226,17 @@ pub async fn create_version(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let doc = sqlx::query_as::<_, crate::models::Document>(
-        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
-    )
-    .bind(&doc_id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
-
-    let is_owner = doc.owner_id == user_id;
-    let role = sqlx::query_scalar::<_, String>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?")
-        .bind(&doc_id)
-        .bind(&user_id)
-        .fetch_optional(&state.db)
+    let (_, role) = access::document_role(&state, &doc_id, &Some(user_id.clone()))
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
 
-    if !is_owner && role != Some("editor".to_string()) {
+    if !role.can_edit() {
         return Err((StatusCode::FORBIDDEN, "Not authorized to create versions".to_string()));
     }
 
     let version_id = uuid::Uuid::new_v4().to_string();
 
-    sqlx::query("INSERT INTO document_versions (id, document_id, user_id, content) VALUES (?, ?, ?, ?)")
+    sqlx::query("INSERT INTO document_versions (id, document_id, user_id, content) VALUES ($1, $2, $3, $4)")
         .bind(&version_id)
         .bind(&doc_id)
         .bind(&user_id)
@@ -281,7 +249,7 @@ pub async fn create_version(
         "SELECT v.id, v.document_id, v.user_id, v.content, v.created_at, u.username as author_name \
          FROM document_versions v \
          LEFT JOIN users u ON v.user_id = u.id \
-         WHERE v.id = ?"
+         WHERE v.id = $1"
     )
     .bind(&version_id)
     .fetch_one(&state.db)
@@ -296,14 +264,18 @@ pub async fn get_versions(
     Path(doc_id): Path<String>,
     jar: SignedCookieJar,
 ) -> Result<Json<Vec<crate::models::DocumentVersion>>, (StatusCode, String)> {
-    let _user_id = jar.get("session_user_id").map(|c| c.value().to_string())
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
+
+    access::document_role(&state, &doc_id, &Some(user_id))
+        .await
+        .ok_or_else(access::forbidden)?;
 
     let versions = sqlx::query_as::<_, crate::models::DocumentVersion>(
         "SELECT v.id, v.document_id, v.user_id, v.content, v.created_at, u.username as author_name \
          FROM document_versions v \
          LEFT JOIN users u ON v.user_id = u.id \
-         WHERE v.document_id = ? \
+         WHERE v.document_id = $1 \
          ORDER BY v.created_at DESC"
     )
     .bind(&doc_id)
@@ -327,7 +299,7 @@ pub async fn update_comment(
         "SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
          FROM comments c \
          LEFT JOIN users u ON c.user_id = u.id \
-         WHERE c.id = ? AND c.user_id = ?"
+         WHERE c.id = $1 AND c.user_id = $2"
     )
     .bind(&comment_id)
     .bind(&user_id)
@@ -339,11 +311,11 @@ pub async fn update_comment(
     if let Some(c) = payload.content {
         comment.content = c;
     }
-    if let Some(r) = payload.resolved {
-        comment.resolved = r;
+    if let Some(resolved) = payload.resolved {
+        comment.resolved = if resolved { 1 } else { 0 };
     }
 
-    sqlx::query("UPDATE comments SET content = ?, resolved = ? WHERE id = ?")
+    sqlx::query("UPDATE comments SET content = $1, resolved = $2 WHERE id = $3")
         .bind(&comment.content)
         .bind(comment.resolved)
         .bind(&comment.id)
@@ -355,7 +327,7 @@ pub async fn update_comment(
         "SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
          FROM comments c \
          LEFT JOIN users u ON c.user_id = u.id \
-         WHERE c.id = ?"
+         WHERE c.id = $1"
     )
     .bind(&comment.id)
     .fetch_one(&state.db)
@@ -373,7 +345,7 @@ pub async fn delete_comment(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM comments WHERE id = ? AND user_id = ?")
+    let result = sqlx::query("DELETE FROM comments WHERE id = $1 AND user_id = $2")
         .bind(&comment_id)
         .bind(&user_id)
         .execute(&state.db)

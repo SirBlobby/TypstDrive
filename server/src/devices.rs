@@ -9,7 +9,6 @@ use axum::{
 use axum_extra::extract::cookie::SignedCookieJar;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::time::Duration;
 use tokio::sync::{broadcast, watch};
 use uuid::Uuid;
@@ -17,7 +16,7 @@ use uuid::Uuid;
 use crate::AppState;
 
 fn hash_token(token: &str) -> String {
-    format!("{:x}", Sha256::digest(token.as_bytes()))
+    crate::hashing::sha256_hex(token.as_bytes())
 }
 
 fn bearer_token(headers: &HeaderMap) -> Option<String> {
@@ -42,7 +41,7 @@ async fn authenticate_device(
     ))?;
 
     let row = sqlx::query_as::<_, (String, String)>(
-        "SELECT id, user_id FROM device_tokens WHERE token_hash = ?",
+        "SELECT id, user_id FROM device_tokens WHERE token_hash = $1",
     )
     .bind(hash_token(&token))
     .fetch_optional(&state.db)
@@ -202,7 +201,7 @@ pub async fn list_devices(
         get_user_id(&jar).ok_or((StatusCode::UNAUTHORIZED, "Not authenticated".to_string()))?;
 
     let rows = sqlx::query_as::<_, (String, String, String, Option<String>)>(
-        "SELECT id, name, created_at, last_used_at FROM device_tokens WHERE user_id = ? ORDER BY created_at DESC",
+        "SELECT id, name, created_at, last_used_at FROM device_tokens WHERE user_id = $1 ORDER BY created_at DESC",
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -236,7 +235,7 @@ pub async fn revoke_device(
     let user_id =
         get_user_id(&jar).ok_or((StatusCode::UNAUTHORIZED, "Not authenticated".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM device_tokens WHERE id = ? AND user_id = ?")
+    let result = sqlx::query("DELETE FROM device_tokens WHERE id = $1 AND user_id = $2")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -251,6 +250,9 @@ pub async fn revoke_device(
     if let Some(entry) = presence.get(&id) {
         let _ = entry.stop.send(true);
     }
+    drop(presence);
+
+    crate::access::revoke_device_sessions(&state, &id).await;
 
     Ok(StatusCode::NO_CONTENT)
 }

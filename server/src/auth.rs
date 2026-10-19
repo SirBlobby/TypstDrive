@@ -7,20 +7,23 @@ use axum_extra::extract::cookie::{Cookie, SameSite, SignedCookieJar};
 use uuid::Uuid;
 
 use crate::{
-    models::{User, RegisterRequest, LoginRequest, ChangePasswordRequest, UpdateProfileRequest, StorageStats},
+    avatars,
+    models::{User, UserProfile, RegisterRequest, LoginRequest, ChangePasswordRequest, UpdateProfileRequest},
     AppState,
 };
 
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Argon2,
-};
+
+async fn profile_for(state: &AppState, user: User) -> UserProfile {
+    let avatar_updated_at = avatars::avatar_updated_at(state, &user.id).await;
+    UserProfile { user, avatar_updated_at }
+}
 
 pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<User>, (StatusCode, String)> {
-    if !state.registration_enabled {
+    let policy = crate::account_policy::load_policy(&state).await;
+    if !policy.registration_enabled {
         return Err((StatusCode::FORBIDDEN, "Registration is disabled on this instance".to_string()));
     }
 
@@ -28,17 +31,15 @@ pub async fn register(
         return Err((StatusCode::BAD_REQUEST, "Username, email, and password cannot be empty".to_string()));
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let password_hash = argon2
-        .hash_password(payload.password.as_bytes(), &salt)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .to_string();
+    policy.check_email_domain(&payload.email)?;
+
+    let password_hash = crate::passwords::hash_password(&payload.password)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     let user_id = Uuid::new_v4().to_string();
 
     let result = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?) RETURNING id, username, email, password_hash, is_admin"
+        "INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, password_hash, is_admin"
     )
     .bind(&user_id)
     .bind(&payload.username)
@@ -60,8 +61,8 @@ pub async fn login(
     State(state): State<AppState>,
     jar: SignedCookieJar,
     Json(payload): Json<LoginRequest>,
-) -> Result<(SignedCookieJar, Json<User>), (StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = ?")
+) -> Result<(SignedCookieJar, Json<UserProfile>), (StatusCode, String)> {
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1")
         .bind(&payload.email)
         .fetch_optional(&state.db)
         .await
@@ -72,10 +73,7 @@ pub async fn login(
         None => return Err((StatusCode::UNAUTHORIZED, "Invalid email or password".to_string())),
     };
 
-    let parsed_hash = PasswordHash::new(&user.password_hash)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if Argon2::default().verify_password(payload.password.as_bytes(), &parsed_hash).is_err() {
+    if !crate::passwords::verify_password(&payload.password, &user.password_hash) {
         return Err((StatusCode::UNAUTHORIZED, "Invalid email or password".to_string()));
     }
 
@@ -85,15 +83,16 @@ pub async fn login(
     cookie.set_path("/");
 
     let jar = jar.add(cookie);
+    let profile = profile_for(&state, user).await;
 
-    Ok((jar, Json(user)))
+    Ok((jar, Json(profile)))
 }
 
 pub async fn update_profile(
     State(state): State<AppState>,
     jar: SignedCookieJar,
     Json(payload): Json<UpdateProfileRequest>,
-) -> Result<Json<User>, (StatusCode, String)> {
+) -> Result<Json<UserProfile>, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
@@ -101,7 +100,27 @@ pub async fn update_profile(
         return Err((StatusCode::BAD_REQUEST, "Username and email cannot be empty".to_string()));
     }
 
-    let result = sqlx::query("UPDATE users SET username = ?, email = ? WHERE id = ?")
+    let current = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1")
+        .bind(&user_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or((StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
+
+    if current.is_admin == 0 {
+        let policy = crate::account_policy::load_policy(&state).await;
+        if payload.username != current.username && !policy.allow_username_change {
+            return Err((StatusCode::FORBIDDEN, "Changing your username is disabled on this instance".to_string()));
+        }
+        if payload.email != current.email {
+            if !policy.allow_email_change {
+                return Err((StatusCode::FORBIDDEN, "Changing your email is disabled on this instance".to_string()));
+            }
+            policy.check_email_domain(&payload.email)?;
+        }
+    }
+
+    let result = sqlx::query("UPDATE users SET username = $1, email = $2 WHERE id = $3")
         .bind(&payload.username)
         .bind(&payload.email)
         .bind(&user_id)
@@ -110,13 +129,13 @@ pub async fn update_profile(
 
     match result {
         Ok(_) => {
-            let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = ?")
+            let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1")
                 .bind(&user_id)
                 .fetch_optional(&state.db)
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
                 .ok_or((StatusCode::NOT_FOUND, "User not found".to_string()))?;
-            Ok(Json(user))
+            Ok(Json(profile_for(&state, user).await))
         }
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
             Err((StatusCode::CONFLICT, "Username or email already exists".to_string()))
@@ -133,20 +152,20 @@ pub async fn logout(jar: SignedCookieJar) -> Result<(SignedCookieJar, StatusCode
 pub async fn me(
     State(state): State<AppState>,
     jar: SignedCookieJar,
-) -> Result<Json<User>, (StatusCode, String)> {
+) -> Result<Json<UserProfile>, (StatusCode, String)> {
     let user_id = match jar.get("session_user_id").map(|c| c.value().to_string()) {
         Some(id) => id,
         None => return Err((StatusCode::UNAUTHORIZED, "Not logged in".to_string())),
     };
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = ?")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     match user {
-        Some(u) => Ok(Json(u)),
+        Some(u) => Ok(Json(profile_for(&state, u).await)),
         None => Err((StatusCode::UNAUTHORIZED, "User not found".to_string())),
     }
 }
@@ -163,27 +182,21 @@ pub async fn change_password(
         return Err((StatusCode::BAD_REQUEST, "Passwords cannot be empty".to_string()));
     }
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = ?")
+    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or((StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
-    let parsed_hash = PasswordHash::new(&user.password_hash)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if Argon2::default().verify_password(payload.current_password.as_bytes(), &parsed_hash).is_err() {
+    if !crate::passwords::verify_password(&payload.current_password, &user.password_hash) {
         return Err((StatusCode::UNAUTHORIZED, "Invalid current password".to_string()));
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let new_password_hash = Argon2::default()
-        .hash_password(payload.new_password.as_bytes(), &salt)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .to_string();
+    let new_password_hash = crate::passwords::hash_password(&payload.new_password)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
-    sqlx::query("UPDATE users SET password_hash = ? WHERE id = ?")
+    sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
         .bind(&new_password_hash)
         .bind(&user_id)
         .execute(&state.db)
@@ -191,37 +204,4 @@ pub async fn change_password(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(StatusCode::OK)
-}
-
-pub async fn storage_stats(
-    State(state): State<AppState>,
-    jar: SignedCookieJar,
-) -> Result<Json<StorageStats>, (StatusCode, String)> {
-    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
-        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
-
-    // LENGTH() returns byte count for both BYTEA (Postgres) and BLOB (SQLite)
-    let docs_size: (i64,) = sqlx::query_as(
-        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM documents WHERE owner_id = ?"
-    )
-    .bind(&user_id)
-    .fetch_one(&state.db)
-    .await
-    .unwrap_or((0,));
-
-    let files_size: (i64,) = sqlx::query_as(
-        "SELECT COALESCE(SUM(LENGTH(data)), 0) FROM files WHERE owner_id = ?"
-    )
-    .bind(&user_id)
-    .fetch_one(&state.db)
-    .await
-    .unwrap_or((0,));
-
-    let stats = StorageStats {
-        documents_size_bytes: docs_size.0,
-        files_size_bytes: files_size.0,
-        total_size_bytes: docs_size.0 + files_size.0,
-    };
-
-    Ok(Json(stats))
 }

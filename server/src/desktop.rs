@@ -5,14 +5,9 @@ use axum::{
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
-use argon2::{
-    password_hash::{PasswordHash, PasswordVerifier},
-    Argon2,
-};
-
+use crate::access::AccessRole;
 use crate::{
     devices::{notify_devices, DeviceEvent},
     models::{Project, User},
@@ -58,11 +53,11 @@ fn is_text_path(path: &str) -> bool {
 }
 
 fn content_hash(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    crate::hashing::sha256_hex(bytes)
 }
 
 pub(crate) fn hash_token(token: &str) -> String {
-    format!("{:x}", Sha256::digest(token.as_bytes()))
+    crate::hashing::sha256_hex(token.as_bytes())
 }
 
 fn generate_token() -> String {
@@ -91,7 +86,7 @@ pub async fn authenticate(
     ))?;
 
     let row = sqlx::query_as::<_, (String, String)>(
-        "SELECT id, user_id FROM device_tokens WHERE token_hash = ?",
+        "SELECT id, user_id FROM device_tokens WHERE token_hash = $1",
     )
     .bind(hash_token(&token))
     .fetch_optional(&state.db)
@@ -101,7 +96,7 @@ pub async fn authenticate(
     let (token_id, user_id) =
         row.ok_or((StatusCode::UNAUTHORIZED, "Invalid device token".to_string()))?;
 
-    let _ = sqlx::query("UPDATE device_tokens SET last_used_at = ? WHERE id = ?")
+    let _ = sqlx::query("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2")
         .bind(chrono::Utc::now().to_rfc3339())
         .bind(&token_id)
         .execute(&state.db)
@@ -111,8 +106,12 @@ pub async fn authenticate(
 }
 
 pub(crate) async fn user_id_for_token(state: &AppState, token: &str) -> Option<String> {
+    device_token_for(state, token).await.map(|(_, user_id)| user_id)
+}
+
+pub(crate) async fn device_token_for(state: &AppState, token: &str) -> Option<(String, String)> {
     let row = sqlx::query_as::<_, (String, String)>(
-        "SELECT id, user_id FROM device_tokens WHERE token_hash = ?",
+        "SELECT id, user_id FROM device_tokens WHERE token_hash = $1",
     )
     .bind(hash_token(token))
     .fetch_optional(&state.db)
@@ -121,38 +120,47 @@ pub(crate) async fn user_id_for_token(state: &AppState, token: &str) -> Option<S
 
     let (token_id, user_id) = row;
 
-    let _ = sqlx::query("UPDATE device_tokens SET last_used_at = ? WHERE id = ?")
+    let _ = sqlx::query("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2")
         .bind(chrono::Utc::now().to_rfc3339())
         .bind(&token_id)
         .execute(&state.db)
         .await;
 
-    Some(user_id)
+    Some((token_id, user_id))
 }
 
-async fn owned_project(
+type DesktopError = (StatusCode, String);
+
+async fn project_with_role(
     state: &AppState,
     project_id: &str,
     user_id: &str,
-) -> Result<Project, (StatusCode, String)> {
-    let project = sqlx::query_as::<_, Project>(
-        "SELECT p.id, p.owner_id, p.folder_id, p.name, p.entrypoint, p.thumbnail_svg, \
-         p.public_role, p.created_at, p.updated_at FROM projects p \
-         WHERE p.id = ? AND (p.owner_id = ? OR EXISTS ( \
-           SELECT 1 FROM project_collaborators c \
-           WHERE c.project_id = p.id AND c.user_id = ? AND c.role = 'editor'))",
-    )
-    .bind(project_id)
-    .bind(user_id)
-    .bind(user_id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+) -> Result<(Project, AccessRole), DesktopError> {
+    crate::access::project_access(state, project_id, &Some(user_id.to_string()))
+        .await
+        .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))
+}
 
-    project.ok_or((
-        StatusCode::NOT_FOUND,
-        "Project not found or not writable".to_string(),
-    ))
+async fn readable_project(state: &AppState, project_id: &str, user_id: &str) -> Result<Project, DesktopError> {
+    Ok(project_with_role(state, project_id, user_id).await?.0)
+}
+
+async fn writable_project(state: &AppState, project_id: &str, user_id: &str) -> Result<Project, DesktopError> {
+    let (project, role) = project_with_role(state, project_id, user_id).await?;
+    if !role.can_edit() {
+        return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
+    }
+    Ok(project)
+}
+
+async fn document_owner(state: &AppState, document_id: &str) -> Option<String> {
+    sqlx::query_as::<_, (String,)>("SELECT owner_id FROM documents WHERE id = $1")
+        .bind(document_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .map(|(owner_id,)| owner_id)
 }
 
 #[derive(Deserialize)]
@@ -188,7 +196,7 @@ pub async fn login(
     }
 
     let user = sqlx::query_as::<_, User>(
-        "SELECT id, username, email, password_hash, is_admin FROM users WHERE email = ?",
+        "SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1",
     )
     .bind(&payload.email)
     .fetch_optional(&state.db)
@@ -199,13 +207,7 @@ pub async fn login(
         "Invalid email or password".to_string(),
     ))?;
 
-    let parsed_hash = PasswordHash::new(&user.password_hash)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if Argon2::default()
-        .verify_password(payload.password.as_bytes(), &parsed_hash)
-        .is_err()
-    {
+    if !crate::passwords::verify_password(&payload.password, &user.password_hash) {
         return Err((
             StatusCode::UNAUTHORIZED,
             "Invalid email or password".to_string(),
@@ -219,7 +221,7 @@ pub async fn login(
         .unwrap_or_else(|| "Typst Desktop".to_string());
 
     sqlx::query(
-        "INSERT INTO device_tokens (id, user_id, name, token_hash, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO device_tokens (id, user_id, name, token_hash, created_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(Uuid::new_v4().to_string())
     .bind(&user.id)
@@ -252,7 +254,7 @@ pub async fn me(
     let user_id = authenticate(&state, &headers).await?;
 
     let user = sqlx::query_as::<_, User>(
-        "SELECT id, username, email, password_hash, is_admin FROM users WHERE id = ?",
+        "SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1",
     )
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -276,11 +278,21 @@ pub async fn logout(
         "Missing Authorization header".to_string(),
     ))?;
 
-    sqlx::query("DELETE FROM device_tokens WHERE token_hash = ?")
+    let token_id = sqlx::query_as::<_, (String,)>("SELECT id FROM device_tokens WHERE token_hash = $1")
+        .bind(hash_token(&token))
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    sqlx::query("DELETE FROM device_tokens WHERE token_hash = $1")
         .bind(hash_token(&token))
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if let Some((token_id,)) = token_id {
+        crate::access::revoke_device_sessions(&state, &token_id).await;
+    }
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -302,7 +314,7 @@ pub async fn list_projects(
     let user_id = authenticate(&state, &headers).await?;
 
     let owned = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
-        "SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE owner_id = ? ORDER BY updated_at DESC",
+        "SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE owner_id = $1 ORDER BY updated_at DESC",
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -311,7 +323,7 @@ pub async fn list_projects(
 
     let shared = sqlx::query_as::<_, (String, String, String, Option<String>, String, String)>(
         "SELECT p.id, p.name, p.entrypoint, p.folder_id, p.updated_at, c.role FROM projects p \
-         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = ? \
+         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = $1 \
          ORDER BY p.updated_at DESC",
     )
     .bind(&user_id)
@@ -375,7 +387,7 @@ pub async fn create_project(
         .unwrap_or_else(|| "main.typ".to_string());
 
     let project = sqlx::query_as::<_, Project>(
-        "INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES (?, ?, ?, ?, ?) \
+        "INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES ($1, $2, $3, $4, $5) \
          RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at",
     )
     .bind(&project_id)
@@ -406,22 +418,19 @@ pub async fn delete_project(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let _ = sqlx::query("DELETE FROM project_files WHERE project_id = ?")
-        .bind(&project_id)
-        .execute(&state.db)
-        .await;
+    let (_, role) = project_with_role(&state, &project_id, &user_id).await?;
+    if role != AccessRole::Owner {
+        return Err((StatusCode::FORBIDDEN, "Only the owner can delete this project".to_string()));
+    }
 
-    let result = sqlx::query("DELETE FROM projects WHERE id = ? AND owner_id = ?")
+    sqlx::query("DELETE FROM projects WHERE id = $1 AND owner_id = $2")
         .bind(&project_id)
         .bind(&user_id)
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "Project not found".to_string()));
-    }
-
+    crate::access::revalidate_resource(&state, crate::access::Resource::Project(project_id.clone())).await;
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
@@ -451,25 +460,37 @@ async fn plain_contents(
     project_id: &str,
 ) -> Result<Vec<(String, String, String, Vec<u8>, String)>, (StatusCode, String)> {
     let rows = sqlx::query_as::<_, (String, String, String, Option<Vec<u8>>, Option<String>)>(
-        "SELECT id, path, kind, content, updated_at FROM project_files WHERE project_id = ? ORDER BY path ASC",
+        "SELECT id, path, kind, content, updated_at FROM project_files WHERE project_id = $1 ORDER BY path ASC",
     )
     .bind(project_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(rows
-        .into_iter()
-        .map(|(id, path, kind, content, updated_at)| {
-            let raw = content.unwrap_or_default();
-            let plain = if kind == "binary" {
-                raw
-            } else {
-                decode_text_blob(&raw).into_bytes()
-            };
-            (id, path, kind, plain, updated_at.unwrap_or_default())
-        })
-        .collect())
+    let mut contents = Vec::with_capacity(rows.len());
+    for (id, path, kind, content, updated_at) in rows {
+        let plain = plain_file_content(state, project_id, &id, &kind, content).await;
+        contents.push((id, path, kind, plain, updated_at.unwrap_or_default()));
+    }
+    Ok(contents)
+}
+
+async fn plain_file_content(
+    state: &AppState,
+    project_id: &str,
+    file_id: &str,
+    kind: &str,
+    stored: Option<Vec<u8>>,
+) -> Vec<u8> {
+    let raw = stored.unwrap_or_default();
+    if kind == "binary" {
+        return raw;
+    }
+    let room = crate::live_documents::project_file_room(project_id, file_id);
+    match crate::live_documents::live_text(state, &room).await {
+        Some(live) => live.into_bytes(),
+        None => decode_text_blob(&raw).into_bytes(),
+    }
 }
 
 pub async fn get_manifest(
@@ -478,7 +499,7 @@ pub async fn get_manifest(
     Path(project_id): Path<String>,
 ) -> Result<Json<ProjectManifest>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    let project = owned_project(&state, &project_id, &user_id).await?;
+    let project = readable_project(&state, &project_id, &user_id).await?;
 
     let files = plain_contents(&state, &project_id)
         .await?
@@ -534,10 +555,10 @@ pub async fn pull_file(
     Query(query): Query<PathQuery>,
 ) -> Result<Json<FileContent>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    owned_project(&state, &project_id, &user_id).await?;
+    readable_project(&state, &project_id, &user_id).await?;
 
-    let row = sqlx::query_as::<_, (String, Option<Vec<u8>>)>(
-        "SELECT kind, content FROM project_files WHERE project_id = ? AND path = ?",
+    let row = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
+        "SELECT id, kind, content FROM project_files WHERE project_id = $1 AND path = $2",
     )
     .bind(&project_id)
     .bind(&query.path)
@@ -546,13 +567,8 @@ pub async fn pull_file(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
-    let (kind, content) = row;
-    let raw = content.unwrap_or_default();
-    let plain = if kind == "binary" {
-        raw
-    } else {
-        decode_text_blob(&raw).into_bytes()
-    };
+    let (file_id, kind, content) = row;
+    let plain = plain_file_content(&state, &project_id, &file_id, &kind, content).await;
 
     let hash = content_hash(&plain);
     let (encoding, content) = encode_for_transport(&kind, plain);
@@ -612,7 +628,7 @@ pub async fn push_file(
     Json(payload): Json<PushFileRequest>,
 ) -> Result<PushOutcome, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    owned_project(&state, &project_id, &user_id).await?;
+    let project = writable_project(&state, &project_id, &user_id).await?;
 
     let incoming = match payload.encoding.as_deref() {
         Some("base64") => BASE64
@@ -621,8 +637,8 @@ pub async fn push_file(
         _ => payload.content.clone().into_bytes(),
     };
 
-    let existing = sqlx::query_as::<_, (String, Option<Vec<u8>>)>(
-        "SELECT kind, content FROM project_files WHERE project_id = ? AND path = ?",
+    let existing = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
+        "SELECT id, kind, content FROM project_files WHERE project_id = $1 AND path = $2",
     )
     .bind(&project_id)
     .bind(&payload.path)
@@ -630,13 +646,8 @@ pub async fn push_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    if let Some((existing_kind, existing_content)) = &existing {
-        let raw = existing_content.clone().unwrap_or_default();
-        let plain = if existing_kind == "binary" {
-            raw
-        } else {
-            decode_text_blob(&raw).into_bytes()
-        };
+    if let Some((existing_id, existing_kind, existing_content)) = &existing {
+        let plain = plain_file_content(&state, &project_id, existing_id, existing_kind, existing_content.clone()).await;
         let server_hash = content_hash(&plain);
 
         let safe = match &payload.base_hash {
@@ -675,11 +686,18 @@ pub async fn push_file(
         "text/plain"
     };
 
+    let existing_size = existing
+        .as_ref()
+        .and_then(|(_, _, content)| content.as_ref())
+        .map(|content| content.len() as i64)
+        .unwrap_or(0);
+    crate::storage::ensure_room(&state, &project.owner_id, stored.len() as i64 - existing_size).await?;
+
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
     sqlx::query(
         "INSERT INTO project_files (id, project_id, path, kind, content, mime_type, updated_at) \
-         VALUES (?, ?, ?, ?, ?, ?, ?) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) \
          ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, \
          kind = excluded.kind, mime_type = excluded.mime_type, updated_at = excluded.updated_at",
     )
@@ -694,13 +712,27 @@ pub async fn push_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let _ = sqlx::query("UPDATE projects SET updated_at = ? WHERE id = ?")
+    let _ = sqlx::query("UPDATE projects SET updated_at = $1 WHERE id = $2")
         .bind(&now)
         .bind(&project_id)
         .execute(&state.db)
         .await;
 
-    notify_devices(&state, &user_id, DeviceEvent::project(&project_id)).await;
+    if kind == "text" {
+        let file_id = sqlx::query_as::<_, (String,)>("SELECT id FROM project_files WHERE project_id = $1 AND path = $2")
+            .bind(&project_id)
+            .bind(&payload.path)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten();
+        if let Some((file_id,)) = file_id {
+            let room = crate::live_documents::project_file_room(&project_id, &file_id);
+            crate::live_documents::replace_text(&state, &room, &String::from_utf8_lossy(&incoming)).await;
+        }
+    }
+
+    notify_devices(&state, &project.owner_id, DeviceEvent::project(&project_id)).await;
 
     Ok(PushOutcome::Applied(Json(PushFileResponse {
         path: payload.path,
@@ -716,9 +748,9 @@ pub async fn delete_file(
     Query(query): Query<PathQuery>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    owned_project(&state, &project_id, &user_id).await?;
+    writable_project(&state, &project_id, &user_id).await?;
 
-    let result = sqlx::query("DELETE FROM project_files WHERE project_id = ? AND path = ?")
+    let result = sqlx::query("DELETE FROM project_files WHERE project_id = $1 AND path = $2")
         .bind(&project_id)
         .bind(&query.path)
         .execute(&state.db)
@@ -757,7 +789,7 @@ pub async fn pull_project(
     Path(project_id): Path<String>,
 ) -> Result<Json<ProjectBundle>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    let project = owned_project(&state, &project_id, &user_id).await?;
+    let project = readable_project(&state, &project_id, &user_id).await?;
 
     let files = plain_contents(&state, &project_id)
         .await?
@@ -797,7 +829,7 @@ pub async fn list_folders(
     let user_id = authenticate(&state, &headers).await?;
 
     let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
-        "SELECT id, name, parent_id FROM folders WHERE owner_id = ? ORDER BY name ASC",
+        "SELECT id, name, parent_id FROM folders WHERE owner_id = $1 ORDER BY name ASC",
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -821,7 +853,7 @@ async fn owned_folder(
     user_id: &str,
 ) -> Result<(), (StatusCode, String)> {
     let row = sqlx::query_as::<_, (i64,)>(
-        "SELECT COUNT(*) FROM folders WHERE id = ? AND owner_id = ?",
+        "SELECT COUNT(*) FROM folders WHERE id = $1 AND owner_id = $2",
     )
     .bind(folder_id)
     .bind(user_id)
@@ -860,7 +892,7 @@ pub async fn create_folder(
     let folder_id = Uuid::new_v4().to_string();
     let name = payload.name.trim().to_string();
 
-    sqlx::query("INSERT INTO folders (id, owner_id, parent_id, name) VALUES (?, ?, ?, ?)")
+    sqlx::query("INSERT INTO folders (id, owner_id, parent_id, name) VALUES ($1, $2, $3, $4)")
         .bind(&folder_id)
         .bind(&user_id)
         .bind(&payload.parent_id)
@@ -896,7 +928,7 @@ pub async fn rename_folder(
     }
 
     let row = sqlx::query_as::<_, (String, Option<String>)>(
-        "UPDATE folders SET name = ? WHERE id = ? AND owner_id = ? RETURNING name, parent_id",
+        "UPDATE folders SET name = $1 WHERE id = $2 AND owner_id = $3 RETURNING name, parent_id",
     )
     .bind(payload.name.trim())
     .bind(&id)
@@ -929,7 +961,7 @@ async fn creates_cycle(
         }
 
         let parent = sqlx::query_as::<_, (Option<String>,)>(
-            "SELECT parent_id FROM folders WHERE id = ? AND owner_id = ?",
+            "SELECT parent_id FROM folders WHERE id = $1 AND owner_id = $2",
         )
         .bind(&current)
         .bind(user_id)
@@ -980,7 +1012,7 @@ pub async fn move_folder(
     }
 
     let row = sqlx::query_as::<_, (String, Option<String>)>(
-        "UPDATE folders SET parent_id = ? WHERE id = ? AND owner_id = ? RETURNING name, parent_id",
+        "UPDATE folders SET parent_id = $1 WHERE id = $2 AND owner_id = $3 RETURNING name, parent_id",
     )
     .bind(&payload.parent_id)
     .bind(&id)
@@ -1006,9 +1038,9 @@ async fn folder_is_empty(
 ) -> Result<bool, (StatusCode, String)> {
     let row = sqlx::query_as::<_, (i64, i64, i64)>(
         "SELECT \
-           (SELECT COUNT(*) FROM folders WHERE parent_id = ? AND owner_id = ?), \
-           (SELECT COUNT(*) FROM projects WHERE folder_id = ? AND owner_id = ?), \
-           (SELECT COUNT(*) FROM documents WHERE folder_id = ? AND owner_id = ?)",
+           (SELECT COUNT(*) FROM folders WHERE parent_id = $1 AND owner_id = $2), \
+           (SELECT COUNT(*) FROM projects WHERE folder_id = $3 AND owner_id = $4), \
+           (SELECT COUNT(*) FROM documents WHERE folder_id = $5 AND owner_id = $6)",
     )
     .bind(folder_id)
     .bind(user_id)
@@ -1038,7 +1070,7 @@ pub async fn delete_folder(
         ));
     }
 
-    let result = sqlx::query("DELETE FROM folders WHERE id = ? AND owner_id = ?")
+    let result = sqlx::query("DELETE FROM folders WHERE id = $1 AND owner_id = $2")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -1072,7 +1104,7 @@ pub async fn move_project(
     }
 
     let row = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
-        "UPDATE projects SET folder_id = ? WHERE id = ? AND owner_id = ? \
+        "UPDATE projects SET folder_id = $1 WHERE id = $2 AND owner_id = $3 \
          RETURNING id, name, entrypoint, folder_id, updated_at",
     )
     .bind(&payload.folder_id)
@@ -1119,7 +1151,7 @@ pub async fn list_documents(
     let rows = match &query.folder_id {
         Some(folder_id) => sqlx::query_as::<_, (String, String, Option<String>, String)>(
             "SELECT id, title, folder_id, updated_at FROM documents \
-             WHERE owner_id = ? AND folder_id = ? ORDER BY updated_at DESC",
+             WHERE owner_id = $1 AND folder_id = $2 ORDER BY updated_at DESC",
         )
         .bind(&user_id)
         .bind(folder_id)
@@ -1127,7 +1159,7 @@ pub async fn list_documents(
         .await,
         None => sqlx::query_as::<_, (String, String, Option<String>, String)>(
             "SELECT id, title, folder_id, updated_at FROM documents \
-             WHERE owner_id = ? AND folder_id IS NULL ORDER BY updated_at DESC",
+             WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC",
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -1162,7 +1194,7 @@ pub async fn list_shared(
 
     let documents = sqlx::query_as::<_, (String, String, Option<String>, String, String)>(
         "SELECT d.id, d.title, d.folder_id, d.updated_at, c.role FROM documents d \
-         INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = ? \
+         INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = $1 \
          ORDER BY d.updated_at DESC",
     )
     .bind(&user_id)
@@ -1172,7 +1204,7 @@ pub async fn list_shared(
 
     let projects = sqlx::query_as::<_, (String, String, String, String, String)>(
         "SELECT p.id, p.name, p.entrypoint, p.updated_at, c.role FROM projects p \
-         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = ? \
+         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = $1 \
          ORDER BY p.updated_at DESC",
     )
     .bind(&user_id)
@@ -1211,7 +1243,7 @@ async fn document_role(
     user_id: &str,
 ) -> Result<(String, String, String), (StatusCode, String)> {
     let row = sqlx::query_as::<_, (String, String, Option<Vec<u8>>, Option<String>)>(
-        "SELECT owner_id, title, content, public_role FROM documents WHERE id = ?",
+        "SELECT owner_id, title, content, public_role FROM documents WHERE id = $1",
     )
     .bind(document_id)
     .fetch_optional(&state.db)
@@ -1229,7 +1261,7 @@ async fn document_role(
 
     if role == "none" {
         if let Ok(Some((collaborator_role,))) = sqlx::query_as::<_, (String,)>(
-            "SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?",
+            "SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2",
         )
         .bind(document_id)
         .bind(user_id)
@@ -1271,7 +1303,10 @@ pub async fn pull_document(
     Path(id): Path<String>,
 ) -> Result<Json<DocumentContent>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    let (role, title, content) = document_role(&state, &id, &user_id).await?;
+    let (role, title, stored_content) = document_role(&state, &id, &user_id).await?;
+    let content = crate::live_documents::live_text(&state, &crate::live_documents::document_room(&id))
+        .await
+        .unwrap_or(stored_content);
 
     Ok(Json(DocumentContent {
         id,
@@ -1295,11 +1330,14 @@ pub async fn push_document(
     Json(payload): Json<PushDocumentRequest>,
 ) -> Result<PushOutcome, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    let (role, _, current) = document_role(&state, &id, &user_id).await?;
+    let (role, _, stored_content) = document_role(&state, &id, &user_id).await?;
 
     if role != "owner" && role != "editor" {
         return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
     }
+
+    let room = crate::live_documents::document_room(&id);
+    let current = crate::live_documents::live_text(&state, &room).await.unwrap_or(stored_content);
 
     let server_hash = content_hash(current.as_bytes());
     let incoming_hash = content_hash(payload.content.as_bytes());
@@ -1322,7 +1360,7 @@ pub async fn push_document(
 
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-    sqlx::query("UPDATE documents SET content = ?, updated_at = ? WHERE id = ?")
+    sqlx::query("UPDATE documents SET content = $1, updated_at = $2 WHERE id = $3")
         .bind(encode_text_blob(&payload.content))
         .bind(&now)
         .bind(&id)
@@ -1330,7 +1368,9 @@ pub async fn push_document(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    notify_devices(&state, &user_id, DeviceEvent::document(&id)).await;
+    crate::live_documents::replace_text(&state, &room, &payload.content).await;
+    let owner_id = document_owner(&state, &id).await.unwrap_or(user_id);
+    notify_devices(&state, &owner_id, DeviceEvent::document(&id)).await;
 
     Ok(PushOutcome::Applied(Json(PushFileResponse {
         path: id,
@@ -1352,10 +1392,11 @@ pub async fn create_document(
     Json(payload): Json<CreateDocumentRequest>,
 ) -> Result<Json<DocumentContent>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
+    crate::storage::ensure_room(&state, &user_id, payload.content.len() as i64).await?;
     let document_id = Uuid::new_v4().to_string();
 
     sqlx::query(
-        "INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&document_id)
     .bind(&user_id)
@@ -1395,7 +1436,7 @@ pub async fn move_document(
     }
 
     let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
-        "UPDATE documents SET folder_id = ? WHERE id = ? AND owner_id = ? \
+        "UPDATE documents SET folder_id = $1 WHERE id = $2 AND owner_id = $3 \
          RETURNING id, title, folder_id, updated_at",
     )
     .bind(&payload.folder_id)
@@ -1424,7 +1465,7 @@ pub async fn delete_document(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let result = sqlx::query("DELETE FROM documents WHERE id = ? AND owner_id = ?")
+    let result = sqlx::query("DELETE FROM documents WHERE id = $1 AND owner_id = $2")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -1435,6 +1476,7 @@ pub async fn delete_document(
         return Err((StatusCode::NOT_FOUND, "Document not found or unauthorized".to_string()));
     }
 
+    crate::access::revalidate_resource(&state, crate::access::Resource::Document(id.clone())).await;
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
@@ -1459,7 +1501,7 @@ pub async fn list_account_files(
     let rows = match &query.folder_id {
         Some(folder_id) => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
             "SELECT id, name, mime_type, folder_id, created_at FROM files \
-             WHERE owner_id = ? AND folder_id = ? ORDER BY name ASC",
+             WHERE owner_id = $1 AND folder_id = $2 ORDER BY name ASC",
         )
         .bind(&user_id)
         .bind(folder_id)
@@ -1467,7 +1509,7 @@ pub async fn list_account_files(
         .await,
         None => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
             "SELECT id, name, mime_type, folder_id, created_at FROM files \
-             WHERE owner_id = ? AND folder_id IS NULL ORDER BY name ASC",
+             WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC",
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -1519,12 +1561,14 @@ pub async fn upload_account_file(
         _ => payload.content.into_bytes(),
     };
 
+    crate::storage::ensure_room(&state, &user_id, data.len() as i64).await?;
+
     let file_id = Uuid::new_v4().to_string();
     let name = payload.name.trim().to_string();
 
     let row = sqlx::query_as::<_, (String,)>(
         "INSERT INTO files (id, owner_id, folder_id, name, mime_type, data) \
-         VALUES (?, ?, ?, ?, ?, ?) RETURNING created_at",
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING created_at",
     )
     .bind(&file_id)
     .bind(&user_id)
@@ -1565,7 +1609,7 @@ pub async fn rename_account_file(
     }
 
     let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
-        "UPDATE files SET name = ? WHERE id = ? AND owner_id = ? \
+        "UPDATE files SET name = $1 WHERE id = $2 AND owner_id = $3 \
          RETURNING name, mime_type, folder_id, created_at",
     )
     .bind(payload.name.trim())
@@ -1605,7 +1649,7 @@ pub async fn move_account_file(
     }
 
     let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
-        "UPDATE files SET folder_id = ? WHERE id = ? AND owner_id = ? \
+        "UPDATE files SET folder_id = $1 WHERE id = $2 AND owner_id = $3 \
          RETURNING name, mime_type, folder_id, created_at",
     )
     .bind(&payload.folder_id)
@@ -1643,7 +1687,7 @@ pub async fn pull_account_file(
     let user_id = authenticate(&state, &headers).await?;
 
     let row = sqlx::query_as::<_, (String, String, Vec<u8>)>(
-        "SELECT name, mime_type, data FROM files WHERE id = ? AND owner_id = ?",
+        "SELECT name, mime_type, data FROM files WHERE id = $1 AND owner_id = $2",
     )
     .bind(&id)
     .bind(&user_id)
@@ -1669,7 +1713,7 @@ pub async fn delete_account_file(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let result = sqlx::query("DELETE FROM files WHERE id = ? AND owner_id = ?")
+    let result = sqlx::query("DELETE FROM files WHERE id = $1 AND owner_id = $2")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)

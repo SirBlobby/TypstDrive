@@ -1,8 +1,10 @@
 use chrono::Datelike;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Read;
+use std::sync::Mutex;
 
 use typst::diag::{FileError, FileResult};
+use typst::format::Format;
 use typst::foundations::{Bytes, Datetime, Duration};
 use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
 use typst::text::{Font, FontBook};
@@ -11,6 +13,8 @@ use typst::{Library, LibraryExt};
 use typst_kit::downloader::SystemDownloader;
 use typst_kit::packages::SystemPackages;
 
+use crate::fonts::shared_fonts;
+
 pub struct MemoryWorld {
     library: typst::utils::LazyHash<Library>,
     main: FileId,
@@ -18,7 +22,15 @@ pub struct MemoryWorld {
     local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
     book: typst::utils::LazyHash<FontBook>,
     fonts: Vec<Font>,
+    font_file_names: Vec<String>,
     packages: SystemPackages,
+    accessed_paths: Mutex<HashSet<String>>,
+    accessed_font_files: Mutex<HashSet<String>>,
+}
+
+pub struct UsedResources {
+    pub paths: HashSet<String>,
+    pub font_files: HashSet<String>,
 }
 
 const LOCAL_NAMESPACE: &str = "typstdrive";
@@ -28,6 +40,15 @@ const REMOTE_MAX_BYTES: u64 = 50 * 1024 * 1024;
 
 fn normalize_path(path: &str) -> String {
     path.trim_start_matches('/').replace('\\', "/")
+}
+
+fn export_formats() -> [Format; 4] {
+    [
+        typst_html::FORMAT,
+        typst_pdf::FORMAT,
+        typst_svg::FORMAT,
+        typst_render::FORMAT,
+    ]
 }
 
 fn remote_url(path: &str) -> Option<String> {
@@ -75,17 +96,9 @@ impl MemoryWorld {
         let downloader = SystemDownloader::new("TypstDrive (typst-kit)");
         let packages = SystemPackages::new(downloader);
 
-        let mut book = FontBook::new();
+        let mut book = shared_fonts().book();
         let mut fonts = Vec::new();
-
-        // Add embedded fonts
-        for data in typst_assets::fonts() {
-            let buffer = Bytes::new(data);
-            for font in Font::iter(buffer) {
-                book.push(font.info().clone());
-                fonts.push(font);
-            }
-        }
+        let mut font_file_names = Vec::new();
 
         // Add custom fonts from files, registered only by their embedded metadata
         // so that all variants (Bold, Italic, etc.) resolve correctly under one family name.
@@ -94,17 +107,17 @@ impl MemoryWorld {
                 for font in Font::iter(Bytes::new(data.clone())) {
                     book.push(font.info().clone());
                     fonts.push(font);
+                    font_file_names.push(name.clone());
                 }
             }
         }
 
-        let library = if enable_html {
-            Library::builder()
-                .with_features([typst::Feature::Html].into_iter().collect())
-                .build()
-        } else {
-            Library::builder().build()
-        };
+        let mut library_builder = Library::builder(export_formats());
+        if enable_html {
+            library_builder =
+                library_builder.with_features([typst::Feature::Html].into_iter().collect());
+        }
+        let library = library_builder.build();
 
         Self {
             library: typst::utils::LazyHash::new(library),
@@ -113,7 +126,17 @@ impl MemoryWorld {
             local_packages,
             book: typst::utils::LazyHash::new(book),
             fonts,
+            font_file_names,
             packages,
+            accessed_paths: Mutex::new(HashSet::new()),
+            accessed_font_files: Mutex::new(HashSet::new()),
+        }
+    }
+
+    pub fn used_resources(&self) -> UsedResources {
+        UsedResources {
+            paths: self.accessed_paths.lock().map(|paths| paths.clone()).unwrap_or_default(),
+            font_files: self.accessed_font_files.lock().map(|fonts| fonts.clone()).unwrap_or_default(),
         }
     }
 
@@ -142,10 +165,13 @@ impl MemoryWorld {
             return fetch_remote(&url);
         }
 
-        self.files
-            .get(&path)
-            .cloned()
-            .ok_or_else(|| FileError::NotFound(path.into()))
+        let data = self.files.get(&path).cloned();
+        if data.is_some() {
+            if let Ok(mut accessed) = self.accessed_paths.lock() {
+                accessed.insert(path.clone());
+            }
+        }
+        data.ok_or_else(|| FileError::NotFound(path.into()))
     }
 }
 
@@ -176,7 +202,15 @@ impl World for MemoryWorld {
     }
 
     fn font(&self, index: usize) -> Option<Font> {
-        self.fonts.get(index).cloned()
+        let shared = shared_fonts();
+        if index < shared.count() {
+            return shared.font(index);
+        }
+        let custom_index = index - shared.count();
+        if let (Some(name), Ok(mut accessed)) = (self.font_file_names.get(custom_index), self.accessed_font_files.lock()) {
+            accessed.insert(name.clone());
+        }
+        self.fonts.get(custom_index).cloned()
     }
 
     fn today(&self, offset: Option<Duration>) -> Option<Datetime> {

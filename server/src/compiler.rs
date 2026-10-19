@@ -1,14 +1,15 @@
-use crate::world::MemoryWorld;
+use crate::world::{MemoryWorld, UsedResources};
 use serde::Serialize;
 use std::collections::HashMap;
 use typst::diag::{SourceDiagnostic, Warned};
+use typst::format::Complete;
 use typst::layout::{Frame, FrameItem};
-use typst::utils::Scalar;
+use typst::model::Document;
 use typst_html::{HtmlDocument, HtmlOptions};
 use typst_layout::PagedDocument;
 use typst_pdf::{pdf, PdfOptions};
-use typst_render::{render, RenderOptions};
-use typst_svg::SvgOptions;
+use typst_render::{render, PngFormat, RenderOptions};
+use typst_svg::{SvgFormat, SvgOptions};
 
 #[derive(Serialize, Clone)]
 pub struct DocumentStats {
@@ -52,6 +53,16 @@ fn extract_frame_text(frame: &Frame, text: &mut String) {
     }
 }
 
+fn svg_options(doc: &PagedDocument) -> SvgOptions<Complete> {
+    let requested: SvgOptions = SvgOptions::default();
+    requested.resolve(doc.options().get::<SvgFormat>())
+}
+
+fn png_options(doc: &PagedDocument) -> RenderOptions<Complete> {
+    let requested: RenderOptions = RenderOptions::default();
+    requested.resolve(doc.options().get::<PngFormat>())
+}
+
 pub struct ProjectInput {
     pub entrypoint: String,
     pub files: HashMap<String, Vec<u8>>,
@@ -81,6 +92,12 @@ impl TypstCompiler {
         Self
     }
 
+    pub fn used_resources(&self, input: ProjectInput) -> UsedResources {
+        let world = input.into_world(false);
+        let _ = typst::compile::<PagedDocument>(&world);
+        world.used_resources()
+    }
+
     pub fn compile_svg(
         &self,
         input: ProjectInput,
@@ -95,7 +112,7 @@ impl TypstCompiler {
                 warnings: _,
             } => {
                 let stats = extract_stats(&doc);
-                let options = SvgOptions::default();
+                let options = svg_options(&doc);
                 let svgs = doc
                     .pages()
                     .iter()
@@ -136,7 +153,7 @@ impl TypstCompiler {
                 warnings: _,
             } => {
                 let opts = PdfOptions::default();
-                match pdf(&doc, &opts) {
+                match pdf(&doc, &opts).output {
                     Ok(bytes) => Ok(bytes),
                     Err(_) => Err(vec![]),
                 }
@@ -168,10 +185,7 @@ impl TypstCompiler {
                 warnings: _,
             } => {
                 if let Some(page) = doc.pages().first() {
-                    let options = RenderOptions {
-                        pixel_per_pt: Scalar::new(2.0),
-                        ..RenderOptions::default()
-                    };
+                    let options = png_options(&doc);
                     let pixmap = render(page, &options);
                     if let Ok(encoded) = pixmap.encode_png() {
                         return Ok(encoded);

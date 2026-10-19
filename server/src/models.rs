@@ -25,6 +25,13 @@ pub struct User {
     pub is_admin: i64,
 }
 
+#[derive(Debug, Serialize)]
+pub struct UserProfile {
+    #[serde(flatten)]
+    pub user: User,
+    pub avatar_updated_at: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct AdminUserView {
     pub id: String,
@@ -53,6 +60,9 @@ pub struct File {
     pub name: String,
     pub mime_type: String,
     pub created_at: String,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub size_bytes: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -70,6 +80,9 @@ pub struct Document {
     pub effective_role: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub size_bytes: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -86,6 +99,9 @@ pub struct Project {
     pub effective_role: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub size_bytes: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -204,13 +220,6 @@ pub struct UpdateDocumentRequest {
     pub public_role: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StorageStats {
-    pub documents_size_bytes: i64,
-    pub files_size_bytes: i64,
-    pub total_size_bytes: i64,
-}
-
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Collaborator {
     pub id: String,
@@ -246,7 +255,8 @@ pub struct Comment {
     pub document_id: String,
     pub user_id: String,
     pub content: String,
-    pub resolved: bool,
+    #[serde(with = "serde_i64_bool")]
+    pub resolved: i64,
     pub created_at: String,
     pub author_name: Option<String>,
 }

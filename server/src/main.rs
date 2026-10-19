@@ -1,4 +1,5 @@
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{get, post, put, delete, patch},
     Router,
 };
@@ -14,27 +15,40 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+mod access;
+mod account_policy;
 mod admin;
 mod api_keys;
+mod api_limits;
 mod auth;
+mod avatars;
 mod compiler;
 mod db;
 mod desktop;
 mod devices;
 mod docs;
+mod downloads;
 mod folders;
+mod fonts;
 mod files;
 mod handlers;
+mod live_documents;
+mod hashing;
 mod models;
 mod packages;
+mod passwords;
 mod projects;
 mod public_api;
 mod setup;
+mod site_settings;
+mod storage;
 mod world;
+mod yjs;
 mod collab;
 
 use compiler::TypstCompiler;
-use handlers::{compile_handler, export_handler, yjs_handler};
+use handlers::{compile_handler, export_handler};
+use yjs::yjs_handler;
 
 pub type RateLimiterMap = Arc<Mutex<HashMap<String, (u32, std::time::Instant)>>>;
 
@@ -48,6 +62,8 @@ pub struct AppState {
     pub rate_limiter: RateLimiterMap,
     pub device_presence: Arc<Mutex<HashMap<String, DevicePresence>>>,
     pub device_events: Arc<Mutex<HashMap<String, broadcast::Sender<DeviceEvent>>>>,
+    pub live_sessions: Arc<Mutex<access::LiveSessions>>,
+    pub live_documents: Arc<Mutex<live_documents::LiveDocuments>>,
 }
 
 impl axum::extract::FromRef<AppState> for Key {
@@ -100,12 +116,21 @@ async fn main() {
         rate_limiter: Arc::new(Mutex::new(HashMap::new())),
         device_presence: Arc::new(Mutex::new(HashMap::new())),
         device_events: Arc::new(Mutex::new(HashMap::new())),
+        live_sessions: Arc::new(Mutex::new(HashMap::new())),
+        live_documents: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let api_routes = Router::new()
         .route("/setup", get(setup::setup_status).post(setup::run_setup))
         .route("/admin/users", get(admin::list_users).post(admin::create_user))
         .route("/admin/users/{id}", patch(admin::update_user).delete(admin::delete_user))
+        .route("/admin/account-policy", get(account_policy::get_policy).put(account_policy::update_policy))
+        .route("/admin/api-access", get(api_limits::overview))
+        .route("/admin/api-access/defaults", put(api_limits::update_defaults))
+        .route("/admin/api-access/users/{id}", put(api_limits::update_user_limits))
+        .route("/admin/storage", get(storage::overview))
+        .route("/admin/storage/default-quota", put(storage::update_default_quota))
+        .route("/admin/storage/users/{id}", put(storage::update_user_quota))
         .route("/compile", post(compile_handler))
         .route("/export/{format}", post(export_handler))
         .route("/export/pandoc/{format}", post(handlers::pandoc_export_handler))
@@ -115,17 +140,25 @@ async fn main() {
         .route("/auth/login", post(auth::login))
         .route("/auth/logout", post(auth::logout))
         .route("/auth/me", get(auth::me).put(auth::update_profile))
-        .route("/auth/storage", get(auth::storage_stats))
+        .route(
+            "/auth/avatar",
+            get(avatars::get_avatar)
+                .put(avatars::upload_avatar)
+                .delete(avatars::delete_avatar)
+                .layer(DefaultBodyLimit::max(avatars::MAX_UPLOAD_BYTES)),
+        )
+        .route("/auth/storage", get(storage::own_storage))
+        .route("/auth/policy", get(account_policy::public_policy))
         .route("/auth/change-password", put(auth::change_password))
         .route("/folders", get(folders::list_folders).post(folders::create_folder))
         .route("/folders/{id}", delete(folders::delete_folder).patch(folders::update_folder))
+        .route("/folders/{id}/download", get(downloads::download_folder))
         .route("/fonts", get(files::list_fonts))
         .route("/files", get(files::list_files).post(files::upload_file_global))
         .route("/files/{id}", delete(files::delete_file).patch(files::update_file))
         .route("/files/{id}/data", get(files::get_file_data))
         .route("/docs/shared", get(docs::list_shared_documents))
         .route("/docs", get(docs::list_documents).post(docs::create_document))
-        .route("/docs/accept-invite", get(collab::accept_invite))
         .route("/docs/{id}", get(docs::get_document).delete(docs::delete_document).patch(docs::update_document))
         .route("/docs/{id}/files", post(docs::upload_file))
         .route("/docs/{id}/collaborators", get(collab::list_collaborators))
@@ -136,11 +169,13 @@ async fn main() {
         .route("/comments/{id}", patch(collab::update_comment).delete(collab::delete_comment))
         .route("/keys", get(api_keys::list_keys).post(api_keys::create_key))
         .route("/keys/usage", get(api_keys::get_aggregate_usage))
+        .route("/keys/limits", get(api_limits::own_limits))
         .route("/keys/{id}", delete(api_keys::delete_key))
         .route("/keys/{id}/regenerate", post(api_keys::regenerate_key))
         .route("/projects/shared", get(projects::list_shared_projects))
         .route("/projects", get(projects::list_projects).post(projects::create_project))
         .route("/projects/{id}", get(projects::get_project).delete(projects::delete_project).patch(projects::update_project))
+        .route("/projects/{id}/download", get(downloads::download_project))
         .route("/projects/{id}/files", get(projects::list_project_files).post(projects::create_project_file))
         .route("/projects/{id}/files/upload", post(projects::upload_project_file))
         .route("/projects/{id}/files/{fid}", get(projects::get_project_file).patch(projects::update_project_file).delete(projects::delete_project_file))

@@ -46,7 +46,7 @@ pub async fn publish_package(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let project = sqlx::query_as::<_, Project>(
-        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = ? AND owner_id = ?"
+        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2"
     )
     .bind(&payload.project_id)
     .bind(&user_id)
@@ -56,7 +56,7 @@ pub async fn publish_package(
     .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
 
     let files = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT path, kind, content FROM project_files WHERE project_id = ?"
+        "SELECT path, kind, content FROM project_files WHERE project_id = $1"
     )
     .bind(&project.id)
     .fetch_all(&state.db)
@@ -94,7 +94,7 @@ pub async fn publish_package(
     }
 
     let existing = sqlx::query_as::<_, Package>(
-        "SELECT id, owner_id, namespace, name, description, created_at FROM packages WHERE namespace = 'typstdrive' AND name = ?"
+        "SELECT id, owner_id, namespace, name, description, created_at FROM packages WHERE namespace = 'typstdrive' AND name = $1"
     )
     .bind(&name)
     .fetch_optional(&state.db)
@@ -111,7 +111,7 @@ pub async fn publish_package(
         None => {
             let package_id = Uuid::new_v4().to_string();
             sqlx::query_as::<_, Package>(
-                "INSERT INTO packages (id, owner_id, namespace, name, description) VALUES (?, ?, 'typstdrive', ?, ?) RETURNING id, owner_id, namespace, name, description, created_at"
+                "INSERT INTO packages (id, owner_id, namespace, name, description) VALUES ($1, $2, 'typstdrive', $3, $4) RETURNING id, owner_id, namespace, name, description, created_at"
             )
             .bind(&package_id)
             .bind(&user_id)
@@ -124,7 +124,7 @@ pub async fn publish_package(
     };
 
     let version_exists = sqlx::query_as::<_, (String,)>(
-        "SELECT id FROM package_versions WHERE package_id = ? AND version = ?"
+        "SELECT id FROM package_versions WHERE package_id = $1 AND version = $2"
     )
     .bind(&package.id)
     .bind(&version)
@@ -138,7 +138,7 @@ pub async fn publish_package(
 
     let version_id = Uuid::new_v4().to_string();
     sqlx::query(
-        "INSERT INTO package_versions (id, package_id, version, entrypoint, manifest) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO package_versions (id, package_id, version, entrypoint, manifest) VALUES ($1, $2, $3, $4, $5)"
     )
     .bind(&version_id)
     .bind(&package.id)
@@ -151,7 +151,7 @@ pub async fn publish_package(
 
     for (path, data) in snapshot {
         let _ = sqlx::query(
-            "INSERT INTO package_files (id, version_id, path, data) VALUES (?, ?, ?, ?)"
+            "INSERT INTO package_files (id, version_id, path, data) VALUES ($1, $2, $3, $4)"
         )
         .bind(Uuid::new_v4().to_string())
         .bind(&version_id)
@@ -196,7 +196,7 @@ pub async fn list_versions(
     let versions = sqlx::query_as::<_, PackageVersion>(
         "SELECT v.id, v.package_id, v.version, v.entrypoint, v.created_at \
          FROM package_versions v JOIN packages p ON p.id = v.package_id \
-         WHERE p.namespace = 'typstdrive' AND p.name = ? ORDER BY v.created_at DESC"
+         WHERE p.namespace = 'typstdrive' AND p.name = $1 ORDER BY v.created_at DESC"
     )
     .bind(&name)
     .fetch_all(&state.db)
@@ -214,7 +214,7 @@ pub async fn delete_package(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let is_admin = sqlx::query_as::<_, (i64,)>("SELECT is_admin FROM users WHERE id = ?")
+    let is_admin = sqlx::query_as::<_, (i64,)>("SELECT is_admin FROM users WHERE id = $1")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -223,12 +223,12 @@ pub async fn delete_package(
         .unwrap_or(false);
 
     let result = if is_admin {
-        sqlx::query("DELETE FROM packages WHERE namespace = 'typstdrive' AND name = ?")
+        sqlx::query("DELETE FROM packages WHERE namespace = 'typstdrive' AND name = $1")
             .bind(&name)
             .execute(&state.db)
             .await
     } else {
-        sqlx::query("DELETE FROM packages WHERE namespace = 'typstdrive' AND name = ? AND owner_id = ?")
+        sqlx::query("DELETE FROM packages WHERE namespace = 'typstdrive' AND name = $1 AND owner_id = $2")
             .bind(&name)
             .bind(&user_id)
             .execute(&state.db)

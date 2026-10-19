@@ -1,54 +1,16 @@
 use axum::{
-    extract::{Path, Query, State, Multipart},
+    extract::{Path, State, Multipart},
     http::{header, StatusCode},
     response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
-use yrs_axum::ws::AxumSink;
-use yrs_axum::broadcast::BroadcastGroup;
-use yrs::sync::Awareness;
-use yrs::{Doc, ReadTxn, Transact, Update};
-use yrs::updates::decoder::Decode;
-use futures_util::stream::{StreamExt, Stream};
+use futures_util::stream::StreamExt;
+use crate::access::{self, Resource};
 use crate::AppState;
-use crate::devices::{notify_devices, DeviceEvent};
 use crate::models::Document;
-
-pub struct ViewerFilterStream {
-    inner: futures_util::stream::SplitStream<axum::extract::ws::WebSocket>,
-    is_viewer: bool,
-}
-
-impl Stream for ViewerFilterStream {
-    type Item = Result<Vec<u8>, yrs::sync::Error>;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        loop {
-            match futures_util::ready!(std::pin::Pin::new(&mut self.inner).poll_next(cx)) {
-                Some(Ok(msg)) => {
-                    if let axum::extract::ws::Message::Binary(bytes) = msg {
-                        if self.is_viewer && !bytes.is_empty() && bytes[0] == 0 && bytes.len() > 1 && bytes[1] == 2 {
-                            continue; // Skip updates
-                        }
-                        return std::task::Poll::Ready(Some(Ok(bytes.to_vec())));
-                    } else if let axum::extract::ws::Message::Close(_) = msg {
-                        return std::task::Poll::Ready(None);
-                    }
-                    continue;
-                }
-                Some(Err(e)) => return std::task::Poll::Ready(Some(Err(yrs::sync::Error::Other(Box::new(e))))),
-                None => return std::task::Poll::Ready(None),
-            }
-        }
-    }
-}
+use crate::projects::decode_text_blob;
 
 #[derive(Deserialize)]
 pub struct CompileRequest {
@@ -91,164 +53,59 @@ pub struct Diagnostic {
     pub to: Option<usize>,
 }
 
-struct YjsSaveTarget {
-    table: &'static str,
-    row_id: String,
-    owner_id: String,
-    event: DeviceEvent,
+fn unauthorized_compile() -> Json<CompileResponse> {
+    Json(CompileResponse {
+        svgs: None,
+        errors: Some(vec![Diagnostic {
+            message: "Unauthorized".to_string(),
+            severity: "Error".to_string(),
+            from: None,
+            to: None,
+        }]),
+        stats: None,
+    })
 }
 
-pub async fn yjs_handler(
-    ws: axum::extract::ws::WebSocketUpgrade,
-    Path(id): Path<String>,
-    Query(params): Query<HashMap<String, String>>,
-    State(state): State<AppState>,
-    jar: axum_extra::extract::cookie::SignedCookieJar,
-) -> impl IntoResponse {
-    let user_id_opt = match jar.get("session_user_id").map(|c| c.value().to_string()) {
-        Some(uid) => Some(uid),
-        None => match params.get("token") {
-            Some(token) => crate::desktop::user_id_for_token(&state, token).await,
-            None => None,
-        },
-    };
-
-    let mut is_viewer = true;
-    let mut initial_content: Option<Vec<u8>> = None;
-    let mut save_target: Option<YjsSaveTarget> = None;
-
-    if let Some(rest) = id.strip_prefix("project:") {
-        if let Some((project_id, file_id)) = rest.split_once(':') {
-            if let Some((project, role)) = crate::projects::project_role(&state, project_id, &user_id_opt).await {
-                is_viewer = role == "viewer";
-                if let Ok(Some((content,))) = sqlx::query_as::<_, (Option<Vec<u8>>,)>(
-                    "SELECT content FROM project_files WHERE id = ? AND project_id = ?"
-                )
-                .bind(file_id)
-                .bind(project_id)
-                .fetch_optional(&state.db)
-                .await
-                {
-                    initial_content = content;
-                }
-                save_target = Some(YjsSaveTarget {
-                    table: "project_files",
-                    row_id: file_id.to_string(),
-                    owner_id: project.owner_id,
-                    event: DeviceEvent::project(project_id),
-                });
-            }
-        }
-    } else {
-        let doc_info = sqlx::query_as::<_, Document>(
-            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
-        )
-        .bind(&id)
-        .fetch_optional(&state.db)
-        .await;
-
-        if let Ok(Some(ref d)) = doc_info {
-            if let Some(uid) = &user_id_opt {
-                if &d.owner_id == uid {
-                    is_viewer = false;
-                } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ? AND role = 'editor'")
-                    .bind(&id)
-                    .bind(uid)
-                    .fetch_optional(&state.db)
-                    .await
-                {
-                    is_viewer = false;
-                }
-            }
-            if is_viewer {
-                if let Some(pr) = &d.public_role {
-                    if pr == "editor" {
-                        is_viewer = false;
-                    }
-                }
-            }
-            initial_content = d.content.clone();
-            save_target = Some(YjsSaveTarget {
-                table: "documents",
-                row_id: id.clone(),
-                owner_id: d.owner_id.clone(),
-                event: DeviceEvent::document(&id),
-            });
-        }
+async fn document_files(state: &AppState, document: &Document) -> HashMap<String, Vec<u8>> {
+    let mut files_map = HashMap::new();
+    if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = $1")
+        .bind(&document.owner_id)
+        .fetch_all(&state.db)
+        .await
+    {
+        files_map.extend(files);
     }
+    if let Ok(collaborator_files) = sqlx::query_as::<_, (String, Vec<u8>)>(
+        "SELECT name, data FROM files WHERE document_id = $1 AND owner_id != $2"
+    )
+    .bind(&document.id)
+    .bind(&document.owner_id)
+    .fetch_all(&state.db)
+    .await
+    {
+        files_map.extend(collaborator_files);
+    }
+    files_map
+}
 
-    let mut bcast_map = state.bcast_map.lock().await;
-    let bcast = if let Some(bcast) = bcast_map.get(&id) {
-        bcast.clone()
-    } else {
-        let ydoc = Doc::new();
-
-        if let Some(content) = initial_content {
-            if let Ok(update) = Update::decode_v1(&content) {
-                ydoc.transact_mut().apply_update(update);
-            }
-        }
-
-        let awareness = Arc::new(RwLock::new(Awareness::new(ydoc)));
-        let new_bcast = Arc::new(BroadcastGroup::new(awareness.clone(), 10).await);
-        bcast_map.insert(id.clone(), new_bcast.clone());
-
-        if let Some(target) = save_target {
-            let save_db = state.db.clone();
-            let save_awareness = awareness.clone();
-            let save_state = state.clone();
-            tokio::spawn(async move {
-                let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
-                let mut last_content: Option<Vec<u8>> = None;
-                loop {
-                    interval.tick().await;
-                    let doc = save_awareness.read().await;
-                    let content = doc.doc().transact().encode_state_as_update_v1(&yrs::StateVector::default());
-                    drop(doc);
-
-                    if last_content.as_ref() == Some(&content) {
-                        continue;
-                    }
-
-                    let query = if target.table == "project_files" {
-                        "UPDATE project_files SET content = ? WHERE id = ?"
-                    } else {
-                        "UPDATE documents SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-                    };
-                    let result = sqlx::query(query)
-                        .bind(&content)
-                        .bind(&target.row_id)
-                        .execute(&save_db)
-                        .await;
-
-                    if result.is_ok() {
-                        last_content = Some(content);
-                        notify_devices(&save_state, &target.owner_id, target.event.clone()).await;
-                    }
-                }
-            });
-        }
-
-        new_bcast
+async fn document_source(
+    state: &AppState,
+    payload: &CompileRequest,
+    user_id: &Option<String>,
+) -> Result<(String, HashMap<String, Vec<u8>>, bool), ()> {
+    let submitted_text = payload.text.clone().unwrap_or_default();
+    let Some(document_id) = &payload.document_id else {
+        return Ok((submitted_text, HashMap::new(), false));
     };
 
-    drop(bcast_map);
-
-    ws.on_upgrade(move |socket| async move {
-        let (sink, stream) = socket.split();
-        let sink = Arc::new(Mutex::new(AxumSink(sink)));
-
-        let filtered_stream = ViewerFilterStream {
-            inner: stream,
-            is_viewer,
-        };
-
-        let sub = bcast.subscribe(sink, filtered_stream);
-        match sub.completed().await {
-            Ok(_) => println!("broadcasting for channel finished successfully"),
-            Err(e) => eprintln!("broadcasting for channel finished abruptly: {}", e),
-        }
-    })
+    let (document, role) = access::document_role(state, document_id, user_id).await.ok_or(())?;
+    let files_map = document_files(state, &document).await;
+    if role.can_edit() {
+        Ok((submitted_text, files_map, true))
+    } else {
+        let saved_text = decode_text_blob(document.content.as_deref().unwrap_or_default());
+        Ok((saved_text, files_map, false))
+    }
 }
 
 pub async fn compile_handler(
@@ -256,30 +113,15 @@ pub async fn compile_handler(
     jar: axum_extra::extract::cookie::SignedCookieJar,
     Json(payload): Json<CompileRequest>,
 ) -> impl IntoResponse {
-    let mut files_map = std::collections::HashMap::new();
-    let mut can_save_thumbnail = false;
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
     if let Some(project_id) = &payload.project_id {
-        let (project, role) = match crate::projects::project_role(&state, project_id, &user_id_opt).await {
-            Some(v) => v,
-            None => {
-                return Json(CompileResponse {
-                    svgs: None,
-                    errors: Some(vec![Diagnostic {
-                        message: "Unauthorized".to_string(),
-                        severity: "Error".to_string(),
-                        from: None,
-                        to: None,
-                    }]),
-                    stats: None,
-                });
-            }
+        let Some((project, role)) = access::project_access(&state, project_id, &user_id_opt).await else {
+            return unauthorized_compile();
         };
 
-        let overrides = payload.files.clone().unwrap_or_default();
+        let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
         let input = crate::projects::assemble_project(&state, &project, overrides).await;
-        let can_save = role == "owner" || role == "editor";
 
         let compiler = state.compiler.lock().await;
         let result = compiler.compile_svg(input);
@@ -287,8 +129,8 @@ pub async fn compile_handler(
 
         return match result {
             Ok((svgs, thumbnail, stats)) => {
-                if can_save {
-                    let _ = sqlx::query("UPDATE projects SET thumbnail_svg = ? WHERE id = ?")
+                if role.can_edit() {
+                    let _ = sqlx::query("UPDATE projects SET thumbnail_svg = $1 WHERE id = $2")
                         .bind(&thumbnail)
                         .bind(&project.id)
                         .execute(&state.db)
@@ -308,75 +150,22 @@ pub async fn compile_handler(
         };
     }
 
-    if let Some(doc_id) = &payload.document_id {
-        if let Ok(doc) = sqlx::query_as::<_, crate::models::Document>(
-            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
-        )
-        .bind(doc_id)
-        .fetch_one(&state.db)
-        .await
-        {
-            let mut has_access = false;
-            if let Some(uid) = &user_id_opt {
-                if &doc.owner_id == uid {
-                    has_access = true;
-                    can_save_thumbnail = true;
-                } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?")
-                    .bind(doc_id)
-                    .bind(uid)
-                    .fetch_optional(&state.db)
-                    .await
-                {
-                    has_access = true;
-                }
-            }
-
-            if !has_access {
-                if let Some(pr) = &doc.public_role {
-                    if pr == "viewer" || pr == "editor" {
-                        has_access = true;
-                    }
-                }
-            }
-
-            if has_access {
-                if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = ?")
-                    .bind(&doc.owner_id)
-                    .fetch_all(&state.db)
-                    .await
-                {
-                    for (name, data) in files {
-                        files_map.insert(name, data);
-                    }
-                }
-                // Also include files uploaded by collaborators specifically for this document
-                if let Ok(collab_files) = sqlx::query_as::<_, (String, Vec<u8>)>(
-                    "SELECT name, data FROM files WHERE document_id = ? AND owner_id != ?"
-                )
-                .bind(doc_id)
-                .bind(&doc.owner_id)
-                .fetch_all(&state.db)
-                .await
-                {
-                    for (name, data) in collab_files {
-                        files_map.insert(name, data);
-                    }
-                }
-            }
-        }
-    }
+    let Ok((source_text, files_map, can_save_thumbnail)) = document_source(&state, &payload, &user_id_opt).await else {
+        return unauthorized_compile();
+    };
 
     let compiler = state.compiler.lock().await;
-    match compiler.compile_svg(ProjectInput::single(payload.text.clone().unwrap_or_default(), files_map)) {
+    let result = compiler.compile_svg(ProjectInput::single(source_text, files_map));
+    drop(compiler);
+
+    match result {
         Ok((svgs, thumbnail, stats)) => {
-            if let Some(doc_id) = &payload.document_id {
-                if can_save_thumbnail {
-                    let _ = sqlx::query("UPDATE documents SET thumbnail_svg = ? WHERE id = ?")
-                        .bind(&thumbnail)
-                        .bind(doc_id)
-                        .execute(&state.db)
-                        .await;
-                }
+            if let (Some(doc_id), true) = (&payload.document_id, can_save_thumbnail) {
+                let _ = sqlx::query("UPDATE documents SET thumbnail_svg = $1 WHERE id = $2")
+                    .bind(&thumbnail)
+                    .bind(doc_id)
+                    .execute(&state.db)
+                    .await;
             }
 
             Json(CompileResponse {
@@ -385,22 +174,11 @@ pub async fn compile_handler(
                 stats: Some(stats),
             })
         }
-        Err(diags) => {
-            let errors = diags
-                .into_iter()
-                .map(|(d, range)| Diagnostic {
-                    message: d.message.to_string(),
-                    severity: format!("{:?}", d.severity),
-                    from: range.as_ref().map(|r| r.start),
-                    to: range.as_ref().map(|r| r.end),
-                })
-                .collect();
-            Json(CompileResponse {
-                svgs: None,
-                errors: Some(errors),
-                stats: None,
-            })
-        }
+        Err(diags) => Json(CompileResponse {
+            svgs: None,
+            errors: Some(map_diagnostics(diags)),
+            stats: None,
+        }),
     }
 }
 
@@ -410,74 +188,21 @@ pub async fn export_handler(
     Path(format): Path<String>,
     Json(payload): Json<CompileRequest>,
 ) -> impl IntoResponse {
-    let mut files_map = std::collections::HashMap::new();
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
-    if let Some(doc_id) = &payload.document_id {
-        if let Ok(doc) = sqlx::query_as::<_, crate::models::Document>(
-            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
-        )
-        .bind(doc_id)
-        .fetch_one(&state.db)
-        .await
-        {
-            let mut has_access = false;
-            if let Some(uid) = &user_id_opt {
-                if &doc.owner_id == uid {
-                    has_access = true;
-                } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?")
-                    .bind(doc_id)
-                    .bind(uid)
-                    .fetch_optional(&state.db)
-                    .await
-                {
-                    has_access = true;
-                }
-            }
-            if !has_access {
-                if let Some(pr) = &doc.public_role {
-                    if pr == "viewer" || pr == "editor" {
-                        has_access = true;
-                    }
-                }
-            }
-
-            if has_access {
-                if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = ?")
-                    .bind(&doc.owner_id)
-                    .fetch_all(&state.db)
-                    .await
-                {
-                    for (name, data) in files {
-                        files_map.insert(name, data);
-                    }
-                }
-                if let Ok(collab_files) = sqlx::query_as::<_, (String, Vec<u8>)>(
-                    "SELECT name, data FROM files WHERE document_id = ? AND owner_id != ?"
-                )
-                .bind(doc_id)
-                .bind(&doc.owner_id)
-                .fetch_all(&state.db)
-                .await
-                {
-                    for (name, data) in collab_files {
-                        files_map.insert(name, data);
-                    }
-                }
-            }
-        }
-    }
-
     let input = if let Some(project_id) = &payload.project_id {
-        match crate::projects::project_role(&state, project_id, &user_id_opt).await {
-            Some((project, _)) => {
-                let overrides = payload.files.clone().unwrap_or_default();
+        match access::project_access(&state, project_id, &user_id_opt).await {
+            Some((project, role)) => {
+                let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
                 crate::projects::assemble_project(&state, &project, overrides).await
             }
             None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
         }
     } else {
-        ProjectInput::single(payload.text.clone().unwrap_or_default(), files_map)
+        match document_source(&state, &payload, &user_id_opt).await {
+            Ok((source_text, files_map, _)) => ProjectInput::single(source_text, files_map),
+            Err(()) => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+        }
     };
 
     let compiler = state.compiler.lock().await;
@@ -659,55 +384,18 @@ pub async fn lsp_handler(
 ) -> impl IntoResponse {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
 
-    let doc = match sqlx::query_as::<_, crate::models::Document>(
-        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await
-    {
-        Ok(Some(d)) => d,
-        _ => return (StatusCode::NOT_FOUND, "Document not found").into_response(),
+    let doc = match access::document_role(&state, &id, &user_id_opt).await {
+        Some((doc, role)) if role.can_edit() => doc,
+        Some(_) => return access::forbidden().into_response(),
+        None => return (StatusCode::NOT_FOUND, "Document not found").into_response(),
     };
 
-    let mut has_access = false;
-    if let Some(uid) = &user_id_opt {
-        if &doc.owner_id == uid {
-            has_access = true;
-        } else if let Ok(Some(_)) = sqlx::query_as::<_, (String,)>("SELECT role FROM collaborators WHERE document_id = ? AND user_id = ?")
-            .bind(&id)
-            .bind(uid)
-            .fetch_optional(&state.db)
-            .await
-        {
-            has_access = true;
-        }
-    }
-    if !has_access {
-        if let Some(pr) = &doc.public_role {
-            if pr == "viewer" || pr == "editor" {
-                has_access = true;
-            }
-        }
-    }
-
-    if !has_access {
-        return (StatusCode::FORBIDDEN, "Forbidden").into_response();
-    }
-
-    let mut files_map = std::collections::HashMap::new();
-    if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = ?")
-        .bind(doc.owner_id)
-        .fetch_all(&state.db)
-        .await
-    {
-        for (name, data) in files {
-            files_map.insert(name, data);
-        }
-    }
+    let files_map = document_files(&state, &doc).await;
 
     ws.on_upgrade(move |socket| async move {
         use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+
+        let session = access::register_session(&state, Resource::Document(id.clone()), user_id_opt, None, true).await;
         use tokio::process::Command;
         use std::process::Stdio;
 
@@ -802,10 +490,12 @@ pub async fn lsp_handler(
             _ = &mut ws_to_lsp => {}
             _ = &mut lsp_to_ws => {}
             _ = child.wait() => {}
+            _ = session.revoked => {}
         }
 
         ws_to_lsp.abort();
         lsp_to_ws.abort();
         let _ = child.kill().await;
+        access::unregister_session(&state, &session.resource, session.session_id).await;
     })
 }

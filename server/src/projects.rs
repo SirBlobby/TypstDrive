@@ -74,7 +74,7 @@ pub async fn project_role(
     user_id_opt: &Option<String>,
 ) -> Option<(Project, String)> {
     let project = sqlx::query_as::<_, Project>(
-        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = ?"
+        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1"
     )
     .bind(project_id)
     .fetch_optional(&state.db)
@@ -86,7 +86,7 @@ pub async fn project_role(
             return Some((project, "owner".to_string()));
         }
         if let Ok(Some((role,))) = sqlx::query_as::<_, (String,)>(
-            "SELECT role FROM project_collaborators WHERE project_id = ? AND user_id = ?",
+            "SELECT role FROM project_collaborators WHERE project_id = $1 AND user_id = $2",
         )
         .bind(project_id)
         .bind(uid)
@@ -137,7 +137,7 @@ pub async fn assemble_project(
     // Account-level uploaded files (fonts, images) come first as a base layer so
     // they are available inside projects; project files below override them by name.
     if let Ok(account_files) = sqlx::query_as::<_, (String, Vec<u8>)>(
-        "SELECT name, data FROM files WHERE owner_id = ?",
+        "SELECT name, data FROM files WHERE owner_id = $1",
     )
     .bind(&project.owner_id)
     .fetch_all(&state.db)
@@ -149,7 +149,7 @@ pub async fn assemble_project(
     }
 
     let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT path, kind, content FROM project_files WHERE project_id = ?",
+        "SELECT path, kind, content FROM project_files WHERE project_id = $1",
     )
     .bind(&project.id)
     .fetch_all(&state.db)
@@ -192,7 +192,7 @@ pub async fn list_projects(
 
     let projects = if let Some(folder_id) = query.folder_id {
         sqlx::query_as::<_, Project>(
-            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE owner_id = ? AND folder_id = ? ORDER BY updated_at DESC"
+            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at, CAST((SELECT COALESCE(SUM(LENGTH(f.content)), 0) FROM project_files f WHERE f.project_id = projects.id) AS BIGINT) AS size_bytes FROM projects WHERE owner_id = $1 AND folder_id = $2 ORDER BY updated_at DESC"
         )
         .bind(&user_id)
         .bind(&folder_id)
@@ -200,7 +200,7 @@ pub async fn list_projects(
         .await
     } else {
         sqlx::query_as::<_, Project>(
-            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE owner_id = ? AND folder_id IS NULL ORDER BY updated_at DESC"
+            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at, CAST((SELECT COALESCE(SUM(LENGTH(f.content)), 0) FROM project_files f WHERE f.project_id = projects.id) AS BIGINT) AS size_bytes FROM projects WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC"
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -222,7 +222,7 @@ pub async fn list_shared_projects(
         "SELECT p.id, p.owner_id, p.folder_id, p.name, p.entrypoint, p.thumbnail_svg, \
          p.public_role, p.created_at, p.updated_at, c.role as effective_role \
          FROM projects p \
-         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = ? \
+         INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = $1 \
          ORDER BY p.updated_at DESC"
     )
     .bind(&user_id)
@@ -244,7 +244,7 @@ pub async fn create_project(
     let project_id = Uuid::new_v4().to_string();
 
     let project = sqlx::query_as::<_, Project>(
-        "INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES (?, ?, ?, ?, 'main.typ') RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at"
+        "INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES ($1, $2, $3, $4, 'main.typ') RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at"
     )
     .bind(&project_id)
     .bind(&user_id)
@@ -260,7 +260,7 @@ pub async fn create_project(
     ];
     for (path, content) in seeds {
         let _ = sqlx::query(
-            "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES (?, ?, ?, 'text', ?, 'text/plain')"
+            "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES ($1, $2, $3, 'text', $4, 'text/plain')"
         )
         .bind(Uuid::new_v4().to_string())
         .bind(&project_id)
@@ -298,7 +298,7 @@ pub async fn update_project(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut project = sqlx::query_as::<_, Project>(
-        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = ? AND owner_id = ?"
+        "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2"
     )
     .bind(&id)
     .bind(&user_id)
@@ -325,18 +325,20 @@ pub async fn update_project(
     }
 
     let project = sqlx::query_as::<_, Project>(
-        "UPDATE projects SET name = ?, entrypoint = ?, folder_id = ?, public_role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND owner_id = ? RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at"
+        "UPDATE projects SET name = $1, entrypoint = $2, folder_id = $3, public_role = $4, updated_at = $5 WHERE id = $6 AND owner_id = $7 RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at"
     )
     .bind(&project.name)
     .bind(&project.entrypoint)
     .bind(&project.folder_id)
     .bind(&project.public_role)
+    .bind(crate::db::timestamp_now())
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    crate::access::revalidate_resource(&state, crate::access::Resource::Project(id.clone())).await;
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(Json(project))
@@ -350,22 +352,25 @@ pub async fn delete_project(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let _ = sqlx::query("DELETE FROM project_files WHERE project_id = ?")
+    let owned_project = sqlx::query_as::<_, (String,)>("SELECT id FROM projects WHERE id = $1 AND owner_id = $2")
         .bind(&id)
-        .execute(&state.db)
-        .await;
+        .bind(&user_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let result = sqlx::query("DELETE FROM projects WHERE id = ? AND owner_id = ?")
+    if owned_project.is_none() {
+        return Err((StatusCode::NOT_FOUND, "Project not found or unauthorized".to_string()));
+    }
+
+    sqlx::query("DELETE FROM projects WHERE id = $1 AND owner_id = $2")
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "Project not found or unauthorized".to_string()));
-    }
-
+    crate::access::revalidate_resource(&state, crate::access::Resource::Project(id.clone())).await;
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
@@ -382,7 +387,7 @@ pub async fn list_project_files(
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
 
     let files = sqlx::query_as::<_, ProjectFile>(
-        "SELECT id, project_id, path, kind, mime_type, created_at FROM project_files WHERE project_id = ? ORDER BY path ASC"
+        "SELECT id, project_id, path, kind, mime_type, created_at FROM project_files WHERE project_id = $1 ORDER BY path ASC"
     )
     .bind(&id)
     .fetch_all(&state.db)
@@ -408,10 +413,11 @@ pub async fn create_project_file(
 
     let kind = payload.kind.unwrap_or_else(|| "text".to_string());
     let content = payload.content.unwrap_or_default();
+    crate::storage::ensure_room(&state, &project.owner_id, content.len() as i64).await?;
     let file_id = Uuid::new_v4().to_string();
 
     let file = sqlx::query_as::<_, ProjectFile>(
-        "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES (?, ?, ?, ?, ?, 'text/plain') RETURNING id, project_id, path, kind, mime_type, created_at"
+        "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES ($1, $2, $3, $4, $5, 'text/plain') RETURNING id, project_id, path, kind, mime_type, created_at"
     )
     .bind(&file_id)
     .bind(&id)
@@ -455,8 +461,11 @@ pub async fn upload_project_file(
             ("binary", data)
         };
 
+        let existing_size = crate::storage::project_file_size(&state, &id, &path).await;
+        crate::storage::ensure_room(&state, &project.owner_id, content.len() as i64 - existing_size).await?;
+
         let _ = sqlx::query(
-            "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES (?, ?, ?, ?, ?, ?) \
+            "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES ($1, $2, $3, $4, $5, $6) \
              ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, kind = excluded.kind, mime_type = excluded.mime_type"
         )
         .bind(Uuid::new_v4().to_string())
@@ -488,7 +497,7 @@ pub async fn get_project_file(
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
 
     let file = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT kind, mime_type, content FROM project_files WHERE id = ? AND project_id = ?"
+        "SELECT kind, mime_type, content FROM project_files WHERE id = $1 AND project_id = $2"
     )
     .bind(&file_id)
     .bind(&id)
@@ -521,7 +530,7 @@ pub async fn update_project_file(
         return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
     }
 
-    let result = sqlx::query("UPDATE project_files SET path = ? WHERE id = ? AND project_id = ?")
+    let result = sqlx::query("UPDATE project_files SET path = $1 WHERE id = $2 AND project_id = $3")
         .bind(&payload.path)
         .bind(&file_id)
         .bind(&id)
@@ -551,7 +560,7 @@ pub async fn delete_project_file(
         return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
     }
 
-    let result = sqlx::query("DELETE FROM project_files WHERE id = ? AND project_id = ?")
+    let result = sqlx::query("DELETE FROM project_files WHERE id = $1 AND project_id = $2")
         .bind(&file_id)
         .bind(&id)
         .execute(&state.db)

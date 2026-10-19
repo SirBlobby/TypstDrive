@@ -2,10 +2,6 @@ use axum::{extract::State, http::StatusCode, Json};
 use axum_extra::extract::cookie::{Cookie, SameSite, SignedCookieJar};
 use uuid::Uuid;
 
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2,
-};
 
 use crate::{
     models::{SetupRequest, SetupStatus, User},
@@ -22,7 +18,7 @@ pub async fn setup_status(
 
     Json(SetupStatus {
         needs_setup: count.0 == 0,
-        registration_enabled: state.registration_enabled,
+        registration_enabled: crate::account_policy::load_policy(&state).await.registration_enabled,
     })
 }
 
@@ -44,16 +40,13 @@ pub async fn run_setup(
         return Err((StatusCode::BAD_REQUEST, "Username, email, and password cannot be empty".to_string()));
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let password_hash = Argon2::default()
-        .hash_password(payload.password.as_bytes(), &salt)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .to_string();
+    let password_hash = crate::passwords::hash_password(&payload.password)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     let user_id = Uuid::new_v4().to_string();
 
     let user = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, username, email, password_hash, is_admin) VALUES (?, ?, ?, ?, ?) RETURNING id, username, email, password_hash, is_admin"
+        "INSERT INTO users (id, username, email, password_hash, is_admin) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, password_hash, is_admin"
     )
     .bind(&user_id)
     .bind(&payload.username)

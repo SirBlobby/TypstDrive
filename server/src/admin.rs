@@ -5,21 +5,17 @@ use axum::{
 };
 use axum_extra::extract::cookie::SignedCookieJar;
 use uuid::Uuid;
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2,
-};
 
 use crate::{
     models::{AdminCreateUserRequest, AdminUserView, UpdateUserRequest},
     AppState,
 };
 
-async fn require_admin(state: &AppState, jar: &SignedCookieJar) -> Result<String, (StatusCode, String)> {
+pub(crate) async fn require_admin(state: &AppState, jar: &SignedCookieJar) -> Result<String, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let is_admin: Option<(i64,)> = sqlx::query_as("SELECT is_admin FROM users WHERE id = ?")
+    let is_admin: Option<(i64,)> = sqlx::query_as("SELECT is_admin FROM users WHERE id = $1")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -42,17 +38,14 @@ pub async fn create_user(
         return Err((StatusCode::BAD_REQUEST, "Username, email, and password are required".to_string()));
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let password_hash = Argon2::default()
-        .hash_password(payload.password.as_bytes(), &salt)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .to_string();
+    let password_hash = crate::passwords::hash_password(&payload.password)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     let user_id = Uuid::new_v4().to_string();
     let is_admin = payload.is_admin.unwrap_or(false);
 
     let result = sqlx::query_as::<_, AdminUserView>(
-        "INSERT INTO users (id, username, email, password_hash, is_admin) VALUES (?, ?, ?, ?, ?) RETURNING id, username, email, is_admin, created_at"
+        "INSERT INTO users (id, username, email, password_hash, is_admin) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, is_admin, created_at"
     )
     .bind(&user_id)
     .bind(&payload.username)
@@ -99,7 +92,7 @@ pub async fn update_user(
         if !is_admin && requester_id == user_id {
             return Err((StatusCode::BAD_REQUEST, "Cannot remove your own admin privileges".to_string()));
         }
-        sqlx::query("UPDATE users SET is_admin = ? WHERE id = ?")
+        sqlx::query("UPDATE users SET is_admin = $1 WHERE id = $2")
             .bind(if is_admin { 1i64 } else { 0i64 })
             .bind(&user_id)
             .execute(&state.db)
@@ -108,7 +101,7 @@ pub async fn update_user(
     }
 
     let user = sqlx::query_as::<_, AdminUserView>(
-        "SELECT id, username, email, is_admin, created_at FROM users WHERE id = ?"
+        "SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1"
     )
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -130,11 +123,13 @@ pub async fn delete_user(
         return Err((StatusCode::BAD_REQUEST, "Cannot delete your own account via admin panel".to_string()));
     }
 
-    sqlx::query("DELETE FROM users WHERE id = ?")
+    sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(&user_id)
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    crate::access::revoke_user_sessions(&state, &user_id).await;
 
     Ok(StatusCode::NO_CONTENT)
 }

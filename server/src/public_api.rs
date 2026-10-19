@@ -56,8 +56,10 @@ fn line_and_column(code: &str, offset: usize) -> (usize, usize) {
     (line, column)
 }
 
-fn compute_cache_key(format: &str, code: &str, files: &Option<Vec<InlineFile>>) -> String {
+fn compute_cache_key(user_id: &str, format: &str, code: &str, files: &Option<Vec<InlineFile>>) -> String {
     let mut hasher = Sha256::new();
+    hasher.update(user_id.as_bytes());
+    hasher.update(b"\x00");
     hasher.update(format.as_bytes());
     hasher.update(b"\x00");
     hasher.update(code.as_bytes());
@@ -70,7 +72,7 @@ fn compute_cache_key(format: &str, code: &str, files: &Option<Vec<InlineFile>>) 
             hasher.update(data.as_bytes());
         }
     }
-    format!("{:x}", hasher.finalize())
+    crate::hashing::to_hex(hasher.finalize().as_slice())
 }
 
 pub async fn render_handler(
@@ -99,14 +101,14 @@ pub async fn render_handler(
 
     let key_hash = hash_key(&api_key);
 
-    let key_row = sqlx::query_as::<_, (String, String, i64)>(
-        "SELECT id, user_id, rate_limit FROM api_keys WHERE key_hash = ?"
+    let key_row = sqlx::query_as::<_, (String, String)>(
+        "SELECT id, user_id FROM api_keys WHERE key_hash = $1"
     )
     .bind(&key_hash)
     .fetch_optional(&state.db)
     .await;
 
-    let (key_id, user_id, rate_limit) = match key_row {
+    let (key_id, user_id) = match key_row {
         Ok(Some(row)) => row,
         Ok(None) => return (StatusCode::UNAUTHORIZED, "Invalid API key").into_response(),
         Err(e) => {
@@ -114,6 +116,15 @@ pub async fn render_handler(
             return (StatusCode::INTERNAL_SERVER_ERROR, msg).into_response();
         }
     };
+
+    let limits = crate::api_limits::effective_limits(&state, &user_id).await;
+    if !limits.api_enabled {
+        return (StatusCode::FORBIDDEN, "API access is disabled for this account").into_response();
+    }
+    if limits.daily_quota > 0 && crate::api_limits::requests_today(&state, &user_id).await >= limits.daily_quota {
+        return (StatusCode::TOO_MANY_REQUESTS, "Daily request quota reached for this account.").into_response();
+    }
+    let rate_limit = limits.rate_limit;
 
     // Rate limiting: fixed window of 60 seconds
     {
@@ -135,14 +146,14 @@ pub async fn render_handler(
     let now_str = now.to_rfc3339();
     let today = now.format("%Y-%m-%d").to_string();
 
-    let _ = sqlx::query("UPDATE api_keys SET last_used_at = ? WHERE id = ?")
+    let _ = sqlx::query("UPDATE api_keys SET last_used_at = $1 WHERE id = $2")
         .bind(&now_str)
         .bind(&key_id)
         .execute(&state.db)
         .await;
 
     let _ = sqlx::query(
-        "INSERT INTO api_key_usage (key_id, date, count) VALUES (?, ?, 1) \
+        "INSERT INTO api_key_usage (key_id, date, count) VALUES ($1, $2, 1) \
          ON CONFLICT (key_id, date) DO UPDATE SET count = api_key_usage.count + 1"
     )
     .bind(&key_id)
@@ -152,7 +163,7 @@ pub async fn render_handler(
 
     let minute_str = now.format("%Y-%m-%d %H:%M").to_string();
     let _ = sqlx::query(
-        "INSERT INTO api_key_usage_detail (key_id, minute, count) VALUES (?, ?, 1) \
+        "INSERT INTO api_key_usage_detail (key_id, minute, count) VALUES ($1, $2, 1) \
          ON CONFLICT (key_id, minute) DO UPDATE SET count = api_key_usage_detail.count + 1"
     )
     .bind(&key_id)
@@ -163,13 +174,13 @@ pub async fn render_handler(
     let cutoff_minute = (chrono::Utc::now() - chrono::TimeDelta::hours(25))
         .format("%Y-%m-%d %H:%M")
         .to_string();
-    let _ = sqlx::query("DELETE FROM api_key_usage_detail WHERE minute < ?")
+    let _ = sqlx::query("DELETE FROM api_key_usage_detail WHERE minute < $1")
         .bind(&cutoff_minute)
         .execute(&state.db)
         .await;
 
     // Check cache
-    let cache_key = compute_cache_key(&payload.format, &payload.code, &payload.files);
+    let cache_key = compute_cache_key(&user_id, &payload.format, &payload.code, &payload.files);
     let content_type: &'static str = match payload.format.as_str() {
         "pdf" => "application/pdf",
         "html" => "text/html; charset=utf-8",
@@ -177,7 +188,7 @@ pub async fn render_handler(
     };
 
     if let Ok(Some((data, created_at))) = sqlx::query_as::<_, (Vec<u8>, String)>(
-        "SELECT data, created_at FROM api_render_cache WHERE content_hash = ? AND format = ?"
+        "SELECT data, created_at FROM api_render_cache WHERE content_hash = $1 AND format = $2"
     )
     .bind(&cache_key)
     .bind(&payload.format)
@@ -195,7 +206,7 @@ pub async fn render_handler(
     // Load user's account files
     let mut files_map: HashMap<String, Vec<u8>> = HashMap::new();
     if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>(
-        "SELECT name, data FROM files WHERE owner_id = ?"
+        "SELECT name, data FROM files WHERE owner_id = $1"
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -229,10 +240,10 @@ pub async fn render_handler(
 
     match result {
         Ok(data) => {
-            // Store in cache (ignore errors — concurrent inserts are fine)
             let cache_id = Uuid::new_v4().to_string();
             let _ = sqlx::query(
-                "INSERT INTO api_render_cache (id, content_hash, format, data, created_at) VALUES (?, ?, ?, ?, ?)"
+                "INSERT INTO api_render_cache (id, content_hash, format, data, created_at) VALUES ($1, $2, $3, $4, $5) \
+                 ON CONFLICT (content_hash) DO UPDATE SET format = excluded.format, data = excluded.data, created_at = excluded.created_at"
             )
             .bind(&cache_id)
             .bind(&cache_key)

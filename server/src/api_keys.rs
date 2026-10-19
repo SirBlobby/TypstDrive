@@ -5,7 +5,6 @@ use axum::{
 };
 use std::collections::HashMap;
 use axum_extra::extract::cookie::SignedCookieJar;
-use sha2::{Sha256, Digest};
 use uuid::Uuid;
 
 use crate::{
@@ -18,7 +17,7 @@ fn get_user_id(jar: &SignedCookieJar) -> Option<String> {
 }
 
 pub fn hash_key(key: &str) -> String {
-    format!("{:x}", Sha256::digest(key.as_bytes()))
+    crate::hashing::sha256_hex(key.as_bytes())
 }
 
 fn generate_api_key() -> String {
@@ -36,13 +35,18 @@ pub async fn list_keys(
     let user_id = get_user_id(&jar)
         .ok_or((StatusCode::UNAUTHORIZED, "Not authenticated".to_string()))?;
 
-    let keys = sqlx::query_as::<_, ApiKeyView>(
-        "SELECT id, name, key_prefix, created_at, last_used_at, rate_limit FROM api_keys WHERE user_id = ? ORDER BY created_at DESC"
+    let rate_limit = crate::api_limits::effective_limits(&state, &user_id).await.rate_limit;
+    let mut keys = sqlx::query_as::<_, ApiKeyView>(
+        "SELECT id, name, key_prefix, created_at, last_used_at, rate_limit FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC"
     )
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    for key in &mut keys {
+        key.rate_limit = rate_limit;
+    }
 
     Ok(Json(keys))
 }
@@ -59,16 +63,12 @@ pub async fn create_key(
         return Err((StatusCode::BAD_REQUEST, "Key name cannot be empty".to_string()));
     }
 
-    let existing: Option<(i64,)> = sqlx::query_as("SELECT COUNT(*) FROM api_keys WHERE user_id = ?")
-        .bind(&user_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if let Some((count,)) = existing {
-        if count >= 10 {
-            return Err((StatusCode::CONFLICT, "Maximum of 10 API keys per account".to_string()));
-        }
+    let limits = crate::api_limits::effective_limits(&state, &user_id).await;
+    if !limits.api_enabled {
+        return Err((StatusCode::FORBIDDEN, "API access is disabled for this account".to_string()));
+    }
+    if crate::api_limits::key_count(&state, &user_id).await >= limits.max_keys {
+        return Err((StatusCode::CONFLICT, format!("Maximum of {} API keys per account", limits.max_keys)));
     }
 
     let key = generate_api_key();
@@ -78,7 +78,7 @@ pub async fn create_key(
     let now = chrono::Utc::now().to_rfc3339();
 
     sqlx::query(
-        "INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, created_at) VALUES ($1, $2, $3, $4, $5, $6)"
     )
     .bind(&id)
     .bind(&user_id)
@@ -96,7 +96,7 @@ pub async fn create_key(
         "key": key,
         "prefix": prefix,
         "created_at": now,
-        "rate_limit": 60,
+        "rate_limit": crate::api_limits::effective_limits(&state, &user_id).await.rate_limit,
     }))))
 }
 
@@ -116,9 +116,9 @@ pub async fn get_aggregate_usage(
                 .format("%Y-%m-%d %H:%M")
                 .to_string();
             sqlx::query_as::<_, UsagePoint>(
-                "SELECT minute as date, SUM(count) as count
+                "SELECT minute as date, CAST(SUM(count) AS BIGINT) as count
                  FROM api_key_usage_detail
-                 WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = ?) AND minute >= ?
+                 WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = $1) AND minute >= $2
                  GROUP BY minute
                  ORDER BY minute ASC"
             )
@@ -133,9 +133,9 @@ pub async fn get_aggregate_usage(
                 .format("%Y-%m-%d %H:%M")
                 .to_string();
             sqlx::query_as::<_, UsagePoint>(
-                "SELECT SUBSTR(minute, 1, 13) as date, SUM(count) as count
+                "SELECT SUBSTR(minute, 1, 13) as date, CAST(SUM(count) AS BIGINT) as count
                  FROM api_key_usage_detail
-                 WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = ?) AND minute >= ?
+                 WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = $1) AND minute >= $2
                  GROUP BY SUBSTR(minute, 1, 13)
                  ORDER BY date ASC"
             )
@@ -150,9 +150,9 @@ pub async fn get_aggregate_usage(
                 .format("%Y-%m-%d")
                 .to_string();
             sqlx::query_as::<_, UsagePoint>(
-                "SELECT date, SUM(count) as count
+                "SELECT date, CAST(SUM(count) AS BIGINT) as count
                  FROM api_key_usage
-                 WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = ?) AND date >= ?
+                 WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = $1) AND date >= $2
                  GROUP BY date
                  ORDER BY date ASC"
             )
@@ -176,7 +176,7 @@ pub async fn regenerate_key(
         .ok_or((StatusCode::UNAUTHORIZED, "Not authenticated".to_string()))?;
 
     let row: Option<(String,)> = sqlx::query_as(
-        "SELECT name FROM api_keys WHERE id = ? AND user_id = ?"
+        "SELECT name FROM api_keys WHERE id = $1 AND user_id = $2"
     )
     .bind(&key_id)
     .bind(&user_id)
@@ -192,7 +192,7 @@ pub async fn regenerate_key(
     let now = chrono::Utc::now().to_rfc3339();
 
     sqlx::query(
-        "UPDATE api_keys SET key_hash = ?, key_prefix = ?, created_at = ?, last_used_at = NULL WHERE id = ? AND user_id = ?"
+        "UPDATE api_keys SET key_hash = $1, key_prefix = $2, created_at = $3, last_used_at = NULL WHERE id = $4 AND user_id = $5"
     )
     .bind(&new_hash)
     .bind(&new_prefix)
@@ -209,7 +209,7 @@ pub async fn regenerate_key(
         "key": new_key,
         "prefix": new_prefix,
         "created_at": now,
-        "rate_limit": 60,
+        "rate_limit": crate::api_limits::effective_limits(&state, &user_id).await.rate_limit,
     })))
 }
 
@@ -221,7 +221,7 @@ pub async fn delete_key(
     let user_id = get_user_id(&jar)
         .ok_or((StatusCode::UNAUTHORIZED, "Not authenticated".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM api_keys WHERE id = ? AND user_id = ?")
+    let result = sqlx::query("DELETE FROM api_keys WHERE id = $1 AND user_id = $2")
         .bind(&key_id)
         .bind(&user_id)
         .execute(&state.db)
