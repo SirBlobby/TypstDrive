@@ -17,7 +17,8 @@
 		onUpload,
 		onRename,
 		onDelete,
-		onSetEntry
+		onSetEntry,
+		onCollapse
 	}: {
 		files?: ProjectFile[];
 		activeFileId?: string;
@@ -29,6 +30,7 @@
 		onRename: (file: ProjectFile, path: string) => void;
 		onDelete: (file: ProjectFile) => void;
 		onSetEntry: (file: ProjectFile) => void;
+		onCollapse: () => void;
 	} = $props();
 
 	let fileInput: HTMLInputElement = $state()!;
@@ -57,8 +59,8 @@
 <div class="h-full flex flex-col bg-[var(--color-surface)] border-r border-[var(--color-line)]">
 	<div class="flex items-center justify-between px-3 py-2 border-b border-[var(--color-line)]">
 		<span class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">Files</span>
-		{#if !readOnly}
-			<div class="flex items-center gap-1">
+		<div class="flex items-center gap-1">
+			{#if !readOnly}
 				<button onclick={handleCreate} title="New file" class="p-1 rounded hover:bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]">
 					<Icon icon="mdi:file-plus-outline" class="text-lg" />
 				</button>
@@ -66,8 +68,11 @@
 					<Icon icon="mdi:upload" class="text-lg" />
 				</button>
 				<input bind:this={fileInput} type="file" multiple class="hidden" onchange={(e) => { const t = e.target as HTMLInputElement; if (t.files) onUpload(t.files); t.value = ''; }} />
-			</div>
-		{/if}
+			{/if}
+			<button onclick={onCollapse} title="Collapse files" aria-label="Collapse files" class="p-1 rounded hover:bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]">
+				<Icon icon="mdi:chevron-double-left" class="text-lg" />
+			</button>
+		</div>
 	</div>
 
 	<div class="flex-1 overflow-y-auto py-1">

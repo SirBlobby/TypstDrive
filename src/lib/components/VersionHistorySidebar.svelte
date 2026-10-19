@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { text } from '../ts/yjs-setup';
+	import ConfirmModal from './ConfirmModal.svelte';
 
 	let { docId, onClose } = $props<{ docId: string, onClose: () => void }>();
 
@@ -32,10 +33,17 @@
 		}
 	}
 
+	let versionToRestore = $state<DocumentVersion | null>(null);
+
 	function restoreVersion(version: DocumentVersion) {
-		if (!text) return;
-		if (!confirm('Are you sure you want to restore this version? This will overwrite the current document.')) return;
-		
+		versionToRestore = version;
+	}
+
+	function confirmRestoreVersion() {
+		const version = versionToRestore;
+		versionToRestore = null;
+		if (!text || !version) return;
+
 		const currentLength = text.length;
 		text.delete(0, currentLength);
 		text.insert(0, version.content);
@@ -59,7 +67,7 @@
 		<div class="flex items-center gap-2">
 			<Icon icon="mdi:history" class="text-lg" />
 			<h2 class="text-sm font-semibold text-[var(--theme-text)]">Version History</h2>
-			<span class="text-[10px] font-bold px-2 py-0.5 rounded-full">{versions.length}</span>
+			<span class="text-[10px] font-bold px-2 py-0.5 rounded-md">{versions.length}</span>
 		</div>
 		<button onclick={onClose} class="p-1.5 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Close Version History">
 			<Icon icon="mdi:close" class="text-lg" />
@@ -140,4 +148,14 @@
 			</div>
 		</div>
 	</div>
+{/if}
+
+{#if versionToRestore}
+	<ConfirmModal
+		title="Restore version"
+		message="Restoring this version will overwrite the current document."
+		confirmLabel="Restore"
+		onconfirm={confirmRestoreVersion}
+		onclose={() => (versionToRestore = null)}
+	/>
 {/if}

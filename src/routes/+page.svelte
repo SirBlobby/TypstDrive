@@ -5,7 +5,7 @@
 
     onMount(() => {
         if ($userStore) {
-            goto('/dashboard');
+            goto('/drive');
         } else {
             goto('/login');
         }

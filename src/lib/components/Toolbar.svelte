@@ -367,7 +367,7 @@
 
 	function confirmDelete() {
 		fetch(`/api/docs/${docId}`, { method: 'DELETE' }).then(res => {
-			if (res.ok) goto('/dashboard');
+			if (res.ok) goto('/drive');
 		});
 	}
 
@@ -401,10 +401,10 @@
 	<div class="flex items-center justify-between px-4 py-2.5">
 		<div class="flex items-center gap-3">
 			<button 
-				onclick={() => goto('/dashboard')} 
+				onclick={() => goto('/drive')} 
 				class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors"
 				aria-label="Back to dashboard"
-				title="Dashboard"
+				title="Drive"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
 			</button>
@@ -428,7 +428,7 @@
 						</button>
 						{#if activeMenu === 'file'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100] max-h-[calc(100vh-8rem)] overflow-y-auto">
-								<button onclick={() => { activeMenu = null; goto('/dashboard'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">New / Open</button>
+								<button onclick={() => { activeMenu = null; goto('/drive'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">New / Open</button>
 								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Document Info</button>
 								{#if !isViewer}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>

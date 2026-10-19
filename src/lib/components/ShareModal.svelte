@@ -158,7 +158,7 @@
                             <p class="text-sm font-medium text-[var(--color-ink)] truncate">{collab.username}</p>
                             <p class="text-xs text-[var(--color-ink-muted)] truncate">{collab.email}</p>
                         </div>
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 {collab.role === 'editor' ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' : 'bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]'}">
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-md flex-shrink-0 {collab.role === 'editor' ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' : 'bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]'}">
                             {collab.role}
                         </span>
                         <button
@@ -183,7 +183,7 @@
         <div class="flex flex-col gap-2">
             <div class="text-xs font-medium text-[var(--color-ink-muted)]">General access</div>
             <div class="flex items-center gap-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-muted)] p-3 transition hover:bg-[var(--color-surface-sunken)]">
-                <div class="rounded-full bg-[var(--color-surface-sunken)] p-2.5 text-[var(--color-ink-muted)]">
+                <div class="rounded-md bg-[var(--color-surface-sunken)] p-2.5 text-[var(--color-ink-muted)]">
                     <Icon icon="mdi:earth" class="text-xl" />
                 </div>
                 <div class="flex-1">

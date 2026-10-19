@@ -3,21 +3,28 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 5px;
+  --radius-2xl: 6px;
+  --radius-3xl: 8px;
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 :root {
   color-scheme: light;
-  --color-surface: #ffffff;
-  --color-surface-muted: #eff1f5;
+  --color-surface: #eff1f5;
+  --color-surface-muted: #e6e9ef;
   --color-surface-sunken: #dce0e8;
   --color-line: #ccd0da;
-  --color-ink: #11111b;
-  --color-ink-muted: #5c5f77;
+  --color-ink: #4c4f69;
+  --color-ink-muted: #6c6f85;
   --color-accent: #1e66f5;
-  --color-accent-soft: #dce8fd;
-  --color-danger: #d5382f;
-  --color-success: #1f8a4c;
+  --color-accent-soft: #d6e2fd;
+  --color-danger: #d20f39;
+  --color-success: #40a02b;
 }
 
 :root[data-theme='dark'] {
@@ -34,15 +41,17 @@
   --color-success: #4cc47f;
 }
 
-:root[data-color-theme='Cerberus'] {
+:root[data-color-theme='Cerberus']:not([data-theme='dark']) {
   --color-surface: #ffffff;
-  --color-surface-muted: #ffffff;
-  --color-surface-sunken: #f4f4f5;
-  --color-line: #d4d4d4;
-  --color-ink: #000000;
-  --color-ink-muted: #52525b;
-  --color-accent: #4338ca;
-  --color-accent-soft: #e0e7ff;
+  --color-surface-muted: #f8f8fa;
+  --color-surface-sunken: #ececf0;
+  --color-line: #e2e2e8;
+  --color-ink: #18181b;
+  --color-ink-muted: #5f5f6b;
+  --color-accent: #4f46e5;
+  --color-accent-soft: #eceafd;
+  --color-danger: #dc2626;
+  --color-success: #15803d;
 }
 
 :root[data-color-theme='Cerberus'][data-theme='dark'] {
@@ -56,15 +65,17 @@
   --color-accent-soft: #262244;
 }
 
-:root[data-color-theme='Arch Linux'] {
+:root[data-color-theme='Arch Linux']:not([data-theme='dark']) {
   --color-surface: #ffffff;
-  --color-surface-muted: #ffffff;
-  --color-surface-sunken: #f6f8fa;
-  --color-line: #d0d7de;
-  --color-ink: #0d1117;
-  --color-ink-muted: #57606a;
-  --color-accent: #0550ae;
-  --color-accent-soft: #dbeafe;
+  --color-surface-muted: #f5f7f9;
+  --color-surface-sunken: #e8edf1;
+  --color-line: #d5dde3;
+  --color-ink: #1f2328;
+  --color-ink-muted: #59636e;
+  --color-accent: #0a6ea8;
+  --color-accent-soft: #e1f1fa;
+  --color-danger: #cf222e;
+  --color-success: #1a7f37;
 }
 
 :root[data-color-theme='Arch Linux'][data-theme='dark'] {
@@ -103,4 +114,35 @@ html.dark {
 .scroll-thin {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line) transparent;
+}
+
+:root[data-text-size='small'] {
+  font-size: 87.5%;
+}
+
+:root[data-text-size='large'] {
+  font-size: 112.5%;
+}
+
+:root[data-contrast='high']:not([data-theme='dark']) {
+  --color-surface: #ffffff;
+  --color-surface-muted: #ffffff;
+  --color-surface-sunken: #e5e5e5;
+  --color-line: #000000;
+  --color-ink: #000000;
+  --color-ink-muted: #1f1f1f;
+}
+
+:root[data-contrast='high'][data-theme='dark'] {
+  --color-surface: #000000;
+  --color-surface-muted: #000000;
+  --color-surface-sunken: #1f1f1f;
+  --color-line: #ffffff;
+  --color-ink: #ffffff;
+  --color-ink-muted: #e5e5e5;
+}
+
+:root[data-contrast='high'] :focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

@@ -5,7 +5,7 @@
 
 <div class="min-h-[80vh] flex flex-col items-center justify-center p-4">
 	<div class="text-center max-w-md bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-line)] p-8">
-		<div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[var(--color-danger)]/10 mb-6">
+		<div class="inline-flex items-center justify-center w-20 h-20 rounded-lg bg-[var(--color-danger)]/10 mb-6">
 			<Icon icon="mdi:alert-circle-outline" class="h-10 w-10 text-[var(--color-danger)]" />
 		</div>
 
@@ -26,7 +26,7 @@
 			class="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl shadow-sm text-white bg-[var(--color-accent)] hover:opacity-90 focus:outline-none transition w-full"
 		>
 			<Icon icon="mdi:home" class="text-lg" />
-			Return to Dashboard
+			Return to Drive
 		</a>
 	</div>
 </div>

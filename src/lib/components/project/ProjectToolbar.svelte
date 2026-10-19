@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { downloadProject } from '$lib/ts/downloads';
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
@@ -271,7 +272,7 @@
 
 	function confirmDelete() {
 		fetch(`/api/projects/${projectId}`, { method: 'DELETE' }).then((res) => {
-			if (res.ok) goto('/projects');
+			if (res.ok) goto('/drive');
 		});
 	}
 
@@ -289,7 +290,7 @@
 <header class="flex flex-col border-b border-[var(--theme-border)] bg-[var(--theme-bg)] text-[var(--theme-text)] select-none w-full relative z-[70]">
 	<div class="flex items-center justify-between px-4 py-2.5">
 		<div class="flex items-center gap-3">
-			<button onclick={() => goto('/projects')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors" title="Projects">
+			<button onclick={() => goto('/drive')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors" title="Back to Drive">
 				<Icon icon="mdi:arrow-left" class="text-xl" />
 			</button>
 
@@ -304,8 +305,9 @@
 						<button onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'file' ? null : 'file'; }} class="px-2 py-0.5 rounded transition-colors {activeMenu === 'file' ? 'bg-[var(--theme-border)]' : 'hover:bg-[var(--theme-border)]'}">File</button>
 						{#if activeMenu === 'file'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100] max-h-[calc(100vh-8rem)] overflow-y-auto">
-								<button onclick={() => { activeMenu = null; goto('/projects'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">All Projects</button>
+								<button onclick={() => { activeMenu = null; goto('/drive'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Back to Drive</button>
 								<button onclick={() => { activeMenu = null; showInfoModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Project Info</button>
+								<button onclick={() => { activeMenu = null; downloadProject(projectId); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Download Project (.zip)</button>
 								{#if !isViewer}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
 									<button onclick={() => { activeMenu = null; renameName = projectName; showRenameModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Rename</button>

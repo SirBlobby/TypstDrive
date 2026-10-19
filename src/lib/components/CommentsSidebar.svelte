@@ -3,6 +3,7 @@
 	import Icon from '@iconify/svelte';
 	import { userStore } from '../ts/auth';
 	import { commentReference } from '../ts/store';
+	import ConfirmModal from './ConfirmModal.svelte';
 
 	let { docId, onClose } = $props<{ docId: string, onClose: () => void }>();
 
@@ -51,8 +52,16 @@
 		}
 	}
 
-	async function deleteComment(id: string) {
-		if (!confirm('Are you sure you want to delete this comment?')) return;
+	let commentToDeleteId = $state<string | null>(null);
+
+	function deleteComment(id: string) {
+		commentToDeleteId = id;
+	}
+
+	async function confirmDeleteComment() {
+		const id = commentToDeleteId;
+		commentToDeleteId = null;
+		if (!id) return;
 		try {
 			const res = await fetch(`/api/comments/${id}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error('Failed to delete comment');
@@ -100,7 +109,7 @@
 		<div class="flex items-center gap-2">
 			<Icon icon="mdi:comment-text-multiple-outline" class="text-lg" />
 			<h2 class="text-sm font-semibold text-[var(--theme-text)]">Comments</h2>
-			<span class="text-[10px] font-bold px-2 py-0.5 rounded-full">{comments.length}</span>
+			<span class="text-[10px] font-bold px-2 py-0.5 rounded-md">{comments.length}</span>
 		</div>
 		<button onclick={onClose} class="p-1.5 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Close Comments">
 			<Icon icon="mdi:close" class="text-lg" />
@@ -177,3 +186,13 @@
 		<p class="text-[10px] mt-2 text-center">Press <kbd class="font-mono px-1 py-0.5 rounded">Enter</kbd> to post, <kbd class="font-mono px-1 py-0.5 rounded">Shift+Enter</kbd> for newline</p>
 	</div>
 </div>
+
+{#if commentToDeleteId}
+	<ConfirmModal
+		title="Delete comment"
+		message="This comment will be permanently deleted. This cannot be undone."
+		confirmLabel="Delete"
+		onconfirm={confirmDeleteComment}
+		onclose={() => (commentToDeleteId = null)}
+	/>
+{/if}

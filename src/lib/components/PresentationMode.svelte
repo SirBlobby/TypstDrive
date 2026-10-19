@@ -5,7 +5,18 @@
 	let { onClose } = $props<{ onClose: () => void }>();
 
 	let svgs = $state<string[]>([]);
+	let slideAspectRatios = $state<number[]>([]);
 	let currentSlide = $state(0);
+	let stageWidth = $state(0);
+	let stageHeight = $state(0);
+
+	const defaultAspectRatio = 16 / 9;
+
+	let slideSize = $derived.by(() => {
+		const aspectRatio = slideAspectRatios[currentSlide] || defaultAspectRatio;
+		const width = Math.min(stageWidth, stageHeight * aspectRatio);
+		return { width, height: width / aspectRatio };
+	});
 	
 	let canvas = $state<HTMLCanvasElement | null>(null);
 	let activeCanvas = $state<HTMLCanvasElement | null>(null);
@@ -39,12 +50,16 @@
 	}
 
 	onMount(() => {
-		const previewContainers = document.querySelectorAll('.preview-container svg');
+		const previewSvgs = document.querySelectorAll<SVGSVGElement>('.preview-container svg');
 		const svgStrings: string[] = [];
-		previewContainers.forEach(container => {
-			svgStrings.push(container.outerHTML);
+		const aspectRatios: number[] = [];
+		previewSvgs.forEach(svgElement => {
+			svgStrings.push(svgElement.outerHTML);
+			const viewBox = svgElement.viewBox.baseVal;
+			aspectRatios.push(viewBox && viewBox.height > 0 ? viewBox.width / viewBox.height : defaultAspectRatio);
 		});
 		svgs = svgStrings;
+		slideAspectRatios = aspectRatios;
 
 		const el = document.getElementById('presentation-container');
 		if (el && el.requestFullscreen) {
@@ -100,16 +115,16 @@
 
 	$effect(() => {
 		if (canvas && currentSlide !== undefined && !showGrid) {
-			const svgEl = document.getElementById('presentation-svg')?.querySelector('svg');
-			if (svgEl) {
-				const rect = svgEl.getBoundingClientRect();
-				canvas.width = rect.width;
-				canvas.height = rect.height;
+			const canvasWidth = Math.round(slideSize.width);
+			const canvasHeight = Math.round(slideSize.height);
+			if (canvasWidth > 0 && canvasHeight > 0) {
+				canvas.width = canvasWidth;
+				canvas.height = canvasHeight;
 				ctx = canvas.getContext('2d');
 				
 				if (activeCanvas) {
-					activeCanvas.width = rect.width;
-					activeCanvas.height = rect.height;
+					activeCanvas.width = canvasWidth;
+					activeCanvas.height = canvasHeight;
 					activeCtx = activeCanvas.getContext('2d');
 					if (activeCtx) {
 						activeCtx.lineCap = 'round';
@@ -124,7 +139,7 @@
 					if (drawings[currentSlide]) {
 						const img = new Image();
 						img.onload = () => {
-							ctx?.drawImage(img, 0, 0);
+							ctx?.drawImage(img, 0, 0, canvasWidth, canvasHeight);
 						};
 						img.src = drawings[currentSlide];
 					}
@@ -365,18 +380,22 @@
 		</div>
 
 		<div class="flex items-center gap-3">
-			<button onclick={() => showGrid = !showGrid} class="p-2 text-white/70 hover:text-white bg-black/50 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center w-10 h-10" title="Toggle Grid (G)">
+			<button onclick={() => showGrid = !showGrid} class="p-2 text-white/70 hover:text-white bg-black/50 hover:bg-white/10 rounded-md transition-colors flex items-center justify-center w-10 h-10" title="Toggle Grid (G)">
 				<Icon icon="mdi:view-grid" class="text-xl" />
 			</button>
-			<button onclick={() => { if(document.fullscreenElement) document.exitFullscreen(); onClose(); }} class="p-2 text-white/70 hover:text-white bg-black/50 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center w-10 h-10" title="Exit Presentation">
+			<button onclick={() => { if(document.fullscreenElement) document.exitFullscreen(); onClose(); }} class="p-2 text-white/70 hover:text-white bg-black/50 hover:bg-white/10 rounded-md transition-colors flex items-center justify-center w-10 h-10" title="Exit Presentation">
 				<Icon icon="mdi:close" class="text-xl" />
 			</button>
 		</div>
 	</div>
 
-	<div class="relative w-full h-full flex items-center justify-center p-8">
+	<div bind:clientWidth={stageWidth} bind:clientHeight={stageHeight} class="relative w-full h-full flex items-center justify-center">
 		{#if svgs.length > 0 && !showGrid}
-			<div id="presentation-svg" class="relative max-h-full max-w-full shadow-2xl flex items-center justify-center bg-[var(--theme-bg)] text-[var(--theme-text)]">
+			<div
+				id="presentation-svg"
+				class="relative shadow-2xl bg-[var(--theme-bg)] text-[var(--theme-text)]"
+				style="width: {slideSize.width}px; height: {slideSize.height}px;"
+			>
 				{@html svgs[currentSlide]}
 				
 				<canvas 
@@ -401,19 +420,17 @@
 		{/if}
 	</div>
 
-	{#if svgs.length > 0}
-		<div class="absolute bottom-6 flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md px-6 py-3 rounded-full border shadow-2xl transition-opacity duration-300 z-[110] {uiVisible || showGrid ? 'opacity-100' : 'opacity-0'} border-[var(--theme-border)]">
-			{#if svgs.length > 1}
-				<button onclick={prevSlide} disabled={currentSlide === 0} class="p-2 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-full transition-all">
-					<Icon icon="mdi:chevron-left" class="text-3xl" />
-				</button>
-				<button onclick={() => showGrid = !showGrid} class="font-mono font-semibold text-lg text-white/90 min-w-[3rem] text-center hover:bg-white/10 px-2 py-1 rounded-md transition-colors" title="Show Grid (G)">
-					{currentSlide + 1} / {svgs.length}
-				</button>
-				<button onclick={nextSlide} disabled={currentSlide === svgs.length - 1} class="p-2 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-full transition-all">
-					<Icon icon="mdi:chevron-right" class="text-3xl" />
-				</button>
-			{/if}
+	{#if svgs.length > 1}
+		<div class="absolute bottom-6 flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md px-6 py-3 rounded-md border shadow-2xl transition-opacity duration-300 z-[110] {uiVisible || showGrid ? 'opacity-100' : 'opacity-0'} border-[var(--theme-border)]">
+			<button onclick={prevSlide} disabled={currentSlide === 0} class="p-2 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-md transition-all">
+				<Icon icon="mdi:chevron-left" class="text-3xl" />
+			</button>
+			<button onclick={() => showGrid = !showGrid} class="font-mono font-semibold text-lg text-white/90 min-w-[3rem] text-center hover:bg-white/10 px-2 py-1 rounded-md transition-colors" title="Show Grid (G)">
+				{currentSlide + 1} / {svgs.length}
+			</button>
+			<button onclick={nextSlide} disabled={currentSlide === svgs.length - 1} class="p-2 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-md transition-all">
+				<Icon icon="mdi:chevron-right" class="text-3xl" />
+			</button>
 		</div>
 	{/if}
 
@@ -421,11 +438,9 @@
 
 <style>
 	:global(#presentation-svg svg) {
-		max-height: calc(100vh - 4rem);
-		max-width: calc(100vw - 4rem);
-		height: 100%;
-		width: auto;
-		object-fit: contain;
+		display: block;
+		width: 100% !important;
+		height: 100% !important;
 	}
 
 	:global(.presentation-grid-svg) {

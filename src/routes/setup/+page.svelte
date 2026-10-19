@@ -38,7 +38,7 @@
 
             const user = await res.json();
             userStore.set(user);
-            goto('/dashboard');
+            goto('/drive');
         } catch (e: any) {
             errorMsg = e.message;
         } finally {

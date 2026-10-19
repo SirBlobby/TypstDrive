@@ -10,13 +10,15 @@
     let password = $state('');
     let errorMsg = $state('');
     let registrationDisabled = $state(false);
+    let allowedDomains = $state<string[]>([]);
 
     onMount(async () => {
-        if ($userStore) { goto('/dashboard'); return; }
-        const res = await fetch('/api/setup');
+        if ($userStore) { goto('/drive'); return; }
+        const res = await fetch('/api/auth/policy');
         if (res.ok) {
-            const data = await res.json();
-            registrationDisabled = !data.registration_enabled;
+            const policy = await res.json();
+            registrationDisabled = !policy.registration_enabled;
+            allowedDomains = policy.allowed_email_domains;
         }
     });
 
@@ -45,7 +47,7 @@
             if (loginRes.ok) {
                 const user = await loginRes.json();
                 userStore.set(user);
-                goto('/dashboard');
+                goto('/drive');
             }
         } catch (e: any) {
             errorMsg = e.message;
@@ -53,7 +55,7 @@
     }
 
     onMount(() => {
-        if ($userStore) goto('/dashboard');
+        if ($userStore) goto('/drive');
     });
 </script>
 
@@ -66,7 +68,7 @@
     <div class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-10 shadow-2xl">
             <div class="text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] mb-6 mx-auto shadow-sm">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-[var(--color-accent-soft)] text-[var(--color-accent)] mb-6 mx-auto shadow-sm">
                     <Icon icon="mdi:account-plus" class="text-3xl" />
                 </div>
                 <h2 class="text-3xl font-extrabold tracking-tight text-[var(--color-ink)]">
@@ -106,6 +108,9 @@
                                 </div>
                                 <input id="email" name="email" type="email" required bind:value={email} class="block w-full rounded-md border border-[var(--color-line)] pl-10 pr-3 py-2.5 bg-[var(--color-surface)] text-[var(--color-ink)] placeholder-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none sm:text-sm transition-colors" placeholder="user@example.com">
                             </div>
+                            {#if allowedDomains.length > 0}
+                                <p class="mt-1 text-xs text-[var(--color-ink-muted)]">Use an address at {allowedDomains.join(', ')}.</p>
+                            {/if}
                         </div>
                         <div>
                             <label for="password" class="block text-sm font-semibold text-[var(--color-ink-muted)] mb-1.5">Password</label>

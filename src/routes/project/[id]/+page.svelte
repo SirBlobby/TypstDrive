@@ -8,9 +8,11 @@
 	import FileTree from '$lib/components/project/FileTree.svelte';
 	import ProjectToolbar from '$lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '$lib/components/PublishPackageModal.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { compileProject } from '$lib/ts/typst-api';
 	import type { Diagnostic } from '$lib/ts/typst-api';
-	import { editorErrors, documentStatsStore, previewOpenStore, editorViewStore } from '$lib/ts/store';
+	import { editorErrors, documentStatsStore, previewOpenStore, editorViewStore, fileTreeCollapsedStore } from '$lib/ts/store';
+	import Icon from '@iconify/svelte';
 	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject } from '$lib/ts/yjs-project';
 
 	interface ProjectFile {
@@ -134,8 +136,16 @@
 		}
 	}
 
-	async function deleteFile(file: ProjectFile) {
-		if (!confirm(`Delete ${file.path}?`)) return;
+	let fileToDelete = $state<ProjectFile | null>(null);
+
+	function deleteFile(file: ProjectFile) {
+		fileToDelete = file;
+	}
+
+	async function confirmDeleteFile() {
+		const file = fileToDelete;
+		fileToDelete = null;
+		if (!file) return;
 		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, { method: 'DELETE' });
 		if (res.ok) {
 			closeFile(file.id);
@@ -219,20 +229,29 @@
 	/>
 
 	<main class="flex-1 flex overflow-hidden relative" oncontextmenu={handleContextMenu}>
-		<aside class="w-56 flex-shrink-0 hidden md:block">
-			<FileTree
-				{files}
-				{activeFileId}
-				{entrypoint}
-				{readOnly}
-				onSelect={selectFile}
-				onCreate={createFile}
-				onUpload={uploadFiles}
-				onRename={renameFile}
-				onDelete={deleteFile}
-				onSetEntry={setEntry}
-			/>
-		</aside>
+		{#if $fileTreeCollapsedStore}
+			<aside class="w-10 flex-shrink-0 hidden md:flex flex-col items-center py-2 bg-[var(--color-surface)] border-r border-[var(--color-line)]">
+				<button onclick={() => fileTreeCollapsedStore.set(false)} title="Show files" aria-label="Show files" class="p-1.5 rounded hover:bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]">
+					<Icon icon="mdi:file-tree-outline" class="text-lg" />
+				</button>
+			</aside>
+		{:else}
+			<aside class="w-56 flex-shrink-0 hidden md:block">
+				<FileTree
+					{files}
+					{activeFileId}
+					{entrypoint}
+					{readOnly}
+					onSelect={selectFile}
+					onCreate={createFile}
+					onUpload={uploadFiles}
+					onRename={renameFile}
+					onDelete={deleteFile}
+					onSetEntry={setEntry}
+					onCollapse={() => fileTreeCollapsedStore.set(true)}
+				/>
+			</aside>
+		{/if}
 
 		{#if !readOnly}
 			<div class="flex flex-col min-h-0 {$previewOpenStore ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'flex-1'}">
@@ -266,4 +285,14 @@
 
 {#if showPublish}
 	<PublishPackageModal {projectId} onClose={() => (showPublish = false)} />
+{/if}
+
+{#if fileToDelete}
+	<ConfirmModal
+		title="Delete file"
+		message={`'${fileToDelete.path}' will be permanently deleted from this project. This cannot be undone.`}
+		confirmLabel="Delete"
+		onconfirm={confirmDeleteFile}
+		onclose={() => (fileToDelete = null)}
+	/>
 {/if}

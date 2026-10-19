@@ -28,14 +28,14 @@
 
             const user = await res.json();
             userStore.set(user);
-            goto('/dashboard');
+            goto('/drive');
         } catch (e: any) {
             errorMsg = e.message;
         }
     }
 
     onMount(async () => {
-        if ($userStore) { goto('/dashboard'); return; }
+        if ($userStore) { goto('/drive'); return; }
         try {
             const res = await fetch('/api/setup');
             if (res.ok) {
@@ -55,7 +55,7 @@
     <div class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-10 shadow-2xl">
             <div class="text-center">
-                <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-[var(--color-accent)] mb-6 mx-auto shadow-sm">
+                <div class="inline-flex items-center justify-center w-24 h-24 rounded-lg bg-[var(--color-accent)] mb-6 mx-auto shadow-sm">
                     <img src="/favicon.png" alt="TypstDrive" class="h-14 w-14" />
                 </div>
                 <h2 class="text-3xl font-extrabold tracking-tight text-[var(--color-ink)]">
