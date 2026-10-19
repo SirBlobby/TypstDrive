@@ -14,7 +14,7 @@ FROM rust:alpine AS backend-builder
 WORKDIR /app
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig git
 RUN git clone https://github.com/typst/typst.git typst \
-    && git -C typst checkout 9dfd3a08500b7896045f907433cf7b4b02434fad
+    && git -C typst checkout bd5ebec285505889e8ff1d4f68804ab147a699f3
 COPY server/Cargo.* server/
 COPY server/src server/src
 WORKDIR /app/server
@@ -25,7 +25,7 @@ FROM alpine:3.19
 # Provided automatically by buildx (e.g. "amd64", "arm64").
 ARG TARGETARCH
 WORKDIR /app
-RUN apk add --no-cache libgcc openssl pandoc curl sqlite
+RUN apk add --no-cache libgcc openssl pandoc curl sqlite font-noto-emoji
 RUN mkdir -p /data
 # Install tinymist for the target architecture.
 RUN case "$TARGETARCH" in \
