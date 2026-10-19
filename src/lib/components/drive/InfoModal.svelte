@@ -5,7 +5,7 @@
         onClose: () => void
     }>();
 
-    const icon = $derived(selectedInfo.type === 'document' ? 'ph:file-text' : selectedInfo.type === 'folder' ? 'ph:folder' : 'ph:file');
+    const icon = $derived(selectedInfo.type === 'document' ? 'ph:file-text' : selectedInfo.type === 'folder' ? 'ph:folder' : selectedInfo.type === 'project' ? 'ph:folder-star' : 'ph:file');
     const title = $derived(selectedInfo.title || selectedInfo.name || 'Details');
 </script>
 

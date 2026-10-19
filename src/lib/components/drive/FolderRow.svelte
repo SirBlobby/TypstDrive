@@ -1,5 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
+    import { downloadFolder } from '$lib/ts/downloads';
 
     let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId } = $props<{
         folder: any;
@@ -24,9 +25,14 @@
     <div class="flex items-center justify-center w-10 h-10 bg-yellow-50 dark:bg-yellow-500/10 rounded-md group-hover:scale-105 transition-transform pointer-events-none shrink-0 mr-3">
         <Icon icon="mdi:folder" class="text-2xl text-yellow-500" />
     </div>
-    <span class="font-medium text-[var(--color-ink)] text-sm truncate w-full pointer-events-none pr-6">{folder.name}</span>
+    <span class="font-medium text-[var(--color-ink)] text-sm truncate w-full pointer-events-none pr-14">{folder.name}</span>
 
-    <button aria-label="Delete folder" onclick={(e) => { e.stopPropagation(); deleteFolder(folder.id, folder.name); }} class="absolute top-1/2 -translate-y-1/2 right-2 text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-[var(--color-danger)]/10 shrink-0">
-        <Icon icon="mdi:trash-can-outline" class="text-base" />
-    </button>
+    <div class="absolute top-1/2 -translate-y-1/2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+        <button aria-label="Download folder" title="Download as ZIP" onclick={(e) => { e.stopPropagation(); downloadFolder(folder.id); }} class="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] p-1.5 rounded hover:bg-[var(--color-surface-sunken)] shrink-0">
+            <Icon icon="mdi:download" class="text-base" />
+        </button>
+        <button aria-label="Delete folder" title="Delete folder" onclick={(e) => { e.stopPropagation(); deleteFolder(folder.id, folder.name); }} class="text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] p-1.5 rounded hover:bg-[var(--color-danger)]/10 shrink-0">
+            <Icon icon="mdi:trash-can-outline" class="text-base" />
+        </button>
+    </div>
 </div>

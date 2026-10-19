@@ -47,7 +47,7 @@
                 <img src={`data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(doc.thumbnail_svg)))}`} class="w-full h-auto shadow-sm border border-gray-200" alt="Thumbnail" draggable="false" />
             </div>
         {:else}
-            <div class="p-4 bg-[var(--color-accent-soft)] text-[var(--color-accent)] rounded-full transition-transform duration-300 group-hover:scale-110">
+            <div class="p-4 bg-[var(--color-accent-soft)] text-[var(--color-accent)] rounded-lg transition-transform duration-300 group-hover:scale-110">
                 <Icon icon="mdi:file-document" class="text-4xl" />
             </div>
         {/if}
@@ -63,7 +63,7 @@
                 <button
                     aria-label="Document actions"
                     onclick={toggleMenu}
-                    class="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition-colors p-1 rounded-full hover:bg-[var(--color-surface-sunken)] pointer-events-auto"
+                    class="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition-colors p-1 rounded-md hover:bg-[var(--color-surface-sunken)] pointer-events-auto"
                 >
                     <Icon icon="mdi:dots-vertical" class="text-xl" />
                 </button>
