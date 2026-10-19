@@ -1,40 +1,47 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
-	import Navbar from '$lib/components/dashboard/Navbar.svelte';
-
-	interface Package {
-		id: string;
-		name: string;
-		description?: string;
-		owner_name?: string;
-		latest_version?: string;
-	}
+	import { userStore } from '$lib/ts/auth';
+	import type { Package } from '$lib/ts/packages';
+	import Navbar from '$lib/components/drive/Navbar.svelte';
+	import DriveSidebar from '$lib/components/drive/DriveSidebar.svelte';
+	import PackageCard from '$lib/components/packages/PackageCard.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 
 	let packages = $state<Package[]>([]);
 	let loading = $state(true);
-	let copied = $state('');
+	let searchQuery = $state('');
+	let ownership = $state<'all' | 'mine'>('all');
+	let packageToDelete = $state<Package | null>(null);
+
+	let visiblePackages = $derived.by(() => {
+		const query = searchQuery.trim().toLowerCase();
+		return packages.filter((pkg) => {
+			if (ownership === 'mine' && pkg.owner_id !== $userStore?.id) return false;
+			if (!query) return true;
+			return pkg.name.toLowerCase().includes(query) || (pkg.description ?? '').toLowerCase().includes(query);
+		});
+	});
+
+	function canDelete(pkg: Package) {
+		return pkg.owner_id === $userStore?.id || Boolean($userStore?.is_admin);
+	}
 
 	async function load() {
 		loading = true;
-		const res = await fetch('/api/packages');
-		packages = res.ok ? await res.json() : [];
+		try {
+			const res = await fetch('/api/packages');
+			packages = res.ok ? await res.json() : [];
+		} catch {
+			packages = [];
+		}
 		loading = false;
 	}
 
-	function importSnippet(pkg: Package): string {
-		return `#import "@typstdrive/${pkg.name}:${pkg.latest_version ?? '0.1.0'}": *`;
-	}
-
-	async function copy(pkg: Package) {
-		await navigator.clipboard.writeText(importSnippet(pkg));
-		copied = pkg.id;
-		setTimeout(() => (copied = ''), 2000);
-	}
-
-	async function remove(pkg: Package) {
-		if (!confirm(`Delete package "${pkg.name}" and all its versions?`)) return;
+	async function confirmRemove() {
+		const pkg = packageToDelete;
+		packageToDelete = null;
+		if (!pkg) return;
 		const res = await fetch(`/api/packages/${pkg.name}`, { method: 'DELETE' });
 		if (res.ok) packages = packages.filter((p) => p.id !== pkg.id);
 	}
@@ -46,61 +53,83 @@
 	<title>Packages - TypstDrive</title>
 </svelte:head>
 
-<div class="min-h-screen bg-[var(--color-surface-muted)]">
+<div class="h-screen flex flex-col">
 	<Navbar />
 
-	<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-		<div class="mb-6">
-			<button onclick={() => goto('/dashboard')} class="text-sm font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition-colors mb-2 flex items-center gap-1.5">
-				<Icon icon="mdi:arrow-left" class="text-lg" />
-				Back to Dashboard
-			</button>
-			<h2 class="text-2xl font-bold text-[var(--color-ink)] flex items-center gap-2">
-				<Icon icon="mdi:package-variant-closed" class="text-purple-500" />
-				Packages
-			</h2>
-			<p class="text-sm text-[var(--color-ink-muted)] mt-1">
-				Instance-local Typst packages, published from Projects and importable as
-				<code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">@typstdrive/&lt;name&gt;:&lt;version&gt;</code>.
-			</p>
-		</div>
+	<div class="flex flex-1 min-h-0">
+		<DriveSidebar activeView="packages" />
 
-		{#if loading}
-			<p class="text-[var(--color-ink-muted)]">Loading…</p>
-		{:else if packages.length === 0}
-			<div class="text-center py-16 text-[var(--color-ink-muted)]">
-				<Icon icon="mdi:package-variant" class="text-5xl mx-auto mb-3 opacity-50" />
-				<p>No packages published yet. Open a Project and use “Publish” to create one.</p>
-			</div>
-		{:else}
-			<div class="space-y-3">
-				{#each packages as pkg (pkg.id)}
-					<div class="bg-[var(--color-surface)] rounded-xl border border-[var(--color-line)] p-4 flex items-start justify-between gap-4">
-						<div class="min-w-0">
-							<div class="flex items-center gap-2">
-								<p class="font-semibold text-[var(--color-ink)] truncate">@typstdrive/{pkg.name}</p>
-								{#if pkg.latest_version}
-									<span class="text-xs font-mono bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">v{pkg.latest_version}</span>
-								{/if}
-							</div>
-							{#if pkg.description}
-								<p class="text-sm text-[var(--color-ink-muted)] mt-1 truncate">{pkg.description}</p>
-							{/if}
-							<p class="text-xs text-[var(--color-ink-muted)] mt-1">by {pkg.owner_name ?? 'unknown'}</p>
-							<pre class="mt-2 text-xs font-mono bg-[var(--color-surface-muted)] border border-[var(--color-line)] rounded px-2 py-1 overflow-x-auto">{importSnippet(pkg)}</pre>
-						</div>
-						<div class="flex flex-col items-end gap-2 flex-shrink-0">
-							<button onclick={() => copy(pkg)} class="text-xs px-2 py-1 rounded-md bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] flex items-center gap-1">
-								<Icon icon={copied === pkg.id ? 'mdi:check' : 'mdi:content-copy'} class="text-sm" />
-								{copied === pkg.id ? 'Copied' : 'Copy'}
-							</button>
-							<button onclick={() => remove(pkg)} title="Delete" class="text-xs px-2 py-1 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 flex items-center gap-1">
-								<Icon icon="mdi:trash-can-outline" class="text-sm" /> Delete
-							</button>
-						</div>
+		<main class="flex-1 min-w-0 overflow-y-auto px-6 lg:px-8 py-6">
+			<header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-6">
+				<div>
+					<h1 class="text-2xl font-bold text-[var(--color-ink)]">Packages</h1>
+					<p class="text-sm text-[var(--color-ink-muted)] mt-1">
+						Typst packages published on this instance. Import them with
+						<code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">@typstdrive/name:version</code>.
+					</p>
+				</div>
+
+				<div class="flex items-center gap-2">
+					<div class="relative">
+						<Icon icon="mdi:magnify" class="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-[var(--color-ink-muted)]" />
+						<input
+							type="search"
+							bind:value={searchQuery}
+							placeholder="Search packages"
+							aria-label="Search packages"
+							class="w-64 bg-[var(--color-surface)] border border-[var(--color-line)] text-sm text-[var(--color-ink)] rounded-lg pl-9 pr-3 py-2 focus:border-[var(--color-accent)] focus:outline-none transition-colors"
+						/>
 					</div>
-				{/each}
-			</div>
-		{/if}
+					<div class="flex rounded-lg bg-[var(--color-surface-sunken)] p-0.5 text-xs font-medium">
+						{#each [{ value: 'all', label: 'All' }, { value: 'mine', label: 'Mine' }] as option}
+							<button
+								onclick={() => (ownership = option.value as 'all' | 'mine')}
+								class="px-3 py-1.5 rounded-md transition {ownership === option.value
+									? 'bg-[var(--color-surface)] text-[var(--color-ink)] shadow-sm'
+									: 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'}"
+							>
+								{option.label}
+							</button>
+						{/each}
+					</div>
+				</div>
+			</header>
+
+			{#if loading}
+				<div class="min-h-[40vh] flex items-center justify-center text-[var(--color-ink-muted)]">
+					<Icon icon="mdi:loading" class="text-3xl animate-spin" />
+				</div>
+			{:else if packages.length === 0}
+				<div class="min-h-[50vh] flex flex-col items-center justify-center text-center">
+					<div class="inline-flex items-center justify-center w-20 h-20 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-500 mb-5">
+						<Icon icon="mdi:package-variant" class="text-4xl" />
+					</div>
+					<h3 class="text-lg font-semibold text-[var(--color-ink)] mb-1">No packages yet</h3>
+					<p class="text-sm text-[var(--color-ink-muted)] max-w-sm">Open a project and choose Publish to share it as a package everyone on this instance can import.</p>
+				</div>
+			{:else if visiblePackages.length === 0}
+				<div class="min-h-[30vh] flex flex-col items-center justify-center text-center text-[var(--color-ink-muted)]">
+					<Icon icon="mdi:package-variant-remove" class="text-4xl mb-3 opacity-60" />
+					<p class="text-sm">No packages match your filters.</p>
+				</div>
+			{:else}
+				<p class="text-xs text-[var(--color-ink-muted)] mb-3">{visiblePackages.length} {visiblePackages.length === 1 ? 'package' : 'packages'}</p>
+				<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+					{#each visiblePackages as pkg (pkg.id)}
+						<PackageCard {pkg} canDelete={canDelete(pkg)} onDelete={(target) => (packageToDelete = target)} />
+					{/each}
+				</div>
+			{/if}
+		</main>
 	</div>
 </div>
+
+{#if packageToDelete}
+	<ConfirmModal
+		title="Delete package"
+		message={`'${packageToDelete.name}' and all of its versions will be permanently deleted. This cannot be undone.`}
+		confirmLabel="Delete"
+		onconfirm={confirmRemove}
+		onclose={() => (packageToDelete = null)}
+	/>
+{/if}
