@@ -12,6 +12,8 @@
 
 TypstDrive is a collaborative web editor for Typst. With built-in dark mode, multiple themes, and a clean Google Docs-like interface, it makes creating and sharing documents effortless.
 
+Full documentation, including self-hosting, configuration, administration and the API reference, is at **[sirblobby.github.io/TypstDrive](https://sirblobby.github.io/TypstDrive/)**. The source for the site lives in [`mkdocs/`](mkdocs/).
+
 ## Features
 
 - **Real-Time Collaboration**: Powered by Yjs and CodeMirror 6, see changes and cursors from other users instantly.
@@ -21,7 +23,7 @@ TypstDrive is a collaborative web editor for Typst. With built-in dark mode, mul
 - **Document Sharing**: Invite collaborators by email with Editor or Viewer roles. Collaborators' uploaded fonts and images are available to the compiler. A dedicated "Shared with me" folder on the dashboard surfaces all documents others have shared with you. Manage and remove collaborators directly from the Share modal in the editor.
 - **Spaces**: Multi-file editor workspaces, each with its own `typst.toml` and any number of `.typ`, `.bib`, and asset files that import and reference one another. The Space editor has full parity with the document editor — formatting tools, font selector, page settings, zoom, themes, presentation mode, and PDF/PNG/SVG/Pandoc export — plus a file tree, per-file real-time collaboration (live cursors), TOML syntax highlighting, and your account's uploaded fonts and images. Create and edit text files like `refs.bib` directly in the browser — everything a full template (e.g. an IEEE paper) needs. Create one from the `+` menu on the dashboard or manage them at `/spaces`.
 - **Global Packages**: Publish any Space as an instance-local Typst package, immutably versioned and importable everywhere as `@typstdrive/<name>:<version>` (e.g. `#import "@typstdrive/charged-ieee:0.1.4": ieee`). The name, version, and entrypoint are read from the Space's `typst.toml`. Browse published packages at `/packages`.
-- **Public REST API**: Programmatically render Typst documents to PNG, PDF, or HTML via `POST /v1/render`. Compilation failures return a `422` with a JSON body detailing each Typst error, including its message and source line and column. Manage API keys from the Settings panel, with a live usage chart supporting 1-hour, 1-day, and 1-week views. Full API reference available at `/api-docs`.
+- **Public REST API**: Programmatically render Typst documents to PNG, PDF, or HTML via `POST /v1/render`. Compilation failures return a `422` with a JSON body detailing each Typst error, including its message and source line and column. Manage API keys from the Settings panel, with a live usage chart supporting 1-hour, 1-day, and 1-week views. Full API reference available in the [documentation](https://sirblobby.github.io/TypstDrive/api/).
 - **Admin System**: First-run setup wizard creates an admin account. Admins can manage all users, create new accounts with temporary passwords, toggle admin privileges, and delete accounts from the Settings panel.
 - **Presentation Mode**: Turn your documents into instant slideshows with built-in slide controls and a live drawing/annotation tool overlay.
 - **Asset Management**: Upload and seamlessly use custom fonts and images directly within your documents.
@@ -176,6 +178,8 @@ By default, TypstDrive uses **SQLite** — no separate database container requir
 
 To switch to **PostgreSQL**, uncomment the `db` service in `docker-compose.yml` and update `DATABASE_URL` and `DB_TYPE` as shown in the comments there.
 
+Both backends share one schema, defined in `server/src/db/schema.rs`. The server records the schema version in a `schema_version` table and upgrades older databases automatically on startup by rebuilding each table in place (rows that point at missing users, folders or documents are dropped during the upgrade). Back up the SQLite file or Postgres database before upgrading an existing install.
+
 ### Environment Variables
 
 All variables can be set in the `environment:` section of `docker-compose.yml` or passed directly to the container.
@@ -187,7 +191,7 @@ All variables can be set in the `environment:` section of `docker-compose.yml` o
 | `PORT` | `3000` | Port the HTTP server listens on. |
 | `STATIC_DIR` | `/app/build` | Path to compiled frontend assets. |
 | `COOKIE_SECRET` | *(random)* | 64+ byte secret used to sign session cookies. **If not set, a random key is generated on startup and all sessions are invalidated on every container restart.** Generate a stable value with: `openssl rand -hex 64` |
-| `ALLOW_REGISTRATION` | `true` | Set to `false` to disable public self-registration. When disabled, the register link is hidden on the login page and the registration endpoint returns 403. Admins can still create accounts from the Settings panel. |
+| `ALLOW_REGISTRATION` | `true` | Starting value for public self-registration. Once an admin saves **Site Settings → Registration & Accounts**, that setting takes over. When registration is off, the register link is hidden on the login page and the registration endpoint returns 403. Admins can still create accounts from Site Settings. |
 | `RUST_LOG` | `server=debug,tower_http=debug` | Log filter. Set to `info` for quieter production logs. |
 
 #### Example: production-ready `docker-compose.yml` snippet
@@ -209,7 +213,7 @@ openssl rand -hex 64
 
 ### Admin Panel
 
-The first account created via the setup wizard is automatically an administrator. Admins have access to an **Admin** section in Settings (`/settings`) which provides:
+The first account created via the setup wizard is automatically an administrator. Admins can open **Site Settings** from the profile menu (`/site-settings`), which provides:
 
 - A list of all users with creation dates
 - **Create User** — set a username, email, and temporary password; optionally grant admin privileges immediately
@@ -218,21 +222,14 @@ The first account created via the setup wizard is automatically an administrator
 
 ## Continuous Integration
 
-Workflows live in `.gitea/workflows` and run on Gitea Actions.
+Workflows live in `.github/workflows` and run on GitHub Actions.
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | push to `main` or `dev`, pull requests | Type checks and builds the frontend, then checks the backend. |
-| `docker-publish.yml` | push to `main`, `v*` tags, releases | Builds the image and pushes it to the registry, always updating the `latest` tag. |
+| `docker-publish.yml` | push to `main`, `v*` tags, releases | Builds the image and pushes it to `ghcr.io`, always updating the `latest` tag. |
 
-The publish workflow needs two repository secrets, since Gitea's built-in token only grants access to its own registry:
-
-| Secret | Value |
-|---|---|
-| `REGISTRY_USERNAME` | Your GitHub username. |
-| `REGISTRY_TOKEN` | A classic GitHub personal access token with the `write:packages` and `read:packages` scopes. Fine-grained tokens cannot publish to `ghcr.io`. |
-
-Set the image name with the `IMAGE_NAME` variable at the top of the workflow if you publish somewhere other than `ghcr.io/sirblobby/typstdrive`.
+The publish workflow logs in with the built-in `GITHUB_TOKEN`, so no extra secrets are needed. Set the image name with the `IMAGE_NAME` variable at the top of the workflow if you publish somewhere other than `ghcr.io/sirblobby/typstdrive`. Arm images can be built by running the workflow manually with `linux/amd64,linux/arm64` as the platforms.
 
 ## Contributing & Local Development
 
