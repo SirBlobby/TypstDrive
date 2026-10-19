@@ -5,6 +5,7 @@ export type User = {
     username: string;
     email: string;
     is_admin: boolean;
+    avatar_updated_at?: string | null;
 };
 
 export const userStore = writable<User | null>(null);
@@ -21,4 +22,9 @@ export async function fetchUser() {
     } catch {
         userStore.set(null);
     }
+}
+
+export function avatarUrl(user: User | null): string | null {
+    if (!user?.avatar_updated_at) return null;
+    return `/api/auth/avatar?v=${encodeURIComponent(user.avatar_updated_at)}`;
 }
