@@ -277,11 +277,7 @@ pub async fn push_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let _ = sqlx::query(sql("UPDATE projects SET updated_at = $1 WHERE id = $2"))
-        .bind(&now)
-        .bind(&project_id)
-        .execute(&state.db)
-        .await;
+    crate::drive::activity::mark_project_edited(&state, &project_id, Some(&user_id)).await;
 
     if kind == "text" {
         let file_id = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM project_files WHERE project_id = $1 AND path = $2"))

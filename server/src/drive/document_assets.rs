@@ -85,6 +85,7 @@ async fn stored_files(state: &AppState, document: &Document) -> Result<Vec<Store
                     mime_type,
                     created_at,
                     size_bytes: Some(size_bytes),
+                    updated_at: None,
                 },
                 data: state.file_storage.load(data, storage_key).await.unwrap_or_default(),
                 linked_to_document: linked != 0,

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { brandingStore } from '$lib/ts/branding';
 	import { onMount } from 'svelte';
 	import Editor from '$lib/components/Editor.svelte';
 	import Preview from '$lib/components/Preview.svelte';
@@ -118,9 +119,9 @@
 </script>
 
 <svelte:head>
-	<title>{documentTitle} - TypstDrive</title>
-	<meta name="description" content={`Editing ${documentTitle} in TypstDrive.`} />
-	<meta property="og:title" content={`${documentTitle} - TypstDrive`} />
+	<title>{documentTitle} - {$brandingStore.site_name}</title>
+	<meta name="description" content={`Editing ${documentTitle} in ${$brandingStore.site_name}.`} />
+	<meta property="og:title" content={`${documentTitle} - ${$brandingStore.site_name}`} />
 </svelte:head>
 
 <svelte:window onclick={closeContextMenu} />

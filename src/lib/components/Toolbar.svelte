@@ -11,6 +11,7 @@
 	import CommentsSidebar from "./CommentsSidebar.svelte";
 	import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
 	import Modal from './Modal.svelte';
+	import InfoModal from './drive/InfoModal.svelte';
 	import PromptModal from './PromptModal.svelte';
 	import ConfirmModal from './ConfirmModal.svelte';
 	import Icon from '@iconify/svelte';
@@ -368,17 +369,8 @@
 	let showDeleteModal = $state(false);
 	let renameTitle = $state("");
 	$effect(() => { renameTitle = title; });
-	let docInfo = $state<any>(null);
-	
-	
 	function openInfo() {
-		fetch(`/api/docs/${docId}`).then(res => res.json()).then(doc => {
-			docInfo = doc;
-			showInfoModal = true;
-		}).catch(e => {
-			console.error(e);
-			showInfoModal = true; 
-		});
+		showInfoModal = true;
 	}
 
 	function openRename() {
@@ -773,32 +765,7 @@
 {/if}
 
 {#if showInfoModal}
-	<Modal title={docInfo?.title || title} icon="ph:file-text" onclose={() => showInfoModal = false}>
-		<div class="flex flex-col gap-4 text-xs">
-			<div>
-				<p class="mb-1 font-medium text-[var(--color-ink-muted)]">Type</p>
-				<p class="text-sm text-[var(--color-ink)] capitalize">Document</p>
-			</div>
-			{#if docInfo?.created_at}
-				<div>
-					<p class="mb-1 font-medium text-[var(--color-ink-muted)]">Created</p>
-					<p class="text-sm text-[var(--color-ink)]">{new Date(docInfo.created_at).toLocaleString()}</p>
-				</div>
-			{/if}
-			{#if docInfo?.updated_at}
-				<div>
-					<p class="mb-1 font-medium text-[var(--color-ink-muted)]">Last modified</p>
-					<p class="text-sm text-[var(--color-ink)]">{new Date(docInfo.updated_at).toLocaleString()}</p>
-				</div>
-			{/if}
-		</div>
-
-		{#snippet footer()}
-			<button type="button" onclick={() => showInfoModal = false} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90">
-				Close
-			</button>
-		{/snippet}
-	</Modal>
+	<InfoModal selectedInfo={{ id: docId, type: 'document', title }} onClose={() => (showInfoModal = false)} />
 {/if}
 
 {#if showRenameModal}

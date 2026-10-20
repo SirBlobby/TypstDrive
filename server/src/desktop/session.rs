@@ -1,6 +1,8 @@
 use super::*;
 use crate::db::sql;
 
+const DESKTOP_LOGIN_SCOPE: &str = "desktop-login";
+
 #[derive(Deserialize)]
 pub struct DeviceLoginRequest {
     pub email: String,
@@ -19,6 +21,7 @@ pub struct DeviceLoginResponse {
 
 pub async fn login(
     State(state): State<AppState>,
+    client: crate::accounts::client_info::ClientInfo,
     Json(payload): Json<DeviceLoginRequest>,
 ) -> Result<Json<DeviceLoginResponse>, (StatusCode, String)> {
     if let Some(client_version) = &payload.client_version {
@@ -33,24 +36,25 @@ pub async fn login(
         }
     }
 
-    let user = sqlx::query_as::<_, User>(
-        sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1"),
-    )
-    .bind(&payload.email)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((
-        StatusCode::UNAUTHORIZED,
-        "Invalid email or password".to_string(),
-    ))?;
+    let settings = crate::accounts::auth_settings::load(&state).await;
+    state.login_guard.ensure_allowed(DESKTOP_LOGIN_SCOPE, &payload.email, &client.ip_address)?;
 
-    if !crate::accounts::passwords::verify_password(&payload.password, &user.password_hash) {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            "Invalid email or password".to_string(),
-        ));
+    let user = crate::accounts::lookup::user_by_email(&state, &payload.email).await?;
+    let user = match user {
+        Some(user) if crate::accounts::passwords::verify_password(&payload.password, &user.password_hash) => user,
+        _ => {
+            state.login_guard.record_failure(DESKTOP_LOGIN_SCOPE, &payload.email, &client.ip_address, settings.lockout_rules());
+            return Err((StatusCode::UNAUTHORIZED, "Invalid email or password".to_string()));
+        }
+    };
+
+    if !settings.password_login_enabled && user.is_admin == 0 {
+        return Err((StatusCode::FORBIDDEN, "Password sign-in is disabled on this server".to_string()));
     }
+    if crate::accounts::auth_settings::verification_required(&state, &settings) && user.email_verified == 0 {
+        return Err((StatusCode::PRECONDITION_REQUIRED, "Verify your email address before signing in".to_string()));
+    }
+    state.login_guard.record_success(DESKTOP_LOGIN_SCOPE, &payload.email);
 
     let token = generate_token();
     let device_name = payload
@@ -92,7 +96,7 @@ pub async fn me(
     let user_id = authenticate(&state, &headers).await?;
 
     let user = sqlx::query_as::<_, User>(
-        sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"),
+        sql("SELECT id, username, email, password_hash, is_admin, email_verified FROM users WHERE id = $1"),
     )
     .bind(&user_id)
     .fetch_optional(&state.db)

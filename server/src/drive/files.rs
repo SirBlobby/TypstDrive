@@ -30,7 +30,7 @@ pub async fn list_files(
     let files = if let Some(folder_id) = query.folder_id {
         crate::sharing::access::require_folder_access(&state, &folder_id, &user_id).await?;
         sqlx::query_as::<_, File>(
-            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes FROM files WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY name ASC")
+            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, updated_at FROM files WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY name ASC")
         )
         .bind(&folder_id)
         .bind(&folder_id)
@@ -39,7 +39,7 @@ pub async fn list_files(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, File>(
-            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes FROM files WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC")
+            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, updated_at FROM files WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -134,7 +134,7 @@ pub async fn get_file_data(
     Ok(([(header::CONTENT_TYPE, mime_type)], data))
 }
 
-async fn can_read_shared_file(
+pub async fn can_read_shared_file(
     state: &AppState,
     file_id: &str,
     file_owner_id: &str,

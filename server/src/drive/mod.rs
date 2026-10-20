@@ -1,7 +1,11 @@
+pub mod activity;
 pub mod collaboration;
 pub mod document_assets;
 pub mod documents;
 pub mod downloads;
+pub mod file_replace;
 pub mod files;
 pub mod folders;
+pub mod item_info;
 pub mod projects;
+pub mod stars;

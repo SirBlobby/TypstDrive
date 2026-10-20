@@ -13,6 +13,7 @@
 	import PageSettingsModal from '../PageSettingsModal.svelte';
 	import PresentationMode from '../PresentationMode.svelte';
 	import Modal from '../Modal.svelte';
+	import InfoModal from '../drive/InfoModal.svelte';
 	import PromptModal from '../PromptModal.svelte';
 	import ConfirmModal from '../ConfirmModal.svelte';
 	import ShareModal from '../ShareModal.svelte';
@@ -479,17 +480,7 @@
 {/if}
 
 {#if showInfoModal}
-	<Modal title={projectName} icon="ph:folder-star" onclose={() => showInfoModal = false}>
-		<div class="flex flex-col gap-4 text-xs">
-			<div><p class="mb-1 font-medium text-[var(--color-ink-muted)]">Type</p><p class="text-sm text-[var(--color-ink)]">Project (multi-file)</p></div>
-			<div><p class="mb-1 font-medium text-[var(--color-ink-muted)]">Entrypoint</p><p class="font-mono text-sm text-[var(--color-ink)]">{entrypoint}</p></div>
-			<div><p class="mb-1 font-medium text-[var(--color-ink-muted)]">Your role</p><p class="text-sm text-[var(--color-ink)] capitalize">{role}</p></div>
-		</div>
-
-		{#snippet footer()}
-			<button onclick={() => showInfoModal = false} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90">Close</button>
-		{/snippet}
-	</Modal>
+	<InfoModal selectedInfo={{ id: projectId, type: 'project', name: projectName }} onClose={() => (showInfoModal = false)} />
 {/if}
 
 {#if showRenameModal}

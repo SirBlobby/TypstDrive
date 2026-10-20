@@ -5,17 +5,21 @@
     import { driveSidebarCollapsedStore } from '$lib/ts/store';
     import { fetchLatestRelease, fetchServerVersion, isNewerVersion, type LatestRelease } from '$lib/ts/version';
     import StorageSummary from '$lib/components/drive/StorageSummary.svelte';
+    import TeamSwitcher from '$lib/components/drive/teams/TeamSwitcher.svelte';
+    import { activeTeamStore, type TeamSummary } from '$lib/ts/workspace';
 
-    type DriveView = 'drive' | 'shared' | 'packages';
+    type DriveView = 'drive' | 'shared' | 'starred' | 'packages';
 
     let {
         activeView,
         onMyDrive = () => goto('/drive'),
-        onShared = () => goto('/drive?view=shared')
+        onShared = () => goto('/drive?view=shared'),
+        onStarred = () => goto('/drive?view=starred')
     }: {
         activeView: DriveView;
         onMyDrive?: () => void;
         onShared?: () => void;
+        onStarred?: () => void;
     } = $props();
 
     let serverVersion = $state<string | null>(null);
@@ -24,6 +28,26 @@
         serverVersion !== null && latestRelease !== null && isNewerVersion(latestRelease.version, serverVersion)
     );
     let collapsed = $derived($driveSidebarCollapsedStore);
+
+    function openPersonal() {
+        activeTeamStore.set(null);
+        onMyDrive();
+    }
+
+    function openShared() {
+        activeTeamStore.set(null);
+        onShared();
+    }
+
+    function openStarred() {
+        activeTeamStore.set(null);
+        onStarred();
+    }
+
+    function openTeam(team: TeamSummary) {
+        activeTeamStore.set(team);
+        onMyDrive();
+    }
 
     function toggleCollapsed() {
         driveSidebarCollapsedStore.update((value) => !value);
@@ -61,9 +85,11 @@
     <nav class="flex-1 {collapsed ? 'p-2' : 'p-3'} space-y-5">
         <div class="space-y-0.5">
             {@render groupLabel('Workspace')}
-            {@render navItem('Home', 'mdi:home-outline', activeView === 'drive', onMyDrive)}
-            {@render navItem('Shared', 'mdi:account-multiple-outline', activeView === 'shared', onShared)}
+            {@render navItem('Home', 'mdi:home-outline', activeView === 'drive' && !$activeTeamStore, openPersonal)}
+            {@render navItem('Shared', 'mdi:account-multiple-outline', activeView === 'shared', openShared)}
+            {@render navItem('Starred', 'mdi:star-outline', activeView === 'starred', openStarred)}
         </div>
+        <TeamSwitcher {collapsed} highlightActive={activeView === 'drive'} onSelectTeam={openTeam} onTeamClosed={openPersonal} />
         <div class="space-y-0.5">
             {@render groupLabel('Library')}
             {@render navItem('Packages', 'mdi:package-variant-closed', activeView === 'packages', () => goto('/packages'))}
@@ -85,7 +111,9 @@
     </nav>
 
     <div class="{collapsed ? 'p-2' : 'p-3'} space-y-2">
-        <StorageSummary {collapsed} />
+        {#key $activeTeamStore?.id}
+            <StorageSummary {collapsed} />
+        {/key}
 
         {#if updateAvailable && latestRelease}
             <a

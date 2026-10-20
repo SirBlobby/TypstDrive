@@ -3,6 +3,8 @@
     import { goto } from '$app/navigation';
     import { fileType, formatSize, itemModified, itemName, type DriveEntry } from '$lib/ts/drive-filters';
     import { downloadFolder, downloadProject } from '$lib/ts/downloads';
+    import StarButton from '$lib/components/drive/stars/StarButton.svelte';
+    import ReplaceFileButton from './ReplaceFileButton.svelte';
 
     type RenameType = 'document' | 'folder' | 'file' | 'project';
 
@@ -16,7 +18,9 @@
         openPreview,
         onRename,
         onDelete,
-        onShare = undefined
+        onShare = undefined,
+        onInfo = undefined,
+        onReplaced = undefined
     }: {
         entries: DriveEntry[];
         readOnly?: boolean;
@@ -28,7 +32,11 @@
         onRename: (id: string, name: string, type: RenameType) => void;
         onDelete: (id: string, name: string, type: RenameType) => void;
         onShare?: (item: any, kind: ShareKind) => void;
+        onInfo?: (item: any, type: string) => void;
+        onReplaced?: (file: any) => void;
     } = $props();
+
+    const iconButtonClass = 'p-1 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)]';
 
     type ShareKind = 'document' | 'project' | 'folder';
 
@@ -89,7 +97,7 @@
 </script>
 
 <div class="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] overflow-hidden" role="table" aria-label="Drive items">
-    <div role="row" class="grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_8rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_8rem] gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)] border-b border-[var(--color-line)] bg-[var(--color-surface-muted)]">
+    <div role="row" class="grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_10rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_10rem] gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)] border-b border-[var(--color-line)] bg-[var(--color-surface-muted)]">
         <span role="columnheader">Name</span>
         <span role="columnheader">Type</span>
         <span role="columnheader">Modified</span>
@@ -110,18 +118,34 @@
             ondrop={(e) => isFolder && !readOnly && handleDrop(e, entry.item.id)}
             onclick={() => openEntry(entry)}
             onkeydown={(e) => e.key === 'Enter' && openEntry(entry)}
-            class="group grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_8rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_8rem] gap-3 items-center px-4 py-2 text-sm border-b border-[var(--color-line)] last:border-b-0 cursor-pointer transition-colors {dragOverFolderId === entry.item.id && isFolder
+            class="group grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_10rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_10rem] gap-3 items-center px-4 py-2 text-sm border-b border-[var(--color-line)] last:border-b-0 cursor-pointer transition-colors {dragOverFolderId === entry.item.id && isFolder
                 ? 'bg-[var(--color-accent-soft)]'
                 : 'hover:bg-[var(--color-surface-muted)]'}"
         >
             <span role="cell" class="flex items-center gap-3 min-w-0">
                 <Icon icon={typeIcons[type].icon} class="text-xl flex-shrink-0 {typeIcons[type].color}" />
                 <span class="truncate text-[var(--color-ink)] font-medium" title={itemName(entry.item)}>{itemName(entry.item)}</span>
+                {#if entry.category === 'document' || entry.category === 'project'}
+                    <StarButton kind={entry.category} id={entry.item.id} name={itemName(entry.item)} sizeClass="text-sm" />
+                {/if}
             </span>
             <span role="cell" class="text-[var(--color-ink-muted)] truncate">{typeLabels[type]}</span>
             <span role="cell" class="text-[var(--color-ink-muted)] truncate">{formatModified(entry)}</span>
             <span role="cell" class="text-[var(--color-ink-muted)] text-right tabular-nums">{formatEntrySize(entry)}</span>
             <span role="cell" class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                {#if onInfo}
+                    <button
+                        onclick={(e) => { e.stopPropagation(); onInfo(entry.item, entry.category); }}
+                        title="View info"
+                        aria-label={`Info for ${itemName(entry.item)}`}
+                        class={iconButtonClass}
+                    >
+                        <Icon icon="mdi:information-outline" class="text-base" />
+                    </button>
+                {/if}
+                {#if !readOnly && onReplaced && entry.category === 'file'}
+                    <ReplaceFileButton file={entry.item} {onReplaced} buttonClass={iconButtonClass} />
+                {/if}
                 {#if entry.category === 'project' || entry.category === 'folder'}
                     <button
                         onclick={(e) => { e.stopPropagation(); if (entry.category === 'folder') downloadFolder(entry.item.id); else downloadProject(entry.item.id); }}

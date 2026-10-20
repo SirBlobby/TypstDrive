@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { brandingStore } from '$lib/ts/branding';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import Editor from '$lib/components/Editor.svelte';
@@ -210,7 +211,7 @@
 </script>
 
 <svelte:head>
-	<title>{projectName} - TypstDrive</title>
+	<title>{projectName} - {$brandingStore.site_name}</title>
 </svelte:head>
 
 <svelte:window onclick={closeContextMenu} />

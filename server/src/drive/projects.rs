@@ -76,7 +76,7 @@ pub async fn project_role(
     user_id_opt: &Option<String>,
 ) -> Option<(Project, String)> {
     let project = sqlx::query_as::<_, Project>(
-        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1")
+        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, link_password_hash, link_expires_at, created_at, updated_at FROM projects WHERE id = $1")
     )
     .bind(project_id)
     .fetch_optional(&state.db)
@@ -99,31 +99,16 @@ pub async fn project_role(
         .flatten()
         .and_then(|(role,)| AccessRole::from_share_role(&role));
         role = strongest_role(role, inherited_role(state, &project.folder_id, &project.owner_id, user_id_opt).await);
+        role = strongest_role(role, crate::teams::content_role(state, &project.owner_id, uid).await);
     }
 
-    let public_role = project.public_role.as_deref().and_then(AccessRole::from_share_role);
+    let public_role = crate::sharing::links::public_access(
+        &project.id,
+        project.public_role.as_deref(),
+        project.link_password_hash.as_deref(),
+        project.link_expires_at.as_deref(),
+    );
     strongest_role(role, public_role).map(|role| (project, role.as_str().to_string()))
-}
-
-pub async fn load_local_packages(state: &AppState) -> HashMap<String, HashMap<String, Vec<u8>>> {
-    let mut packages: HashMap<String, HashMap<String, Vec<u8>>> = HashMap::new();
-
-    let rows = sqlx::query_as::<_, (String, String, String, Vec<u8>)>(
-        sql("SELECT p.name, v.version, f.path, f.data \
-         FROM package_files f \
-         JOIN package_versions v ON v.id = f.version_id \
-         JOIN packages p ON p.id = v.package_id"),
-    )
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
-
-    for (name, version, path, data) in rows {
-        let key = format!("{}:{}", name, version);
-        packages.entry(key).or_default().insert(path, data);
-    }
-
-    packages
 }
 
 pub async fn assemble_project(
@@ -172,7 +157,7 @@ pub async fn assemble_project(
     ProjectInput {
         entrypoint: project.entrypoint.clone(),
         files,
-        packages: load_local_packages(state).await,
+        packages: crate::packages::visibility::load_files_for(state, &project.owner_id).await,
     }
 }
 
@@ -445,6 +430,7 @@ pub async fn create_project_file(
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
+    crate::drive::activity::mark_project_edited(&state, &id, user_id_opt.as_deref()).await;
     Ok(Json(file))
 }
 
@@ -498,6 +484,7 @@ pub async fn upload_project_file(
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
+    crate::drive::activity::mark_project_edited(&state, &id, user_id_opt.as_deref()).await;
     Ok(Json(serde_json::json!({ "files": uploaded })))
 }
 
@@ -559,6 +546,7 @@ pub async fn update_project_file(
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
+    crate::drive::activity::mark_project_edited(&state, &id, user_id_opt.as_deref()).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -588,5 +576,6 @@ pub async fn delete_project_file(
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
+    crate::drive::activity::mark_project_edited(&state, &id, user_id_opt.as_deref()).await;
     Ok(StatusCode::NO_CONTENT)
 }

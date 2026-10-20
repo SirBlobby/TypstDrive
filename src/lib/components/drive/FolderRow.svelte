@@ -2,7 +2,7 @@
     import Icon from '@iconify/svelte';
     import { downloadFolder } from '$lib/ts/downloads';
 
-    let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId, shareFolder = undefined, readOnly = false } = $props<{
+    let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId, shareFolder = undefined, openInfo = undefined, readOnly = false } = $props<{
         folder: any;
         dragOverFolderId: string | null;
         navigateToFolder: (folder: any) => void;
@@ -10,6 +10,7 @@
         deleteFolder: (id: string, name: string) => void;
         setDragOverFolderId: (id: string | null) => void;
         shareFolder?: (folder: any) => void;
+        openInfo?: (folder: any, type: string) => void;
         readOnly?: boolean;
     }>();
 
@@ -33,7 +34,7 @@
     <div class="flex items-center justify-center w-10 h-10 bg-yellow-50 dark:bg-yellow-500/10 rounded-md group-hover:scale-105 transition-transform pointer-events-none shrink-0 mr-3">
         <Icon icon="mdi:folder" class="text-2xl text-yellow-500" />
     </div>
-    <div class="min-w-0 w-full pointer-events-none pr-20">
+    <div class="min-w-0 w-full pointer-events-none pr-28">
         <p class="font-medium text-[var(--color-ink)] text-sm truncate">{folder.name}</p>
         {#if folder.effective_role}
             <p class="text-xs text-[var(--color-ink-muted)] truncate capitalize">{folder.effective_role}</p>
@@ -44,6 +45,11 @@
         <button aria-label="Download folder" title="Download as ZIP" onclick={(e) => { e.stopPropagation(); downloadFolder(folder.id); }} class="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] p-1.5 rounded hover:bg-[var(--color-surface-sunken)] shrink-0">
             <Icon icon="mdi:download" class="text-base" />
         </button>
+        {#if openInfo}
+            <button aria-label="Folder info" title="View info" onclick={(e) => { e.stopPropagation(); openInfo(folder, 'folder'); }} class="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] p-1.5 rounded hover:bg-[var(--color-surface-sunken)] shrink-0">
+                <Icon icon="mdi:information-outline" class="text-base" />
+            </button>
+        {/if}
         {#if !readOnly}
             {#if shareFolder}
                 <button aria-label="Share folder" title="Share folder" onclick={(e) => { e.stopPropagation(); shareFolder(folder); }} class="text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] p-1.5 rounded hover:bg-[var(--color-surface-sunken)] shrink-0">

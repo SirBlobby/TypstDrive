@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { fileDataUrl } from '$lib/ts/item-info';
     import Icon from '@iconify/svelte';
 
     let { files, startFileId, onClose }: {
@@ -15,7 +16,7 @@
     let imageFailed = $state(false);
 
     let currentFile = $derived(files[currentIndex]);
-    let fileUrl = $derived(`/api/files/${currentFile.id}/data`);
+    let fileUrl = $derived(fileDataUrl(currentFile));
     let previewKind = $derived(previewKindFor(currentFile));
     let hasMultiple = $derived(files.length > 1);
 

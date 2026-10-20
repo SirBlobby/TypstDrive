@@ -86,7 +86,8 @@ pub async fn replace_text(state: &AppState, room_id: &str, replacement: &str) ->
                 text.insert(&mut transaction, start as u32, &replacement[start..replacement_end]);
             }
         }
-        doc.transact().encode_diff_v1(&state_before)
+        let difference = doc.transact().encode_diff_v1(&state_before);
+        difference
     };
     relay::publish_update(state, room_id, update);
     true

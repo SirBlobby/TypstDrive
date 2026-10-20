@@ -3,6 +3,7 @@
     import Icon from '@iconify/svelte';
     import Modal from './Modal.svelte';
     import UnsharedFilesWarning from './UnsharedFilesWarning.svelte';
+    import ReplaceFileButton from './drive/ReplaceFileButton.svelte';
     import { formatSize } from '$lib/ts/drive-filters';
 
     type LinkedFile = { id: string; name: string; mime_type: string; size_bytes?: number; shared_with_collaborators: boolean };
@@ -109,6 +110,9 @@
                     <a href={fileUrl(file)} download={file.name} title="Download" aria-label={`Download ${file.name}`} class="p-1.5 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)]">
                         <Icon icon="mdi:download" class="text-base" />
                     </a>
+                    {#if canEdit}
+                        <ReplaceFileButton {file} onReplaced={loadFiles} buttonClass="p-1.5 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-surface-sunken)] disabled:opacity-50" />
+                    {/if}
                     {#if canEdit && !isFont(file)}
                         <button onclick={() => onInsert(file)} title="Insert into document" aria-label={`Insert ${file.name}`} class="p-1.5 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-surface-sunken)]">
                             <Icon icon="mdi:plus-box-outline" class="text-base" />

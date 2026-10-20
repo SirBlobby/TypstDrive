@@ -57,8 +57,8 @@ pub async fn apply_remote_frame(state: &AppState, room_id: &str, frame: &[u8]) {
     for message in decode_messages(frame) {
         match message {
             Message::Sync(SyncMessage::Update(update)) | Message::Sync(SyncMessage::SyncStep2(update)) => {
+                let awareness = awareness.write().await;
                 if let Ok(update) = Update::decode_v1(&update) {
-                    let awareness = awareness.write().await;
                     awareness.doc().transact_mut().apply_update(update);
                 }
             }

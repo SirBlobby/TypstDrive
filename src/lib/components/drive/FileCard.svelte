@@ -1,23 +1,30 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
+    import { fileDataUrl } from '$lib/ts/item-info';
+    import ReplaceFileButton from './ReplaceFileButton.svelte';
 
-    let { file, deleteFile, openRename, openPreview, readOnly = false } = $props<{
+    let { file, deleteFile, openRename, openPreview, openInfo = undefined, onReplaced = undefined, readOnly = false } = $props<{
         file: any;
         readOnly?: boolean;
         deleteFile: (id: string, name: string) => void;
         openRename: (id: string, name: string, type: 'file') => void;
         openPreview: (file: any) => void;
+        openInfo?: (file: any, type: string) => void;
+        onReplaced?: (file: any) => void;
     }>();
+
+    const actionButtonClass = 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] p-1 rounded-md hover:bg-[var(--color-surface-sunken)]';
 
     let lowerName = $derived(file.name.toLowerCase());
     let isFont = $derived(lowerName.endsWith('.ttf') || lowerName.endsWith('.otf'));
     let isImage = $derived(file.mime_type.startsWith('image/'));
     let isPdf = $derived(file.mime_type === 'application/pdf' || lowerName.endsWith('.pdf'));
-    let fileUrl = $derived(`/api/files/${file.id}/data`);
+    let fileUrl = $derived(fileDataUrl(file));
     let previewFailed = $state(false);
 
+    let shownDate = $derived(file.updated_at ?? file.created_at);
     let uploadedDate = $derived(
-        new Date(file.created_at ? (file.created_at.endsWith('Z') ? file.created_at : file.created_at + 'Z') : Date.now())
+        new Date(shownDate ? (shownDate.endsWith('Z') ? shownDate : shownDate.replace(' ', 'T') + 'Z') : Date.now())
             .toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     );
 
@@ -61,8 +68,16 @@
     <div class="p-4 flex flex-col flex-grow">
         <div class="flex items-start justify-between gap-2">
             <h3 class="text-lg font-semibold text-[var(--color-ink)] truncate pointer-events-none" title={file.name}>{file.name}</h3>
-            {#if !readOnly}
             <div class="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                {#if openInfo}
+                    <button aria-label="File info" title="View info" onclick={(e) => { e.stopPropagation(); openInfo(file, 'file'); }} class={actionButtonClass}>
+                        <Icon icon="mdi:information-outline" class="text-lg" />
+                    </button>
+                {/if}
+                {#if !readOnly && onReplaced}
+                    <ReplaceFileButton {file} {onReplaced} buttonClass={actionButtonClass} iconClass="text-lg" />
+                {/if}
+                {#if !readOnly}
                 <button
                     aria-label="Rename file"
                     title="Rename file"
@@ -79,12 +94,12 @@
                 >
                     <Icon icon="mdi:trash-can-outline" class="text-lg" />
                 </button>
+                {/if}
             </div>
-            {/if}
         </div>
         <p class="text-xs text-[var(--color-ink-muted)] flex items-center gap-1 mt-2 pointer-events-none">
             <Icon icon={isFont ? 'mdi:format-font' : isImage ? 'mdi:image-outline' : 'mdi:clock-outline'} class="text-sm" />
-            Uploaded {uploadedDate}
+            {file.updated_at ? 'Replaced' : 'Uploaded'} {uploadedDate}
         </p>
     </div>
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { brandingStore } from '$lib/ts/branding';
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
@@ -28,6 +29,11 @@
     import DriveSidebar from '$lib/components/drive/DriveSidebar.svelte';
     import DriveHeader from '$lib/components/drive/DriveHeader.svelte';
     import IncomingTransfers from '$lib/components/drive/IncomingTransfers.svelte';
+    import DriveEmptyState from '$lib/components/drive/DriveEmptyState.svelte';
+    import DriveSectionTitle from '$lib/components/drive/DriveSectionTitle.svelte';
+    import StarredView from '$lib/components/drive/stars/StarredView.svelte';
+    import { fetchStarred } from '$lib/ts/stars';
+    import { activeTeamStore, refreshTeams } from '$lib/ts/workspace';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);
@@ -178,6 +184,7 @@
 
     function navigateToFolder(folder: {id: string, name: string, effective_role?: string}) {
         searchQuery = '';
+        inStarred = false;
         if (inSharedDrive) {
             inSharedDrive = false;
             sharedFolderRole = folder.effective_role ?? 'viewer';
@@ -200,6 +207,7 @@
             return;
         }
         inSharedDrive = false;
+        inStarred = false;
         if (index === -1) {
             folderPath = [];
             currentFolderId = null;
@@ -314,10 +322,16 @@
             return;
         }
 
-        if ($page.url.searchParams.get('view') === 'shared') {
+        fetchStarred();
+        const view = $page.url.searchParams.get('view');
+        if (view === 'shared') {
+            activeTeamStore.set(null);
             enterSharedDrive();
+        } else if (view === 'starred') {
+            activeTeamStore.set(null);
+            enterStarred();
         } else {
-            loadDocs();
+            refreshTeams().then(loadDocs);
         }
     });
 
@@ -343,6 +357,10 @@
         selectedInfo = { ...item, type };
         showInfoModal = true;
         activeMenu = null;
+    }
+
+    function replaceFileInList(updated: any) {
+        files = files.map((file) => (file.id === updated.id ? { ...file, ...updated } : file));
     }
 
     function openRename(id: string, currentTitle: string, type: 'document'|'folder'|'file'|'project') {
@@ -374,6 +392,7 @@
     }
 
     let inSharedDrive = $state(false);
+    let inStarred = $state(false);
     let sharedFolderRole = $state<string | null>(null);
     let browsingSharedFolder = $derived(sharedFolderRole !== null);
     let sharedFolders = $state<any[]>([]);
@@ -433,7 +452,9 @@
             : visibleFolders.length + visibleProjects.length + visibleDocuments.length + visibleFiles.length
     );
 
-    let headerTitle = $derived(inSharedDrive ? 'Shared with me' : (folderPath.at(-1)?.name ?? 'Home'));
+    let workspaceName = $derived($activeTeamStore?.name ?? 'Home');
+    let canChangeWorkspace = $derived($activeTeamStore?.role !== 'viewer');
+    let headerTitle = $derived(inStarred ? 'Starred' : inSharedDrive ? 'Shared with me' : (folderPath.at(-1)?.name ?? workspaceName));
 
     async function loadSharedDocs() {
         sharedDocsLoading = true;
@@ -452,11 +473,21 @@
 
     function enterSharedDrive() {
         searchQuery = '';
+        inStarred = false;
         inSharedDrive = true;
         sharedFolderRole = null;
         folderPath = [];
         currentFolderId = null;
         loadSharedDocs();
+    }
+
+    function enterStarred() {
+        searchQuery = '';
+        inStarred = true;
+        inSharedDrive = false;
+        sharedFolderRole = null;
+        folderPath = [];
+        currentFolderId = null;
     }
 
     type ShareKind = 'document' | 'project' | 'folder';
@@ -515,35 +546,21 @@
 </script>
 
 <svelte:head>
-	<title>Drive - TypstDrive</title>
+	<title>Drive - {$brandingStore.site_name}</title>
 	<meta name="description" content="Manage your Typst documents, projects and folders." />
 </svelte:head>
 
 <svelte:window onclick={handleWindowClick} />
-
-{#snippet sectionTitle(title: string)}
-    <div class="flex items-center gap-2 mb-3">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">{title}</h2>
-        <div class="flex-1 h-px bg-[var(--color-line)]"></div>
-    </div>
-{/snippet}
-
-{#snippet emptyState(icon: string, heading: string, message: string)}
-    <div class="min-h-[45vh] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] px-6">
-        <Icon {icon} class="text-5xl text-[var(--color-accent)] mb-4" />
-        <h3 class="text-lg font-semibold text-[var(--color-ink)] mb-1">{heading}</h3>
-        <p class="text-sm text-[var(--color-ink-muted)] max-w-sm">{message}</p>
-    </div>
-{/snippet}
 
 <div class="h-screen flex flex-col">
     <Navbar />
 
     <div class="flex flex-1 min-h-0">
         <DriveSidebar
-            activeView={inSharedDrive || browsingSharedFolder ? 'shared' : 'drive'}
+            activeView={inStarred ? 'starred' : inSharedDrive || browsingSharedFolder ? 'shared' : 'drive'}
             onMyDrive={goHome}
             onShared={enterSharedDrive}
+            onStarred={enterStarred}
         />
         <input type="file" bind:this={fileInput} accept="image/*,font/*,.typ,.ttf,.otf,.pdf,application/pdf" multiple onchange={handleFileUpload} class="hidden" />
         <input type="file" bind:this={importFileInput} accept=".docx,.tex,.md,.html" onchange={handleImportUpload} class="hidden" />
@@ -552,10 +569,10 @@
             <DriveHeader
                 title={headerTitle}
                 {folderPath}
-                showActions={!inSharedDrive && !browsingSharedFolder}
+                showActions={!inStarred && !inSharedDrive && !browsingSharedFolder && canChangeWorkspace}
                 showPath={browsingSharedFolder}
-                rootLabel={browsingSharedFolder ? 'Shared with me' : 'Home'}
-                rootIcon={browsingSharedFolder ? 'mdi:account-multiple-outline' : 'mdi:home-outline'}
+                rootLabel={browsingSharedFolder ? 'Shared with me' : workspaceName}
+                rootIcon={browsingSharedFolder ? 'mdi:account-multiple-outline' : $activeTeamStore ? 'mdi:account-group-outline' : 'mdi:home-outline'}
                 {isImporting}
                 {dragOverBreadcrumbIndex}
                 bind:searchQuery
@@ -573,15 +590,24 @@
 
             <DriveFilters bind:filters bind:viewMode />
 
-            {#if inSharedDrive}
+            {#if inStarred}
+                <StarredView
+                    {searchQuery}
+                    {filters}
+                    {viewMode}
+                    {activeMenu}
+                    setActiveMenu={(id) => activeMenu = id}
+                    {openInfo}
+                />
+            {:else if inSharedDrive}
                 {#if sharedDocsLoading}
                     <div class="min-h-[45vh] flex items-center justify-center text-[var(--color-ink-muted)]">
                         <Icon icon="mdi:loading" class="text-3xl animate-spin" />
                     </div>
                 {:else if sharedFolders.length === 0 && sharedDocs.length === 0 && sharedProjects.length === 0}
-                    {@render emptyState('mdi:account-multiple-outline', 'Nothing shared yet', 'Folders, documents and projects other people share with you will appear here.')}
+                    <DriveEmptyState icon="mdi:account-multiple-outline" heading="Nothing shared yet" message="Folders, documents and projects other people share with you will appear here." />
                 {:else if visibleItemCount === 0}
-                    {@render emptyState('mdi:magnify-remove-outline', 'No matches', 'Nothing here matches your search.')}
+                    <DriveEmptyState icon="mdi:magnify-remove-outline" heading="No matches" message="Nothing here matches your search." />
                 {:else}
                     {#if viewMode === 'list'}
                         <DriveListView
@@ -594,11 +620,12 @@
                             openPreview={(file) => previewFileId = file.id}
                             onRename={openRename}
                             onDelete={(id, name, type) => openDelete(id, type, name)}
+                            onInfo={openInfo}
                         />
                     {:else}
                         {#if visibleSharedFolders.length > 0 || visibleSharedProjects.length > 0}
                             <section class="mb-8">
-                                {@render sectionTitle('Folders & projects')}
+                                <DriveSectionTitle title="Folders & projects" />
                                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
                                     {#each visibleSharedFolders as folder (folder.id)}
                                         <FolderRow
@@ -608,6 +635,7 @@
                                             {handleDrop}
                                             {deleteFolder}
                                             setDragOverFolderId={(id) => dragOverFolderId = id}
+                                            {openInfo}
                                             readOnly
                                         />
                                     {/each}
@@ -627,7 +655,7 @@
                         {/if}
                         {#if visibleSharedDocs.length > 0}
                             <section>
-                                {@render sectionTitle('Files')}
+                                <DriveSectionTitle title="Files" />
                                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                                     {#each visibleSharedDocs as doc}
                                         <DocCard
@@ -652,13 +680,13 @@
                     <Icon icon="mdi:loading" class="text-3xl animate-spin" />
                 </div>
             {:else if documents.length === 0 && files.length === 0 && folders.length === 0 && projects.length === 0}
-                {@render emptyState(
-                    currentFolderId === null ? 'mdi:text-box-plus-outline' : 'mdi:folder-open-outline',
-                    currentFolderId === null ? 'Start your first document' : 'This folder is empty',
-                    browsingSharedFolder ? 'Nothing has been added to this shared folder yet.' : 'Create a document, project or folder, or upload images and fonts to use in your Typst files.'
-                )}
+                <DriveEmptyState
+                    icon={currentFolderId === null ? 'mdi:text-box-plus-outline' : 'mdi:folder-open-outline'}
+                    heading={currentFolderId === null ? 'Start your first document' : 'This folder is empty'}
+                    message={browsingSharedFolder ? 'Nothing has been added to this shared folder yet.' : 'Create a document, project or folder, or upload images and fonts to use in your Typst files.'}
+                />
             {:else if visibleItemCount === 0}
-                {@render emptyState('mdi:magnify-remove-outline', 'No matches', 'Nothing in this folder matches your search.')}
+                <DriveEmptyState icon="mdi:magnify-remove-outline" heading="No matches" message="Nothing in this folder matches your search." />
             {:else}
                 {#if viewMode === 'list'}
                     <DriveListView
@@ -672,11 +700,13 @@
                         onRename={openRename}
                         onDelete={(id, name, type) => openDelete(id, type, name)}
                         onShare={shareItem}
+                        onInfo={openInfo}
+                        onReplaced={replaceFileInList}
                     />
                 {:else}
                     {#if visibleFolders.length > 0 || visibleProjects.length > 0}
                         <section class="mb-8">
-                            {@render sectionTitle('Folders & projects')}
+                            <DriveSectionTitle title="Folders & projects" />
                             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
                                 {#each visibleFolders as folder}
                                     <FolderRow
@@ -687,6 +717,7 @@
                                         {deleteFolder}
                                         setDragOverFolderId={(id) => dragOverFolderId = id}
                                         shareFolder={(target) => shareItem(target, 'folder')}
+                                        {openInfo}
                                         readOnly={browsingSharedFolder}
                                     />
                                 {/each}
@@ -708,7 +739,7 @@
 
                     {#if visibleDocuments.length > 0 || visibleFiles.length > 0}
                         <section>
-                            {@render sectionTitle('Files')}
+                            <DriveSectionTitle title="Files" />
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                                 {#each visibleDocuments as doc}
                                     <DocCard
@@ -723,7 +754,15 @@
                                     />
                                 {/each}
                                 {#each visibleFiles as file}
-                                    <FileCard {file} {deleteFile} {openRename} openPreview={(target) => previewFileId = target.id} readOnly={browsingSharedFolder} />
+                                    <FileCard
+                                        {file}
+                                        {deleteFile}
+                                        {openRename}
+                                        {openInfo}
+                                        onReplaced={replaceFileInList}
+                                        openPreview={(target) => previewFileId = target.id}
+                                        readOnly={browsingSharedFolder}
+                                    />
                                 {/each}
                             </div>
                         </section>

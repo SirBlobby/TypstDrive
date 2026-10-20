@@ -28,6 +28,14 @@ pub struct ViewerFilterStream {
     revoked: Arc<AtomicBool>,
     state: AppState,
     room_id: String,
+    user_id: Option<String>,
+}
+
+fn contains_document_change(bytes: &[u8]) -> bool {
+    let mut decoder = DecoderV1::from(bytes);
+    MessageReader::new(&mut decoder).any(|message| {
+        matches!(message, Ok(Message::Sync(SyncMessage::Update(_))))
+    })
 }
 
 fn is_read_only_frame(bytes: &[u8]) -> bool {
@@ -60,6 +68,9 @@ impl Stream for ViewerFilterStream {
                     if self.read_only && !is_read_only_frame(&bytes) {
                         continue;
                     }
+                    if let Some(user_id) = self.user_id.as_deref().filter(|_| contains_document_change(&bytes)) {
+                        crate::drive::activity::note_live_edit(&self.room_id, user_id);
+                    }
                     relay::forward_client_frame(&self.state, &self.room_id, &bytes);
                     return std::task::Poll::Ready(Some(Ok(bytes.to_vec())));
                 }
@@ -72,8 +83,10 @@ impl Stream for ViewerFilterStream {
 }
 
 struct YjsSaveTarget {
+    room_id: String,
     table: &'static str,
     row_id: String,
+    project_id: Option<String>,
     owner_id: String,
     event: DeviceEvent,
 }
@@ -103,8 +116,10 @@ async fn resolve_room(state: &AppState, room_id: &str, user_id: &Option<String>)
             role,
             initial_content: content,
             save_target: YjsSaveTarget {
+                room_id: room_id.to_string(),
                 table: "project_files",
                 row_id: file_id.to_string(),
+                project_id: Some(project_id.to_string()),
                 owner_id: project.owner_id,
                 event: DeviceEvent::project(project_id),
             },
@@ -117,8 +132,10 @@ async fn resolve_room(state: &AppState, room_id: &str, user_id: &Option<String>)
         role,
         initial_content: document.content,
         save_target: YjsSaveTarget {
+            room_id: room_id.to_string(),
             table: "documents",
             row_id: room_id.to_string(),
+            project_id: None,
             owner_id: document.owner_id,
             event: DeviceEvent::document(room_id),
         },
@@ -153,6 +170,11 @@ fn spawn_autosave(state: AppState, awareness: Arc<RwLock<Awareness>>, target: Yj
 
             if result.is_ok() {
                 last_content = Some(content);
+                let editor = crate::drive::activity::live_editor(&target.room_id);
+                match &target.project_id {
+                    Some(project_id) => crate::drive::activity::mark_project_edited(&state, project_id, editor.as_deref()).await,
+                    None => crate::drive::activity::mark_document_edited(&state, &target.row_id, editor.as_deref()).await,
+                }
                 notify_devices(&state, &target.owner_id, target.event.clone()).await;
             }
         }
@@ -209,7 +231,7 @@ pub async fn yjs_handler(
     let (bcast, resource, role) = room_broadcast(&state, &room_id, room).await;
 
     ws.on_upgrade(move |socket| async move {
-        let session = access::register_session(&state, resource, user_id, device_token_id, role.can_edit()).await;
+        let session = access::register_session(&state, resource, user_id.clone(), device_token_id, role.can_edit()).await;
 
         let (sink, stream) = socket.split();
         let sink = Arc::new(Mutex::new(AxumSink(sink)));
@@ -221,6 +243,7 @@ pub async fn yjs_handler(
             revoked: revoked_flag.clone(),
             state: state.clone(),
             room_id: room_id.clone(),
+            user_id: user_id.clone(),
         };
 
         let subscription = bcast.subscribe(sink.clone(), filtered_stream);

@@ -2,6 +2,7 @@
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
     import { downloadProject } from '$lib/ts/downloads';
+    import StarButton from '$lib/components/drive/stars/StarButton.svelte';
 
     let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, shareItem = undefined, readOnly = false } = $props<{
         project: any;
@@ -49,12 +50,13 @@
     <div class="flex items-center justify-center w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-md group-hover:scale-105 transition-transform pointer-events-none shrink-0 mr-3">
         <Icon icon="mdi:folder-star" class="text-2xl text-indigo-500" />
     </div>
-    <div class="min-w-0 w-full pointer-events-none pr-6">
+    <div class="min-w-0 w-full pointer-events-none pr-14">
         <p class="font-medium text-[var(--color-ink)] text-sm truncate">{project.name}</p>
         <p class="text-xs text-[var(--color-ink-muted)] truncate">{readOnly && project.effective_role ? project.effective_role : 'Project'}</p>
     </div>
 
-    <div class="absolute top-1/2 -translate-y-1/2 right-2 action-menu-container">
+    <div class="absolute top-1/2 -translate-y-1/2 right-2 action-menu-container flex items-center">
+        <StarButton kind="project" id={project.id} name={project.name} />
         <button aria-label="Project actions" onclick={toggleMenu} class="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] opacity-0 group-hover:opacity-100 {activeMenu === project.id ? 'opacity-100' : ''} transition-opacity p-1 rounded hover:bg-[var(--color-surface-sunken)]">
             <Icon icon="mdi:dots-vertical" class="text-lg" />
         </button>

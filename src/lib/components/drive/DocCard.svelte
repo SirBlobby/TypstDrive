@@ -1,6 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
+    import StarButton from '$lib/components/drive/stars/StarButton.svelte';
 
     let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, readOnly = false } = $props<{
         doc: any;
@@ -60,7 +61,8 @@
             <h3 class="text-lg font-semibold text-[var(--color-ink)] truncate pr-2 pointer-events-none" title={doc.title}>{doc.title}</h3>
 
 
-            <div class="relative action-menu-container">
+            <div class="relative action-menu-container flex items-center">
+                <StarButton kind="document" id={doc.id} name={doc.title} sizeClass="text-lg" />
                 <button
                     aria-label="Document actions"
                     onclick={toggleMenu}
