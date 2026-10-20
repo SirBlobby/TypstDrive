@@ -9,6 +9,25 @@
 | `typst/` | The Typst compiler, checked out at the commit the server builds against. |
 | `mkdocs/` | This documentation site. |
 
+## Server layout
+
+The server code in `server/src/` is grouped by feature.
+
+| Path | Contents |
+|---|---|
+| `main.rs` | Startup and the shared `AppState`. |
+| `routes.rs` | Every HTTP route and the handler it calls. |
+| `accounts/` | Sign-in, sessions, avatars, passwords, first-run setup, account rules and storage quotas. |
+| `admin/` | User management and site settings for administrators. |
+| `api/` | Render API keys, rate limits and the `/v1/render` endpoint. |
+| `compile/` | The Typst compiler, its file world, fonts, and the compile and export handlers. |
+| `db/` | Database connection, schema and migrations for SQLite and PostgreSQL. |
+| `desktop/` | The Typst Desktop sync API: devices, sessions, projects, folders, documents and files. |
+| `drive/` | Documents, document files, uploaded files, folders, projects, downloads and comments. |
+| `packages/` | The package registry and publishing rules. |
+| `realtime/` | Yjs collaboration and live document state. |
+| `sharing/` | Access checks, members, and ownership transfers. |
+
 ## Running locally
 
 Clone the Typst compiler into `typst/` first, at the commit pinned in the `Dockerfile`:

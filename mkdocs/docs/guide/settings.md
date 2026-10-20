@@ -12,7 +12,7 @@ Choose a color theme (Cerberus, Catppuccin or Arch Linux) in light or dark mode.
 
 ## Storage
 
-Shows how much space your documents and uploaded files use.
+Shows how much space your documents and uploaded files use, and your storage quota if an administrator has set one.
 
 ## API keys
 

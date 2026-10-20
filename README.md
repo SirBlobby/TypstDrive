@@ -1,6 +1,6 @@
 # TypstDrive
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/sirblobby/typstdrive)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/SirBlobby/TypstDrive.git)
 [![Typst Version](https://img.shields.io/badge/Typst-0.15.1-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.82+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte)](https://kit.svelte.dev/)
@@ -20,14 +20,16 @@ Full documentation, including self-hosting, configuration, administration and th
 - **Instant Preview**: Compile Typst to SVG on the fly with sub-second latency, featuring interactive document zoom controls and a collapsible preview pane.
 - **Customizable Themes**: Choose from multiple editor themes (Catppuccin, Arch Linux, Cerberus) and toggle global dark mode.
 - **Export Options**: Export your compiled documents directly to PDF, PNG, SVG, HTML, Markdown, Word, or LaTeX formats using internal conversion and Pandoc integrations.
-- **Document Sharing**: Invite collaborators by email with Editor or Viewer roles. Collaborators' uploaded fonts and images are available to the compiler. A dedicated "Shared with me" folder on the dashboard surfaces all documents others have shared with you. Manage and remove collaborators directly from the Share modal in the editor.
+- **Sharing**: Share documents, projects and folders by email with Editor or Viewer roles. Folder members get the same role on everything inside. Collaborators can use the files linked to a document, and the editor warns about files they cannot access with a button to share them. The "Shared with me" view lists everything shared with you, and owners can transfer ownership to a member, who accepts before the item moves into their drive.
 - **Spaces**: Multi-file editor workspaces, each with its own `typst.toml` and any number of `.typ`, `.bib`, and asset files that import and reference one another. The Space editor has full parity with the document editor — formatting tools, font selector, page settings, zoom, themes, presentation mode, and PDF/PNG/SVG/Pandoc export — plus a file tree, per-file real-time collaboration (live cursors), TOML syntax highlighting, and your account's uploaded fonts and images. Create and edit text files like `refs.bib` directly in the browser — everything a full template (e.g. an IEEE paper) needs. Create one from the `+` menu on the dashboard or manage them at `/spaces`.
 - **Global Packages**: Publish any Space as an instance-local Typst package, immutably versioned and importable everywhere as `@typstdrive/<name>:<version>` (e.g. `#import "@typstdrive/charged-ieee:0.1.4": ieee`). The name, version, and entrypoint are read from the Space's `typst.toml`. Browse published packages at `/packages`.
 - **Public REST API**: Programmatically render Typst documents to PNG, PDF, or HTML via `POST /v1/render`. Compilation failures return a `422` with a JSON body detailing each Typst error, including its message and source line and column. Manage API keys from the Settings panel, with a live usage chart supporting 1-hour, 1-day, and 1-week views. Full API reference available in the [documentation](https://sirblobby.github.io/TypstDrive/api/).
 - **Admin System**: First-run setup wizard creates an admin account. Admins can manage all users, create new accounts with temporary passwords, toggle admin privileges, and delete accounts from the Settings panel.
+- **Storage Quotas**: Admins see storage usage per account and set a default quota or per-account quotas from Site Settings.
+- **Package Rules**: Admins can turn package publishing off, limit it to admins, cap package size and versions, and control whether owners can delete their packages.
 - **Presentation Mode**: Turn your documents into instant slideshows with built-in slide controls and a live drawing/annotation tool overlay.
 - **Asset Management**: Upload and seamlessly use custom fonts and images directly within your documents.
-- **Desktop Sync API**: A dedicated API under `/api/desktop` lets [Typst Desktop](https://github.com/SirBlobby/typst-desktop) browse your folders, documents, Spaces, shared items, and uploaded assets, and keep them in sync locally. Device-token authentication, role-aware permissions, and hash-based conflict detection.
+- **Desktop Sync API**: A dedicated API under `/api/desktop` lets [Typst Desktop](https://github.com/SirBlobby/typst-desktop.git) browse your folders, documents, Spaces, shared items, and uploaded assets, and keep them in sync locally. Device-token authentication, role-aware permissions, and hash-based conflict detection.
 
 ## Fonts & Images
 
@@ -167,7 +169,7 @@ docker compose up -d
 To build the image yourself instead of pulling it, clone the repository and use the bundled compose file, which builds from the local `Dockerfile`:
 
 ```bash
-git clone https://github.com/sirblobby/typstdrive.git
+git clone https://github.com/SirBlobby/TypstDrive.git
 cd typstdrive
 docker compose up -d
 ```
@@ -219,6 +221,8 @@ The first account created via the setup wizard is automatically an administrator
 - **Create User** — set a username, email, and temporary password; optionally grant admin privileges immediately
 - **Toggle Admin** — promote or demote any other user
 - **Delete User** — permanently remove any account other than your own
+- **Storage** — usage per account, with a default quota and per-account quotas
+- **Packages** — publishing rules, maximum package size and maximum versions per package
 
 ## Continuous Integration
 

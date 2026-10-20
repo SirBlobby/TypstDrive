@@ -2,6 +2,8 @@
 
 Upload `.ttf` and `.otf` fonts and image files from the Drive or from the editor toolbar. Uploaded files are available to every document and project in your account.
 
+People you share a document with can only use fonts, the files linked to the document, and files in folders shared with them. Manage them from the paperclip button in the editor toolbar. See [Document files](sharing.md#document-files).
+
 ## Fonts
 
 TypstDrive reads the family name stored in each font file and registers every weight and style under that family. Use the font by its family name, which also appears in the editor's font picker:

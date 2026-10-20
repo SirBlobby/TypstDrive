@@ -4,7 +4,7 @@ The Drive at `/drive` is where everything you own lives: folders, projects, docu
 
 ## Layout
 
-- **Sidebar**: Home, Shared, Packages and a link to Typst Universe, plus your storage usage. Collapse it with the button at the bottom; the choice is remembered in your browser.
+- **Sidebar**: Home, Shared, Packages and a link to Typst Universe, plus your storage usage against your quota and the TypstDrive version, with a notice when a newer release is available. Collapse it with the button at the bottom; the choice is remembered in your browser.
 - **Header**: the folder path, the current folder name, a filter box, **Upload**, and **New document** with a menu for a new project, folder or import.
 - **Toolbar**: sort by name, last modified or size, flip the sort direction, and switch between the grid and list views.
 
@@ -12,7 +12,7 @@ The Drive at `/drive` is where everything you own lives: folders, projects, docu
 
 Folders hold documents, projects, files and other folders. Projects appear next to folders with a star icon and open the project editor. Drag a document, project or file onto a folder, or onto the folder path at the top, to move it.
 
-Deleting a folder deletes everything inside it, after a confirmation.
+Deleting a folder deletes everything inside it, after a confirmation. Share a folder or project from its share button.
 
 ## Downloading
 
@@ -33,7 +33,9 @@ Documents and uploaded files are shown together in the **Files** section.
 
 ## Shared with me
 
-**Shared** lists the documents and projects other people have shared with you, with your role on each. See [Sharing and Permissions](sharing.md).
+**Shared** lists the documents, projects and folders other people have shared with you, with your role on each. Open a shared folder to browse it. See [Sharing and Permissions](sharing.md).
+
+Requests to become the owner of an item appear at the top of the Drive, with **Accept** and **Decline** buttons.
 
 ## Importing
 
