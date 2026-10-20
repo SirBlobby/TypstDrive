@@ -11,6 +11,7 @@ use crate::{
     models::{Comment, CreateCommentRequest, UpdateCommentRequest},
     AppState,
 };
+use crate::db::sql;
 
 pub async fn get_comments(
     State(state): State<AppState>,
@@ -25,11 +26,11 @@ pub async fn get_comments(
         .ok_or_else(access::forbidden)?;
 
     let comments = sqlx::query_as::<_, Comment>(
-        "SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
+        sql("SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
          FROM comments c \
          LEFT JOIN users u ON c.user_id = u.id \
          WHERE c.document_id = $1 \
-         ORDER BY c.created_at ASC"
+         ORDER BY c.created_at ASC")
     )
     .bind(&doc_id)
     .fetch_all(&state.db)
@@ -57,7 +58,7 @@ pub async fn add_comment(
 
     let comment_id = Uuid::new_v4().to_string();
 
-    sqlx::query("INSERT INTO comments (id, document_id, user_id, content) VALUES ($1, $2, $3, $4)")
+    sqlx::query(sql("INSERT INTO comments (id, document_id, user_id, content) VALUES ($1, $2, $3, $4)"))
         .bind(&comment_id)
         .bind(&doc_id)
         .bind(&user_id)
@@ -67,10 +68,10 @@ pub async fn add_comment(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let comment = sqlx::query_as::<_, Comment>(
-        "SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
+        sql("SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
          FROM comments c \
          LEFT JOIN users u ON c.user_id = u.id \
-         WHERE c.id = $1"
+         WHERE c.id = $1")
     )
     .bind(&comment_id)
     .fetch_one(&state.db)
@@ -99,7 +100,7 @@ pub async fn create_version(
 
     let version_id = uuid::Uuid::new_v4().to_string();
 
-    sqlx::query("INSERT INTO document_versions (id, document_id, user_id, content) VALUES ($1, $2, $3, $4)")
+    sqlx::query(sql("INSERT INTO document_versions (id, document_id, user_id, content) VALUES ($1, $2, $3, $4)"))
         .bind(&version_id)
         .bind(&doc_id)
         .bind(&user_id)
@@ -109,10 +110,10 @@ pub async fn create_version(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let version = sqlx::query_as::<_, crate::models::DocumentVersion>(
-        "SELECT v.id, v.document_id, v.user_id, v.content, v.created_at, u.username as author_name \
+        sql("SELECT v.id, v.document_id, v.user_id, v.content, v.created_at, u.username as author_name \
          FROM document_versions v \
          LEFT JOIN users u ON v.user_id = u.id \
-         WHERE v.id = $1"
+         WHERE v.id = $1")
     )
     .bind(&version_id)
     .fetch_one(&state.db)
@@ -135,11 +136,11 @@ pub async fn get_versions(
         .ok_or_else(access::forbidden)?;
 
     let versions = sqlx::query_as::<_, crate::models::DocumentVersion>(
-        "SELECT v.id, v.document_id, v.user_id, v.content, v.created_at, u.username as author_name \
+        sql("SELECT v.id, v.document_id, v.user_id, v.content, v.created_at, u.username as author_name \
          FROM document_versions v \
          LEFT JOIN users u ON v.user_id = u.id \
          WHERE v.document_id = $1 \
-         ORDER BY v.created_at DESC"
+         ORDER BY v.created_at DESC")
     )
     .bind(&doc_id)
     .fetch_all(&state.db)
@@ -159,10 +160,10 @@ pub async fn update_comment(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut comment = sqlx::query_as::<_, Comment>(
-        "SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
+        sql("SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
          FROM comments c \
          LEFT JOIN users u ON c.user_id = u.id \
-         WHERE c.id = $1 AND c.user_id = $2"
+         WHERE c.id = $1 AND c.user_id = $2")
     )
     .bind(&comment_id)
     .bind(&user_id)
@@ -178,7 +179,7 @@ pub async fn update_comment(
         comment.resolved = if resolved { 1 } else { 0 };
     }
 
-    sqlx::query("UPDATE comments SET content = $1, resolved = $2 WHERE id = $3")
+    sqlx::query(sql("UPDATE comments SET content = $1, resolved = $2 WHERE id = $3"))
         .bind(&comment.content)
         .bind(comment.resolved)
         .bind(&comment.id)
@@ -187,10 +188,10 @@ pub async fn update_comment(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let updated_comment = sqlx::query_as::<_, Comment>(
-        "SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
+        sql("SELECT c.id, c.document_id, c.user_id, c.content, c.resolved, c.created_at, u.username as author_name \
          FROM comments c \
          LEFT JOIN users u ON c.user_id = u.id \
-         WHERE c.id = $1"
+         WHERE c.id = $1")
     )
     .bind(&comment.id)
     .fetch_one(&state.db)
@@ -208,7 +209,7 @@ pub async fn delete_comment(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM comments WHERE id = $1 AND user_id = $2")
+    let result = sqlx::query(sql("DELETE FROM comments WHERE id = $1 AND user_id = $2"))
         .bind(&comment_id)
         .bind(&user_id)
         .execute(&state.db)

@@ -12,6 +12,7 @@ use crate::{
     models::{File},
     AppState,
 };
+use crate::db::sql;
 
 #[derive(Deserialize)]
 pub struct ListFilesQuery {
@@ -29,15 +30,16 @@ pub async fn list_files(
     let files = if let Some(folder_id) = query.folder_id {
         crate::sharing::access::require_folder_access(&state, &folder_id, &user_id).await?;
         sqlx::query_as::<_, File>(
-            "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, CAST(LENGTH(data) AS BIGINT) AS size_bytes FROM files WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $1) ORDER BY name ASC"
+            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes FROM files WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY name ASC")
         )
+        .bind(&folder_id)
         .bind(&folder_id)
         .fetch_all(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, File>(
-            "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, CAST(LENGTH(data) AS BIGINT) AS size_bytes FROM files WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC"
+            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes FROM files WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -83,13 +85,16 @@ pub async fn upload_file_global(
             }
         }
 
-        sqlx::query("INSERT INTO files (id, owner_id, folder_id, name, mime_type, data) VALUES ($1, $2, $3, $4, $5, $6)")
+        let stored = state.file_storage.store(data).await?;
+        sqlx::query(sql("INSERT INTO files (id, owner_id, folder_id, name, mime_type, data, size_bytes, storage_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"))
             .bind(&file_id)
             .bind(&user_id)
             .bind(&query.folder_id)
             .bind(&file_name)
             .bind(&content_type)
-            .bind(&data)
+            .bind(&stored.inline_data)
+            .bind(stored.size_bytes)
+            .bind(&stored.storage_key)
             .execute(&state.db)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -112,8 +117,8 @@ pub async fn get_file_data(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let (owner_id, document_id, folder_id, mime_type, data) = sqlx::query_as::<_, (String, Option<String>, Option<String>, String, Vec<u8>)>(
-        "SELECT owner_id, document_id, folder_id, mime_type, data FROM files WHERE id = $1"
+    let (owner_id, document_id, folder_id, mime_type, data, storage_key) = sqlx::query_as::<_, (String, Option<String>, Option<String>, String, Vec<u8>, Option<String>)>(
+        sql("SELECT owner_id, document_id, folder_id, mime_type, data, storage_key FROM files WHERE id = $1")
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -125,6 +130,7 @@ pub async fn get_file_data(
         return Err((StatusCode::NOT_FOUND, "File not found".to_string()));
     }
 
+    let data = state.file_storage.load(data, storage_key).await?;
     Ok(([(header::CONTENT_TYPE, mime_type)], data))
 }
 
@@ -140,7 +146,7 @@ async fn can_read_shared_file(
     if crate::sharing::access::inherited_role(state, folder_id, file_owner_id, &user).await.is_some() {
         return true;
     }
-    let mut linked_documents: Vec<String> = sqlx::query_as::<_, (String,)>("SELECT document_id FROM document_shared_files WHERE file_id = $1")
+    let mut linked_documents: Vec<String> = sqlx::query_as::<_, (String,)>(sql("SELECT document_id FROM document_shared_files WHERE file_id = $1"))
         .bind(file_id)
         .fetch_all(&state.db)
         .await
@@ -165,7 +171,7 @@ pub async fn delete_file(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM files WHERE id = $1 AND owner_id = $2")
+    let result = sqlx::query(sql("DELETE FROM files WHERE id = $1 AND owner_id = $2"))
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -186,8 +192,8 @@ pub async fn list_fonts(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let files = sqlx::query_as::<_, (String, Vec<u8>)>(
-        "SELECT name, data FROM files WHERE owner_id = $1"
+    let files = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(
+        sql("SELECT name, data, storage_key FROM files WHERE owner_id = $1 AND (LOWER(name) LIKE '%.ttf' OR LOWER(name) LIKE '%.otf')")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -195,11 +201,9 @@ pub async fn list_fonts(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let mut families = std::collections::BTreeSet::new();
-    for (name, data) in files {
-        if name.to_lowercase().ends_with(".ttf") || name.to_lowercase().ends_with(".otf") {
-            for font in typst::text::Font::iter(typst::foundations::Bytes::new(data)) {
-                families.insert(font.info().family.clone());
-            }
+    for (_, data) in state.file_storage.load_named_skipping_failures(files).await {
+        for font in typst::text::Font::iter(typst::foundations::Bytes::new(data)) {
+            families.insert(font.info().family.clone());
         }
     }
 
@@ -222,7 +226,7 @@ pub async fn update_file(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut file = sqlx::query_as::<_, File>(
-        "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE id = $1 AND owner_id = $2"
+        sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE id = $1 AND owner_id = $2")
     )
     .bind(&id)
     .bind(&user_id)
@@ -247,11 +251,16 @@ pub async fn update_file(
         }
     }
 
-    let file = sqlx::query_as::<_, File>(
-        "UPDATE files SET name = $1, folder_id = $2 WHERE id = $3 AND owner_id = $4 RETURNING id, owner_id, document_id, folder_id, name, mime_type, created_at, CAST(LENGTH(data) AS BIGINT) AS size_bytes"
-    )
+    sqlx::query(sql("UPDATE files SET name = $1, folder_id = $2 WHERE id = $3 AND owner_id = $4"))
     .bind(&file.name)
     .bind(&file.folder_id)
+    .bind(&id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let file = sqlx::query_as::<_, File>(sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes FROM files WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)

@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use sqlx::{AnyConnection, AnyPool, AssertSqlSafe, Connection};
 
 use super::dialect::Dialect;
-use super::schema::{Column, CopyRule, Table, INDEXES, LEGACY_RENAMES, RETIRED_TABLES, TABLES};
+use super::schema::{Column, CopyRule, Table, BACKFILLS, INDEXES, LEGACY_RENAMES, RETIRED_TABLES, TABLES};
 
-const CURRENT_VERSION: i64 = 6;
+pub const CURRENT_VERSION: i64 = 7;
 const REBUILD_SUFFIX: &str = "__rebuild";
 
 async fn run(connection: &mut AnyConnection, sql: String) -> Result<(), sqlx::Error> {
@@ -36,14 +36,77 @@ async fn stored_version(connection: &mut AnyConnection) -> Result<Option<i64>, s
     Ok(version)
 }
 
-fn create_table_sql(dialect: Dialect, table: &Table, created_name: &str) -> String {
-    let mut parts: Vec<String> = table
-        .columns
+fn mentions_column(column_list: &str, column: &str) -> bool {
+    let Some(open) = column_list.find('(') else {
+        return false;
+    };
+    let close = column_list[open..].find(')').map(|offset| open + offset).unwrap_or(column_list.len());
+    column_list[open + 1..close].split(',').any(|name| name.trim() == column)
+}
+
+fn is_key_column(table: &Table, column: &str) -> bool {
+    let in_constraint = table.constraints.iter().any(|constraint| mentions_column(constraint, column));
+    let in_index = INDEXES
         .iter()
-        .map(|column| format!("{} {}", column.name, dialect.render(column.definition, created_name)))
-        .collect();
+        .filter(|index| index.contains(&format!(" ON {} ", table.name)))
+        .any(|index| mentions_column(&index[index.find(" ON ").unwrap_or(0)..], column));
+    in_constraint || in_index
+}
+
+fn split_reference(dialect: Dialect, definition: String) -> (String, Option<String>) {
+    if dialect != Dialect::Mysql {
+        return (definition, None);
+    }
+    match definition.find(" REFERENCES ") {
+        Some(position) => (definition[..position].to_string(), Some(definition[position + 1..].to_string())),
+        None => (definition, None),
+    }
+}
+
+fn column_sql(dialect: Dialect, table: &Table, column: &Column, created_name: &str) -> (String, Option<String>) {
+    let rendered = dialect.render_column(column.definition, created_name, is_key_column(table, column.name));
+    let (definition, reference) = split_reference(dialect, rendered);
+    let foreign_key = reference.map(|reference| format!("FOREIGN KEY ({}) {reference}", column.name));
+    (format!("{} {definition}", column.name), foreign_key)
+}
+
+fn create_table_sql(dialect: Dialect, table: &Table, created_name: &str) -> String {
+    let mut parts = Vec::new();
+    let mut foreign_keys = Vec::new();
+    for column in table.columns {
+        let (definition, foreign_key) = column_sql(dialect, table, column, created_name);
+        parts.push(definition);
+        foreign_keys.extend(foreign_key);
+    }
     parts.extend(table.constraints.iter().map(|constraint| constraint.to_string()));
-    format!("CREATE TABLE IF NOT EXISTS {created_name} (\n    {}\n)", parts.join(",\n    "))
+    parts.extend(foreign_keys);
+    format!(
+        "CREATE TABLE IF NOT EXISTS {created_name} (\n    {}\n){}",
+        parts.join(",\n    "),
+        dialect.table_options()
+    )
+}
+
+async fn add_missing_columns(connection: &mut AnyConnection, dialect: Dialect) -> Result<(), sqlx::Error> {
+    for table in TABLES {
+        let existing_columns = column_names(connection, dialect, table.name).await?;
+        for column in table.columns.iter().filter(|column| !existing_columns.contains(column.name)) {
+            let (definition, foreign_key) = column_sql(dialect, table, column, table.name);
+            let mut statement = format!("ALTER TABLE {} ADD COLUMN {definition}", table.name);
+            if let Some(foreign_key) = foreign_key {
+                statement.push_str(&format!(", ADD {foreign_key}"));
+            }
+            run(connection, statement).await?;
+        }
+    }
+    Ok(())
+}
+
+async fn run_backfills(connection: &mut AnyConnection) -> Result<(), sqlx::Error> {
+    for statement in BACKFILLS {
+        run(connection, statement.to_string()).await?;
+    }
+    Ok(())
 }
 
 fn copy_expression(dialect: Dialect, column: &Column) -> String {
@@ -148,18 +211,21 @@ async fn apply_migrations(connection: &mut AnyConnection, dialect: Dialect) -> R
     let mut transaction = connection.begin().await?;
 
     if version.is_some() {
-        tracing::info!("Adding new tables for schema version {CURRENT_VERSION}");
+        tracing::info!("Adding new tables and columns for schema version {CURRENT_VERSION}");
         create_fresh_schema(&mut transaction, dialect).await?;
+        add_missing_columns(&mut transaction, dialect).await?;
+        run_backfills(&mut transaction).await?;
     } else if has_existing_data {
         tracing::info!("Upgrading existing database to schema version {CURRENT_VERSION}");
         upgrade_legacy_schema(&mut transaction, dialect).await?;
+        run_backfills(&mut transaction).await?;
     } else {
         tracing::info!("Creating database schema version {CURRENT_VERSION}");
         create_fresh_schema(&mut transaction, dialect).await?;
     }
 
     run(&mut transaction, "DELETE FROM schema_version".to_string()).await?;
-    sqlx::query("INSERT INTO schema_version (version) VALUES ($1)")
+    sqlx::query(super::sql("INSERT INTO schema_version (version) VALUES ($1)"))
         .bind(CURRENT_VERSION)
         .execute(&mut *transaction)
         .await?;
@@ -167,23 +233,44 @@ async fn apply_migrations(connection: &mut AnyConnection, dialect: Dialect) -> R
     transaction.commit().await
 }
 
+async fn create_index(connection: &mut AnyConnection, dialect: Dialect, statement: &str) -> Result<(), sqlx::Error> {
+    let Some(exists_query) = dialect.index_exists_query() else {
+        return run(connection, statement.to_string()).await;
+    };
+    let index_name = statement.split_whitespace().nth(5).unwrap_or_default();
+    let (count,): (i64,) = sqlx::query_as(exists_query)
+        .bind(index_name)
+        .fetch_one(&mut *connection)
+        .await?;
+    if count > 0 {
+        return Ok(());
+    }
+    run(connection, statement.replace(" IF NOT EXISTS", "")).await
+}
+
 pub async fn migrate(pool: &AnyPool, dialect: Dialect) -> Result<(), sqlx::Error> {
     let mut connection = pool.acquire().await?;
 
-    if dialect == Dialect::Sqlite {
-        run(&mut connection, "PRAGMA journal_mode = WAL".to_string()).await?;
-        run(&mut connection, "PRAGMA foreign_keys = OFF".to_string()).await?;
+    match dialect {
+        Dialect::Sqlite => {
+            run(&mut connection, "PRAGMA journal_mode = WAL".to_string()).await?;
+            run(&mut connection, "PRAGMA foreign_keys = OFF".to_string()).await?;
+        }
+        Dialect::Mysql => run(&mut connection, "SET FOREIGN_KEY_CHECKS = 0".to_string()).await?,
+        Dialect::Postgres => {}
     }
 
     let result = apply_migrations(&mut connection, dialect).await;
 
-    if dialect == Dialect::Sqlite {
-        run(&mut connection, "PRAGMA foreign_keys = ON".to_string()).await?;
+    match dialect {
+        Dialect::Sqlite => run(&mut connection, "PRAGMA foreign_keys = ON".to_string()).await?,
+        Dialect::Mysql => run(&mut connection, "SET FOREIGN_KEY_CHECKS = 1".to_string()).await?,
+        Dialect::Postgres => {}
     }
     result?;
 
     for index in INDEXES {
-        sqlx::query(*index).execute(&mut *connection).await?;
+        create_index(&mut connection, dialect, index).await?;
     }
 
     Ok(())

@@ -1,6 +1,7 @@
 use super::*;
 use super::project_files::{ConflictResponse, PushFileResponse, PushOutcome};
 use super::projects::ProjectSummary;
+use crate::db::sql;
 
 #[derive(Serialize)]
 pub struct CloudDocument {
@@ -25,16 +26,16 @@ pub async fn list_documents(
 
     let rows = match &query.folder_id {
         Some(folder_id) => sqlx::query_as::<_, (String, String, Option<String>, String)>(
-            "SELECT id, title, folder_id, updated_at FROM documents \
-             WHERE owner_id = $1 AND folder_id = $2 ORDER BY updated_at DESC",
+            sql("SELECT id, title, folder_id, updated_at FROM documents \
+             WHERE owner_id = $1 AND folder_id = $2 ORDER BY updated_at DESC"),
         )
         .bind(&user_id)
         .bind(folder_id)
         .fetch_all(&state.db)
         .await,
         None => sqlx::query_as::<_, (String, String, Option<String>, String)>(
-            "SELECT id, title, folder_id, updated_at FROM documents \
-             WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC",
+            sql("SELECT id, title, folder_id, updated_at FROM documents \
+             WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC"),
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -68,9 +69,9 @@ pub async fn list_shared(
     let user_id = authenticate(&state, &headers).await?;
 
     let documents = sqlx::query_as::<_, (String, String, Option<String>, String, String)>(
-        "SELECT d.id, d.title, d.folder_id, d.updated_at, c.role FROM documents d \
+        sql("SELECT d.id, d.title, d.folder_id, d.updated_at, c.role FROM documents d \
          INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = $1 \
-         ORDER BY d.updated_at DESC",
+         ORDER BY d.updated_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -78,9 +79,9 @@ pub async fn list_shared(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let projects = sqlx::query_as::<_, (String, String, String, String, String)>(
-        "SELECT p.id, p.name, p.entrypoint, p.updated_at, c.role FROM projects p \
+        sql("SELECT p.id, p.name, p.entrypoint, p.updated_at, c.role FROM projects p \
          INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = $1 \
-         ORDER BY p.updated_at DESC",
+         ORDER BY p.updated_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -118,7 +119,7 @@ async fn document_role(
     user_id: &str,
 ) -> Result<(String, String, String), (StatusCode, String)> {
     let row = sqlx::query_as::<_, (String, String, Option<Vec<u8>>, Option<String>)>(
-        "SELECT owner_id, title, content, public_role FROM documents WHERE id = $1",
+        sql("SELECT owner_id, title, content, public_role FROM documents WHERE id = $1"),
     )
     .bind(document_id)
     .fetch_optional(&state.db)
@@ -136,7 +137,7 @@ async fn document_role(
 
     if role == "none" {
         if let Ok(Some((collaborator_role,))) = sqlx::query_as::<_, (String,)>(
-            "SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2",
+            sql("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2"),
         )
         .bind(document_id)
         .bind(user_id)
@@ -235,7 +236,7 @@ pub async fn push_document(
 
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-    sqlx::query("UPDATE documents SET content = $1, updated_at = $2 WHERE id = $3")
+    sqlx::query(sql("UPDATE documents SET content = $1, updated_at = $2 WHERE id = $3"))
         .bind(encode_text_blob(&payload.content))
         .bind(&now)
         .bind(&id)
@@ -274,7 +275,7 @@ pub async fn create_document(
     let document_id = Uuid::new_v4().to_string();
 
     sqlx::query(
-        "INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5)",
+        sql("INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5)"),
     )
     .bind(&document_id)
     .bind(&user_id)
@@ -313,11 +314,15 @@ pub async fn move_document(
         owned_folder(&state, folder_id, &user_id).await?;
     }
 
-    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
-        "UPDATE documents SET folder_id = $1 WHERE id = $2 AND owner_id = $3 \
-         RETURNING id, title, folder_id, updated_at",
-    )
+    sqlx::query(sql("UPDATE documents SET folder_id = $1 WHERE id = $2 AND owner_id = $3"))
     .bind(&payload.folder_id)
+    .bind(&id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT id, title, folder_id, updated_at FROM documents WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -343,7 +348,7 @@ pub async fn delete_document(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let result = sqlx::query("DELETE FROM documents WHERE id = $1 AND owner_id = $2")
+    let result = sqlx::query(sql("DELETE FROM documents WHERE id = $1 AND owner_id = $2"))
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)

@@ -11,6 +11,7 @@ use crate::{
     models::{Document, CreateDocumentRequest},
     AppState,
 };
+use crate::db::sql;
 
 #[derive(serde::Deserialize)]
 pub struct ListDocsQuery {
@@ -25,11 +26,11 @@ pub async fn list_shared_documents(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let docs = sqlx::query_as::<_, Document>(
-        "SELECT d.id, d.owner_id, d.folder_id, d.title, d.content, d.thumbnail_svg, \
+        sql("SELECT d.id, d.owner_id, d.folder_id, d.title, d.content, d.thumbnail_svg, \
          d.public_role, d.created_at, d.updated_at, c.role as effective_role \
          FROM documents d \
          INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = $1 \
-         ORDER BY d.updated_at DESC"
+         ORDER BY d.updated_at DESC")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -50,15 +51,16 @@ pub async fn list_documents(
     let docs = if let Some(folder_id) = query.folder_id {
         crate::sharing::access::require_folder_access(&state, &folder_id, &user_id).await?;
         sqlx::query_as::<_, Document>(
-            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $1) ORDER BY updated_at DESC"
+            sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY updated_at DESC")
         )
+        .bind(&folder_id)
         .bind(&folder_id)
         .fetch_all(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Document>(
-            "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC"
+            sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -92,14 +94,18 @@ pub async fn create_document(
         encoded
     };
 
-    let doc = sqlx::query_as::<_, Document>(
-        "INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5) RETURNING id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at"
-    )
+    sqlx::query(sql("INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5)"))
     .bind(&doc_id)
     .bind(&user_id)
     .bind(&payload.folder_id)
     .bind(&payload.title)
     .bind(&content)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let doc = sqlx::query_as::<_, Document>(sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1"))
+    .bind(&doc_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -132,7 +138,7 @@ pub async fn update_document(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut doc = sqlx::query_as::<_, Document>(
-        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2"
+        sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2")
     )
     .bind(&id)
     .bind(&user_id)
@@ -160,13 +166,18 @@ pub async fn update_document(
         }
     }
 
-    let doc = sqlx::query_as::<_, Document>(
-        "UPDATE documents SET title = $1, folder_id = $2, public_role = $3, updated_at = $4 WHERE id = $5 AND owner_id = $6 RETURNING id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at"
-    )
+    sqlx::query(sql("UPDATE documents SET title = $1, folder_id = $2, public_role = $3, updated_at = $4 WHERE id = $5 AND owner_id = $6"))
     .bind(&doc.title)
     .bind(&doc.folder_id)
     .bind(&doc.public_role)
     .bind(crate::db::timestamp_now())
+    .bind(&id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let doc = sqlx::query_as::<_, Document>(sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
@@ -186,7 +197,7 @@ pub async fn delete_document(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM documents WHERE id = $1 AND owner_id = $2")
+    let result = sqlx::query(sql("DELETE FROM documents WHERE id = $1 AND owner_id = $2"))
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)

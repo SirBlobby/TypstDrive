@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::{api::keys::hash_key, compile::compiler::ProjectInput, AppState};
+use crate::db::sql;
 
 #[derive(Deserialize)]
 pub struct RenderRequest {
@@ -102,7 +103,7 @@ pub async fn render_handler(
     let key_hash = hash_key(&api_key);
 
     let key_row = sqlx::query_as::<_, (String, String)>(
-        "SELECT id, user_id FROM api_keys WHERE key_hash = $1"
+        sql("SELECT id, user_id FROM api_keys WHERE key_hash = $1")
     )
     .bind(&key_hash)
     .fetch_optional(&state.db)
@@ -146,15 +147,15 @@ pub async fn render_handler(
     let now_str = now.to_rfc3339();
     let today = now.format("%Y-%m-%d").to_string();
 
-    let _ = sqlx::query("UPDATE api_keys SET last_used_at = $1 WHERE id = $2")
+    let _ = sqlx::query(sql("UPDATE api_keys SET last_used_at = $1 WHERE id = $2"))
         .bind(&now_str)
         .bind(&key_id)
         .execute(&state.db)
         .await;
 
     let _ = sqlx::query(
-        "INSERT INTO api_key_usage (key_id, date, count) VALUES ($1, $2, 1) \
-         ON CONFLICT (key_id, date) DO UPDATE SET count = api_key_usage.count + 1"
+        sql("INSERT INTO api_key_usage (key_id, date, count) VALUES ($1, $2, 1) \
+         ON CONFLICT (key_id, date) DO UPDATE SET count = api_key_usage.count + 1")
     )
     .bind(&key_id)
     .bind(&today)
@@ -163,8 +164,8 @@ pub async fn render_handler(
 
     let minute_str = now.format("%Y-%m-%d %H:%M").to_string();
     let _ = sqlx::query(
-        "INSERT INTO api_key_usage_detail (key_id, minute, count) VALUES ($1, $2, 1) \
-         ON CONFLICT (key_id, minute) DO UPDATE SET count = api_key_usage_detail.count + 1"
+        sql("INSERT INTO api_key_usage_detail (key_id, minute, count) VALUES ($1, $2, 1) \
+         ON CONFLICT (key_id, minute) DO UPDATE SET count = api_key_usage_detail.count + 1")
     )
     .bind(&key_id)
     .bind(&minute_str)
@@ -174,7 +175,7 @@ pub async fn render_handler(
     let cutoff_minute = (chrono::Utc::now() - chrono::TimeDelta::hours(25))
         .format("%Y-%m-%d %H:%M")
         .to_string();
-    let _ = sqlx::query("DELETE FROM api_key_usage_detail WHERE minute < $1")
+    let _ = sqlx::query(sql("DELETE FROM api_key_usage_detail WHERE minute < $1"))
         .bind(&cutoff_minute)
         .execute(&state.db)
         .await;
@@ -188,7 +189,7 @@ pub async fn render_handler(
     };
 
     if let Ok(Some((data, created_at))) = sqlx::query_as::<_, (Vec<u8>, String)>(
-        "SELECT data, created_at FROM api_render_cache WHERE content_hash = $1 AND format = $2"
+        sql("SELECT data, created_at FROM api_render_cache WHERE content_hash = $1 AND format = $2")
     )
     .bind(&cache_key)
     .bind(&payload.format)
@@ -205,14 +206,14 @@ pub async fn render_handler(
 
     // Load user's account files
     let mut files_map: HashMap<String, Vec<u8>> = HashMap::new();
-    if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>)>(
-        "SELECT name, data FROM files WHERE owner_id = $1"
+    if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(
+        sql("SELECT name, data, storage_key FROM files WHERE owner_id = $1")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
     {
-        for (name, data) in files {
+        for (name, data) in state.file_storage.load_named_skipping_failures(files).await {
             files_map.insert(name, data);
         }
     }
@@ -242,8 +243,8 @@ pub async fn render_handler(
         Ok(data) => {
             let cache_id = Uuid::new_v4().to_string();
             let _ = sqlx::query(
-                "INSERT INTO api_render_cache (id, content_hash, format, data, created_at) VALUES ($1, $2, $3, $4, $5) \
-                 ON CONFLICT (content_hash) DO UPDATE SET format = excluded.format, data = excluded.data, created_at = excluded.created_at"
+                sql("INSERT INTO api_render_cache (id, content_hash, format, data, created_at) VALUES ($1, $2, $3, $4, $5) \
+                 ON CONFLICT (content_hash) DO UPDATE SET format = excluded.format, data = excluded.data, created_at = excluded.created_at")
             )
             .bind(&cache_id)
             .bind(&cache_key)

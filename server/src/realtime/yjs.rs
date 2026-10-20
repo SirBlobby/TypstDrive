@@ -16,14 +16,18 @@ use yrs::{Doc, ReadTxn, Transact, Update};
 use yrs_axum::broadcast::BroadcastGroup;
 use yrs_axum::ws::AxumSink;
 
+use crate::realtime::relay;
 use crate::sharing::access::{self, AccessRole, Resource};
 use crate::desktop::devices::{notify_devices, DeviceEvent};
 use crate::AppState;
+use crate::db::sql;
 
 pub struct ViewerFilterStream {
     inner: futures_util::stream::SplitStream<axum::extract::ws::WebSocket>,
     read_only: bool,
     revoked: Arc<AtomicBool>,
+    state: AppState,
+    room_id: String,
 }
 
 fn is_read_only_frame(bytes: &[u8]) -> bool {
@@ -56,6 +60,7 @@ impl Stream for ViewerFilterStream {
                     if self.read_only && !is_read_only_frame(&bytes) {
                         continue;
                     }
+                    relay::forward_client_frame(&self.state, &self.room_id, &bytes);
                     return std::task::Poll::Ready(Some(Ok(bytes.to_vec())));
                 }
                 Some(Ok(axum::extract::ws::Message::Close(_))) | None => return std::task::Poll::Ready(None),
@@ -85,7 +90,7 @@ async fn resolve_room(state: &AppState, room_id: &str, user_id: &Option<String>)
         let (project_id, file_id) = rest.split_once(':')?;
         let (project, role) = access::project_access(state, project_id, user_id).await?;
         let (content,) = sqlx::query_as::<_, (Option<Vec<u8>>,)>(
-            "SELECT content FROM project_files WHERE id = $1 AND project_id = $2"
+            sql("SELECT content FROM project_files WHERE id = $1 AND project_id = $2")
         )
         .bind(file_id)
         .bind(project_id)
@@ -139,7 +144,7 @@ fn spawn_autosave(state: AppState, awareness: Arc<RwLock<Awareness>>, target: Yj
             } else {
                 "UPDATE documents SET content = $1, updated_at = $2 WHERE id = $3"
             };
-            let result = sqlx::query(query)
+            let result = sqlx::query(sql(query))
                 .bind(&content)
                 .bind(crate::db::timestamp_now())
                 .bind(&target.row_id)
@@ -172,6 +177,7 @@ async fn room_broadcast(state: &AppState, room_id: &str, room: YjsRoom) -> (Arc<
     let bcast = Arc::new(BroadcastGroup::new(awareness.clone(), 10).await);
     bcast_map.insert(room_id.to_string(), bcast.clone());
     crate::realtime::live_documents::register(state, room_id, awareness.clone()).await;
+    relay::request_missing_updates(state, room_id, &awareness).await;
     spawn_autosave(state.clone(), awareness, save_target);
 
     (bcast, resource, role)
@@ -213,6 +219,8 @@ pub async fn yjs_handler(
             inner: stream,
             read_only: !role.can_edit(),
             revoked: revoked_flag.clone(),
+            state: state.clone(),
+            room_id: room_id.clone(),
         };
 
         let subscription = bcast.subscribe(sink.clone(), filtered_stream);

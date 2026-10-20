@@ -1,5 +1,6 @@
 use super::*;
 use super::documents::FolderQuery;
+use crate::db::sql;
 
 #[derive(Serialize)]
 pub struct CloudFile {
@@ -19,16 +20,16 @@ pub async fn list_account_files(
 
     let rows = match &query.folder_id {
         Some(folder_id) => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
-            "SELECT id, name, mime_type, folder_id, created_at FROM files \
-             WHERE owner_id = $1 AND folder_id = $2 ORDER BY name ASC",
+            sql("SELECT id, name, mime_type, folder_id, created_at FROM files \
+             WHERE owner_id = $1 AND folder_id = $2 ORDER BY name ASC"),
         )
         .bind(&user_id)
         .bind(folder_id)
         .fetch_all(&state.db)
         .await,
         None => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
-            "SELECT id, name, mime_type, folder_id, created_at FROM files \
-             WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC",
+            sql("SELECT id, name, mime_type, folder_id, created_at FROM files \
+             WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC"),
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -85,16 +86,23 @@ pub async fn upload_account_file(
     let file_id = Uuid::new_v4().to_string();
     let name = payload.name.trim().to_string();
 
-    let row = sqlx::query_as::<_, (String,)>(
-        "INSERT INTO files (id, owner_id, folder_id, name, mime_type, data) \
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING created_at",
-    )
+    let stored = state.file_storage.store(data).await?;
+    sqlx::query(sql("INSERT INTO files (id, owner_id, folder_id, name, mime_type, data, size_bytes, storage_key) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"))
     .bind(&file_id)
     .bind(&user_id)
     .bind(&payload.folder_id)
     .bind(&name)
     .bind(&payload.mime_type)
-    .bind(&data)
+    .bind(&stored.inline_data)
+    .bind(stored.size_bytes)
+    .bind(&stored.storage_key)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let row = sqlx::query_as::<_, (String,)>(sql("SELECT created_at FROM files WHERE id = $1"))
+    .bind(&file_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -127,11 +135,15 @@ pub async fn rename_account_file(
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
     }
 
-    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
-        "UPDATE files SET name = $1 WHERE id = $2 AND owner_id = $3 \
-         RETURNING name, mime_type, folder_id, created_at",
-    )
+    sqlx::query(sql("UPDATE files SET name = $1 WHERE id = $2 AND owner_id = $3"))
     .bind(payload.name.trim())
+    .bind(&id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT name, mime_type, folder_id, created_at FROM files WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -167,11 +179,15 @@ pub async fn move_account_file(
         owned_folder(&state, folder_id, &user_id).await?;
     }
 
-    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(
-        "UPDATE files SET folder_id = $1 WHERE id = $2 AND owner_id = $3 \
-         RETURNING name, mime_type, folder_id, created_at",
-    )
+    sqlx::query(sql("UPDATE files SET folder_id = $1 WHERE id = $2 AND owner_id = $3"))
     .bind(&payload.folder_id)
+    .bind(&id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT name, mime_type, folder_id, created_at FROM files WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -205,8 +221,8 @@ pub async fn pull_account_file(
 ) -> Result<Json<CloudFileContent>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let row = sqlx::query_as::<_, (String, String, Vec<u8>)>(
-        "SELECT name, mime_type, data FROM files WHERE id = $1 AND owner_id = $2",
+    let row = sqlx::query_as::<_, (String, String, Vec<u8>, Option<String>)>(
+        sql("SELECT name, mime_type, data, storage_key FROM files WHERE id = $1 AND owner_id = $2"),
     )
     .bind(&id)
     .bind(&user_id)
@@ -215,7 +231,8 @@ pub async fn pull_account_file(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
-    let (name, mime_type, data) = row;
+    let (name, mime_type, inline_data, storage_key) = row;
+    let data = state.file_storage.load(inline_data, storage_key).await?;
 
     Ok(Json(CloudFileContent {
         name,
@@ -232,7 +249,7 @@ pub async fn delete_account_file(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let result = sqlx::query("DELETE FROM files WHERE id = $1 AND owner_id = $2")
+    let result = sqlx::query(sql("DELETE FROM files WHERE id = $1 AND owner_id = $2"))
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)

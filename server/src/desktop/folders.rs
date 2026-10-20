@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::sql;
 
 #[derive(Serialize)]
 pub struct CloudFolder {
@@ -14,7 +15,7 @@ pub async fn list_folders(
     let user_id = authenticate(&state, &headers).await?;
 
     let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
-        "SELECT id, name, parent_id FROM folders WHERE owner_id = $1 ORDER BY name ASC",
+        sql("SELECT id, name, parent_id FROM folders WHERE owner_id = $1 ORDER BY name ASC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -56,7 +57,7 @@ pub async fn create_folder(
     let folder_id = Uuid::new_v4().to_string();
     let name = payload.name.trim().to_string();
 
-    sqlx::query("INSERT INTO folders (id, owner_id, parent_id, name) VALUES ($1, $2, $3, $4)")
+    sqlx::query(sql("INSERT INTO folders (id, owner_id, parent_id, name) VALUES ($1, $2, $3, $4)"))
         .bind(&folder_id)
         .bind(&user_id)
         .bind(&payload.parent_id)
@@ -91,10 +92,15 @@ pub async fn rename_folder(
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
     }
 
-    let row = sqlx::query_as::<_, (String, Option<String>)>(
-        "UPDATE folders SET name = $1 WHERE id = $2 AND owner_id = $3 RETURNING name, parent_id",
-    )
+    sqlx::query(sql("UPDATE folders SET name = $1 WHERE id = $2 AND owner_id = $3"))
     .bind(payload.name.trim())
+    .bind(&id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let row = sqlx::query_as::<_, (String, Option<String>)>(sql("SELECT name, parent_id FROM folders WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -125,7 +131,7 @@ async fn creates_cycle(
         }
 
         let parent = sqlx::query_as::<_, (Option<String>,)>(
-            "SELECT parent_id FROM folders WHERE id = $1 AND owner_id = $2",
+            sql("SELECT parent_id FROM folders WHERE id = $1 AND owner_id = $2"),
         )
         .bind(&current)
         .bind(user_id)
@@ -175,10 +181,15 @@ pub async fn move_folder(
         }
     }
 
-    let row = sqlx::query_as::<_, (String, Option<String>)>(
-        "UPDATE folders SET parent_id = $1 WHERE id = $2 AND owner_id = $3 RETURNING name, parent_id",
-    )
+    sqlx::query(sql("UPDATE folders SET parent_id = $1 WHERE id = $2 AND owner_id = $3"))
     .bind(&payload.parent_id)
+    .bind(&id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let row = sqlx::query_as::<_, (String, Option<String>)>(sql("SELECT name, parent_id FROM folders WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -201,10 +212,10 @@ async fn folder_is_empty(
     user_id: &str,
 ) -> Result<bool, (StatusCode, String)> {
     let row = sqlx::query_as::<_, (i64, i64, i64)>(
-        "SELECT \
+        sql("SELECT \
            (SELECT COUNT(*) FROM folders WHERE parent_id = $1 AND owner_id = $2), \
            (SELECT COUNT(*) FROM projects WHERE folder_id = $3 AND owner_id = $4), \
-           (SELECT COUNT(*) FROM documents WHERE folder_id = $5 AND owner_id = $6)",
+           (SELECT COUNT(*) FROM documents WHERE folder_id = $5 AND owner_id = $6)"),
     )
     .bind(folder_id)
     .bind(user_id)
@@ -234,7 +245,7 @@ pub async fn delete_folder(
         ));
     }
 
-    let result = sqlx::query("DELETE FROM folders WHERE id = $1 AND owner_id = $2")
+    let result = sqlx::query(sql("DELETE FROM folders WHERE id = $1 AND owner_id = $2"))
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)

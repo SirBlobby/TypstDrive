@@ -10,6 +10,7 @@ use futures_util::stream::StreamExt;
 use crate::sharing::access::{self, Resource};
 use crate::AppState;
 use crate::drive::projects::decode_text_blob;
+use crate::db::sql;
 
 #[derive(Deserialize)]
 pub struct CompileRequest {
@@ -107,7 +108,7 @@ pub async fn compile_handler(
         return match result {
             Ok((svgs, thumbnail, stats)) => {
                 if role.can_edit() {
-                    let _ = sqlx::query("UPDATE projects SET thumbnail_svg = $1 WHERE id = $2")
+                    let _ = sqlx::query(sql("UPDATE projects SET thumbnail_svg = $1 WHERE id = $2"))
                         .bind(&thumbnail)
                         .bind(&project.id)
                         .execute(&state.db)
@@ -138,7 +139,7 @@ pub async fn compile_handler(
     match result {
         Ok((svgs, thumbnail, stats)) => {
             if let (Some(doc_id), true) = (&payload.document_id, can_save_thumbnail) {
-                let _ = sqlx::query("UPDATE documents SET thumbnail_svg = $1 WHERE id = $2")
+                let _ = sqlx::query(sql("UPDATE documents SET thumbnail_svg = $1 WHERE id = $2"))
                     .bind(&thumbnail)
                     .bind(doc_id)
                     .execute(&state.db)

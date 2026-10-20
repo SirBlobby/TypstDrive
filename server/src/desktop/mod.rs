@@ -14,6 +14,7 @@ use crate::{
     drive::projects::{decode_text_blob, encode_text_blob},
     AppState,
 };
+use crate::db::sql;
 
 pub mod devices;
 pub mod session;
@@ -94,7 +95,7 @@ pub async fn authenticate(
     ))?;
 
     let row = sqlx::query_as::<_, (String, String)>(
-        "SELECT id, user_id FROM device_tokens WHERE token_hash = $1",
+        sql("SELECT id, user_id FROM device_tokens WHERE token_hash = $1"),
     )
     .bind(hash_token(&token))
     .fetch_optional(&state.db)
@@ -104,7 +105,7 @@ pub async fn authenticate(
     let (token_id, user_id) =
         row.ok_or((StatusCode::UNAUTHORIZED, "Invalid device token".to_string()))?;
 
-    let _ = sqlx::query("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2")
+    let _ = sqlx::query(sql("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2"))
         .bind(chrono::Utc::now().to_rfc3339())
         .bind(&token_id)
         .execute(&state.db)
@@ -119,7 +120,7 @@ pub(crate) async fn user_id_for_token(state: &AppState, token: &str) -> Option<S
 
 pub(crate) async fn device_token_for(state: &AppState, token: &str) -> Option<(String, String)> {
     let row = sqlx::query_as::<_, (String, String)>(
-        "SELECT id, user_id FROM device_tokens WHERE token_hash = $1",
+        sql("SELECT id, user_id FROM device_tokens WHERE token_hash = $1"),
     )
     .bind(hash_token(token))
     .fetch_optional(&state.db)
@@ -128,7 +129,7 @@ pub(crate) async fn device_token_for(state: &AppState, token: &str) -> Option<(S
 
     let (token_id, user_id) = row;
 
-    let _ = sqlx::query("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2")
+    let _ = sqlx::query(sql("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2"))
         .bind(chrono::Utc::now().to_rfc3339())
         .bind(&token_id)
         .execute(&state.db)
@@ -162,7 +163,7 @@ async fn writable_project(state: &AppState, project_id: &str, user_id: &str) -> 
 }
 
 async fn document_owner(state: &AppState, document_id: &str) -> Option<String> {
-    sqlx::query_as::<_, (String,)>("SELECT owner_id FROM documents WHERE id = $1")
+    sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM documents WHERE id = $1"))
         .bind(document_id)
         .fetch_optional(&state.db)
         .await
@@ -177,7 +178,7 @@ async fn owned_folder(
     user_id: &str,
 ) -> Result<(), (StatusCode, String)> {
     let row = sqlx::query_as::<_, (i64,)>(
-        "SELECT COUNT(*) FROM folders WHERE id = $1 AND owner_id = $2",
+        sql("SELECT COUNT(*) FROM folders WHERE id = $1 AND owner_id = $2"),
     )
     .bind(folder_id)
     .bind(user_id)

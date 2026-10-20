@@ -11,6 +11,7 @@ use crate::{
     models::{User, UserProfile, RegisterRequest, LoginRequest, ChangePasswordRequest, UpdateProfileRequest},
     AppState,
 };
+use crate::db::sql;
 
 
 async fn profile_for(state: &AppState, user: User) -> UserProfile {
@@ -38,15 +39,23 @@ pub async fn register(
 
     let user_id = Uuid::new_v4().to_string();
 
-    let result = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, password_hash, is_admin"
-    )
-    .bind(&user_id)
-    .bind(&payload.username)
-    .bind(&payload.email)
-    .bind(&password_hash)
-    .fetch_one(&state.db)
-    .await;
+    let inserted = sqlx::query(sql("INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)"))
+        .bind(&user_id)
+        .bind(&payload.username)
+        .bind(&payload.email)
+        .bind(&password_hash)
+        .execute(&state.db)
+        .await;
+
+    let result = match inserted {
+        Ok(_) => {
+            sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"))
+                .bind(&user_id)
+                .fetch_one(&state.db)
+                .await
+        }
+        Err(err) => Err(err),
+    };
 
     match result {
         Ok(user) => Ok(Json(user)),
@@ -62,7 +71,7 @@ pub async fn login(
     jar: SignedCookieJar,
     Json(payload): Json<LoginRequest>,
 ) -> Result<(SignedCookieJar, Json<UserProfile>), (StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1")
+    let user = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1"))
         .bind(&payload.email)
         .fetch_optional(&state.db)
         .await
@@ -100,7 +109,7 @@ pub async fn update_profile(
         return Err((StatusCode::BAD_REQUEST, "Username and email cannot be empty".to_string()));
     }
 
-    let current = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1")
+    let current = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"))
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -120,7 +129,7 @@ pub async fn update_profile(
         }
     }
 
-    let result = sqlx::query("UPDATE users SET username = $1, email = $2 WHERE id = $3")
+    let result = sqlx::query(sql("UPDATE users SET username = $1, email = $2 WHERE id = $3"))
         .bind(&payload.username)
         .bind(&payload.email)
         .bind(&user_id)
@@ -129,7 +138,7 @@ pub async fn update_profile(
 
     match result {
         Ok(_) => {
-            let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1")
+            let user = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"))
                 .bind(&user_id)
                 .fetch_optional(&state.db)
                 .await
@@ -158,7 +167,7 @@ pub async fn me(
         None => return Err((StatusCode::UNAUTHORIZED, "Not logged in".to_string())),
     };
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1")
+    let user = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"))
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -182,7 +191,7 @@ pub async fn change_password(
         return Err((StatusCode::BAD_REQUEST, "Passwords cannot be empty".to_string()));
     }
 
-    let user = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1")
+    let user = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"))
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -196,7 +205,7 @@ pub async fn change_password(
     let new_password_hash = crate::accounts::passwords::hash_password(&payload.new_password)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
-    sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
+    sqlx::query(sql("UPDATE users SET password_hash = $1 WHERE id = $2"))
         .bind(&new_password_hash)
         .bind(&user_id)
         .execute(&state.db)

@@ -10,6 +10,7 @@ use image::codecs::webp::WebPEncoder;
 use image::{ImageReader, Limits};
 
 use crate::AppState;
+use crate::db::sql;
 
 pub const MAX_UPLOAD_BYTES: usize = 15 * 1024 * 1024;
 
@@ -51,7 +52,7 @@ fn compress_avatar(source: &[u8]) -> Result<Vec<u8>, String> {
 }
 
 pub async fn avatar_updated_at(state: &AppState, user_id: &str) -> Option<String> {
-    sqlx::query_as::<_, (String,)>("SELECT updated_at FROM user_avatars WHERE user_id = $1")
+    sqlx::query_as::<_, (String,)>(sql("SELECT updated_at FROM user_avatars WHERE user_id = $1"))
         .bind(user_id)
         .fetch_optional(&state.db)
         .await
@@ -66,7 +67,7 @@ pub async fn get_avatar(
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let user_id = session_user_id(&jar)?;
 
-    let avatar = sqlx::query_as::<_, (Vec<u8>,)>("SELECT data FROM user_avatars WHERE user_id = $1")
+    let avatar = sqlx::query_as::<_, (Vec<u8>,)>(sql("SELECT data FROM user_avatars WHERE user_id = $1"))
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -109,13 +110,13 @@ pub async fn upload_avatar(
 
     let updated_at = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S%.3f").to_string();
 
-    sqlx::query("DELETE FROM user_avatars WHERE user_id = $1")
+    sqlx::query(sql("DELETE FROM user_avatars WHERE user_id = $1"))
         .bind(&user_id)
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    sqlx::query("INSERT INTO user_avatars (user_id, data, updated_at) VALUES ($1, $2, $3)")
+    sqlx::query(sql("INSERT INTO user_avatars (user_id, data, updated_at) VALUES ($1, $2, $3)"))
         .bind(&user_id)
         .bind(&compressed)
         .bind(&updated_at)
@@ -132,7 +133,7 @@ pub async fn delete_avatar(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = session_user_id(&jar)?;
 
-    sqlx::query("DELETE FROM user_avatars WHERE user_id = $1")
+    sqlx::query(sql("DELETE FROM user_avatars WHERE user_id = $1"))
         .bind(&user_id)
         .execute(&state.db)
         .await

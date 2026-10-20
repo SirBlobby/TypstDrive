@@ -16,6 +16,7 @@ use crate::{
     drive::projects::decode_text_blob,
     AppState,
 };
+use crate::db::sql;
 
 type ApiError = (StatusCode, String);
 
@@ -59,34 +60,38 @@ async fn document_with_role(state: &AppState, document_id: &str, user_id: &Optio
 }
 
 async fn stored_files(state: &AppState, document: &Document) -> Result<Vec<StoredFile>, ApiError> {
-    let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>, String, String, String, Vec<u8>, i64)>(
-        "SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, data, \
-         CAST(CASE WHEN document_id = $1 OR id IN (SELECT file_id FROM document_shared_files WHERE document_id = $1) THEN 1 ELSE 0 END AS BIGINT) \
-         FROM files WHERE document_id = $1 OR owner_id = $2 ORDER BY name ASC"
+    let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>, String, String, String, Vec<u8>, i64, Option<String>, i64)>(
+        sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, data, size_bytes, storage_key, \
+         CAST(CASE WHEN document_id = $1 OR id IN (SELECT file_id FROM document_shared_files WHERE document_id = $2) THEN 1 ELSE 0 END AS BIGINT) \
+         FROM files WHERE document_id = $3 OR owner_id = $4 ORDER BY name ASC")
     )
+    .bind(&document.id)
+    .bind(&document.id)
     .bind(&document.id)
     .bind(&document.owner_id)
     .fetch_all(&state.db)
     .await
     .map_err(internal_error)?;
 
-    Ok(rows
-        .into_iter()
-        .map(|(id, owner_id, document_id, folder_id, name, mime_type, created_at, data, linked)| StoredFile {
-            file: File {
-                id,
-                owner_id,
-                document_id,
-                folder_id,
-                name,
-                mime_type,
-                created_at,
-                size_bytes: Some(data.len() as i64),
-            },
-            data,
-            linked_to_document: linked != 0,
-        })
-        .collect())
+    let loads = rows.into_iter().map(
+        |(id, owner_id, document_id, folder_id, name, mime_type, created_at, data, size_bytes, storage_key, linked)| async move {
+            StoredFile {
+                file: File {
+                    id,
+                    owner_id,
+                    document_id,
+                    folder_id,
+                    name,
+                    mime_type,
+                    created_at,
+                    size_bytes: Some(size_bytes),
+                },
+                data: state.file_storage.load(data, storage_key).await.unwrap_or_default(),
+                linked_to_document: linked != 0,
+            }
+        },
+    );
+    Ok(futures_util::future::join_all(loads).await)
 }
 
 async fn readable_by_collaborator(
@@ -191,8 +196,8 @@ async fn require_document_owner(state: &AppState, document_id: &str, jar: &Signe
 
 async fn link_file(state: &AppState, document_id: &str, file_id: &str) -> Result<(), ApiError> {
     sqlx::query(
-        "INSERT INTO document_shared_files (document_id, file_id) VALUES ($1, $2) \
-         ON CONFLICT (document_id, file_id) DO NOTHING"
+        sql("INSERT INTO document_shared_files (document_id, file_id) VALUES ($1, $2) \
+         ON CONFLICT (document_id, file_id) DO NOTHING")
     )
     .bind(document_id)
     .bind(file_id)
@@ -209,7 +214,7 @@ pub async fn attach_asset(
 ) -> Result<StatusCode, ApiError> {
     let document = require_document_owner(&state, &document_id, &jar).await?;
 
-    let owned_file = sqlx::query_as::<_, (String,)>("SELECT id FROM files WHERE id = $1 AND owner_id = $2")
+    let owned_file = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM files WHERE id = $1 AND owner_id = $2"))
         .bind(&file_id)
         .bind(&document.owner_id)
         .fetch_optional(&state.db)
@@ -274,14 +279,17 @@ pub async fn upload_asset(
             }
         }
 
-        sqlx::query("INSERT INTO files (id, owner_id, document_id, folder_id, name, mime_type, data) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        let stored = state.file_storage.store(data).await?;
+        sqlx::query(sql("INSERT INTO files (id, owner_id, document_id, folder_id, name, mime_type, data, size_bytes, storage_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"))
             .bind(Uuid::new_v4().to_string())
             .bind(&document.owner_id)
             .bind(&document.id)
             .bind(&document.folder_id)
             .bind(&file_name)
             .bind(&content_type)
-            .bind(&data)
+            .bind(&stored.inline_data)
+            .bind(stored.size_bytes)
+            .bind(&stored.storage_key)
             .execute(&state.db)
             .await
             .map_err(internal_error)?;

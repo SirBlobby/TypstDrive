@@ -4,7 +4,6 @@ use axum::{
     Json,
 };
 use axum_extra::extract::cookie::SignedCookieJar;
-use sqlx::AssertSqlSafe;
 use uuid::Uuid;
 
 use crate::{
@@ -12,6 +11,7 @@ use crate::{
     models::{CollaboratorView, InviteRequest},
     AppState,
 };
+use crate::db::{sql, sql_owned};
 
 type ApiError = (StatusCode, String);
 
@@ -76,8 +76,8 @@ fn session_user(jar: &SignedCookieJar) -> Result<String, ApiError> {
 }
 
 pub async fn owner_of(state: &AppState, kind: ShareKind, item_id: &str) -> Result<String, ApiError> {
-    let sql = format!("SELECT owner_id FROM {} WHERE id = $1", kind.item_table());
-    sqlx::query_as::<_, (String,)>(AssertSqlSafe(sql))
+    let statement = format!("SELECT owner_id FROM {} WHERE id = $1", kind.item_table());
+    sqlx::query_as::<_, (String,)>(sql_owned(statement))
         .bind(item_id)
         .fetch_optional(&state.db)
         .await
@@ -105,7 +105,7 @@ async fn has_access(state: &AppState, kind: ShareKind, item_id: &str, user_id: &
         kind.collaborator_table(),
         kind.item_column()
     );
-    let (share_count,) = sqlx::query_as::<_, (i64,)>(AssertSqlSafe(direct_share))
+    let (share_count,) = sqlx::query_as::<_, (i64,)>(sql_owned(direct_share))
         .bind(item_id)
         .bind(user_id)
         .fetch_one(&state.db)
@@ -116,7 +116,7 @@ async fn has_access(state: &AppState, kind: ShareKind, item_id: &str, user_id: &
     }
 
     let item = format!("SELECT owner_id, folder_id FROM {} WHERE id = $1", kind.item_table());
-    let Some((owner_id, folder_id)) = sqlx::query_as::<_, (String, Option<String>)>(AssertSqlSafe(item))
+    let Some((owner_id, folder_id)) = sqlx::query_as::<_, (String, Option<String>)>(sql_owned(item))
         .bind(item_id)
         .fetch_optional(&state.db)
         .await
@@ -151,14 +151,14 @@ async fn list(state: &AppState, kind: ShareKind, item_id: &str, jar: &SignedCook
         return Err(access::forbidden());
     }
 
-    let sql = format!(
+    let statement = format!(
         "SELECT c.id, c.user_id, u.username, u.email, c.role, c.created_at \
          FROM {} c INNER JOIN users u ON u.id = c.user_id \
          WHERE c.{} = $1 ORDER BY c.created_at ASC",
         kind.collaborator_table(),
         kind.item_column()
     );
-    let collaborators = sqlx::query_as::<_, CollaboratorView>(AssertSqlSafe(sql))
+    let collaborators = sqlx::query_as::<_, CollaboratorView>(sql_owned(statement))
         .bind(item_id)
         .fetch_all(&state.db)
         .await
@@ -181,7 +181,7 @@ async fn invite(
         return Err((StatusCode::BAD_REQUEST, "Role must be viewer or editor".to_string()));
     }
 
-    let (invited_user_id,) = sqlx::query_as::<_, (String,)>("SELECT id FROM users WHERE LOWER(email) = LOWER($1)")
+    let (invited_user_id,) = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM users WHERE LOWER(email) = LOWER($1)"))
         .bind(payload.email.trim())
         .fetch_optional(&state.db)
         .await
@@ -198,7 +198,7 @@ async fn invite(
         table = kind.collaborator_table(),
         column = kind.item_column()
     );
-    sqlx::query(AssertSqlSafe(upsert))
+    sqlx::query(sql_owned(upsert))
         .bind(Uuid::new_v4().to_string())
         .bind(item_id)
         .bind(&invited_user_id)
@@ -215,7 +215,7 @@ async fn invite(
         kind.collaborator_table(),
         kind.item_column()
     );
-    let collaborator = sqlx::query_as::<_, CollaboratorView>(AssertSqlSafe(lookup))
+    let collaborator = sqlx::query_as::<_, CollaboratorView>(sql_owned(lookup))
         .bind(item_id)
         .bind(&invited_user_id)
         .fetch_one(&state.db)
@@ -229,8 +229,8 @@ async fn remove(state: &AppState, kind: ShareKind, item_id: &str, collaborator_i
     let user_id = session_user(jar)?;
     require_owner(state, kind, item_id, &user_id).await?;
 
-    let sql = format!("DELETE FROM {} WHERE id = $1 AND {} = $2", kind.collaborator_table(), kind.item_column());
-    let result = sqlx::query(AssertSqlSafe(sql))
+    let statement = format!("DELETE FROM {} WHERE id = $1 AND {} = $2", kind.collaborator_table(), kind.item_column());
+    let result = sqlx::query(sql_owned(statement))
         .bind(collaborator_id)
         .bind(item_id)
         .execute(&state.db)

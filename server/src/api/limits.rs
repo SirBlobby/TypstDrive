@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::admin::users::require_admin;
 use crate::AppState;
+use crate::db::sql;
 
 const ENABLED_KEY: &str = "api.enabled";
 const RATE_LIMIT_KEY: &str = "api.rate_limit";
@@ -125,7 +126,7 @@ pub async fn load_defaults(state: &AppState) -> ApiLimits {
 
 async fn load_overrides(state: &AppState, user_id: &str) -> ApiLimitOverrides {
     let row: Option<(Option<i64>, Option<i64>, Option<i64>, Option<i64>)> = sqlx::query_as(
-        "SELECT api_enabled, rate_limit, max_keys, daily_quota FROM user_api_limits WHERE user_id = $1"
+        sql("SELECT api_enabled, rate_limit, max_keys, daily_quota FROM user_api_limits WHERE user_id = $1")
     )
     .bind(user_id)
     .fetch_optional(&state.db)
@@ -150,9 +151,9 @@ pub async fn effective_limits(state: &AppState, user_id: &str) -> ApiLimits {
 
 pub async fn requests_today(state: &AppState, user_id: &str) -> i64 {
     sqlx::query_as::<_, (i64,)>(
-        "SELECT CAST(COALESCE(SUM(daily_usage.count), 0) AS BIGINT) FROM api_key_usage daily_usage \
+        sql("SELECT CAST(COALESCE(SUM(daily_usage.count), 0) AS BIGINT) FROM api_key_usage daily_usage \
          INNER JOIN api_keys k ON k.id = daily_usage.key_id \
-         WHERE k.user_id = $1 AND daily_usage.date = $2"
+         WHERE k.user_id = $1 AND daily_usage.date = $2")
     )
     .bind(user_id)
     .bind(today())
@@ -163,7 +164,7 @@ pub async fn requests_today(state: &AppState, user_id: &str) -> i64 {
 }
 
 pub async fn key_count(state: &AppState, user_id: &str) -> i64 {
-    sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM api_keys WHERE user_id = $1")
+    sqlx::query_as::<_, (i64,)>(sql("SELECT COUNT(*) FROM api_keys WHERE user_id = $1"))
         .bind(user_id)
         .fetch_one(&state.db)
         .await
@@ -196,14 +197,14 @@ pub async fn overview(
 
     type OverviewRow = (String, String, String, i64, Option<i64>, Option<i64>, Option<i64>, Option<i64>, i64, i64);
     let rows: Vec<OverviewRow> = sqlx::query_as(
-        "SELECT u.id, u.username, COALESCE(u.email, ''), u.is_admin, \
+        sql("SELECT u.id, u.username, COALESCE(u.email, ''), u.is_admin, \
                 l.api_enabled, l.rate_limit, l.max_keys, l.daily_quota, \
                 CAST((SELECT COUNT(*) FROM api_keys k WHERE k.user_id = u.id) AS BIGINT), \
                 CAST((SELECT COALESCE(SUM(daily_usage.count), 0) FROM api_key_usage daily_usage \
                       INNER JOIN api_keys k ON k.id = daily_usage.key_id \
                       WHERE k.user_id = u.id AND daily_usage.date = $1) AS BIGINT) \
          FROM users u LEFT JOIN user_api_limits l ON l.user_id = u.id \
-         ORDER BY u.username ASC"
+         ORDER BY u.username ASC")
     )
     .bind(today())
     .fetch_all(&state.db)
@@ -264,7 +265,7 @@ pub async fn update_user_limits(
     require_admin(&state, &jar).await?;
     validate_limits(payload.rate_limit, payload.max_keys, payload.daily_quota)?;
 
-    let user_exists = sqlx::query_as::<_, (String,)>("SELECT id FROM users WHERE id = $1")
+    let user_exists = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM users WHERE id = $1"))
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -274,17 +275,17 @@ pub async fn update_user_limits(
     }
 
     if payload.is_empty() {
-        sqlx::query("DELETE FROM user_api_limits WHERE user_id = $1")
+        sqlx::query(sql("DELETE FROM user_api_limits WHERE user_id = $1"))
             .bind(&user_id)
             .execute(&state.db)
             .await
             .map_err(internal_error)?;
     } else {
         sqlx::query(
-            "INSERT INTO user_api_limits (user_id, api_enabled, rate_limit, max_keys, daily_quota, updated_at) \
+            sql("INSERT INTO user_api_limits (user_id, api_enabled, rate_limit, max_keys, daily_quota, updated_at) \
              VALUES ($1, $2, $3, $4, $5, $6) \
              ON CONFLICT (user_id) DO UPDATE SET api_enabled = excluded.api_enabled, rate_limit = excluded.rate_limit, \
-             max_keys = excluded.max_keys, daily_quota = excluded.daily_quota, updated_at = excluded.updated_at"
+             max_keys = excluded.max_keys, daily_quota = excluded.daily_quota, updated_at = excluded.updated_at")
         )
         .bind(&user_id)
         .bind(payload.api_enabled.map(|enabled| if enabled { 1i64 } else { 0i64 }))

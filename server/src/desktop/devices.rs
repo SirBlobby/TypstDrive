@@ -13,7 +13,9 @@ use std::time::Duration;
 use tokio::sync::{broadcast, watch};
 use uuid::Uuid;
 
+use crate::cluster::ClusterEvent;
 use crate::AppState;
+use crate::db::sql;
 
 fn hash_token(token: &str) -> String {
     crate::hashing::sha256_hex(token.as_bytes())
@@ -41,7 +43,7 @@ async fn authenticate_device(
     ))?;
 
     let row = sqlx::query_as::<_, (String, String)>(
-        "SELECT id, user_id FROM device_tokens WHERE token_hash = $1",
+        sql("SELECT id, user_id FROM device_tokens WHERE token_hash = $1"),
     )
     .bind(hash_token(&token))
     .fetch_optional(&state.db)
@@ -90,6 +92,11 @@ impl DeviceEvent {
 }
 
 pub async fn notify_devices(state: &AppState, user_id: &str, event: DeviceEvent) {
+    state.cluster.publish_event(&ClusterEvent::DeviceNotification { user_id: user_id.to_string(), event: event.clone() });
+    deliver_local(state, user_id, event).await;
+}
+
+pub async fn deliver_local(state: &AppState, user_id: &str, event: DeviceEvent) {
     let events = state.device_events.lock().await;
     if let Some(sender) = events.get(user_id) {
         let _ = sender.send(event);
@@ -201,7 +208,7 @@ pub async fn list_devices(
         get_user_id(&jar).ok_or((StatusCode::UNAUTHORIZED, "Not authenticated".to_string()))?;
 
     let rows = sqlx::query_as::<_, (String, String, String, Option<String>)>(
-        "SELECT id, name, created_at, last_used_at FROM device_tokens WHERE user_id = $1 ORDER BY created_at DESC",
+        sql("SELECT id, name, created_at, last_used_at FROM device_tokens WHERE user_id = $1 ORDER BY created_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -235,7 +242,7 @@ pub async fn revoke_device(
     let user_id =
         get_user_id(&jar).ok_or((StatusCode::UNAUTHORIZED, "Not authenticated".to_string()))?;
 
-    let result = sqlx::query("DELETE FROM device_tokens WHERE id = $1 AND user_id = $2")
+    let result = sqlx::query(sql("DELETE FROM device_tokens WHERE id = $1 AND user_id = $2"))
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)

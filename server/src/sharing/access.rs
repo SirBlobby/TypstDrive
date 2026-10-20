@@ -4,8 +4,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use axum::http::StatusCode;
 use tokio::sync::oneshot;
 
+use crate::cluster::ClusterEvent;
 use crate::models::{Document, Project};
 use crate::AppState;
+use crate::db::sql;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccessRole {
@@ -90,12 +92,12 @@ pub fn forbidden() -> (StatusCode, String) {
 pub async fn folder_role(state: &AppState, folder_id: &str, user_id: &Option<String>) -> Option<AccessRole> {
     let uid = user_id.as_ref()?;
     let ancestors = sqlx::query_as::<_, (String, Option<String>)>(
-        "WITH RECURSIVE ancestors(id, parent_id, owner_id) AS ( \
+        sql("WITH RECURSIVE ancestors(id, parent_id, owner_id) AS ( \
              SELECT id, parent_id, owner_id FROM folders WHERE id = $1 \
              UNION ALL SELECT f.id, f.parent_id, f.owner_id FROM folders f \
              INNER JOIN ancestors a ON f.id = a.parent_id AND f.owner_id = a.owner_id \
          ) SELECT a.owner_id, c.role FROM ancestors a \
-         LEFT JOIN folder_collaborators c ON c.folder_id = a.id AND c.user_id = $2"
+         LEFT JOIN folder_collaborators c ON c.folder_id = a.id AND c.user_id = $2")
     )
     .bind(folder_id)
     .bind(uid)
@@ -113,7 +115,7 @@ pub async fn folder_role(state: &AppState, folder_id: &str, user_id: &Option<Str
 }
 
 pub async fn folder_owner(state: &AppState, folder_id: &str) -> Option<String> {
-    sqlx::query_as::<_, (String,)>("SELECT owner_id FROM folders WHERE id = $1")
+    sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM folders WHERE id = $1"))
         .bind(folder_id)
         .fetch_optional(&state.db)
         .await
@@ -169,7 +171,7 @@ pub async fn document_role(
     user_id: &Option<String>,
 ) -> Option<(Document, AccessRole)> {
     let document = sqlx::query_as::<_, Document>(
-        "SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1"
+        sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1")
     )
     .bind(document_id)
     .fetch_optional(&state.db)
@@ -182,7 +184,7 @@ pub async fn document_role(
             return Some((document, AccessRole::Owner));
         }
         role = sqlx::query_as::<_, (String,)>(
-            "SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2"
+            sql("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2")
         )
         .bind(document_id)
         .bind(uid)
@@ -250,6 +252,15 @@ pub async fn unregister_session(state: &AppState, resource: &Resource, session_i
 }
 
 pub async fn revalidate_resource(state: &AppState, resource: Resource) {
+    let event = match &resource {
+        Resource::Document(id) => ClusterEvent::RevalidateDocument { document_id: id.clone() },
+        Resource::Project(id) => ClusterEvent::RevalidateProject { project_id: id.clone() },
+    };
+    state.cluster.publish_event(&event);
+    revalidate_local(state, resource).await;
+}
+
+pub async fn revalidate_local(state: &AppState, resource: Resource) {
     let checks: Vec<(u64, Option<String>, bool)> = {
         let sessions = state.live_sessions.lock().await;
         match sessions.get(&resource) {
@@ -273,10 +284,20 @@ pub async fn revalidate_resource(state: &AppState, resource: Resource) {
 }
 
 pub async fn revoke_user_sessions(state: &AppState, user_id: &str) {
+    state.cluster.publish_event(&ClusterEvent::RevokeUser { user_id: user_id.to_string() });
+    revoke_user_sessions_local(state, user_id).await;
+}
+
+pub async fn revoke_user_sessions_local(state: &AppState, user_id: &str) {
     revoke_matching(state, |_, session| session.user_id.as_deref() == Some(user_id)).await;
 }
 
 pub async fn revoke_device_sessions(state: &AppState, device_token_id: &str) {
+    state.cluster.publish_event(&ClusterEvent::RevokeDevice { device_token_id: device_token_id.to_string() });
+    revoke_device_sessions_local(state, device_token_id).await;
+}
+
+pub async fn revoke_device_sessions_local(state: &AppState, device_token_id: &str) {
     revoke_matching(state, |_, session| session.device_token_id.as_deref() == Some(device_token_id)).await;
 }
 

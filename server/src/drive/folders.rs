@@ -11,6 +11,7 @@ use crate::{
     models::{Folder, CreateFolderRequest},
     AppState,
 };
+use crate::db::sql;
 
 #[derive(Deserialize)]
 pub struct ListFoldersQuery {
@@ -28,15 +29,16 @@ pub async fn list_folders(
     let folders = if let Some(parent_id) = query.parent_id {
         crate::sharing::access::require_folder_access(&state, &parent_id, &user_id).await?;
         sqlx::query_as::<_, Folder>(
-            "SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE parent_id = $1 AND owner_id = (SELECT p.owner_id FROM folders p WHERE p.id = $1) ORDER BY name ASC"
+            sql("SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE parent_id = $1 AND owner_id = (SELECT p.owner_id FROM folders p WHERE p.id = $2) ORDER BY name ASC")
         )
+        .bind(&parent_id)
         .bind(&parent_id)
         .fetch_all(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Folder>(
-            "SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE owner_id = $1 AND parent_id IS NULL ORDER BY name ASC"
+            sql("SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE owner_id = $1 AND parent_id IS NULL ORDER BY name ASC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -55,9 +57,9 @@ pub async fn list_shared_folders(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let folders = sqlx::query_as::<_, Folder>(
-        "SELECT f.id, f.owner_id, f.parent_id, f.name, f.created_at, c.role AS effective_role \
+        sql("SELECT f.id, f.owner_id, f.parent_id, f.name, f.created_at, c.role AS effective_role \
          FROM folders f INNER JOIN folder_collaborators c ON c.folder_id = f.id AND c.user_id = $1 \
-         ORDER BY f.name ASC"
+         ORDER BY f.name ASC")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -78,13 +80,17 @@ pub async fn create_folder(
 
     let folder_id = Uuid::new_v4().to_string();
 
-    let folder = sqlx::query_as::<_, Folder>(
-        "INSERT INTO folders (id, owner_id, parent_id, name) VALUES ($1, $2, $3, $4) RETURNING id, owner_id, parent_id, name, created_at"
-    )
+    sqlx::query(sql("INSERT INTO folders (id, owner_id, parent_id, name) VALUES ($1, $2, $3, $4)"))
     .bind(&folder_id)
     .bind(&user_id)
     .bind(&payload.parent_id)
     .bind(&payload.name)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE id = $1"))
+    .bind(&folder_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -100,7 +106,7 @@ pub async fn delete_folder(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let owned_folder = sqlx::query_as::<_, (String,)>("SELECT id FROM folders WHERE id = $1 AND owner_id = $2")
+    let owned_folder = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM folders WHERE id = $1 AND owner_id = $2"))
         .bind(&id)
         .bind(&user_id)
         .fetch_optional(&state.db)
@@ -114,7 +120,7 @@ pub async fn delete_folder(
     let affected_documents = items_in_folder_tree(&state, "documents", &id, &user_id).await?;
     let affected_projects = items_in_folder_tree(&state, "projects", &id, &user_id).await?;
 
-    sqlx::query("DELETE FROM folders WHERE id = $1 AND owner_id = $2")
+    sqlx::query(sql("DELETE FROM folders WHERE id = $1 AND owner_id = $2"))
         .bind(&id)
         .bind(&user_id)
         .execute(&state.db)
@@ -153,7 +159,7 @@ pub(crate) async fn items_in_folder_tree(
          ) SELECT id FROM documents WHERE folder_id IN (SELECT id FROM tree)"
     };
 
-    let rows = sqlx::query_as::<_, (String,)>(query)
+    let rows = sqlx::query_as::<_, (String,)>(sql(query))
         .bind(folder_id)
         .bind(user_id)
         .fetch_all(&state.db)
@@ -176,10 +182,15 @@ pub async fn update_folder(
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let folder = sqlx::query_as::<_, Folder>(
-        "UPDATE folders SET name = $1 WHERE id = $2 AND owner_id = $3 RETURNING id, owner_id, parent_id, name, created_at"
-    )
+    sqlx::query(sql("UPDATE folders SET name = $1 WHERE id = $2 AND owner_id = $3"))
     .bind(&payload.name)
+    .bind(&id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)

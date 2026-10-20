@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::admin::users::require_admin;
 use crate::AppState;
+use crate::db::sql;
 
 const DEFAULT_QUOTA_KEY: &str = "storage.default_quota";
 const MAX_QUOTA_BYTES: i64 = 1024 * 1024 * 1024 * 1024 * 1024;
@@ -80,13 +81,13 @@ pub struct UserQuotaResponse {
 const DOCUMENTS_SIZE_SQL: &str =
     "SELECT CAST(COALESCE(SUM(LENGTH(content)), 0) AS BIGINT) FROM documents WHERE owner_id = $1";
 const FILES_SIZE_SQL: &str =
-    "SELECT CAST(COALESCE(SUM(LENGTH(data)), 0) AS BIGINT) FROM files WHERE owner_id = $1";
+    "SELECT CAST(COALESCE(SUM(size_bytes), 0) AS BIGINT) FROM files WHERE owner_id = $1";
 const PROJECTS_SIZE_SQL: &str =
     "SELECT CAST(COALESCE(SUM(LENGTH(pf.content)), 0) AS BIGINT) FROM project_files pf \
      INNER JOIN projects p ON p.id = pf.project_id WHERE p.owner_id = $1";
 
-async fn sum_for_user(state: &AppState, sql: &'static str, user_id: &str) -> i64 {
-    sqlx::query_as::<_, (i64,)>(sql)
+async fn sum_for_user(state: &AppState, statement: &'static str, user_id: &str) -> i64 {
+    sqlx::query_as::<_, (i64,)>(sql(statement))
         .bind(user_id)
         .fetch_one(&state.db)
         .await
@@ -104,7 +105,7 @@ pub async fn usage_for(state: &AppState, user_id: &str) -> StorageUsage {
 
 pub async fn project_file_size(state: &AppState, project_id: &str, path: &str) -> i64 {
     sqlx::query_as::<_, (i64,)>(
-        "SELECT CAST(COALESCE(LENGTH(content), 0) AS BIGINT) FROM project_files WHERE project_id = $1 AND path = $2"
+        sql("SELECT CAST(COALESCE(LENGTH(content), 0) AS BIGINT) FROM project_files WHERE project_id = $1 AND path = $2")
     )
     .bind(project_id)
     .bind(path)
@@ -124,7 +125,7 @@ pub async fn default_quota(state: &AppState) -> i64 {
 }
 
 async fn quota_override(state: &AppState, user_id: &str) -> Option<i64> {
-    sqlx::query_as::<_, (i64,)>("SELECT quota_bytes FROM user_storage_quotas WHERE user_id = $1")
+    sqlx::query_as::<_, (i64,)>(sql("SELECT quota_bytes FROM user_storage_quotas WHERE user_id = $1"))
         .bind(user_id)
         .fetch_optional(&state.db)
         .await
@@ -210,13 +211,13 @@ pub async fn overview(
 
     type OverviewRow = (String, String, String, Option<i64>, i64, i64, i64);
     let rows: Vec<OverviewRow> = sqlx::query_as(
-        "SELECT u.id, u.username, COALESCE(u.email, ''), q.quota_bytes, \
+        sql("SELECT u.id, u.username, COALESCE(u.email, ''), q.quota_bytes, \
                 CAST((SELECT COALESCE(SUM(LENGTH(d.content)), 0) FROM documents d WHERE d.owner_id = u.id) AS BIGINT), \
-                CAST((SELECT COALESCE(SUM(LENGTH(f.data)), 0) FROM files f WHERE f.owner_id = u.id) AS BIGINT), \
+                CAST((SELECT COALESCE(SUM(f.size_bytes), 0) FROM files f WHERE f.owner_id = u.id) AS BIGINT), \
                 CAST((SELECT COALESCE(SUM(LENGTH(pf.content)), 0) FROM project_files pf \
                       INNER JOIN projects p ON p.id = pf.project_id WHERE p.owner_id = u.id) AS BIGINT) \
          FROM users u LEFT JOIN user_storage_quotas q ON q.user_id = u.id \
-         ORDER BY u.username ASC"
+         ORDER BY u.username ASC")
     )
     .fetch_all(&state.db)
     .await
@@ -262,7 +263,7 @@ pub async fn update_user_quota(
 ) -> Result<Json<UserQuotaResponse>, ApiError> {
     require_admin(&state, &jar).await?;
 
-    let user_exists = sqlx::query_as::<_, (String,)>("SELECT id FROM users WHERE id = $1")
+    let user_exists = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM users WHERE id = $1"))
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -275,8 +276,8 @@ pub async fn update_user_quota(
         Some(quota) => {
             validate_quota(quota)?;
             sqlx::query(
-                "INSERT INTO user_storage_quotas (user_id, quota_bytes, updated_at) VALUES ($1, $2, $3) \
-                 ON CONFLICT (user_id) DO UPDATE SET quota_bytes = excluded.quota_bytes, updated_at = excluded.updated_at"
+                sql("INSERT INTO user_storage_quotas (user_id, quota_bytes, updated_at) VALUES ($1, $2, $3) \
+                 ON CONFLICT (user_id) DO UPDATE SET quota_bytes = excluded.quota_bytes, updated_at = excluded.updated_at")
             )
             .bind(&user_id)
             .bind(quota)
@@ -286,7 +287,7 @@ pub async fn update_user_quota(
             .map_err(internal_error)?;
         }
         None => {
-            sqlx::query("DELETE FROM user_storage_quotas WHERE user_id = $1")
+            sqlx::query(sql("DELETE FROM user_storage_quotas WHERE user_id = $1"))
                 .bind(&user_id)
                 .execute(&state.db)
                 .await

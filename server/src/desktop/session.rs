@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::sql;
 
 #[derive(Deserialize)]
 pub struct DeviceLoginRequest {
@@ -33,7 +34,7 @@ pub async fn login(
     }
 
     let user = sqlx::query_as::<_, User>(
-        "SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1",
+        sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1"),
     )
     .bind(&payload.email)
     .fetch_optional(&state.db)
@@ -58,7 +59,7 @@ pub async fn login(
         .unwrap_or_else(|| "Typst Desktop".to_string());
 
     sqlx::query(
-        "INSERT INTO device_tokens (id, user_id, name, token_hash, created_at) VALUES ($1, $2, $3, $4, $5)",
+        sql("INSERT INTO device_tokens (id, user_id, name, token_hash, created_at) VALUES ($1, $2, $3, $4, $5)"),
     )
     .bind(Uuid::new_v4().to_string())
     .bind(&user.id)
@@ -91,7 +92,7 @@ pub async fn me(
     let user_id = authenticate(&state, &headers).await?;
 
     let user = sqlx::query_as::<_, User>(
-        "SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1",
+        sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"),
     )
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -115,13 +116,13 @@ pub async fn logout(
         "Missing Authorization header".to_string(),
     ))?;
 
-    let token_id = sqlx::query_as::<_, (String,)>("SELECT id FROM device_tokens WHERE token_hash = $1")
+    let token_id = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM device_tokens WHERE token_hash = $1"))
         .bind(hash_token(&token))
         .fetch_optional(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    sqlx::query("DELETE FROM device_tokens WHERE token_hash = $1")
+    sqlx::query(sql("DELETE FROM device_tokens WHERE token_hash = $1"))
         .bind(hash_token(&token))
         .execute(&state.db)
         .await

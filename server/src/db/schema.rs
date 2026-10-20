@@ -117,6 +117,8 @@ pub const TABLES: &[Table] = &[
             plain("name", "TEXT NOT NULL"),
             plain("mime_type", "TEXT NOT NULL"),
             plain("data", "{blob} NOT NULL"),
+            Column { name: "size_bytes", definition: "{integer} NOT NULL DEFAULT 0", copy: CopyRule::DefaultWhenNull("0") },
+            plain("storage_key", "TEXT"),
             created_at("created_at"),
         ],
         constraints: &[],
@@ -350,6 +352,8 @@ pub const INDEXES: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_packages_owner ON packages (owner_id)",
     "CREATE INDEX IF NOT EXISTS idx_device_tokens_user ON device_tokens (user_id)",
 ];
+
+pub const BACKFILLS: &[&str] = &["UPDATE files SET size_bytes = LENGTH(data) WHERE storage_key IS NULL"];
 
 pub const RETIRED_TABLES: &[&str] = &["document_history", "invitations"];
 

@@ -10,12 +10,13 @@ use crate::{
     models::{AdminCreateUserRequest, AdminUserView, UpdateUserRequest},
     AppState,
 };
+use crate::db::sql;
 
 pub(crate) async fn require_admin(state: &AppState, jar: &SignedCookieJar) -> Result<String, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let is_admin: Option<(i64,)> = sqlx::query_as("SELECT is_admin FROM users WHERE id = $1")
+    let is_admin: Option<(i64,)> = sqlx::query_as(sql("SELECT is_admin FROM users WHERE id = $1"))
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
@@ -44,16 +45,24 @@ pub async fn create_user(
     let user_id = Uuid::new_v4().to_string();
     let is_admin = payload.is_admin.unwrap_or(false);
 
-    let result = sqlx::query_as::<_, AdminUserView>(
-        "INSERT INTO users (id, username, email, password_hash, is_admin) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, is_admin, created_at"
-    )
-    .bind(&user_id)
-    .bind(&payload.username)
-    .bind(&payload.email)
-    .bind(&password_hash)
-    .bind(if is_admin { 1i64 } else { 0i64 })
-    .fetch_one(&state.db)
-    .await;
+    let inserted = sqlx::query(sql("INSERT INTO users (id, username, email, password_hash, is_admin) VALUES ($1, $2, $3, $4, $5)"))
+        .bind(&user_id)
+        .bind(&payload.username)
+        .bind(&payload.email)
+        .bind(&password_hash)
+        .bind(if is_admin { 1i64 } else { 0i64 })
+        .execute(&state.db)
+        .await;
+
+    let result = match inserted {
+        Ok(_) => {
+            sqlx::query_as::<_, AdminUserView>(sql("SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1"))
+                .bind(&user_id)
+                .fetch_one(&state.db)
+                .await
+        }
+        Err(err) => Err(err),
+    };
 
     match result {
         Ok(user) => Ok((StatusCode::CREATED, Json(user))),
@@ -71,7 +80,7 @@ pub async fn list_users(
     require_admin(&state, &jar).await?;
 
     let users = sqlx::query_as::<_, AdminUserView>(
-        "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at ASC"
+        sql("SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at ASC")
     )
     .fetch_all(&state.db)
     .await
@@ -92,7 +101,7 @@ pub async fn update_user(
         if !is_admin && requester_id == user_id {
             return Err((StatusCode::BAD_REQUEST, "Cannot remove your own admin privileges".to_string()));
         }
-        sqlx::query("UPDATE users SET is_admin = $1 WHERE id = $2")
+        sqlx::query(sql("UPDATE users SET is_admin = $1 WHERE id = $2"))
             .bind(if is_admin { 1i64 } else { 0i64 })
             .bind(&user_id)
             .execute(&state.db)
@@ -101,7 +110,7 @@ pub async fn update_user(
     }
 
     let user = sqlx::query_as::<_, AdminUserView>(
-        "SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1"
+        sql("SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1")
     )
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -123,7 +132,7 @@ pub async fn delete_user(
         return Err((StatusCode::BAD_REQUEST, "Cannot delete your own account via admin panel".to_string()));
     }
 
-    sqlx::query("DELETE FROM users WHERE id = $1")
+    sqlx::query(sql("DELETE FROM users WHERE id = $1"))
         .bind(&user_id)
         .execute(&state.db)
         .await

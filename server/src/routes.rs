@@ -20,6 +20,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/api-access/defaults", put(api::limits::update_defaults))
         .route("/admin/api-access/users/{id}", put(api::limits::update_user_limits))
         .route("/admin/package-policy", get(packages::policy::get_policy).put(packages::policy::update_policy))
+        .route("/admin/server", get(admin::server_info::server_info))
         .route("/admin/storage", get(accounts::storage::overview))
         .route("/admin/storage/default-quota", put(accounts::storage::update_default_quota))
         .route("/admin/storage/users/{id}", put(accounts::storage::update_user_quota))

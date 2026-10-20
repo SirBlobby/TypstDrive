@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::sql;
 
 #[derive(Serialize)]
 pub struct ProjectSummary {
@@ -17,7 +18,7 @@ pub async fn list_projects(
     let user_id = authenticate(&state, &headers).await?;
 
     let owned = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
-        "SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE owner_id = $1 ORDER BY updated_at DESC",
+        sql("SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE owner_id = $1 ORDER BY updated_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -25,9 +26,9 @@ pub async fn list_projects(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let shared = sqlx::query_as::<_, (String, String, String, Option<String>, String, String)>(
-        "SELECT p.id, p.name, p.entrypoint, p.folder_id, p.updated_at, c.role FROM projects p \
+        sql("SELECT p.id, p.name, p.entrypoint, p.folder_id, p.updated_at, c.role FROM projects p \
          INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = $1 \
-         ORDER BY p.updated_at DESC",
+         ORDER BY p.updated_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -89,15 +90,18 @@ pub async fn create_project(
         .entrypoint
         .unwrap_or_else(|| "main.typ".to_string());
 
-    let project = sqlx::query_as::<_, Project>(
-        "INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES ($1, $2, $3, $4, $5) \
-         RETURNING id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at",
-    )
+    sqlx::query(sql("INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES ($1, $2, $3, $4, $5)"))
     .bind(&project_id)
     .bind(&user_id)
     .bind(&payload.folder_id)
     .bind(payload.name.trim())
     .bind(&entrypoint)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let project = sqlx::query_as::<_, Project>(sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1"))
+    .bind(&project_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -126,7 +130,7 @@ pub async fn delete_project(
         return Err((StatusCode::FORBIDDEN, "Only the owner can delete this project".to_string()));
     }
 
-    sqlx::query("DELETE FROM projects WHERE id = $1 AND owner_id = $2")
+    sqlx::query(sql("DELETE FROM projects WHERE id = $1 AND owner_id = $2"))
         .bind(&project_id)
         .bind(&user_id)
         .execute(&state.db)
@@ -156,11 +160,15 @@ pub async fn move_project(
         owned_folder(&state, folder_id, &user_id).await?;
     }
 
-    let row = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
-        "UPDATE projects SET folder_id = $1 WHERE id = $2 AND owner_id = $3 \
-         RETURNING id, name, entrypoint, folder_id, updated_at",
-    )
+    sqlx::query(sql("UPDATE projects SET folder_id = $1 WHERE id = $2 AND owner_id = $3"))
     .bind(&payload.folder_id)
+    .bind(&project_id)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let row = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(sql("SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE id = $1 AND owner_id = $2"))
     .bind(&project_id)
     .bind(&user_id)
     .fetch_optional(&state.db)

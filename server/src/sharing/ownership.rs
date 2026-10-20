@@ -5,7 +5,7 @@ use axum::{
 };
 use axum_extra::extract::cookie::SignedCookieJar;
 use serde::{Deserialize, Serialize};
-use sqlx::{AssertSqlSafe, FromRow};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{
@@ -14,6 +14,7 @@ use crate::{
     sharing::members::{owner_of, revalidate, ShareKind},
     AppState,
 };
+use crate::db::{sql, sql_owned};
 
 type ApiError = (StatusCode, String);
 
@@ -78,12 +79,12 @@ fn name_column(kind: ShareKind) -> &'static str {
 }
 
 async fn is_direct_member(state: &AppState, kind: ShareKind, item_id: &str, user_id: &str) -> Result<bool, ApiError> {
-    let sql = format!(
+    let statement = format!(
         "SELECT CAST(COUNT(*) AS BIGINT) FROM {} WHERE {} = $1 AND user_id = $2",
         kind.collaborator_table(),
         kind.item_column()
     );
-    let (count,) = sqlx::query_as::<_, (i64,)>(AssertSqlSafe(sql))
+    let (count,) = sqlx::query_as::<_, (i64,)>(sql_owned(statement))
         .bind(item_id)
         .bind(user_id)
         .fetch_one(&state.db)
@@ -93,8 +94,8 @@ async fn is_direct_member(state: &AppState, kind: ShareKind, item_id: &str, user
 }
 
 async fn current_name_and_owner(state: &AppState, kind: ShareKind, item_id: &str) -> Option<(String, String)> {
-    let sql = format!("SELECT {}, owner_id FROM {} WHERE id = $1", name_column(kind), kind.item_table());
-    sqlx::query_as::<_, (String, String)>(AssertSqlSafe(sql))
+    let statement = format!("SELECT {}, owner_id FROM {} WHERE id = $1", name_column(kind), kind.item_table());
+    sqlx::query_as::<_, (String, String)>(sql_owned(statement))
         .bind(item_id)
         .fetch_optional(&state.db)
         .await
@@ -116,8 +117,8 @@ async fn still_valid(state: &AppState, transfer: &mut TransferView) -> bool {
 }
 
 async fn fetch_transfers(state: &AppState, condition: &'static str, value: &str) -> Result<Vec<TransferView>, ApiError> {
-    let sql = format!("{TRANSFER_COLUMNS} WHERE {condition} ORDER BY t.created_at DESC");
-    let transfers = sqlx::query_as::<_, TransferView>(AssertSqlSafe(sql))
+    let statement = format!("{TRANSFER_COLUMNS} WHERE {condition} ORDER BY t.created_at DESC");
+    let transfers = sqlx::query_as::<_, TransferView>(sql_owned(statement))
         .bind(value)
         .fetch_all(&state.db)
         .await
@@ -135,7 +136,7 @@ async fn fetch_transfers(state: &AppState, condition: &'static str, value: &str)
 }
 
 async fn remove_transfer(state: &AppState, transfer_id: &str) -> Result<(), ApiError> {
-    sqlx::query("DELETE FROM ownership_transfers WHERE id = $1")
+    sqlx::query(sql("DELETE FROM ownership_transfers WHERE id = $1"))
         .bind(transfer_id)
         .execute(&state.db)
         .await
@@ -161,7 +162,7 @@ pub async fn request_transfer(
         return Err((StatusCode::BAD_REQUEST, format!("Ownership can only go to someone this {} is shared with", kind.label())));
     }
 
-    sqlx::query("DELETE FROM ownership_transfers WHERE item_kind = $1 AND item_id = $2")
+    sqlx::query(sql("DELETE FROM ownership_transfers WHERE item_kind = $1 AND item_id = $2"))
         .bind(kind.label())
         .bind(&payload.item_id)
         .execute(&state.db)
@@ -169,7 +170,7 @@ pub async fn request_transfer(
         .map_err(internal_error)?;
 
     let transfer_id = Uuid::new_v4().to_string();
-    sqlx::query("INSERT INTO ownership_transfers (id, item_kind, item_id, from_user_id, to_user_id) VALUES ($1, $2, $3, $4, $5)")
+    sqlx::query(sql("INSERT INTO ownership_transfers (id, item_kind, item_id, from_user_id, to_user_id) VALUES ($1, $2, $3, $4, $5)"))
         .bind(&transfer_id)
         .bind(kind.label())
         .bind(&payload.item_id)
@@ -228,7 +229,7 @@ pub async fn cancel_transfer(
     jar: SignedCookieJar,
 ) -> Result<StatusCode, ApiError> {
     let user_id = session_user(&jar)?;
-    let result = sqlx::query("DELETE FROM ownership_transfers WHERE id = $1 AND (from_user_id = $2 OR to_user_id = $2)")
+    let result = sqlx::query(sql("DELETE FROM ownership_transfers WHERE id = $1 AND $2 IN (from_user_id, to_user_id)"))
         .bind(&transfer_id)
         .bind(&user_id)
         .execute(&state.db)

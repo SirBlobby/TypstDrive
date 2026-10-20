@@ -11,10 +11,12 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod accounts;
 mod admin;
 mod api;
+mod cluster;
 mod compile;
 mod db;
 mod desktop;
 mod drive;
+mod file_storage;
 mod hashing;
 mod models;
 mod packages;
@@ -38,6 +40,8 @@ pub struct AppState {
     pub device_events: Arc<Mutex<HashMap<String, broadcast::Sender<DeviceEvent>>>>,
     pub live_sessions: Arc<Mutex<sharing::access::LiveSessions>>,
     pub live_documents: Arc<Mutex<realtime::live_documents::LiveDocuments>>,
+    pub cluster: Arc<cluster::Cluster>,
+    pub file_storage: Arc<file_storage::FileStorage>,
 }
 
 impl axum::extract::FromRef<AppState> for Key {
@@ -57,6 +61,7 @@ async fn main() {
         .init();
 
     tracing::info!("Starting TypstDrive Server");
+    let _ = rustls::crypto::ring::default_provider().install_default();
 
     let db = db::init_db().await;
 
@@ -92,7 +97,12 @@ async fn main() {
         device_events: Arc::new(Mutex::new(HashMap::new())),
         live_sessions: Arc::new(Mutex::new(HashMap::new())),
         live_documents: Arc::new(Mutex::new(HashMap::new())),
+        cluster: Arc::new(cluster::Cluster::from_environment()),
+        file_storage: Arc::new(file_storage::FileStorage::from_environment()),
     };
+
+    cluster::start(state.clone());
+    file_storage::maintenance::spawn(state.clone());
 
     let app = routes::build_router(state);
 

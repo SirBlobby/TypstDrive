@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::sql;
 
 #[derive(Serialize)]
 pub struct ManifestEntry {
@@ -24,7 +25,7 @@ async fn plain_contents(
     project_id: &str,
 ) -> Result<Vec<(String, String, String, Vec<u8>, String)>, (StatusCode, String)> {
     let rows = sqlx::query_as::<_, (String, String, String, Option<Vec<u8>>, Option<String>)>(
-        "SELECT id, path, kind, content, updated_at FROM project_files WHERE project_id = $1 ORDER BY path ASC",
+        sql("SELECT id, path, kind, content, updated_at FROM project_files WHERE project_id = $1 ORDER BY path ASC"),
     )
     .bind(project_id)
     .fetch_all(&state.db)
@@ -122,7 +123,7 @@ pub async fn pull_file(
     readable_project(&state, &project_id, &user_id).await?;
 
     let row = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT id, kind, content FROM project_files WHERE project_id = $1 AND path = $2",
+        sql("SELECT id, kind, content FROM project_files WHERE project_id = $1 AND path = $2"),
     )
     .bind(&project_id)
     .bind(&query.path)
@@ -202,7 +203,7 @@ pub async fn push_file(
     };
 
     let existing = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT id, kind, content FROM project_files WHERE project_id = $1 AND path = $2",
+        sql("SELECT id, kind, content FROM project_files WHERE project_id = $1 AND path = $2"),
     )
     .bind(&project_id)
     .bind(&payload.path)
@@ -260,10 +261,10 @@ pub async fn push_file(
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
     sqlx::query(
-        "INSERT INTO project_files (id, project_id, path, kind, content, mime_type, updated_at) \
+        sql("INSERT INTO project_files (id, project_id, path, kind, content, mime_type, updated_at) \
          VALUES ($1, $2, $3, $4, $5, $6, $7) \
          ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, \
-         kind = excluded.kind, mime_type = excluded.mime_type, updated_at = excluded.updated_at",
+         kind = excluded.kind, mime_type = excluded.mime_type, updated_at = excluded.updated_at"),
     )
     .bind(Uuid::new_v4().to_string())
     .bind(&project_id)
@@ -276,14 +277,14 @@ pub async fn push_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let _ = sqlx::query("UPDATE projects SET updated_at = $1 WHERE id = $2")
+    let _ = sqlx::query(sql("UPDATE projects SET updated_at = $1 WHERE id = $2"))
         .bind(&now)
         .bind(&project_id)
         .execute(&state.db)
         .await;
 
     if kind == "text" {
-        let file_id = sqlx::query_as::<_, (String,)>("SELECT id FROM project_files WHERE project_id = $1 AND path = $2")
+        let file_id = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM project_files WHERE project_id = $1 AND path = $2"))
             .bind(&project_id)
             .bind(&payload.path)
             .fetch_optional(&state.db)
@@ -314,7 +315,7 @@ pub async fn delete_file(
     let user_id = authenticate(&state, &headers).await?;
     writable_project(&state, &project_id, &user_id).await?;
 
-    let result = sqlx::query("DELETE FROM project_files WHERE project_id = $1 AND path = $2")
+    let result = sqlx::query(sql("DELETE FROM project_files WHERE project_id = $1 AND path = $2"))
         .bind(&project_id)
         .bind(&query.path)
         .execute(&state.db)

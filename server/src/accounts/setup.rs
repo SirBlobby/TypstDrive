@@ -7,11 +7,12 @@ use crate::{
     models::{SetupRequest, SetupStatus, User},
     AppState,
 };
+use crate::db::sql;
 
 pub async fn setup_status(
     State(state): State<AppState>,
 ) -> Json<SetupStatus> {
-    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
+    let count: (i64,) = sqlx::query_as(sql("SELECT COUNT(*) FROM users"))
         .fetch_one(&state.db)
         .await
         .unwrap_or((0,));
@@ -27,7 +28,7 @@ pub async fn run_setup(
     jar: SignedCookieJar,
     Json(payload): Json<SetupRequest>,
 ) -> Result<(SignedCookieJar, Json<User>), (StatusCode, String)> {
-    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
+    let count: (i64,) = sqlx::query_as(sql("SELECT COUNT(*) FROM users"))
         .fetch_one(&state.db)
         .await
         .unwrap_or((0,));
@@ -45,14 +46,18 @@ pub async fn run_setup(
 
     let user_id = Uuid::new_v4().to_string();
 
-    let user = sqlx::query_as::<_, User>(
-        "INSERT INTO users (id, username, email, password_hash, is_admin) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, password_hash, is_admin"
-    )
+    sqlx::query(sql("INSERT INTO users (id, username, email, password_hash, is_admin) VALUES ($1, $2, $3, $4, $5)"))
     .bind(&user_id)
     .bind(&payload.username)
     .bind(&payload.email)
     .bind(&password_hash)
     .bind(1i64)
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let user = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"))
+    .bind(&user_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::admin::users::require_admin;
 use crate::admin::site_settings::{load_settings, save_settings};
 use crate::AppState;
+use crate::db::sql;
 
 const PUBLISHING_ENABLED_KEY: &str = "packages.publishing_enabled";
 const ADMINS_ONLY_KEY: &str = "packages.admins_only";
@@ -81,7 +82,7 @@ pub async fn load_policy(state: &AppState) -> PackagePolicy {
 }
 
 pub async fn is_admin(state: &AppState, user_id: &str) -> Result<bool, ApiError> {
-    Ok(sqlx::query_as::<_, (i64,)>("SELECT is_admin FROM users WHERE id = $1")
+    Ok(sqlx::query_as::<_, (i64,)>(sql("SELECT is_admin FROM users WHERE id = $1"))
         .bind(user_id)
         .fetch_optional(&state.db)
         .await

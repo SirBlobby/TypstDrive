@@ -13,6 +13,7 @@ use zip::{CompressionMethod, ZipWriter};
 use crate::models::Project;
 use crate::drive::projects::{assemble_project, decode_text_blob};
 use crate::AppState;
+use crate::db::sql;
 
 type ApiError = (StatusCode, String);
 
@@ -77,7 +78,7 @@ fn safe_relative_path(path: &str) -> String {
 
 async fn project_entries(state: &AppState, project: &Project, prefix: &str) -> Result<Vec<ArchiveEntry>, ApiError> {
     let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        "SELECT path, kind, content FROM project_files WHERE project_id = $1 ORDER BY path ASC"
+        sql("SELECT path, kind, content FROM project_files WHERE project_id = $1 ORDER BY path ASC")
     )
     .bind(&project.id)
     .fetch_all(&state.db)
@@ -103,18 +104,20 @@ async fn project_entries(state: &AppState, project: &Project, prefix: &str) -> R
         compiler.used_resources(input)
     };
 
-    let account_files = sqlx::query_as::<_, (String, Vec<u8>)>("SELECT name, data FROM files WHERE owner_id = $1")
+    let account_files = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(sql("SELECT name, data, storage_key FROM files WHERE owner_id = $1"))
         .bind(&project.owner_id)
         .fetch_all(&state.db)
         .await
         .map_err(internal_error)?;
 
     let mut included = HashSet::new();
-    for (name, data) in account_files {
-        let is_used = used.paths.contains(&name) || used.font_files.contains(&name);
-        if is_used && !project_paths.contains(&name) && included.insert(name.clone()) {
-            entries.push(ArchiveEntry::File(format!("{prefix}{}", safe_relative_path(&name)), data));
-        }
+    let used_files: Vec<_> = account_files
+        .into_iter()
+        .filter(|(name, _, _)| used.paths.contains(name) || used.font_files.contains(name))
+        .filter(|(name, _, _)| !project_paths.contains(name) && included.insert(name.clone()))
+        .collect();
+    for (name, data) in state.file_storage.load_named(used_files).await? {
+        entries.push(ArchiveEntry::File(format!("{prefix}{}", safe_relative_path(&name)), data));
     }
 
     Ok(entries)
@@ -129,7 +132,7 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
         let mut names = NameAllocator::default();
 
         let subfolders = sqlx::query_as::<_, (String, String)>(
-            "SELECT id, name FROM folders WHERE parent_id = $1 AND owner_id = $2 ORDER BY name ASC"
+            sql("SELECT id, name FROM folders WHERE parent_id = $1 AND owner_id = $2 ORDER BY name ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
@@ -142,7 +145,7 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
         }
 
         let documents = sqlx::query_as::<_, (String, Option<Vec<u8>>)>(
-            "SELECT title, content FROM documents WHERE folder_id = $1 AND owner_id = $2 ORDER BY title ASC"
+            sql("SELECT title, content FROM documents WHERE folder_id = $1 AND owner_id = $2 ORDER BY title ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
@@ -155,21 +158,21 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
             entries.push(ArchiveEntry::File(format!("{prefix}{file_name}"), text.into_bytes()));
         }
 
-        let files = sqlx::query_as::<_, (String, Vec<u8>)>(
-            "SELECT name, data FROM files WHERE folder_id = $1 AND owner_id = $2 ORDER BY name ASC"
+        let files = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(
+            sql("SELECT name, data, storage_key FROM files WHERE folder_id = $1 AND owner_id = $2 ORDER BY name ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
         .fetch_all(&state.db)
         .await
         .map_err(internal_error)?;
-        for (name, data) in files {
+        for (name, data) in state.file_storage.load_named(files).await? {
             let file_name = names.claim(&safe_segment(&name, "file"));
             entries.push(ArchiveEntry::File(format!("{prefix}{file_name}"), data));
         }
 
         let projects = sqlx::query_as::<_, Project>(
-            "SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE folder_id = $1 AND owner_id = $2 ORDER BY name ASC"
+            sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE folder_id = $1 AND owner_id = $2 ORDER BY name ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
@@ -244,7 +247,7 @@ pub async fn download_folder(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     crate::sharing::access::require_folder_access(&state, &id, &user_id).await?;
-    let (folder_name, owner_id) = sqlx::query_as::<_, (String, String)>("SELECT name, owner_id FROM folders WHERE id = $1")
+    let (folder_name, owner_id) = sqlx::query_as::<_, (String, String)>(sql("SELECT name, owner_id FROM folders WHERE id = $1"))
         .bind(&id)
         .fetch_optional(&state.db)
         .await
