@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 use yrs::sync::Awareness;
-use yrs::{GetString, ReadTxn, Text, Transact};
+use yrs::updates::decoder::Decode;
+use yrs::{Doc, GetString, ReadTxn, StateVector, Text, Transact, Update};
 
 use crate::realtime::relay;
 use crate::AppState;
@@ -62,6 +63,34 @@ fn changed_range(current: &str, replacement: &str) -> (usize, usize, usize) {
     (prefix, current.len() - prefix - suffix, replacement.len() - suffix)
 }
 
+fn apply_replacement(doc: &Doc, replacement: &str) -> bool {
+    let text = doc.get_or_insert_text(TEXT_NAME);
+    let mut transaction = doc.transact_mut();
+    let current = text.get_string(&transaction);
+    if current == replacement {
+        return false;
+    }
+
+    let (start, removed_length, replacement_end) = changed_range(&current, replacement);
+    if removed_length > 0 {
+        text.remove_range(&mut transaction, start as u32, removed_length as u32);
+    }
+    if replacement_end > start {
+        text.insert(&mut transaction, start as u32, &replacement[start..replacement_end]);
+    }
+    true
+}
+
+pub fn merge_text_into_blob(stored: Option<&[u8]>, replacement: &str) -> Vec<u8> {
+    let doc = Doc::new();
+    if let Some(update) = stored.and_then(|bytes| Update::decode_v1(bytes).ok()) {
+        doc.transact_mut().apply_update(update);
+    }
+    apply_replacement(&doc, replacement);
+    let encoded = doc.transact().encode_state_as_update_v1(&StateVector::default());
+    encoded
+}
+
 pub async fn replace_text(state: &AppState, room_id: &str, replacement: &str) -> bool {
     let Some(awareness) = room(state, room_id).await else {
         return false;
@@ -69,26 +98,24 @@ pub async fn replace_text(state: &AppState, room_id: &str, replacement: &str) ->
     let update = {
         let awareness = awareness.read().await;
         let doc = awareness.doc();
-        let text = doc.get_or_insert_text(TEXT_NAME);
         let state_before = doc.transact().state_vector();
-        {
-            let mut transaction = doc.transact_mut();
-            let current = text.get_string(&transaction);
-            if current == replacement {
-                return true;
-            }
-
-            let (start, removed_length, replacement_end) = changed_range(&current, replacement);
-            if removed_length > 0 {
-                text.remove_range(&mut transaction, start as u32, removed_length as u32);
-            }
-            if replacement_end > start {
-                text.insert(&mut transaction, start as u32, &replacement[start..replacement_end]);
-            }
+        if !apply_replacement(doc, replacement) {
+            return true;
         }
         let difference = doc.transact().encode_diff_v1(&state_before);
         difference
     };
     relay::publish_update(state, room_id, update);
     true
+}
+
+pub async fn store_text(state: &AppState, room_id: &str, stored: Option<&[u8]>, replacement: &str) -> Vec<u8> {
+    if replace_text(state, room_id, replacement).await {
+        if let Some(awareness) = room(state, room_id).await {
+            let awareness = awareness.read().await;
+            let encoded = awareness.doc().transact().encode_state_as_update_v1(&StateVector::default());
+            return encoded;
+        }
+    }
+    merge_text_into_blob(stored, replacement)
 }

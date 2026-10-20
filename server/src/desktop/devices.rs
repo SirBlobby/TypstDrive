@@ -92,8 +92,32 @@ impl DeviceEvent {
 }
 
 pub async fn notify_devices(state: &AppState, user_id: &str, event: DeviceEvent) {
-    state.cluster.publish_event(&ClusterEvent::DeviceNotification { user_id: user_id.to_string(), event: event.clone() });
-    deliver_local(state, user_id, event).await;
+    let mut recipients = vec![user_id.to_string()];
+    for collaborator in collaborators_of(state, &event).await {
+        if !recipients.contains(&collaborator) {
+            recipients.push(collaborator);
+        }
+    }
+
+    for recipient in recipients {
+        state.cluster.publish_event(&ClusterEvent::DeviceNotification { user_id: recipient.clone(), event: event.clone() });
+        deliver_local(state, &recipient, event.clone()).await;
+    }
+}
+
+async fn collaborators_of(state: &AppState, event: &DeviceEvent) -> Vec<String> {
+    let (query, resource_id) = match (&event.document_id, &event.project_id) {
+        (Some(document_id), _) => ("SELECT user_id FROM collaborators WHERE document_id = $1", document_id),
+        (None, Some(project_id)) => ("SELECT user_id FROM project_collaborators WHERE project_id = $1", project_id),
+        _ => return Vec::new(),
+    };
+
+    sqlx::query_as::<_, (String,)>(sql(query))
+        .bind(resource_id)
+        .fetch_all(&state.db)
+        .await
+        .map(|rows| rows.into_iter().map(|(user_id,)| user_id).collect())
+        .unwrap_or_default()
 }
 
 pub async fn deliver_local(state: &AppState, user_id: &str, event: DeviceEvent) {

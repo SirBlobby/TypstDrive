@@ -246,15 +246,22 @@ pub async fn push_document(
 
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
+    let stored_blob = sqlx::query_as::<_, (Option<Vec<u8>>,)>(sql("SELECT content FROM documents WHERE id = $1"))
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .and_then(|(content,)| content);
+    let merged_blob = crate::realtime::live_documents::store_text(&state, &room, stored_blob.as_deref(), &payload.content).await;
+
     sqlx::query(sql("UPDATE documents SET content = $1, updated_at = $2 WHERE id = $3"))
-        .bind(encode_text_blob(&payload.content))
+        .bind(&merged_blob)
         .bind(&now)
         .bind(&id)
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    crate::realtime::live_documents::replace_text(&state, &room, &payload.content).await;
     crate::drive::activity::mark_document_edited(&state, &id, Some(&user_id)).await;
     let owner_id = document_owner(&state, &id).await.unwrap_or(user_id);
     notify_devices(&state, &owner_id, DeviceEvent::document(&id)).await;

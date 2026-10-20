@@ -242,7 +242,17 @@ pub async fn push_file(
     let stored = if kind == "binary" {
         incoming.clone()
     } else {
-        encode_text_blob(&String::from_utf8_lossy(&incoming))
+        let previous_blob = existing
+            .as_ref()
+            .filter(|(_, existing_kind, _)| existing_kind != "binary")
+            .and_then(|(_, _, content)| content.as_deref());
+        match existing.as_ref() {
+            Some((existing_id, _, _)) => {
+                let room = crate::realtime::live_documents::project_file_room(&project_id, existing_id);
+                crate::realtime::live_documents::store_text(&state, &room, previous_blob, &String::from_utf8_lossy(&incoming)).await
+            }
+            None => encode_text_blob(&String::from_utf8_lossy(&incoming)),
+        }
     };
 
     let mime_type = if kind == "binary" {
@@ -278,20 +288,6 @@ pub async fn push_file(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     crate::drive::activity::mark_project_edited(&state, &project_id, Some(&user_id)).await;
-
-    if kind == "text" {
-        let file_id = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM project_files WHERE project_id = $1 AND path = $2"))
-            .bind(&project_id)
-            .bind(&payload.path)
-            .fetch_optional(&state.db)
-            .await
-            .ok()
-            .flatten();
-        if let Some((file_id,)) = file_id {
-            let room = crate::realtime::live_documents::project_file_room(&project_id, &file_id);
-            crate::realtime::live_documents::replace_text(&state, &room, &String::from_utf8_lossy(&incoming)).await;
-        }
-    }
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&project_id)).await;
 
