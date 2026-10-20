@@ -12,13 +12,17 @@ RUN bun run build
 # Built for the target platform (under QEMU emulation for non-native arches).
 FROM rust:alpine AS backend-builder
 WORKDIR /app
-RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig git
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig git lld
 RUN git clone https://github.com/typst/typst.git typst \
     && git -C typst checkout bd5ebec285505889e8ff1d4f68804ab147a699f3
 COPY server/Cargo.* server/
+COPY server/.cargo server/.cargo
 COPY server/src server/src
 WORKDIR /app/server
-RUN cargo build --release
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/app/server/target \
+    cargo build --release && cp target/release/server /app/server-binary
 
 # Final Runtime Image
 FROM alpine:3.19
@@ -38,7 +42,7 @@ RUN case "$TARGETARCH" in \
     chmod +x /usr/local/bin/tinymist && \
     rm /tmp/tinymist.tar.gz
 COPY --from=frontend-builder /app/build /app/build
-COPY --from=backend-builder /app/server/target/release/server /app/server
+COPY --from=backend-builder /app/server-binary /app/server
 
 # --- Environment Variables ---
 # PORT            Server listen port (default: 3000)
@@ -65,6 +69,15 @@ COPY --from=backend-builder /app/server/target/release/server /app/server
 # S3_PREFIX            Folder inside the bucket (default: typstdrive)
 # S3_VIRTUAL_HOSTED_STYLE  Set to "true" for bucket.host style URLs
 # OBJECT_CACHE_MB      Memory cache for files read from object storage (default: 256)
+# PUBLIC_URL           Address people use to open TypstDrive. Needed for single sign-on and email links.
+# TRUST_PROXY_HEADERS  Set to "true" behind a reverse proxy to read X-Forwarded-For
+# SMTP_PROVIDER        "google" fills in the Gmail server and port
+# SMTP_HOST, SMTP_PORT, SMTP_SECURITY, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM
+#                      Outgoing mail for sign-in codes, verification, password reset and invitations
+# OIDC_PROVIDERS       Comma-separated OpenID Connect provider IDs, each configured with
+#                      OIDC_<ID>_ISSUER, OIDC_<ID>_CLIENT_ID and OIDC_<ID>_CLIENT_SECRET
+# GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_HOSTED_DOMAIN   Sign in with Google
+# GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET                         Sign in with GitHub
 ENV PORT=3000
 ENV STATIC_DIR=/app/build
 ENV DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
