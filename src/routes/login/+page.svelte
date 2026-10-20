@@ -1,115 +1,151 @@
 <script lang="ts">
+    import { brandingStore } from '$lib/ts/branding';
     import { goto } from '$app/navigation';
+    import { page } from '$app/state';
     import { onMount } from 'svelte';
-    import { userStore } from '$lib/ts/auth';
     import Icon from '@iconify/svelte';
-    import Footer from '$lib/components/Footer.svelte';
+    import { userStore } from '$lib/ts/auth';
+    import { fetchAuthOptions, postJson, readError, type AuthOptions } from '$lib/ts/auth-options';
+    import AuthShell from '$lib/components/auth/AuthShell.svelte';
+    import AuthField from '$lib/components/auth/AuthField.svelte';
+    import FormNotice from '$lib/components/auth/FormNotice.svelte';
+    import SsoButtons from '$lib/components/auth/SsoButtons.svelte';
+    import EmailCodeForm from '$lib/components/auth/EmailCodeForm.svelte';
+    import type { User } from '$lib/ts/auth';
+
+    const EMAIL_NOT_VERIFIED = 428;
 
     let email = $state('');
     let password = $state('');
-    let errorMsg = $state('');
-    let registrationEnabled = $state(true);
+    let errorMsg = $state(page.url.searchParams.get('sso_error') ?? '');
+    let infoMsg = $state('');
+    let needsVerification = $state(false);
+    let submitting = $state(false);
+    let options = $state<AuthOptions | null>(null);
+    let useEmailCode = $state(false);
+
+    let passwordAvailable = $derived(options?.password_login_enabled ?? true);
+    let emailCodeAvailable = $derived(options?.email_code_login_available ?? false);
+    let showEmailCode = $derived(emailCodeAvailable && (useEmailCode || !passwordAvailable));
+
+    const redirectTo = page.url.searchParams.get('redirect') ?? '/drive';
 
     async function login(e: Event) {
         e.preventDefault();
         errorMsg = '';
+        infoMsg = '';
+        needsVerification = false;
+        submitting = true;
         try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-
+            const res = await postJson('/api/auth/login', { email, password });
             if (!res.ok) {
-                const text = await res.text();
-                errorMsg = text || 'Login failed';
+                needsVerification = res.status === EMAIL_NOT_VERIFIED;
+                errorMsg = await readError(res, 'Login failed');
                 return;
             }
-
-            const user = await res.json();
-            userStore.set(user);
-            goto('/drive');
+            finishSignIn(await res.json());
         } catch (e: any) {
             errorMsg = e.message;
+        } finally {
+            submitting = false;
+        }
+    }
+
+    function finishSignIn(user: User) {
+        userStore.set(user);
+        goto(redirectTo.startsWith('/') ? redirectTo : '/drive');
+    }
+
+    function switchMethod(toEmailCode: boolean) {
+        useEmailCode = toEmailCode;
+        errorMsg = '';
+        infoMsg = '';
+        needsVerification = false;
+    }
+
+    async function resendVerification() {
+        const res = await postJson('/api/auth/verify-email/resend', { email });
+        if (res.ok) {
+            errorMsg = '';
+            needsVerification = false;
+            infoMsg = 'If the account needs it, a new verification email is on its way.';
+        } else {
+            errorMsg = await readError(res, 'Could not send the email');
         }
     }
 
     onMount(async () => {
         if ($userStore) { goto('/drive'); return; }
-        try {
-            const res = await fetch('/api/setup');
-            if (res.ok) {
-                const data = await res.json();
-                registrationEnabled = data.registration_enabled;
-            }
-        } catch {}
+        options = await fetchAuthOptions();
     });
 </script>
 
 <svelte:head>
-	<title>Login - TypstDrive</title>
-	<meta name="description" content="Sign in to TypstDrive." />
+	<title>Login - {$brandingStore.site_name}</title>
+	<meta name="description" content={`Sign in to ${$brandingStore.site_name}.`} />
 </svelte:head>
 
-<div class="min-h-screen flex flex-col bg-[var(--color-surface-muted)]">
-    <div class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md w-full space-y-8 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-10 shadow-2xl">
-            <div class="text-center">
-                <div class="inline-flex items-center justify-center w-24 h-24 rounded-lg bg-[var(--color-accent)] mb-6 mx-auto shadow-sm">
-                    <img src="/favicon.png" alt="TypstDrive" class="h-14 w-14" />
-                </div>
-                <h2 class="text-3xl font-extrabold tracking-tight text-[var(--color-ink)]">
-                    Welcome back
-                </h2>
-                <p class="mt-2 text-sm text-[var(--color-ink-muted)] font-medium">
-                    Sign in to your TypstDrive workspace
-                </p>
-            </div>
-            <form class="mt-8 space-y-6" onsubmit={login}>
-                <div class="space-y-5">
-                    <div>
-                        <label for="email" class="block text-sm font-semibold text-[var(--color-ink-muted)] mb-1.5">Email address</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Icon icon="mdi:email" class="text-[var(--color-ink-muted)]" />
-                            </div>
-                            <input id="email" name="email" type="email" required bind:value={email} class="block w-full rounded-md border border-[var(--color-line)] pl-10 pr-3 py-2.5 bg-[var(--color-surface)] text-[var(--color-ink)] placeholder-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none sm:text-sm transition-colors" placeholder="user@example.com">
-                        </div>
-                    </div>
-                    <div>
-                        <label for="password" class="block text-sm font-semibold text-[var(--color-ink-muted)] mb-1.5">Password</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Icon icon="mdi:lock" class="text-[var(--color-ink-muted)]" />
-                            </div>
-                            <input id="password" name="password" type="password" required bind:value={password} class="block w-full rounded-md border border-[var(--color-line)] pl-10 pr-3 py-2.5 bg-[var(--color-surface)] text-[var(--color-ink)] placeholder-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none sm:text-sm transition-colors" placeholder="••••••••">
-                        </div>
-                    </div>
-                </div>
-
-                {#if errorMsg}
-                    <div class="flex items-center gap-2 text-[var(--color-danger)] bg-[var(--color-danger)]/10 p-3 rounded-md text-sm border border-[var(--color-danger)]/20">
-                        <Icon icon="mdi:alert-circle" class="text-lg flex-shrink-0" />
-                        <span class="font-medium">{errorMsg}</span>
-                    </div>
-                {/if}
-
-                <div class="pt-2">
-                    <button type="submit" class="group w-full flex justify-center items-center gap-2 py-3 px-4 text-sm font-bold rounded-md text-white bg-[var(--color-accent)] hover:opacity-90 focus:outline-none transition">
-                        Sign in
-                        <Icon icon="mdi:arrow-right" class="text-lg group-hover:translate-x-1 transition-transform" />
-                    </button>
-                </div>
-            </form>
-            {#if registrationEnabled}
-            <div class="text-sm text-center mt-6 pt-4 border-t border-[var(--color-line)]">
-                <span class="text-[var(--color-ink-muted)]">New to TypstDrive? </span>
-                <a href="/register" class="font-bold text-[var(--color-accent)] hover:underline transition-colors">
-                    Create an account
-                </a>
-            </div>
+<AuthShell title="Welcome back" subtitle={`Sign in to your ${$brandingStore.site_name} workspace`}>
+    {#if errorMsg}
+        <FormNotice>
+            {errorMsg}
+            {#if needsVerification}
+                <button type="button" onclick={resendVerification} class="block mt-1 underline font-semibold">Send a new verification email</button>
             {/if}
-        </div>
-    </div>
-    <Footer />
-</div>
+        </FormNotice>
+    {/if}
+    {#if infoMsg}
+        <FormNotice tone="success">{infoMsg}</FormNotice>
+    {/if}
+    {#if $brandingStore.login_message}
+        <FormNotice tone="info"><span class="whitespace-pre-line">{$brandingStore.login_message}</span></FormNotice>
+    {/if}
+
+    {#if showEmailCode}
+        <EmailCodeForm bind:email onSignedIn={finishSignIn} />
+        {#if passwordAvailable}
+            <div class="text-center -mt-2">
+                <button type="button" onclick={() => switchMethod(false)} class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Sign in with a password instead</button>
+            </div>
+        {/if}
+    {:else if passwordAvailable}
+        <form class="space-y-6" onsubmit={login}>
+            <div class="space-y-5">
+                <AuthField id="email" label="Email address" icon="mdi:email" type="email" autocomplete="email" placeholder="user@example.com" bind:value={email} />
+                <AuthField id="password" label="Password" icon="mdi:lock" type="password" autocomplete="current-password" placeholder="Your password" bind:value={password} />
+            </div>
+
+            {#if options?.password_reset_available}
+                <div class="text-right -mt-3">
+                    <a href="/forgot-password" class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Forgot your password?</a>
+                </div>
+            {/if}
+
+            <button type="submit" disabled={submitting} class="group w-full flex justify-center items-center gap-2 py-3 px-4 text-sm font-bold rounded-md text-white bg-[var(--color-accent)] hover:opacity-90 focus:outline-none transition disabled:opacity-60">
+                Sign in
+                <Icon icon="mdi:arrow-right" class="text-lg group-hover:translate-x-1 transition-transform" />
+            </button>
+        </form>
+        {#if emailCodeAvailable}
+            <div class="text-center -mt-2">
+                <button type="button" onclick={() => switchMethod(true)} class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Email me a sign-in code instead</button>
+            </div>
+        {/if}
+    {/if}
+
+    {#if options}
+        <SsoButtons providers={options.providers} redirect={redirectTo} showDivider={passwordAvailable || emailCodeAvailable} />
+        {#if !passwordAvailable && !emailCodeAvailable && options.providers.length === 0}
+            <FormNotice tone="info">No sign-in method is available. Contact your administrator.</FormNotice>
+        {/if}
+    {/if}
+
+    {#snippet footer()}
+        {#if options?.registration_enabled}
+            <span class="text-[var(--color-ink-muted)]">New to {$brandingStore.site_name}? </span>
+            <a href="/register" class="font-bold text-[var(--color-accent)] hover:underline transition-colors">Create an account</a>
+        {:else}
+            <span class="text-[var(--color-ink-muted)]">Need an account? Ask your administrator.</span>
+        {/if}
+    {/snippet}
+</AuthShell>
