@@ -9,6 +9,8 @@
 	import DocumentAssetsModal from './DocumentAssetsModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
+	import { currentKeybind } from '$lib/ts/keybinds/keybinds-store';
+	import { matchesKeybind, shortcutText } from '$lib/ts/keybinds/key-format';
 	import CommentsPanel from './comments/CommentsPanel.svelte';
 	import InfoModal from './drive/InfoModal.svelte';
 	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
@@ -318,7 +320,7 @@
 	}
 
 	function handleShortcut(event: KeyboardEvent) {
-		if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+		if (matchesKeybind(currentKeybind('saveVersion'), event)) {
 			event.preventDefault();
 			if (!readOnly) handleSaveVersion();
 		}
@@ -385,7 +387,7 @@
 								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Document Info</button>
 								{#if !readOnly}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; handleSaveVersion(); }} disabled={saveStatus === 'saving'} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Save Version <span class="text-xs opacity-60">Ctrl+S</span></button>
+								<button onclick={() => { activeMenu = null; handleSaveVersion(); }} disabled={saveStatus === 'saving'} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Save Version <span class="text-xs opacity-60">{shortcutText(currentKeybind('saveVersion'))}</span></button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<button onclick={() => { activeMenu = null; openRename(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Rename</button>
 								<button onclick={() => { activeMenu = null; isShareModalOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Share</button>
@@ -430,7 +432,7 @@
 								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Copy (Ctrl+C)</button>
 								<button onclick={() => { activeMenu = null; navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t)); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Paste (Ctrl+V)</button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; if ($editorViewStore) openFind($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Find (Ctrl+F)</button>
+								<button onclick={() => { activeMenu = null; if ($editorViewStore) openFind($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Find <span class="text-xs opacity-60">{shortcutText(currentKeybind('find'))}</span></button>
 								<button onclick={() => { activeMenu = null; if ($editorViewStore) openReplace($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Search and Replace</button>
 							</div>
 						{/if}

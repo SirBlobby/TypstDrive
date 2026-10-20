@@ -7,6 +7,7 @@
 	import { insertTypstSetting } from '$lib/ts/typst-settings';
 	import { startCommentOnSelection } from '$lib/ts/comments';
 	import ToolbarButton from './ToolbarButton.svelte';
+	import { withShortcut } from '$lib/ts/keybinds/keybinds-store';
 
 	let { docId, readOnly, canComment, unsharedFileCount, onOpenAssets, onOpenPageSettings }: {
 		docId?: string;
@@ -129,12 +130,12 @@
 		</select>
 
 		<div class="flex items-center gap-1">
-			<ToolbarButton icon="mdi:format-bold" title="Bold" onclick={() => format('*', '*', 'bold')} />
-			<ToolbarButton icon="mdi:format-italic" title="Italic" onclick={() => format('_', '_', 'italic')} />
-			<ToolbarButton icon="mdi:code-tags" title="Code" onclick={() => format('`', '`', 'code')} />
+			<ToolbarButton icon="mdi:format-bold" title={withShortcut('Bold', 'bold')} onclick={() => format('*', '*', 'bold')} />
+			<ToolbarButton icon="mdi:format-italic" title={withShortcut('Italic', 'italic')} onclick={() => format('_', '_', 'italic')} />
+			<ToolbarButton icon="mdi:code-tags" title={withShortcut('Code', 'code')} onclick={() => format('`', '`', 'code')} />
 			<ToolbarButton icon="mdi:format-quote-close" title="Quote" onclick={() => $editorViewStore && insertQuote($editorViewStore)} />
 			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
-			<ToolbarButton icon="mdi:sigma" title="Math (Inline)" onclick={() => format('$ ', ' $', 'x = y')} />
+			<ToolbarButton icon="mdi:sigma" title={withShortcut('Math (Inline)', 'inlineMath')} onclick={() => format('$ ', ' $', 'x = y')} />
 			<ToolbarButton icon="mdi:math-integral" title="Math (Block)" onclick={() => format('$ \n  ', '\n$ ', 'x = y')} />
 			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
 			<ToolbarButton icon="mdi:format-list-bulleted" title="Bullet List" onclick={() => format('- ', '', 'List item')} />
@@ -166,11 +167,11 @@
 
 	<div class="flex items-center gap-1">
 		{#if canComment}
-			<ToolbarButton icon="mdi:comment-plus-outline" title="Comment on selection (Ctrl+Alt+M)" onclick={startCommentOnSelection} />
+			<ToolbarButton icon="mdi:comment-plus-outline" title={withShortcut('Comment on selection', 'addComment')} onclick={startCommentOnSelection} />
 		{/if}
-		<ToolbarButton icon="mdi:magnify" title="Find (Ctrl+F)" onclick={() => $editorViewStore && openFind($editorViewStore)} />
+		<ToolbarButton icon="mdi:magnify" title={withShortcut('Find', 'find')} onclick={() => $editorViewStore && openFind($editorViewStore)} />
 		{#if !readOnly}
-			<ToolbarButton icon="mdi:find-replace" title="Search and replace" onclick={() => $editorViewStore && openReplace($editorViewStore)} />
+			<ToolbarButton icon="mdi:find-replace" title={withShortcut('Search and replace', 'replace')} onclick={() => $editorViewStore && openReplace($editorViewStore)} />
 		{/if}
 	</div>
 

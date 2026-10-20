@@ -5,6 +5,7 @@ import { activeThreadStore, startCommentOnSelection } from '$lib/ts/comments';
 import { activeSuggestionStore } from '$lib/ts/suggestions';
 import { commentMarks } from '$lib/ts/editor-comment-marks';
 import { suggestionMarks } from '$lib/ts/editor-suggestions';
+import { currentKeybind } from '$lib/ts/keybinds/keybinds-store';
 
 function openThread(commentId: string) {
     activeThreadStore.set(commentId);
@@ -17,18 +18,19 @@ function openSuggestion(suggestionId: string) {
 }
 
 export function reviewExtensions(): Extension[] {
+    const commentKey = currentKeybind('addComment');
     return [
         commentMarks(openThread),
         suggestionMarks(openSuggestion),
-        keymap.of([
+        keymap.of(commentKey ? [
             {
-                key: 'Mod-Alt-m',
+                key: commentKey,
                 preventDefault: true,
                 run: () => {
                     startCommentOnSelection();
                     return true;
                 }
             }
-        ])
+        ] : [])
     ];
 }

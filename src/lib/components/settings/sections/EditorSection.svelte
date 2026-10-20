@@ -3,6 +3,7 @@
     import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
     import ToggleSwitch from '$lib/components/settings/ToggleSwitch.svelte';
+    import KeybindsCard from '$lib/components/settings/KeybindsCard.svelte';
     import { inputClass, secondaryButtonClass } from '$lib/ts/settings-ui';
     import { editorFonts, findEditorFont, loadEditorFont } from '$lib/ts/editor-fonts';
     import {
@@ -102,4 +103,6 @@
             <button type="button" onclick={() => editorSettingsStore.set(defaultEditorSettings)} class={secondaryButtonClass}>Reset to defaults</button>
         {/snippet}
     </SettingsCard>
+
+    <KeybindsCard />
 </div>

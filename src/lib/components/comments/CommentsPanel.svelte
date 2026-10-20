@@ -8,6 +8,8 @@
     import { activeSuggestionStore, loadSuggestions, suggestionsStore } from '$lib/ts/suggestions';
     import { doc } from '$lib/ts/yjs-setup';
     import { editorViewStore } from '$lib/ts/store';
+    import { currentKeybind } from '$lib/ts/keybinds/keybinds-store';
+    import { shortcutText } from '$lib/ts/keybinds/key-format';
     import { resolveRange } from '$lib/ts/document-anchors';
     import {
         activeThreadStore,
@@ -156,7 +158,7 @@
                 <Icon icon={filter === 'open' ? 'mdi:comment-outline' : 'mdi:check-all'} class="text-4xl opacity-50" />
                 <p class="text-sm">{filter === 'open' ? 'No open comments' : 'No resolved comments'}</p>
                 {#if filter === 'open' && canComment}
-                    <p class="max-w-[16rem] text-xs">Select text in the editor and press Ctrl+Alt+M, or right-click it, to comment on it.</p>
+                    <p class="max-w-[16rem] text-xs">Select text in the editor and press {shortcutText(currentKeybind('addComment')) || 'the comment shortcut'}, or right-click it, to comment on it.</p>
                 {/if}
             </div>
         {:else}

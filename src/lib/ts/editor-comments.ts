@@ -1,4 +1,4 @@
-import type { EditorView, KeyBinding } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 import type { ChangeSpec } from '@codemirror/state';
 
 function selectedLines(view: EditorView) {
@@ -33,8 +33,4 @@ export function toggleLineComment(view: EditorView, marker: string) {
 
     view.dispatch({ changes, scrollIntoView: true, userEvent: allCommented ? 'uncomment' : 'comment' });
     return true;
-}
-
-export function lineCommentKeymap(marker: string): KeyBinding[] {
-    return [{ key: 'Mod-/', run: (view) => toggleLineComment(view, marker), preventDefault: true }];
 }

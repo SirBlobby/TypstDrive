@@ -16,7 +16,7 @@
 	import { typstLspExtensions } from '../ts/editor-lsp';
 	import { setDiagnostics, lintGutter } from '@codemirror/lint';
 	import { bracketExtensions, typstBracketSettings } from '../ts/editor-brackets';
-	import { lineCommentKeymap } from '../ts/editor-comments';
+	import { editorKeybindExtension } from '../ts/editor-keybinds';
 	import { searchKeymap } from '@codemirror/search';
 	import { searchExtensions } from '../ts/editor-search';
 	import { editorSettingsStore } from '../ts/editor-settings';
@@ -50,7 +50,7 @@
 	let unsubscribeLspReconnect: () => void;
 	let unsubscribePreferences: () => void;
 
-	let currentTheme = 'Catppuccin';
+	let currentTheme = 'Cerberus';
 	let isDark = true;
 	let state: EditorState;
 	let client: LSPClient | null = null;
@@ -191,7 +191,8 @@
 				history(),
 				...bracketExtensions,
 				...searchExtensions(),
-				keymap.of([...lineCommentKeymap(isToml ? '#' : '//'), ...searchKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab] as any),
+				editorKeybindExtension(isToml ? '#' : '//', !isToml),
+				keymap.of([...searchKeymap.filter((binding) => binding.key !== 'Mod-f'), ...defaultKeymap, ...historyKeymap, indentWithTab] as any),
 				languageExtension,
 				yCollab(activeText, activeProvider.awareness),
 				...completionExtensions,
