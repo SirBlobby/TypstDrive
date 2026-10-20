@@ -71,10 +71,9 @@ pub async fn get_avatar(
 
 pub async fn get_user_avatar(
     State(state): State<AppState>,
-    jar: SignedCookieJar,
+    _signed_in: crate::accounts::signed_in::SignedInUser,
     Path(user_id): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    session_user_id(&jar)?;
     avatar_response(&state, &user_id).await
 }
 

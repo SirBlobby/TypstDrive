@@ -1,7 +1,7 @@
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
-use axum_extra::extract::cookie::SignedCookieJar;
+use crate::accounts::signed_in::SignedInUser;
 use serde::Serialize;
 
 use crate::db::sql;
@@ -32,12 +32,6 @@ pub struct DocumentText {
     pub text: String,
 }
 
-fn session_user(jar: &SignedCookieJar) -> Result<String, ApiError> {
-    jar.get("session_user_id")
-        .map(|cookie| cookie.value().to_string())
-        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))
-}
-
 fn internal_error(error: sqlx::Error) -> ApiError {
     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }
@@ -45,9 +39,9 @@ fn internal_error(error: sqlx::Error) -> ApiError {
 pub async fn list_images(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<Vec<LibraryImage>>, ApiError> {
-    let user = Some(session_user(&jar)?);
+    let user = Some(user_id);
     let (document, role) = access::document_role(&state, &document_id, &user).await.ok_or_else(access::forbidden)?;
 
     type ImageRow = (String, String, String, i64, String, Option<String>, i64);
@@ -78,9 +72,8 @@ pub async fn list_images(
 
 pub async fn list_documents(
     State(state): State<AppState>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<Vec<LibraryDocument>>, ApiError> {
-    let user_id = session_user(&jar)?;
     let documents = sqlx::query_as::<_, (String, String, String)>(sql(
         "SELECT d.id, d.title, d.updated_at FROM documents d WHERE d.owner_id = $1 \
          OR d.id IN (SELECT c.document_id FROM collaborators c WHERE c.user_id = $2) \
@@ -100,9 +93,9 @@ pub async fn list_documents(
 pub async fn document_text(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<DocumentText>, ApiError> {
-    let user = Some(session_user(&jar)?);
+    let user = Some(user_id);
     let (document, _) = access::document_role(&state, &document_id, &user).await.ok_or_else(access::forbidden)?;
     let room_id = crate::realtime::live_documents::document_room(&document_id);
     let text = match crate::realtime::live_documents::live_text(&state, &room_id).await {

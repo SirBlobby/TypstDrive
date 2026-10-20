@@ -11,6 +11,7 @@ pub mod password_reset;
 pub mod passwords;
 pub mod policy;
 pub mod sessions;
+pub mod signed_in;
 pub mod setup;
 pub mod sso;
 pub mod storage;

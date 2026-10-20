@@ -1,7 +1,7 @@
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
-use axum_extra::extract::cookie::SignedCookieJar;
+use crate::accounts::signed_in::SignedInUser;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -57,12 +57,6 @@ fn internal_error(error: sqlx::Error) -> ApiError {
     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }
 
-fn session_user(jar: &SignedCookieJar) -> Result<String, ApiError> {
-    jar.get("session_user_id")
-        .map(|cookie| cookie.value().to_string())
-        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))
-}
-
 fn not_found() -> ApiError {
     (StatusCode::NOT_FOUND, "Suggestion not found".to_string())
 }
@@ -110,9 +104,8 @@ async fn load_suggestion(state: &AppState, suggestion_id: &str) -> Result<Sugges
 pub async fn list_suggestions(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<Vec<SuggestionView>>, ApiError> {
-    let user_id = session_user(&jar)?;
     document_access(&state, &document_id, &user_id).await?;
     let rows = sqlx::query_as::<_, SuggestionRow>(sql_owned(format!(
         "{SUGGESTION_COLUMNS} WHERE document_id = $1 ORDER BY created_at DESC"
@@ -127,10 +120,9 @@ pub async fn list_suggestions(
 pub async fn create_suggestion(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
     Json(payload): Json<CreateSuggestionRequest>,
 ) -> Result<Json<SuggestionView>, ApiError> {
-    let user_id = session_user(&jar)?;
     if !document_access(&state, &document_id, &user_id).await?.can_suggest() {
         return Err((StatusCode::FORBIDDEN, "You cannot suggest changes to this document".to_string()));
     }
@@ -167,10 +159,9 @@ pub async fn create_suggestion(
 pub async fn update_suggestion(
     State(state): State<AppState>,
     Path(suggestion_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
     Json(payload): Json<UpdateSuggestionRequest>,
 ) -> Result<Json<SuggestionView>, ApiError> {
-    let user_id = session_user(&jar)?;
     let suggestion = load_suggestion(&state, &suggestion_id).await?;
     let role = document_access(&state, &suggestion.document_id, &user_id).await?;
 

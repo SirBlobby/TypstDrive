@@ -7,7 +7,7 @@ pub use history::save_when_leaving;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
-use axum_extra::extract::cookie::SignedCookieJar;
+use crate::accounts::signed_in::SignedInUser;
 use serde::{Deserialize, Serialize};
 
 use crate::db::sql;
@@ -39,12 +39,6 @@ fn internal_error(error: sqlx::Error) -> ApiError {
     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }
 
-fn session_user(jar: &SignedCookieJar) -> Result<String, ApiError> {
-    jar.get("session_user_id")
-        .map(|cookie| cookie.value().to_string())
-        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))
-}
-
 fn clean_label(label: Option<String>) -> Option<String> {
     label.map(|label| label.trim().chars().take(120).collect::<String>()).filter(|label| !label.is_empty())
 }
@@ -63,9 +57,8 @@ async fn require_editor(state: &AppState, document_id: &str, user_id: &str) -> R
 pub async fn get_versions(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<Vec<VersionView>>, ApiError> {
-    let user_id = session_user(&jar)?;
     access::document_role(&state, &document_id, &Some(user_id)).await.ok_or_else(access::forbidden)?;
     Ok(Json(list_versions(&state, &document_id).await.map_err(internal_error)?))
 }
@@ -73,10 +66,9 @@ pub async fn get_versions(
 pub async fn create_version(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
     Json(payload): Json<SaveVersionRequest>,
 ) -> Result<Json<SaveVersionResponse>, ApiError> {
-    let user_id = session_user(&jar)?;
     require_editor(&state, &document_id, &user_id).await?;
     let content = history::current_text(&state, &document_id)
         .await
@@ -96,10 +88,9 @@ pub async fn create_version(
 pub async fn rename_version(
     State(state): State<AppState>,
     Path((document_id, version_id)): Path<(String, String)>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
     Json(payload): Json<RenameVersionRequest>,
 ) -> Result<StatusCode, ApiError> {
-    let user_id = session_user(&jar)?;
     require_editor(&state, &document_id, &user_id).await?;
     let result = sqlx::query(sql("UPDATE document_versions SET label = $1 WHERE id = $2 AND document_id = $3"))
         .bind(clean_label(payload.label))
@@ -117,9 +108,8 @@ pub async fn rename_version(
 pub async fn restore_version(
     State(state): State<AppState>,
     Path((document_id, version_id)): Path<(String, String)>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
 ) -> Result<StatusCode, ApiError> {
-    let user_id = session_user(&jar)?;
     require_editor(&state, &document_id, &user_id).await?;
     let version = find_version(&state, &document_id, &version_id)
         .await

@@ -1,7 +1,7 @@
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
-use axum_extra::extract::cookie::SignedCookieJar;
+use crate::accounts::signed_in::SignedInUser;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -52,12 +52,6 @@ const COMMENT_COLUMNS: &str = "SELECT id, document_id, parent_id, user_id, conte
 
 fn internal_error(error: sqlx::Error) -> ApiError {
     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
-}
-
-fn session_user(jar: &SignedCookieJar) -> Result<String, ApiError> {
-    jar.get("session_user_id")
-        .map(|cookie| cookie.value().to_string())
-        .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))
 }
 
 fn not_found() -> ApiError {
@@ -129,9 +123,8 @@ async fn thread_root(state: &AppState, document_id: &str, parent_id: &str) -> Re
 pub async fn get_comments(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<Vec<CommentView>>, ApiError> {
-    let user_id = session_user(&jar)?;
     document_access(&state, &document_id, &user_id).await?;
     let rows = sqlx::query_as::<_, CommentRow>(sql_owned(format!("{COMMENT_COLUMNS} WHERE document_id = $1 ORDER BY created_at ASC")))
         .bind(&document_id)
@@ -144,10 +137,9 @@ pub async fn get_comments(
 pub async fn add_comment(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
     Json(payload): Json<CreateCommentRequest>,
 ) -> Result<Json<CommentView>, ApiError> {
-    let user_id = session_user(&jar)?;
     if !document_access(&state, &document_id, &user_id).await?.can_comment() {
         return Err(access::forbidden());
     }
@@ -192,10 +184,9 @@ pub async fn add_comment(
 pub async fn update_comment(
     State(state): State<AppState>,
     Path(comment_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
     Json(payload): Json<UpdateCommentRequest>,
 ) -> Result<Json<CommentView>, ApiError> {
-    let user_id = session_user(&jar)?;
     let comment = load_comment(&state, &comment_id).await?;
     let role = document_access(&state, &comment.document_id, &user_id).await?;
     let is_author = comment.user_id == user_id;
@@ -234,9 +225,8 @@ pub async fn update_comment(
 pub async fn delete_comment(
     State(state): State<AppState>,
     Path(comment_id): Path<String>,
-    jar: SignedCookieJar,
+    SignedInUser(user_id): SignedInUser,
 ) -> Result<StatusCode, ApiError> {
-    let user_id = session_user(&jar)?;
     let comment = load_comment(&state, &comment_id).await?;
     let role = document_access(&state, &comment.document_id, &user_id).await?;
     if comment.user_id != user_id && role != AccessRole::Owner {
