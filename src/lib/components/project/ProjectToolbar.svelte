@@ -119,7 +119,7 @@
 		fetch(`/api/export/pandoc/${format}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ text: content })
+			body: JSON.stringify({ text: content, project_id: projectId })
 		})
 			.then((res) => {
 				if (!res.ok) throw new Error('Export failed');

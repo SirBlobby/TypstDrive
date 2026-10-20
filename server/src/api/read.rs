@@ -154,8 +154,7 @@ pub async fn get_project_file(
     let (kind, mime_type, content) = row;
     let content = content.unwrap_or_default();
     if kind == "binary" {
-        return Ok(([(axum::http::header::CONTENT_TYPE, mime_type)], content).into_response());
+        return Ok(crate::user_content::response(&mime_type, content));
     }
-    let text = decode_text_blob(&content);
-    Ok(([(axum::http::header::CONTENT_TYPE, "text/plain; charset=utf-8".to_string())], text).into_response())
+    Ok(crate::user_content::text_response(decode_text_blob(&content)))
 }

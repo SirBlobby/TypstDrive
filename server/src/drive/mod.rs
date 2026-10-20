@@ -10,6 +10,7 @@ pub mod folder_colors;
 pub mod folders;
 pub mod item_info;
 pub mod people;
+pub mod project_paths;
 pub mod projects;
 pub mod stars;
 pub mod suggestions;

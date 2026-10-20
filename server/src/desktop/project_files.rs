@@ -190,9 +190,10 @@ pub async fn push_file(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(project_id): Path<String>,
-    Json(payload): Json<PushFileRequest>,
+    Json(mut payload): Json<PushFileRequest>,
 ) -> Result<PushOutcome, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
+    payload.path = crate::drive::project_paths::clean_project_path(&payload.path)?;
     let project = writable_project(&state, &project_id, &user_id).await?;
 
     let incoming = match payload.encoding.as_deref() {

@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, Query, State, Multipart},
-    http::{header, StatusCode},
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
@@ -14,6 +14,7 @@ use yrs::Update;
 use crate::{
     sharing::access::{inherited_role, require_folder_access, require_owned_folder, strongest_role, AccessRole},
     compile::compiler::ProjectInput,
+    drive::project_paths::clean_project_path,
     desktop::devices::{notify_devices, DeviceEvent},
     models::{
         CreateProjectFileRequest, CreateProjectRequest, Project, ProjectFile, UpdateProjectFileRequest,
@@ -68,6 +69,14 @@ fn slugify(name: &str) -> String {
     } else {
         trimmed
     }
+}
+
+fn can_edit_role(role: &str) -> bool {
+    matches!(role, "owner" | "editor")
+}
+
+fn read_only() -> (StatusCode, String) {
+    (StatusCode::FORBIDDEN, "Read-only access".to_string())
 }
 
 pub async fn project_role(
@@ -301,18 +310,14 @@ pub async fn update_project(
         project.name = name;
     }
     if let Some(entrypoint) = payload.entrypoint {
-        project.entrypoint = entrypoint;
+        project.entrypoint = clean_project_path(&entrypoint)?;
     }
     if let Some(folder_id) = payload.folder_id {
         require_owned_folder(&state, &Some(folder_id.clone()), &user_id).await?;
         project.folder_id = if folder_id.is_empty() { None } else { Some(folder_id) };
     }
     if let Some(public_role) = payload.public_role {
-        project.public_role = if public_role == "none" || public_role.is_empty() {
-            None
-        } else {
-            Some(public_role)
-        };
+        project.public_role = crate::sharing::links::parse_public_role(&public_role, false)?;
     }
 
     sqlx::query(sql("UPDATE projects SET name = $1, entrypoint = $2, folder_id = $3, public_role = $4, updated_at = $5 WHERE id = $6 AND owner_id = $7"))
@@ -403,20 +408,19 @@ pub async fn create_project_file(
     let (project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
-    if role == "viewer" {
-        return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
+    if !can_edit_role(&role) {
+        return Err(read_only());
     }
 
-    let kind = payload.kind.unwrap_or_else(|| "text".to_string());
+    let path = clean_project_path(&payload.path)?;
     let content = payload.content.unwrap_or_default();
     crate::accounts::storage::ensure_room(&state, &project.owner_id, content.len() as i64).await?;
     let file_id = Uuid::new_v4().to_string();
 
-    sqlx::query(sql("INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES ($1, $2, $3, $4, $5, 'text/plain')"))
+    sqlx::query(sql("INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES ($1, $2, $3, 'text', $4, 'text/plain')"))
     .bind(&file_id)
     .bind(&id)
-    .bind(&payload.path)
-    .bind(&kind)
+    .bind(&path)
     .bind(encode_text_blob(&content))
     .execute(&state.db)
     .await
@@ -444,14 +448,14 @@ pub async fn upload_project_file(
     let (project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
-    if role == "viewer" {
-        return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
+    if !can_edit_role(&role) {
+        return Err(read_only());
     }
 
     let mut uploaded = vec![];
 
     while let Some(field) = multipart.next_field().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))? {
-        let path = field.file_name().unwrap_or("unnamed").to_string();
+        let path = clean_project_path(field.file_name().unwrap_or("unnamed"))?;
         let mime_type = field.content_type().unwrap_or("application/octet-stream").to_string();
         let data = field.bytes().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?.to_vec();
 
@@ -512,9 +516,9 @@ pub async fn get_project_file(
     let bytes = content.unwrap_or_default();
 
     if kind == "binary" {
-        Ok(([(header::CONTENT_TYPE, mime_type)], bytes))
+        Ok(crate::user_content::response(&mime_type, bytes))
     } else {
-        Ok(([(header::CONTENT_TYPE, "text/plain".to_string())], decode_text_blob(&bytes).into_bytes()))
+        Ok(crate::user_content::text_response(decode_text_blob(&bytes)))
     }
 }
 
@@ -528,12 +532,13 @@ pub async fn update_project_file(
     let (project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
-    if role == "viewer" {
-        return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
+    if !can_edit_role(&role) {
+        return Err(read_only());
     }
 
+    let path = clean_project_path(&payload.path)?;
     let result = sqlx::query(sql("UPDATE project_files SET path = $1 WHERE id = $2 AND project_id = $3"))
-        .bind(&payload.path)
+        .bind(&path)
         .bind(&file_id)
         .bind(&id)
         .execute(&state.db)
@@ -559,8 +564,8 @@ pub async fn delete_project_file(
     let (project, role) = project_role(&state, &id, &user_id_opt)
         .await
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
-    if role == "viewer" {
-        return Err((StatusCode::FORBIDDEN, "Read-only access".to_string()));
+    if !can_edit_role(&role) {
+        return Err(read_only());
     }
 
     let result = sqlx::query(sql("DELETE FROM project_files WHERE id = $1 AND project_id = $2"))

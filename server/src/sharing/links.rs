@@ -95,6 +95,17 @@ pub struct LinkSettingsRequest {
     pub expires_at: Option<String>,
 }
 
+pub fn parse_public_role(value: &str, allow_suggester: bool) -> Result<Option<String>, ApiError> {
+    match value.trim() {
+        "viewer" => Ok(Some("viewer".to_string())),
+        "editor" => Ok(Some("editor".to_string())),
+        "suggester" if allow_suggester => Ok(Some("suggester".to_string())),
+        "none" | "" => Ok(None),
+        _ if allow_suggester => Err((StatusCode::BAD_REQUEST, invalid_role_message(LinkKind::Document).to_string())),
+        _ => Err((StatusCode::BAD_REQUEST, invalid_role_message(LinkKind::Project).to_string())),
+    }
+}
+
 fn grant_token(item_id: &str, password_hash: &str) -> String {
     let fingerprint = crate::hashing::sha256_hex(password_hash.as_bytes());
     format!("{item_id}.{}", &fingerprint[..16])
@@ -159,12 +170,13 @@ pub async fn link_status(
     }
 
     let password_hash = link.password_hash.clone().filter(|hash| !hash.is_empty());
+    let unlocked = password_hash.as_deref().map(|hash| is_granted(&item_id, hash)).unwrap_or(true);
     Ok(Json(LinkStatus {
-        name: link.name,
+        name: if unlocked { link.name } else { String::new() },
         public_role: link.public_role,
         requires_password: password_hash.is_some(),
         expired: is_expired(link.expires_at.as_deref()),
-        unlocked: password_hash.map(|hash| is_granted(&item_id, &hash)).unwrap_or(true),
+        unlocked,
         expires_at: link.expires_at,
     }))
 }
@@ -187,7 +199,7 @@ pub async fn unlock_link(
     }
 
     state.login_guard.ensure_allowed(UNLOCK_SCOPE, &item_id, &client.ip_address)?;
-    if !passwords::verify_password(&payload.password, &password_hash) {
+    if !passwords::verify_password(&payload.password, &password_hash).await {
         let rules = crate::accounts::auth_settings::load(&state).await.lockout_rules();
         state.login_guard.record_failure(UNLOCK_SCOPE, &item_id, &client.ip_address, rules);
         return Err((StatusCode::UNAUTHORIZED, "Incorrect password".to_string()));
@@ -241,19 +253,15 @@ pub async fn update_link(
         return Err((StatusCode::FORBIDDEN, "Only the owner can change link sharing".to_string()));
     }
 
-    let public_role = match payload.public_role.as_deref().map(str::trim) {
-        Some("viewer") => Some("viewer".to_string()),
-        Some("editor") => Some("editor".to_string()),
-        Some("suggester") if matches!(kind, LinkKind::Document) => Some("suggester".to_string()),
-        Some("none") | Some("") => None,
-        Some(_) => return Err((StatusCode::BAD_REQUEST, invalid_role_message(kind).to_string())),
+    let public_role = match payload.public_role.as_deref() {
+        Some(role) => parse_public_role(role, matches!(kind, LinkKind::Document))?,
         None => link.public_role.clone(),
     };
 
     let password_hash = match (&payload.password, payload.remove_password.unwrap_or(false)) {
         (_, true) => None,
         (Some(password), false) if !password.is_empty() => {
-            Some(passwords::hash_password(password).map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error))?)
+            Some(passwords::hash_password(password).await.map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error))?)
         }
         _ => link.password_hash.clone(),
     };

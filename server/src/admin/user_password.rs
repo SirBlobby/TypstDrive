@@ -22,9 +22,7 @@ pub async fn set_user_password(
     Json(payload): Json<SetPasswordRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let requester_id = require_admin(&state, &jar).await?;
-    if payload.password.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Password cannot be empty".to_string()));
-    }
+    crate::accounts::passwords::check_new_password(&payload.password)?;
 
     let (username,) = sqlx::query_as::<_, (String,)>(sql("SELECT username FROM users WHERE id = $1 AND account_kind = 'user'"))
         .bind(&user_id)
@@ -34,6 +32,7 @@ pub async fn set_user_password(
         .ok_or((StatusCode::NOT_FOUND, "User not found".to_string()))?;
 
     let password_hash = crate::accounts::passwords::hash_password(&payload.password)
+        .await
         .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error))?;
     sqlx::query(sql("UPDATE users SET password_hash = $1 WHERE id = $2"))
         .bind(&password_hash)

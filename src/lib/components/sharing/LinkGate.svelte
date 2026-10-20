@@ -42,7 +42,7 @@
                 <p class="text-sm text-[var(--color-ink-muted)] animate-pulse">Opening...</p>
             {:else if gateState === 'locked'}
                 <Icon icon="mdi:lock-outline" class="mx-auto mb-3 text-4xl text-[var(--color-accent)]" />
-                <h1 class="text-lg font-semibold text-[var(--color-ink)]">{link?.name}</h1>
+                <h1 class="text-lg font-semibold text-[var(--color-ink)]">{link?.name || 'Protected link'}</h1>
                 <p class="mt-1 text-sm text-[var(--color-ink-muted)]">This link is protected. Enter the password to open it.</p>
                 <form onsubmit={unlock} class="mt-5 space-y-3">
                     <input type="password" required bind:value={password} placeholder="Password" class="w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none" />

@@ -75,6 +75,12 @@ See [Bigger installs](scaling.md).
 | `S3_VIRTUAL_HOSTED_STYLE` | `false` | Use `bucket.host` addresses instead of `host/bucket`. |
 | `OBJECT_CACHE_MB` | `256` | Memory used to cache files from the bucket. |
 
+## Security
+
+| Setting | Default | What it does |
+|---|---|---|
+| `REMOTE_URLS_ALLOW_PRIVATE` | `false` | Documents can load images and data from web addresses. By default addresses on private networks, such as `localhost`, `192.168.x.x` or cloud metadata services, are blocked. Set to `true` only if documents need to reach servers on your own network. |
+
 ## Everything else
 
 Who can register, sign-in rules, branding, storage limits, teams, packages and API limits are all set in the browser. See [Administration](../admin/index.md).

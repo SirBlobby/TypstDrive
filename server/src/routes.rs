@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, compile, desktop, drive, packages, realtime, request_context, sharing, teams, AppState,
+    accounts, admin, api, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -47,9 +47,9 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/compile", post(compile::handlers::compile_handler))
         .route("/export/{format}", post(compile::handlers::export_handler))
-        .route("/export/pandoc/{format}", post(compile::handlers::pandoc_export_handler))
-        .route("/import/pandoc", post(compile::handlers::pandoc_import_handler))
-        .route("/lsp/{id}", get(compile::handlers::lsp_handler))
+        .route("/export/pandoc/{format}", post(compile::pandoc::pandoc_export_handler))
+        .route("/import/pandoc", post(compile::pandoc::pandoc_import_handler))
+        .route("/lsp/{id}", get(compile::lsp::lsp_handler))
         .route("/auth/register", post(accounts::auth::register))
         .route("/auth/login", post(accounts::auth::login))
         .route("/auth/logout", post(accounts::auth::logout))
@@ -206,5 +206,6 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/yjs", yjs_routes.layer(TraceLayer::new_for_http()))
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))
         .layer(axum::middleware::from_fn_with_state(state.clone(), request_context::attach_request_context))
+        .layer(axum::middleware::from_fn(security_headers::add_security_headers))
         .with_state(state)
 }

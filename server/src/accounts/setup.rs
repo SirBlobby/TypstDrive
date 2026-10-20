@@ -41,8 +41,10 @@ pub async fn run_setup(
     if payload.username.is_empty() || payload.password.is_empty() || payload.email.is_empty() {
         return Err((StatusCode::BAD_REQUEST, "Username, email, and password cannot be empty".to_string()));
     }
+    crate::accounts::passwords::check_new_password(&payload.password)?;
 
     let password_hash = crate::accounts::passwords::hash_password(&payload.password)
+        .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     let user_id = Uuid::new_v4().to_string();

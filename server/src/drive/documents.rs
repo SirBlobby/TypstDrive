@@ -93,6 +93,7 @@ pub async fn create_document(
         println!("Encoded Yjs state length: {}", encoded.len());
         encoded
     };
+    crate::accounts::storage::ensure_room(&state, &user_id, content.len() as i64).await?;
 
     sqlx::query(sql("INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5)"))
     .bind(&doc_id)
@@ -159,11 +160,7 @@ pub async fn update_document(
         }
     }
     if let Some(new_public_role) = payload.public_role {
-        if new_public_role == "none" || new_public_role.is_empty() {
-            doc.public_role = None;
-        } else {
-            doc.public_role = Some(new_public_role);
-        }
+        doc.public_role = crate::sharing::links::parse_public_role(&new_public_role, true)?;
     }
 
     sqlx::query(sql("UPDATE documents SET title = $1, folder_id = $2, public_role = $3, updated_at = $4 WHERE id = $5 AND owner_id = $6"))

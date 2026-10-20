@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use axum::{
     extract::{Multipart, Path, State},
-    http::{header, StatusCode},
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
@@ -183,7 +183,7 @@ pub async fn get_asset_data(
         .find(|stored| stored.file.id == file_id)
         .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
-    Ok(([(header::CONTENT_TYPE, stored.file.mime_type)], stored.data))
+    Ok(crate::user_content::response(&stored.file.mime_type, stored.data))
 }
 
 async fn require_document_owner(state: &AppState, document_id: &str, jar: &SignedCookieJar) -> Result<Document, ApiError> {

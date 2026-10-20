@@ -58,14 +58,12 @@ pub async fn confirm_reset(
     State(state): State<AppState>,
     Json(payload): Json<ResetConfirmation>,
 ) -> Result<StatusCode, ApiError> {
-    if payload.password.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Password cannot be empty".to_string()));
-    }
+    passwords::check_new_password(&payload.password)?;
 
     let invalid = (StatusCode::BAD_REQUEST, "This reset link is invalid or has expired".to_string());
     let consumed = email_tokens::consume(&state, &payload.token, TokenPurpose::ResetPassword).await.ok_or(invalid)?;
 
-    let password_hash = passwords::hash_password(&payload.password).map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error))?;
+    let password_hash = passwords::hash_password(&payload.password).await.map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error))?;
     sqlx::query(sql(
         "UPDATE users SET password_hash = $1, email_verified = CASE WHEN LOWER(email) = LOWER($2) THEN 1 ELSE email_verified END WHERE id = $3",
     ))

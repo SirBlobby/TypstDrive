@@ -50,8 +50,10 @@ pub async fn register(
     }
 
     policy.check_email_domain(&payload.email)?;
+    passwords::check_new_password(&payload.password)?;
 
     let password_hash = passwords::hash_password(&payload.password)
+        .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     let user_id = Uuid::new_v4().to_string();
@@ -88,8 +90,9 @@ pub async fn login(
     state.login_guard.ensure_allowed(LOGIN_SCOPE, &payload.email, &client.ip_address)?;
 
     let user = lookup::user_by_email(&state, &payload.email).await?;
+    let verified = passwords::verify_login(&payload.password, user.as_ref().map(|user| user.password_hash.as_str())).await;
     let user = match user {
-        Some(user) if passwords::verify_password(&payload.password, &user.password_hash) => user,
+        Some(user) if verified => user,
         _ => {
             state.login_guard.record_failure(LOGIN_SCOPE, &payload.email, &client.ip_address, settings.lockout_rules());
             return Err((StatusCode::UNAUTHORIZED, "Invalid email or password".to_string()));
@@ -187,18 +190,17 @@ pub async fn change_password(
     sessions::CurrentSession(session): sessions::CurrentSession,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<StatusCode, ApiError> {
-    if payload.new_password.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Password cannot be empty".to_string()));
-    }
+    passwords::check_new_password(&payload.new_password)?;
 
     let user = current_user(&state, &session.user_id).await?;
     if passwords::has_password(&user.password_hash)
-        && !passwords::verify_password(&payload.current_password, &user.password_hash)
+        && !passwords::verify_password(&payload.current_password, &user.password_hash).await
     {
         return Err((StatusCode::UNAUTHORIZED, "Invalid current password".to_string()));
     }
 
     let new_password_hash = passwords::hash_password(&payload.new_password)
+        .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     sqlx::query(sql("UPDATE users SET password_hash = $1 WHERE id = $2"))

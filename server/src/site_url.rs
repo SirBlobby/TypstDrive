@@ -14,5 +14,8 @@ pub fn link(path: &str) -> Option<String> {
 }
 
 pub fn is_safe_redirect(path: &str) -> bool {
-    path.starts_with('/') && !path.starts_with("//") && !path.contains('\\')
+    path.starts_with('/')
+        && !path.starts_with("//")
+        && !path.contains('\\')
+        && !path.chars().any(|character| character.is_control() || character.is_whitespace())
 }

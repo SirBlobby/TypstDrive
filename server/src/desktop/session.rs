@@ -68,8 +68,10 @@ pub async fn login(
     state.login_guard.ensure_allowed(DESKTOP_LOGIN_SCOPE, &payload.email, &client.ip_address)?;
 
     let user = crate::accounts::lookup::user_by_email(&state, &payload.email).await?;
+    let stored_hash = user.as_ref().map(|user| user.password_hash.as_str());
+    let verified = crate::accounts::passwords::verify_login(&payload.password, stored_hash).await;
     let user = match user {
-        Some(user) if crate::accounts::passwords::verify_password(&payload.password, &user.password_hash) => user,
+        Some(user) if verified => user,
         _ => {
             state.login_guard.record_failure(DESKTOP_LOGIN_SCOPE, &payload.email, &client.ip_address, settings.lockout_rules());
             return Err((StatusCode::UNAUTHORIZED, "Invalid email or password".to_string()));

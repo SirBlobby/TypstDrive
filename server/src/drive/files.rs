@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State, Query, Multipart},
-    http::{StatusCode, header},
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
@@ -131,7 +131,7 @@ pub async fn get_file_data(
     }
 
     let data = state.file_storage.load(data, storage_key).await?;
-    Ok(([(header::CONTENT_TYPE, mime_type)], data))
+    Ok(crate::user_content::response(&mime_type, data))
 }
 
 pub async fn can_read_shared_file(
