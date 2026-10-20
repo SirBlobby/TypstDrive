@@ -11,6 +11,7 @@ use crate::AppState;
 use crate::db::sql;
 
 const DEFAULT_QUOTA_KEY: &str = "storage.default_quota";
+const DEFAULT_TEAM_QUOTA_KEY: &str = "storage.default_team_quota";
 const MAX_QUOTA_BYTES: i64 = 1024 * 1024 * 1024 * 1024 * 1024;
 
 type ApiError = (StatusCode, String);
@@ -50,6 +51,7 @@ pub struct UserStorage {
     pub user_id: String,
     pub username: String,
     pub email: String,
+    pub is_team: bool,
     pub usage: StorageUsage,
     pub quota_override: Option<i64>,
     pub quota_bytes: i64,
@@ -58,13 +60,15 @@ pub struct UserStorage {
 #[derive(Serialize)]
 pub struct StorageOverview {
     pub default_quota_bytes: i64,
+    pub default_team_quota_bytes: i64,
     pub total_size_bytes: i64,
     pub users: Vec<UserStorage>,
 }
 
 #[derive(Deserialize)]
 pub struct DefaultQuotaRequest {
-    pub default_quota_bytes: i64,
+    pub default_quota_bytes: Option<i64>,
+    pub default_team_quota_bytes: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -116,12 +120,30 @@ pub async fn project_file_size(state: &AppState, project_id: &str, path: &str) -
     .unwrap_or(0)
 }
 
-pub async fn default_quota(state: &AppState) -> i64 {
-    crate::admin::site_settings::load_settings(state, "storage.")
+pub struct DefaultQuotas {
+    pub users: i64,
+    pub teams: i64,
+}
+
+impl DefaultQuotas {
+    fn for_account(&self, is_team: bool) -> i64 {
+        if is_team { self.teams } else { self.users }
+    }
+}
+
+pub async fn default_quotas(state: &AppState) -> DefaultQuotas {
+    let settings = crate::admin::site_settings::load_settings(state, "storage.").await;
+    let read = |key: &str| settings.get(key).and_then(|value| value.parse().ok()).unwrap_or(0);
+    DefaultQuotas { users: read(DEFAULT_QUOTA_KEY), teams: read(DEFAULT_TEAM_QUOTA_KEY) }
+}
+
+async fn is_team_account(state: &AppState, account_id: &str) -> bool {
+    sqlx::query_as::<_, (String,)>(sql("SELECT account_kind FROM users WHERE id = $1"))
+        .bind(account_id)
+        .fetch_optional(&state.db)
         .await
-        .get(DEFAULT_QUOTA_KEY)
-        .and_then(|value| value.parse().ok())
-        .unwrap_or(0)
+        .unwrap_or(None)
+        .is_some_and(|(account_kind,)| account_kind == "team")
 }
 
 async fn quota_override(state: &AppState, user_id: &str) -> Option<i64> {
@@ -136,7 +158,7 @@ async fn quota_override(state: &AppState, user_id: &str) -> Option<i64> {
 pub async fn quota_for(state: &AppState, user_id: &str) -> i64 {
     match quota_override(state, user_id).await {
         Some(quota) => quota,
-        None => default_quota(state).await,
+        None => default_quotas(state).await.for_account(is_team_account(state, user_id).await),
     }
 }
 
@@ -207,11 +229,11 @@ pub async fn overview(
     jar: SignedCookieJar,
 ) -> Result<Json<StorageOverview>, ApiError> {
     require_admin(&state, &jar).await?;
-    let default_quota_bytes = default_quota(&state).await;
+    let defaults = default_quotas(&state).await;
 
-    type OverviewRow = (String, String, String, Option<i64>, i64, i64, i64);
+    type OverviewRow = (String, String, String, String, Option<i64>, i64, i64, i64);
     let rows: Vec<OverviewRow> = sqlx::query_as(
-        sql("SELECT u.id, u.username, COALESCE(u.email, ''), q.quota_bytes, \
+        sql("SELECT u.id, u.username, COALESCE(u.email, 'Team space'), u.account_kind, q.quota_bytes, \
                 CAST((SELECT COALESCE(SUM(LENGTH(d.content)), 0) FROM documents d WHERE d.owner_id = u.id) AS BIGINT), \
                 CAST((SELECT COALESCE(SUM(f.size_bytes), 0) FROM files f WHERE f.owner_id = u.id) AS BIGINT), \
                 CAST((SELECT COALESCE(SUM(LENGTH(pf.content)), 0) FROM project_files pf \
@@ -225,32 +247,55 @@ pub async fn overview(
 
     let users: Vec<UserStorage> = rows
         .into_iter()
-        .map(|(user_id, username, email, quota_override, documents, files, projects)| UserStorage {
-            user_id,
-            username,
-            email,
-            usage: StorageUsage::new(documents, files, projects),
-            quota_override,
-            quota_bytes: quota_override.unwrap_or(default_quota_bytes),
+        .map(|(user_id, username, email, account_kind, quota_override, documents, files, projects)| {
+            let is_team = account_kind == "team";
+            UserStorage {
+                user_id,
+                username,
+                email,
+                is_team,
+                usage: StorageUsage::new(documents, files, projects),
+                quota_override,
+                quota_bytes: quota_override.unwrap_or(defaults.for_account(is_team)),
+            }
         })
         .collect();
 
     let total_size_bytes = users.iter().map(|user| user.usage.total_size_bytes).sum();
 
-    Ok(Json(StorageOverview { default_quota_bytes, total_size_bytes, users }))
+    Ok(Json(StorageOverview {
+        default_quota_bytes: defaults.users,
+        default_team_quota_bytes: defaults.teams,
+        total_size_bytes,
+        users,
+    }))
 }
 
 pub async fn update_default_quota(
     State(state): State<AppState>,
     jar: SignedCookieJar,
+    client: crate::accounts::client_info::ClientInfo,
     Json(payload): Json<DefaultQuotaRequest>,
 ) -> Result<StatusCode, ApiError> {
-    require_admin(&state, &jar).await?;
-    validate_quota(payload.default_quota_bytes)?;
+    let admin_id = require_admin(&state, &jar).await?;
+    let mut changes = Vec::new();
+    if let Some(quota) = payload.default_quota_bytes {
+        validate_quota(quota)?;
+        changes.push((DEFAULT_QUOTA_KEY, quota.to_string()));
+    }
+    if let Some(quota) = payload.default_team_quota_bytes {
+        validate_quota(quota)?;
+        changes.push((DEFAULT_TEAM_QUOTA_KEY, quota.to_string()));
+    }
 
-    crate::admin::site_settings::save_settings(&state, &[(DEFAULT_QUOTA_KEY, payload.default_quota_bytes.to_string())])
+    crate::admin::site_settings::save_settings(&state, &changes)
         .await
         .map_err(internal_error)?;
+
+    for (key, value) in &changes {
+        let action = if *key == DEFAULT_TEAM_QUOTA_KEY { "settings.storage_default_team_quota" } else { "settings.storage_default_quota" };
+        crate::admin::audit::record(&state, &admin_id, &client, action, "", value).await;
+    }
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -258,10 +303,11 @@ pub async fn update_default_quota(
 pub async fn update_user_quota(
     State(state): State<AppState>,
     jar: SignedCookieJar,
+    client: crate::accounts::client_info::ClientInfo,
     Path(user_id): Path<String>,
     Json(payload): Json<UserQuotaRequest>,
 ) -> Result<Json<UserQuotaResponse>, ApiError> {
-    require_admin(&state, &jar).await?;
+    let admin_id = require_admin(&state, &jar).await?;
 
     let user_exists = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM users WHERE id = $1"))
         .bind(&user_id)
@@ -294,6 +340,8 @@ pub async fn update_user_quota(
                 .map_err(internal_error)?;
         }
     }
+
+    crate::admin::audit::record(&state, &admin_id, &client, "storage.user_quota", &user_id, &format!("{:?}", payload.quota_bytes)).await;
 
     Ok(Json(UserQuotaResponse {
         quota_override: payload.quota_bytes,

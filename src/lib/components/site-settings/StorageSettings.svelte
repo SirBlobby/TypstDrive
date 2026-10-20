@@ -18,6 +18,7 @@
         user_id: string;
         username: string;
         email: string;
+        is_team: boolean;
         usage: StorageUsage;
         quota_override: number | null;
         quota_bytes: number;
@@ -27,6 +28,8 @@
     let totalBytes = $state(0);
     let savedDefaultQuota = $state<number | null>(null);
     let defaultDraft = $state<QuotaDraft>({ amount: '0', unit: 'GB' });
+    let savedTeamDefaultQuota = $state<number | null>(null);
+    let teamDefaultDraft = $state<QuotaDraft>({ amount: '0', unit: 'GB' });
     let loading = $state(true);
     let loadError = $state('');
     let savingDefault = $state(false);
@@ -38,7 +41,10 @@
     let savingUser = $state(false);
     let userError = $state('');
 
-    let defaultChanged = $derived(savedDefaultQuota !== null && draftToQuota(defaultDraft) !== savedDefaultQuota);
+    let defaultChanged = $derived(
+        savedDefaultQuota !== null &&
+            (draftToQuota(defaultDraft) !== savedDefaultQuota || draftToQuota(teamDefaultDraft) !== savedTeamDefaultQuota)
+    );
     let usersOverQuota = $derived(users.filter((user) => user.quota_bytes > 0 && user.usage.total_size_bytes > user.quota_bytes).length);
     let visibleUsers = $derived(
         users
@@ -51,6 +57,15 @@
 
     function formatQuota(bytes: number) {
         return bytes > 0 ? formatBytes(bytes) : 'Unlimited';
+    }
+
+    function defaultQuotaFor(user: UserStorage) {
+        return (user.is_team ? savedTeamDefaultQuota : savedDefaultQuota) ?? 0;
+    }
+
+    function discardDefaults() {
+        if (savedDefaultQuota !== null) defaultDraft = quotaToDraft(savedDefaultQuota);
+        if (savedTeamDefaultQuota !== null) teamDefaultDraft = quotaToDraft(savedTeamDefaultQuota);
     }
 
     function barColor(user: UserStorage) {
@@ -71,6 +86,8 @@
                 totalBytes = data.total_size_bytes;
                 savedDefaultQuota = data.default_quota_bytes;
                 defaultDraft = quotaToDraft(data.default_quota_bytes);
+                savedTeamDefaultQuota = data.default_team_quota_bytes;
+                teamDefaultDraft = quotaToDraft(data.default_team_quota_bytes);
             } else {
                 loadError = (await res.text()) || 'Failed to load storage usage.';
             }
@@ -82,7 +99,8 @@
 
     async function saveDefault() {
         const quota = draftToQuota(defaultDraft);
-        if (quota === null) {
+        const teamQuota = draftToQuota(teamDefaultDraft);
+        if (quota === null || teamQuota === null) {
             defaultMessage = { kind: 'error', text: 'Enter a valid size.' };
             return;
         }
@@ -92,13 +110,13 @@
             const res = await fetch('/api/admin/storage/default-quota', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ default_quota_bytes: quota })
+                body: JSON.stringify({ default_quota_bytes: quota, default_team_quota_bytes: teamQuota })
             });
             if (res.ok) {
-                defaultMessage = { kind: 'success', text: 'Default quota saved.' };
+                defaultMessage = { kind: 'success', text: 'Default quotas saved.' };
                 await load();
             } else {
-                defaultMessage = { kind: 'error', text: (await res.text()) || 'Failed to save default quota.' };
+                defaultMessage = { kind: 'error', text: (await res.text()) || 'Failed to save default quotas.' };
             }
         } catch {
             defaultMessage = { kind: 'error', text: 'Network error.' };
@@ -170,18 +188,21 @@
             {/each}
         </div>
 
-        <SettingsCard title="Default quota" description="Applies to every account without its own quota.">
-            <SettingsRow label="Maximum storage" description="Use 0 for unlimited." forId="default-quota">
+        <SettingsCard title="Default quotas" description="Applies to every account without its own quota. Use 0 for unlimited.">
+            <SettingsRow label="Users" description="Maximum storage for each user account." forId="default-quota">
                 <QuotaInput id="default-quota" bind:draft={defaultDraft} placeholder="0" />
+            </SettingsRow>
+            <SettingsRow label="Team spaces" description="Maximum storage for each team, shared by its members." forId="default-team-quota">
+                <QuotaInput id="default-team-quota" bind:draft={teamDefaultDraft} placeholder="0" />
             </SettingsRow>
             {#snippet footer()}
                 {#if defaultMessage}
                     <p class="mr-auto text-xs font-medium {defaultMessage.kind === 'success' ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}">{defaultMessage.text}</p>
                 {/if}
-                <button onclick={() => savedDefaultQuota !== null && (defaultDraft = quotaToDraft(savedDefaultQuota))} disabled={!defaultChanged || savingDefault} class={secondaryButtonClass}>Discard</button>
+                <button onclick={discardDefaults} disabled={!defaultChanged || savingDefault} class={secondaryButtonClass}>Discard</button>
                 <button onclick={saveDefault} disabled={!defaultChanged || savingDefault} class={primaryButtonClass}>
                     <Icon icon={savingDefault ? 'mdi:loading' : 'mdi:content-save-outline'} class="text-base {savingDefault ? 'animate-spin' : ''}" />
-                    {savingDefault ? 'Saving...' : 'Save default'}
+                    {savingDefault ? 'Saving...' : 'Save defaults'}
                 </button>
             {/snippet}
         </SettingsCard>
@@ -200,6 +221,9 @@
                         <div class="min-w-48 flex-1">
                             <p class="flex items-center gap-2 text-sm font-medium text-[var(--color-ink)]">
                                 {user.username}
+                                {#if user.is_team}
+                                    <span class="rounded-md bg-[var(--color-surface-sunken)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--color-ink-muted)]">Team</span>
+                                {/if}
                                 {#if user.quota_override !== null}
                                     <span class="rounded-md bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--color-accent)]">Custom</span>
                                 {/if}
@@ -230,7 +254,7 @@
                         <div class="mt-3 rounded-md border border-[var(--color-line)] bg-[var(--color-surface-muted)] p-4">
                             <label for="quota-{user.user_id}" class="block text-xs font-medium text-[var(--color-ink-muted)]">Maximum storage (leave empty for default, 0 for unlimited)</label>
                             <div class="mt-1 flex items-center gap-2">
-                                <QuotaInput id="quota-{user.user_id}" bind:draft={userDraft} placeholder="Default ({formatQuota(savedDefaultQuota ?? 0)})" />
+                                <QuotaInput id="quota-{user.user_id}" bind:draft={userDraft} placeholder="Default ({formatQuota(defaultQuotaFor(user))})" />
                             </div>
                             <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
                                 {#if userError}
