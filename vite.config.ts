@@ -1,13 +1,11 @@
 import tailwindcss from '@tailwindcss/vite';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { relative, sep } from 'node:path';
 import { defineConfig } from 'vite';
 import wasm from 'vite-plugin-wasm';
 
 function useRunesOutsideLibraries({ filename }: { filename: string }) {
-	const relativePath = relative(import.meta.dirname, filename);
-	const pathSegments = relativePath.toLowerCase().split(sep);
+	const pathSegments = filename.toLowerCase().split(/[\\/]/);
 	const isExternalLibrary = pathSegments.includes('node_modules');
 	return isExternalLibrary ? undefined : true;
 }
