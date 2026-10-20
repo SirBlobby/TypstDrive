@@ -12,9 +12,22 @@ export interface OwnershipTransfer {
     created_at: string;
 }
 
+export interface TeamMemberAccess {
+    user_id: string;
+    username: string;
+    email: string | null;
+    team_role: string;
+}
+
+export interface TeamAccess {
+    team_name: string;
+    members: TeamMemberAccess[];
+}
+
 export interface ShareInfo {
     is_owner: boolean;
     pending_transfer: OwnershipTransfer | null;
+    team: TeamAccess | null;
 }
 
 async function errorText(res: Response, fallback: string) {

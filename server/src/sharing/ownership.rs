@@ -12,6 +12,7 @@ use crate::{
     desktop::devices::{notify_devices, DeviceEvent},
     sharing::ownership_moves::{item_size, transfer_item},
     sharing::members::{owner_of, revalidate, ShareKind},
+    sharing::team_access::{team_access_for, TeamAccess},
     AppState,
 };
 use crate::db::{sql, sql_owned};
@@ -49,6 +50,7 @@ pub struct TransferList {
 pub struct ShareInfo {
     pub is_owner: bool,
     pub pending_transfer: Option<TransferView>,
+    pub team: Option<TeamAccess>,
 }
 
 const TRANSFER_COLUMNS: &str = "SELECT t.id, t.item_kind, t.item_id, t.from_user_id, sender.username AS from_username, \
@@ -249,7 +251,8 @@ pub async fn share_info(
 ) -> Result<Json<ShareInfo>, ApiError> {
     let user_id = session_user(&jar)?;
     let kind = parse_kind(&item_kind)?;
-    let is_owner = owner_of(&state, kind, &item_id).await? == user_id;
+    let owner_id = owner_of(&state, kind, &item_id).await?;
+    let is_owner = owner_id == user_id;
 
     let pending_transfer = if is_owner {
         fetch_transfers(&state, "t.item_id = $1", &item_id)
@@ -260,5 +263,7 @@ pub async fn share_info(
         None
     };
 
-    Ok(Json(ShareInfo { is_owner, pending_transfer }))
+    let team = team_access_for(&state, &owner_id, &user_id).await;
+
+    Ok(Json(ShareInfo { is_owner, pending_transfer, team }))
 }

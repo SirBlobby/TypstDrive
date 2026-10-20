@@ -3,7 +3,9 @@
     import Icon from '@iconify/svelte';
     import Modal from './Modal.svelte';
     import UnsharedFilesWarning from './UnsharedFilesWarning.svelte';
-    import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind } from '$lib/ts/ownership';
+    import LinkSharing from './sharing/LinkSharing.svelte';
+    import TeamMembersAccess from './sharing/TeamMembersAccess.svelte';
+    import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind, type TeamAccess } from '$lib/ts/ownership';
 
     let { onClose, itemId = undefined, kind = 'document' } = $props<{ onClose: () => void, itemId?: string, kind?: ShareKind }>();
 
@@ -22,7 +24,6 @@
 
     let link = $state('');
     let copied = $state(false);
-    let role = $state('editor');
 
     let collaborators = $state<CollaboratorView[]>([]);
     let collabLoading = $state(false);
@@ -30,6 +31,7 @@
 
     let isOwner = $state(false);
     let pendingTransfer = $state<OwnershipTransfer | null>(null);
+    let team = $state<TeamAccess | null>(null);
     let confirmTransferTo = $state<CollaboratorView | null>(null);
     let transferBusy = $state(false);
     let transferError = $state('');
@@ -39,6 +41,7 @@
         const info = await fetchShareInfo(kind as ShareKind, itemId);
         isOwner = info?.is_owner ?? false;
         pendingTransfer = info?.pending_transfer ?? null;
+        team = info?.team ?? null;
     }
 
     async function startTransfer(collab: CollaboratorView) {
@@ -129,7 +132,7 @@
 
     $effect(() => {
         const itemUrl = itemId && itemPage ? `${window.location.origin}${itemPage}/${itemId}` : window.location.href.split('?')[0];
-        link = `${itemUrl}?role=${role}`;
+        link = itemUrl;
     });
 
     function copyLink() {
@@ -190,6 +193,11 @@
                 </div>
             {/if}
         </div>
+
+        {#if team && team.members.length > 0}
+            <div class="h-px bg-[var(--color-line)]"></div>
+            <TeamMembersAccess {team} />
+        {/if}
 
         {#if collabLoading}
             <div class="flex items-center gap-2 text-sm text-[var(--color-ink-muted)] py-1">
@@ -265,25 +273,9 @@
             </div>
         {/if}
 
-        {#if itemPage}
-        <div class="h-px bg-[var(--color-line)]"></div>
-
-        <div class="flex flex-col gap-2">
-            <div class="text-xs font-medium text-[var(--color-ink-muted)]">General access</div>
-            <div class="flex items-center gap-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-muted)] p-3 transition hover:bg-[var(--color-surface-sunken)]">
-                <div class="rounded-md bg-[var(--color-surface-sunken)] p-2.5 text-[var(--color-ink-muted)]">
-                    <Icon icon="mdi:earth" class="text-xl" />
-                </div>
-                <div class="flex-1">
-                    <h4 class="text-sm font-medium text-[var(--color-ink)]">Anyone with the link</h4>
-                    <p class="text-xs text-[var(--color-ink-muted)] mt-0.5">Can view and collaborate based on role</p>
-                </div>
-                <select bind:value={role} class="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] transition hover:bg-[var(--color-surface-sunken)] focus:outline-none cursor-pointer">
-                    <option value="viewer">Viewer</option>
-                    <option value="editor">Editor</option>
-                </select>
-            </div>
-        </div>
+        {#if itemPage && itemId && kind !== 'folder'}
+            <div class="h-px bg-[var(--color-line)]"></div>
+            <LinkSharing kind={kind === 'project' ? 'project' : 'document'} {itemId} canManage={isOwner} />
         {/if}
     </div>
 

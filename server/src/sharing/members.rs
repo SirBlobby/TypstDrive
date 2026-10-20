@@ -11,7 +11,7 @@ use crate::{
     models::{CollaboratorView, InviteRequest},
     AppState,
 };
-use crate::db::{sql, sql_owned};
+use crate::db::sql_owned;
 
 type ApiError = (StatusCode, String);
 
@@ -181,12 +181,7 @@ async fn invite(
         return Err((StatusCode::BAD_REQUEST, "Role must be viewer or editor".to_string()));
     }
 
-    let (invited_user_id,) = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM users WHERE LOWER(email) = LOWER($1)"))
-        .bind(payload.email.trim())
-        .fetch_optional(&state.db)
-        .await
-        .map_err(internal_error)?
-        .ok_or((StatusCode::NOT_FOUND, "User with that email not found".to_string()))?;
+    let invited_user_id = crate::accounts::lookup::shareable_user_id(state, &payload.email).await?;
 
     if invited_user_id == inviter_id {
         return Err((StatusCode::BAD_REQUEST, format!("You already own this {}", kind.label())));

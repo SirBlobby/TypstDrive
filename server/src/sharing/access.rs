@@ -108,10 +108,14 @@ pub async fn folder_role(state: &AppState, folder_id: &str, user_id: &Option<Str
     if ancestors.iter().any(|(owner_id, _)| owner_id == uid) {
         return Some(AccessRole::Owner);
     }
+    let team_role = match ancestors.first() {
+        Some((owner_id, _)) => crate::teams::content_role(state, owner_id, uid).await,
+        None => None,
+    };
     ancestors
         .iter()
         .filter_map(|(_, role)| role.as_deref().and_then(AccessRole::from_share_role))
-        .fold(None, |best, role| strongest_role(best, Some(role)))
+        .fold(team_role, |best, role| strongest_role(best, Some(role)))
 }
 
 pub async fn folder_owner(state: &AppState, folder_id: &str) -> Option<String> {
@@ -171,7 +175,7 @@ pub async fn document_role(
     user_id: &Option<String>,
 ) -> Option<(Document, AccessRole)> {
     let document = sqlx::query_as::<_, Document>(
-        sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1")
+        sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, link_password_hash, link_expires_at, created_at, updated_at FROM documents WHERE id = $1")
     )
     .bind(document_id)
     .fetch_optional(&state.db)
@@ -194,9 +198,15 @@ pub async fn document_role(
         .flatten()
         .and_then(|(role,)| AccessRole::from_share_role(&role));
         role = strongest_role(role, inherited_role(state, &document.folder_id, &document.owner_id, user_id).await);
+        role = strongest_role(role, crate::teams::content_role(state, &document.owner_id, uid).await);
     }
 
-    let public_role = document.public_role.as_deref().and_then(AccessRole::from_share_role);
+    let public_role = crate::sharing::links::public_access(
+        &document.id,
+        document.public_role.as_deref(),
+        document.link_password_hash.as_deref(),
+        document.link_expires_at.as_deref(),
+    );
     strongest_role(role, public_role).map(|role| (document, role))
 }
 
