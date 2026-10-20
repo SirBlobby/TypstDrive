@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { userStore } from '$lib/ts/auth';
-	import type { Package } from '$lib/ts/packages';
+	import { fetchUserPackagePolicy, type Package, type UserPackagePolicy } from '$lib/ts/packages';
 	import Navbar from '$lib/components/drive/Navbar.svelte';
 	import DriveSidebar from '$lib/components/drive/DriveSidebar.svelte';
 	import PackageCard from '$lib/components/packages/PackageCard.svelte';
@@ -13,6 +13,7 @@
 	let searchQuery = $state('');
 	let ownership = $state<'all' | 'mine'>('all');
 	let packageToDelete = $state<Package | null>(null);
+	let policy = $state<UserPackagePolicy | null>(null);
 
 	let visiblePackages = $derived.by(() => {
 		const query = searchQuery.trim().toLowerCase();
@@ -24,7 +25,8 @@
 	});
 
 	function canDelete(pkg: Package) {
-		return pkg.owner_id === $userStore?.id || Boolean($userStore?.is_admin);
+		if ($userStore?.is_admin) return true;
+		return pkg.owner_id === $userStore?.id && Boolean(policy?.can_delete_own);
 	}
 
 	async function load() {
@@ -46,7 +48,10 @@
 		if (res.ok) packages = packages.filter((p) => p.id !== pkg.id);
 	}
 
-	onMount(load);
+	onMount(async () => {
+		policy = await fetchUserPackagePolicy();
+		await load();
+	});
 </script>
 
 <svelte:head>
@@ -105,7 +110,11 @@
 						<Icon icon="mdi:package-variant" class="text-4xl" />
 					</div>
 					<h3 class="text-lg font-semibold text-[var(--color-ink)] mb-1">No packages yet</h3>
-					<p class="text-sm text-[var(--color-ink-muted)] max-w-sm">Open a project and choose Publish to share it as a package everyone on this instance can import.</p>
+					<p class="text-sm text-[var(--color-ink-muted)] max-w-sm">
+						{policy && !policy.can_publish
+							? 'Package publishing is not available for your account on this instance.'
+							: 'Open a project and choose Publish to share it as a package everyone on this instance can import.'}
+					</p>
 				</div>
 			{:else if visiblePackages.length === 0}
 				<div class="min-h-[30vh] flex flex-col items-center justify-center text-center text-[var(--color-ink-muted)]">

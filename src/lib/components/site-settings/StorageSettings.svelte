@@ -2,10 +2,11 @@
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import { formatBytes, inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import { QUOTA_UNITS, draftToQuota, quotaToDraft, usageShare, type QuotaDraft } from '$lib/ts/storage-quota';
+    import { draftToQuota, quotaToDraft, usageShare, type QuotaDraft } from '$lib/ts/storage-quota';
     import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import QuotaInput from './QuotaInput.svelte';
 
     type StorageUsage = {
         documents_size_bytes: number;
@@ -148,29 +149,6 @@
     onMount(load);
 </script>
 
-{#snippet quotaInput(id: string, draft: QuotaDraft, placeholder: string, onChange: (draft: QuotaDraft) => void)}
-    <input
-        {id}
-        type="number"
-        min="0"
-        step="any"
-        value={draft.amount}
-        {placeholder}
-        oninput={(e) => onChange({ ...draft, amount: (e.currentTarget as HTMLInputElement).value })}
-        class="{inputClass} sm:!max-w-32"
-    />
-    <select
-        value={draft.unit}
-        onchange={(e) => onChange({ ...draft, unit: (e.currentTarget as HTMLSelectElement).value as QuotaDraft['unit'] })}
-        aria-label="Unit"
-        class="{inputClass} !w-auto"
-    >
-        {#each QUOTA_UNITS as unit}
-            <option value={unit}>{unit}</option>
-        {/each}
-    </select>
-{/snippet}
-
 <SettingsHeader
     title="Storage"
     description="See how much space each account uses and limit how much they can store. Quotas block new uploads once an account is full; existing data is never removed."
@@ -194,7 +172,7 @@
 
         <SettingsCard title="Default quota" description="Applies to every account without its own quota.">
             <SettingsRow label="Maximum storage" description="Use 0 for unlimited." forId="default-quota">
-                {@render quotaInput('default-quota', defaultDraft, '0', (draft) => (defaultDraft = draft))}
+                <QuotaInput id="default-quota" bind:draft={defaultDraft} placeholder="0" />
             </SettingsRow>
             {#snippet footer()}
                 {#if defaultMessage}
@@ -252,7 +230,7 @@
                         <div class="mt-3 rounded-md border border-[var(--color-line)] bg-[var(--color-surface-muted)] p-4">
                             <label for="quota-{user.user_id}" class="block text-xs font-medium text-[var(--color-ink-muted)]">Maximum storage (leave empty for default, 0 for unlimited)</label>
                             <div class="mt-1 flex items-center gap-2">
-                                {@render quotaInput(`quota-${user.user_id}`, userDraft, `Default (${formatQuota(savedDefaultQuota ?? 0)})`, (draft) => (userDraft = draft))}
+                                <QuotaInput id="quota-{user.user_id}" bind:draft={userDraft} placeholder="Default ({formatQuota(savedDefaultQuota ?? 0)})" />
                             </div>
                             <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
                                 {#if userError}
