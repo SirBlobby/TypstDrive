@@ -132,7 +132,7 @@ TypstDrive uses the [Typst](https://github.com/typst/typst) compiler, which is a
 
 ## Disclaimer
 
-TypstDrive is a community application and is not affiliated with, endorsed by, or supported by the official Typst project or Typst GmbH. "Typst" is used only to describe the document language TypstDrive works with. Links to Typst documentation and Typst Universe open the official Typst website.
+TypstDrive is a community application and is not affiliated with, endorsed by, or supported by the official Typst project. "Typst" is used only to describe the document language TypstDrive works with. Links to Typst documentation and Typst Universe open the official Typst website.
 
 ## Previews
 
