@@ -8,6 +8,7 @@
     import SettingsSidebar from '$lib/components/settings/SettingsSidebar.svelte';
     import AccountSection from '$lib/components/settings/sections/AccountSection.svelte';
     import AppearanceSection from '$lib/components/settings/sections/AppearanceSection.svelte';
+    import EditorSection from '$lib/components/settings/sections/EditorSection.svelte';
     import StorageSection from '$lib/components/settings/sections/StorageSection.svelte';
     import ApiKeysSection from '$lib/components/settings/sections/ApiKeysSection.svelte';
     import DevicesSection from '$lib/components/settings/sections/DevicesSection.svelte';
@@ -17,6 +18,7 @@
         { id: 'account', label: 'Account', icon: 'mdi:account-outline' },
         { id: 'security', label: 'Security', icon: 'mdi:shield-lock-outline' },
         { id: 'appearance', label: 'Appearance', icon: 'mdi:palette-outline' },
+        { id: 'editor', label: 'Editor', icon: 'mdi:code-braces' },
         { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
         { id: 'api-keys', label: 'API Keys', icon: 'mdi:key-outline' },
         { id: 'devices', label: 'Devices', icon: 'mdi:devices' }
@@ -64,6 +66,8 @@
                     <SecuritySection />
                 {:else if activeSection === 'appearance'}
                     <AppearanceSection />
+                {:else if activeSection === 'editor'}
+                    <EditorSection />
                 {:else if activeSection === 'storage'}
                     <StorageSection />
                 {:else if activeSection === 'api-keys'}
