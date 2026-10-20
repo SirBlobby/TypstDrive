@@ -2,10 +2,12 @@
     import Icon from '@iconify/svelte';
     import type { Package, PackageVersion } from '$lib/ts/packages';
 
-    let { pkg, canDelete, onDelete }: {
+    let { pkg, canDelete, canManage, onDelete, onManageAccess }: {
         pkg: Package;
         canDelete: boolean;
+        canManage: boolean;
         onDelete: (pkg: Package) => void;
+        onManageAccess: (pkg: Package) => void;
     } = $props();
 
     let showVersions = $state(false);
@@ -56,6 +58,12 @@
             <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
                     <h3 class="font-semibold text-[var(--color-ink)] truncate" title={pkg.name}>{pkg.name}</h3>
+                    {#if pkg.visibility === 'private'}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)] px-1.5 py-0.5 rounded">
+                            <Icon icon="mdi:lock-outline" class="text-xs" />
+                            Private
+                        </span>
+                    {/if}
                     {#if pkg.latest_version}
                         <span class="text-xs font-mono bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">v{pkg.latest_version}</span>
                     {/if}
@@ -64,6 +72,11 @@
                     by {pkg.owner_name ?? 'unknown'} · published {formatDate(pkg.created_at)}
                 </p>
             </div>
+            {#if canManage}
+                <button onclick={() => onManageAccess(pkg)} title="Manage access" aria-label="Manage access" class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors">
+                    <Icon icon="mdi:account-lock-outline" class="text-lg" />
+                </button>
+            {/if}
             {#if canDelete}
                 <button onclick={() => onDelete(pkg)} title="Delete package" aria-label="Delete package" class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors">
                     <Icon icon="mdi:trash-can-outline" class="text-lg" />

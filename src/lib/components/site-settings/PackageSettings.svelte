@@ -109,6 +109,18 @@
             </SettingsRow>
         </SettingsCard>
 
+        <SettingsCard title="Private packages" description="Private packages can only be used by their owner and the people and team spaces they are shared with.">
+            <SettingsRow label="Allow private packages" description="When off, members can only publish public packages. Packages that are already private stay private.">
+                <ToggleSwitch label="Allow private packages" bind:checked={policy.allow_private_packages} />
+            </SettingsRow>
+            <SettingsRow label="Default for new packages" description="Who can use a package when it is first published, unless the publisher picks otherwise." forId="default-package-visibility">
+                <select id="default-package-visibility" bind:value={policy.default_visibility} class="{inputClass} sm:!max-w-40">
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                </select>
+            </SettingsRow>
+        </SettingsCard>
+
         <SettingsCard title="Limits" description="Applies to every publish, including administrators. Use 0 for no limit.">
             <SettingsRow label="Maximum package size" description="Total size of all files in one published version." forId="max-package-size">
                 <QuotaInput id="max-package-size" bind:draft={sizeDraft} placeholder="0" />

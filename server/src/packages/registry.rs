@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::{
     models::{Package, PackageVersion, Project, PublishPackageRequest},
     packages::policy::{is_admin, load_policy},
+    packages::visibility,
     drive::projects::decode_text_blob,
     AppState,
 };
@@ -102,13 +103,7 @@ pub async fn publish_package(
         return Err((StatusCode::BAD_REQUEST, "Version must be in the form major.minor.patch".to_string()));
     }
 
-    let existing = sqlx::query_as::<_, Package>(
-        sql("SELECT id, owner_id, namespace, name, description, created_at FROM packages WHERE namespace = 'typstdrive' AND name = $1")
-    )
-    .bind(&name)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let existing = visibility::find_by_name(&state, &name).await?;
 
     let package = match existing {
         Some(pkg) => {
@@ -118,17 +113,19 @@ pub async fn publish_package(
             pkg
         }
         None => {
+            let package_visibility = policy.visibility_for_new_package(payload.visibility.as_deref(), user_is_admin)?;
             let package_id = Uuid::new_v4().to_string();
-            sqlx::query(sql("INSERT INTO packages (id, owner_id, namespace, name, description) VALUES ($1, $2, 'typstdrive', $3, $4)"))
+            sqlx::query(sql("INSERT INTO packages (id, owner_id, namespace, name, description, visibility) VALUES ($1, $2, 'typstdrive', $3, $4, $5)"))
             .bind(&package_id)
             .bind(&user_id)
             .bind(&name)
             .bind(&manifest.package.description)
+            .bind(package_visibility)
             .execute(&state.db)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            sqlx::query_as::<_, Package>(sql("SELECT id, owner_id, namespace, name, description, created_at FROM packages WHERE id = $1"))
+            sqlx::query_as::<_, Package>(sql("SELECT id, owner_id, namespace, name, description, visibility, created_at FROM packages WHERE id = $1"))
             .bind(&package_id)
             .fetch_one(&state.db)
             .await
@@ -190,19 +187,14 @@ pub async fn list_packages(
     State(state): State<AppState>,
     jar: SignedCookieJar,
 ) -> Result<Json<Vec<Package>>, (StatusCode, String)> {
-    jar.get("session_user_id").map(|c| c.value().to_string())
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
-    let packages = sqlx::query_as::<_, Package>(
-        sql("SELECT p.id, p.owner_id, p.namespace, p.name, p.description, p.created_at, \
-         u.username as owner_name, \
-         (SELECT v.version FROM package_versions v WHERE v.package_id = p.id ORDER BY v.created_at DESC LIMIT 1) as latest_version \
-         FROM packages p JOIN users u ON u.id = p.owner_id \
-         ORDER BY p.name ASC")
-    )
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let packages = if is_admin(&state, &user_id).await? {
+        visibility::list_all(&state).await?
+    } else {
+        visibility::list_visible(&state, &user_id).await?
+    };
 
     Ok(Json(packages))
 }
@@ -212,15 +204,20 @@ pub async fn list_versions(
     Path(name): Path<String>,
     jar: SignedCookieJar,
 ) -> Result<Json<Vec<PackageVersion>>, (StatusCode, String)> {
-    jar.get("session_user_id").map(|c| c.value().to_string())
+    let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
+    let not_found = (StatusCode::NOT_FOUND, "Package not found".to_string());
+    let package = visibility::find_by_name(&state, &name).await?.ok_or(not_found.clone())?;
+    if !is_admin(&state, &user_id).await? && !visibility::can_view(&state, &package.id, &user_id).await {
+        return Err(not_found);
+    }
+
     let versions = sqlx::query_as::<_, PackageVersion>(
-        sql("SELECT v.id, v.package_id, v.version, v.entrypoint, v.created_at \
-         FROM package_versions v JOIN packages p ON p.id = v.package_id \
-         WHERE p.namespace = 'typstdrive' AND p.name = $1 ORDER BY v.created_at DESC")
+        sql("SELECT id, package_id, version, entrypoint, created_at \
+         FROM package_versions WHERE package_id = $1 ORDER BY created_at DESC")
     )
-    .bind(&name)
+    .bind(&package.id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

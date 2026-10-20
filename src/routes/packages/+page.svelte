@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { brandingStore } from '$lib/ts/branding';
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { userStore } from '$lib/ts/auth';
@@ -7,26 +8,39 @@
 	import DriveSidebar from '$lib/components/drive/DriveSidebar.svelte';
 	import PackageCard from '$lib/components/packages/PackageCard.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import PackageAccessModal from '$lib/components/packages/PackageAccessModal.svelte';
+	import { activeTeamStore } from '$lib/ts/workspace';
 
 	let packages = $state<Package[]>([]);
 	let loading = $state(true);
 	let searchQuery = $state('');
 	let ownership = $state<'all' | 'mine'>('all');
 	let packageToDelete = $state<Package | null>(null);
+	let packageToShare = $state<Package | null>(null);
 	let policy = $state<UserPackagePolicy | null>(null);
 
 	let visiblePackages = $derived.by(() => {
 		const query = searchQuery.trim().toLowerCase();
 		return packages.filter((pkg) => {
-			if (ownership === 'mine' && pkg.owner_id !== $userStore?.id) return false;
+			if (ownership === 'mine' && pkg.owner_id !== actingAccountId) return false;
 			if (!query) return true;
 			return pkg.name.toLowerCase().includes(query) || (pkg.description ?? '').toLowerCase().includes(query);
 		});
 	});
 
+	let actingAccountId = $derived($activeTeamStore?.id ?? $userStore?.id);
+
+	function canManage(pkg: Package) {
+		return Boolean($userStore?.is_admin) || pkg.owner_id === actingAccountId;
+	}
+
+	function updateVisibility(pkg: Package, visibility: Package['visibility']) {
+		packages = packages.map((item) => (item.id === pkg.id ? { ...item, visibility } : item));
+	}
+
 	function canDelete(pkg: Package) {
 		if ($userStore?.is_admin) return true;
-		return pkg.owner_id === $userStore?.id && Boolean(policy?.can_delete_own);
+		return pkg.owner_id === actingAccountId && Boolean(policy?.can_delete_own);
 	}
 
 	async function load() {
@@ -55,7 +69,7 @@
 </script>
 
 <svelte:head>
-	<title>Packages - TypstDrive</title>
+	<title>Packages - {$brandingStore.site_name}</title>
 </svelte:head>
 
 <div class="h-screen flex flex-col">
@@ -69,7 +83,7 @@
 				<div>
 					<h1 class="text-2xl font-bold text-[var(--color-ink)]">Packages</h1>
 					<p class="text-sm text-[var(--color-ink-muted)] mt-1">
-						Typst packages published on this instance. Import them with
+						Typst packages you can use on this instance. Private packages are only shown to the people and teams they are shared with. Import them with
 						<code class="font-mono text-xs bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded">@typstdrive/name:version</code>.
 					</p>
 				</div>
@@ -125,13 +139,28 @@
 				<p class="text-xs text-[var(--color-ink-muted)] mb-3">{visiblePackages.length} {visiblePackages.length === 1 ? 'package' : 'packages'}</p>
 				<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
 					{#each visiblePackages as pkg (pkg.id)}
-						<PackageCard {pkg} canDelete={canDelete(pkg)} onDelete={(target) => (packageToDelete = target)} />
+						<PackageCard
+							{pkg}
+							canDelete={canDelete(pkg)}
+							canManage={canManage(pkg)}
+							onDelete={(target) => (packageToDelete = target)}
+							onManageAccess={(target) => (packageToShare = target)}
+						/>
 					{/each}
 				</div>
 			{/if}
 		</main>
 	</div>
 </div>
+
+{#if packageToShare}
+	<PackageAccessModal
+		pkg={packageToShare}
+		canMakePrivate={Boolean(policy?.can_publish_private)}
+		onClose={() => (packageToShare = null)}
+		onChanged={(visibility) => packageToShare && updateVisibility(packageToShare, visibility)}
+	/>
+{/if}
 
 {#if packageToDelete}
 	<ConfirmModal
