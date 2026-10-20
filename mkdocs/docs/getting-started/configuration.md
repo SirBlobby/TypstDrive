@@ -13,7 +13,6 @@ All settings are environment variables. Set them in the `environment:` section o
 | `COOKIE_SECRET` | random | Secret of at least 64 bytes used to sign session cookies. Generate one with `openssl rand -hex 64`. |
 | `PUBLIC_URL` | not set | Address people use to open TypstDrive, such as `https://typst.example.com`. Needed for single sign-on and links in emails. |
 | `TRUST_PROXY_HEADERS` | `false` | Read the client address from `X-Forwarded-For` or `X-Real-IP`. Turn on only behind a reverse proxy. |
-| `ALLOW_REGISTRATION` | `true` | Starting value for public sign-up. Once an administrator saves **Site Settings → Registration & Accounts**, the saved setting is used instead. |
 | `RUST_LOG` | `server=debug,tower_http=debug` | Log filter. Use `info` for quieter production logs. |
 | `REDIS_URL` | not set | Redis or Valkey server, such as `redis://redis:6379`. Needed to run more than one app instance. See [Scaling](scaling.md). |
 | `REDIS_CHANNEL_PREFIX` | `typstdrive` | Prefix for the pub/sub channels, so several installs can share one Redis server. |
@@ -43,7 +42,6 @@ environment:
   - PORT=3000
   - COOKIE_SECRET=your-64-plus-byte-secret-here
   - PUBLIC_URL=https://typst.example.com
-  - ALLOW_REGISTRATION=false
   - RUST_LOG=info
   - SMTP_PROVIDER=google
   - SMTP_USERNAME=you@gmail.com

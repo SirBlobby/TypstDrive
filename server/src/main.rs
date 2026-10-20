@@ -38,7 +38,6 @@ pub struct AppState {
     pub bcast_map: Arc<Mutex<HashMap<String, Arc<BroadcastGroup>>>>,
     pub db: AnyPool,
     pub key: Key,
-    pub registration_enabled: bool,
     pub rate_limiter: RateLimiterMap,
     pub device_presence: Arc<Mutex<HashMap<String, DevicePresence>>>,
     pub device_events: Arc<Mutex<HashMap<String, broadcast::Sender<DeviceEvent>>>>,
@@ -88,16 +87,11 @@ async fn main() {
         }
     };
 
-    let registration_enabled = std::env::var("ALLOW_REGISTRATION")
-        .map(|v| v.to_lowercase() != "false")
-        .unwrap_or(true);
-
     let state = AppState {
         compiler: Arc::new(Mutex::new(TypstCompiler::new())),
         bcast_map: Arc::new(Mutex::new(HashMap::new())),
         db,
         key,
-        registration_enabled,
         rate_limiter: Arc::new(Mutex::new(HashMap::new())),
         device_presence: Arc::new(Mutex::new(HashMap::new())),
         device_events: Arc::new(Mutex::new(HashMap::new())),

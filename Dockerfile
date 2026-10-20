@@ -56,8 +56,6 @@ COPY --from=backend-builder /app/server-binary /app/server
 # COOKIE_SECRET        64+ byte secret for signing session cookies.
 #                      If unset, a random key is generated on each start
 #                      and all sessions are invalidated on restart.
-# ALLOW_REGISTRATION   Set to "false" to disable public registration.
-#                      Admins can still create accounts via the admin panel.
 # RUST_LOG             Log filter (default: server=debug,tower_http=debug)
 # REDIS_URL            Redis or Valkey URL for real-time collaboration across instances.
 # REDIS_CHANNEL_PREFIX Prefix for the pub/sub channels (default: typstdrive)

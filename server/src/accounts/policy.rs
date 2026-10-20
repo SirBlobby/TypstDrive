@@ -54,7 +54,7 @@ pub async fn load_policy(state: &AppState) -> AccountPolicy {
     let flag = |key: &str, fallback: bool| settings.get(key).map(|value| value == "true").unwrap_or(fallback);
 
     AccountPolicy {
-        registration_enabled: flag(REGISTRATION_KEY, state.registration_enabled),
+        registration_enabled: flag(REGISTRATION_KEY, true),
         allowed_email_domains: settings
             .get(DOMAINS_KEY)
             .map(|value| normalize_domains(&value.split(',').map(str::to_string).collect::<Vec<_>>()))

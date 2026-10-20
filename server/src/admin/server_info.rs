@@ -38,7 +38,6 @@ const KNOWN_VARIABLES: &[KnownVariable] = &[
     variable("SMTP_USERNAME", "Email", "User name for the mail server."),
     variable("SMTP_PASSWORD", "Email", "Password or app password for the mail server."),
     variable("SMTP_FROM", "Email", "Sender address, for example TypstDrive <noreply@example.com>."),
-    variable("ALLOW_REGISTRATION", "Accounts", "Starting value for public sign-up."),
     variable("REDIS_URL", "Real-time", "Redis or Valkey server shared by every app instance."),
     variable("REDIS_CHANNEL_PREFIX", "Real-time", "Prefix for the pub/sub channels."),
     variable("S3_BUCKET", "File storage", "Bucket for uploaded files. Turns on object storage."),

@@ -24,7 +24,6 @@ TypstDrive ships as a single Docker image that contains both the Rust server and
           - DB_TYPE=sqlite
           - COOKIE_SECRET=your-64-plus-byte-secret-here
           - PUBLIC_URL=http://localhost:3000
-          - ALLOW_REGISTRATION=false
           - RUST_LOG=info
         volumes:
           - appdata:/data
