@@ -7,6 +7,7 @@ export interface EnvironmentVariable {
 
 export interface ServerInfo {
     server_version: string;
+    typst_version: string;
     database: {
         kind: string;
         version: string | null;

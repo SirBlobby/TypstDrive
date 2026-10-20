@@ -81,9 +81,12 @@ pub struct FileStorageView {
     cache_limit_bytes: i64,
 }
 
+const TYPST_VERSION: &str = "0.15.1";
+
 #[derive(Serialize)]
 pub struct ServerInfo {
     server_version: &'static str,
+    typst_version: &'static str,
     database: DatabaseView,
     realtime: RealtimeView,
     file_storage: FileStorageView,
@@ -115,6 +118,7 @@ pub async fn server_info(
 
     Ok(Json(ServerInfo {
         server_version: env!("CARGO_PKG_VERSION"),
+        typst_version: TYPST_VERSION,
         database: DatabaseView {
             kind: dialect.label(),
             version: db::server_version(&state.db).await,

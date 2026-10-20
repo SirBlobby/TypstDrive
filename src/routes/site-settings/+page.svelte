@@ -16,6 +16,7 @@
     import TeamSettings from '$lib/components/site-settings/TeamSettings.svelte';
     import BrandingSettings from '$lib/components/site-settings/BrandingSettings.svelte';
     import AuditLog from '$lib/components/site-settings/AuditLog.svelte';
+    import AboutSettings from '$lib/components/site-settings/AboutSettings.svelte';
 
     const navItems = [
         { id: 'users', label: 'Users', icon: 'mdi:account-group-outline' },
@@ -28,7 +29,8 @@
         { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
         { id: 'api-access', label: 'API Access', icon: 'mdi:api' },
         { id: 'audit-log', label: 'Audit Log', icon: 'mdi:clipboard-text-clock-outline' },
-        { id: 'server', label: 'Server', icon: 'mdi:server-outline' }
+        { id: 'server', label: 'Server', icon: 'mdi:server-outline' },
+        { id: 'about', label: 'About', icon: 'mdi:information-outline' }
     ];
 
     let activeSection = $state('users');
@@ -92,6 +94,8 @@
                     <AuditLog />
                 {:else if activeSection === 'server'}
                     <ServerSettings />
+                {:else if activeSection === 'about'}
+                    <AboutSettings />
                 {/if}
             {/if}
         </main>

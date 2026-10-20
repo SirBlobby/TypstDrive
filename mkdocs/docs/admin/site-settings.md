@@ -122,3 +122,7 @@ Shows how the instance is set up. Nothing here can be changed from the browser; 
 - **Environment variables**: every variable TypstDrive reads, with a description and whether it is set. Values are never sent to the browser, even for administrators.
 
 See [Configuration](../getting-started/configuration.md) and [Scaling](../getting-started/scaling.md).
+
+## About
+
+Shows the TypstDrive and Typst versions, the database schema version, the author and the license, with links to the Typst documentation, Typst Universe, the TypstDrive documentation, the GitHub repository and the issue tracker.
