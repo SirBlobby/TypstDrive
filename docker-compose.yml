@@ -8,9 +8,12 @@ services:
       # SQLite (default, single-volume, no extra container):
       - DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
       - DB_TYPE=sqlite
-      # PostgreSQL alternative (uncomment and set DB_TYPE=postgres):
+      # PostgreSQL alternative (uncomment the db service below):
       # - DATABASE_URL=postgres://postgres:password@db:5432/typstdrive
       # - DB_TYPE=postgres
+      # MySQL / MariaDB alternative (uncomment the mysql service below):
+      # - DATABASE_URL=mysql://typstdrive:password@mysql:3306/typstdrive
+      # - DB_TYPE=mysql
 
       # --- Optional ---
       # Server listen port (default: 3000, also update the ports mapping above)
@@ -25,12 +28,19 @@ services:
       - ALLOW_REGISTRATION=false
       # Log verbosity (default: server=debug,tower_http=debug)
       # - RUST_LOG=info
+
+      # --- Scaling ---
+      # Redis or Valkey for real-time collaboration across app instances (uncomment the valkey service below):
+      # - REDIS_URL=redis://valkey:6379
+      # S3-compatible object storage for uploads (uncomment the rustfs service below and create the bucket first):
+      # - S3_BUCKET=typstdrive
+      # - S3_ENDPOINT=http://rustfs:9000
+      # - S3_ACCESS_KEY_ID=rustfsadmin
+      # - S3_SECRET_ACCESS_KEY=rustfsadmin
     volumes:
       - appdata:/data
 
   # Uncomment the db service below when using PostgreSQL (DB_TYPE=postgres).
-  # Also switch the volume mount in the app service from appdata:/data
-  # to a separate volume, since PostgreSQL manages its own data directory.
   # db:
   #   image: postgres:16-alpine
   #   environment:
@@ -42,6 +52,40 @@ services:
   #   volumes:
   #     - pgdata:/var/lib/postgresql/data
 
+  # Uncomment the mysql service below when using MySQL (DB_TYPE=mysql).
+  # mysql:
+  #   image: mysql:8.4
+  #   command: --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --max-allowed-packet=256M
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: rootpassword
+  #     MYSQL_DATABASE: typstdrive
+  #     MYSQL_USER: typstdrive
+  #     MYSQL_PASSWORD: password
+  #   volumes:
+  #     - mysqldata:/var/lib/mysql
+
+  # Uncomment the valkey service below when REDIS_URL is set.
+  # valkey:
+  #   image: valkey/valkey:8-alpine
+
+  # Uncomment the rustfs service below when S3_BUCKET is set.
+  # Console: http://localhost:9001 (sign in with the access key and secret key, then create the bucket).
+  # rustfs:
+  #   image: rustfs/rustfs:latest
+  #   environment:
+  #     - RUSTFS_VOLUMES=/data
+  #     - RUSTFS_ADDRESS=0.0.0.0:9000
+  #     - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+  #     - RUSTFS_CONSOLE_ENABLE=true
+  #     - RUSTFS_ACCESS_KEY=rustfsadmin
+  #     - RUSTFS_SECRET_KEY=rustfsadmin
+  #   ports:
+  #     - "9001:9001"
+  #   volumes:
+  #     - rustfsdata:/data
+
 volumes:
   appdata:
-  # pgdata:   # Uncomment when using PostgreSQL
+  # pgdata:       # Uncomment when using PostgreSQL
+  # mysqldata:    # Uncomment when using MySQL
+  # rustfsdata:   # Uncomment when using RustFS

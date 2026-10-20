@@ -46,7 +46,8 @@ COPY --from=backend-builder /app/server/target/release/server /app/server
 # DATABASE_URL    Database connection URL
 #                   SQLite:   sqlite:///data/typstdrive.db?mode=rwc
 #                   Postgres: postgres://user:pass@host:5432/typstdrive
-# DB_TYPE         Database backend: "sqlite" or "postgres"
+#                   MySQL:    mysql://user:pass@host:3306/typstdrive
+# DB_TYPE         Database backend: "sqlite", "postgres", "mysql" or "mariadb"
 #                 Auto-detected from DATABASE_URL if not set.
 # COOKIE_SECRET        64+ byte secret for signing session cookies.
 #                      If unset, a random key is generated on each start
@@ -54,9 +55,18 @@ COPY --from=backend-builder /app/server/target/release/server /app/server
 # ALLOW_REGISTRATION   Set to "false" to disable public registration.
 #                      Admins can still create accounts via the admin panel.
 # RUST_LOG             Log filter (default: server=debug,tower_http=debug)
+# REDIS_URL            Redis or Valkey URL for real-time collaboration across instances.
+# REDIS_CHANNEL_PREFIX Prefix for the pub/sub channels (default: typstdrive)
+# S3_BUCKET            Bucket for uploaded files. Turns on object storage (RustFS, AWS S3, R2).
+# S3_ENDPOINT          Endpoint for S3-compatible services, for example http://rustfs:9000
+# S3_REGION            Bucket region (default: us-east-1)
+# S3_ACCESS_KEY_ID     Access key for the bucket
+# S3_SECRET_ACCESS_KEY Secret key for the bucket
+# S3_PREFIX            Folder inside the bucket (default: typstdrive)
+# S3_VIRTUAL_HOSTED_STYLE  Set to "true" for bucket.host style URLs
+# OBJECT_CACHE_MB      Memory cache for files read from object storage (default: 256)
 ENV PORT=3000
 ENV STATIC_DIR=/app/build
 ENV DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
-ENV DB_TYPE=sqlite
 EXPOSE 3000
 CMD ["/app/server"]
