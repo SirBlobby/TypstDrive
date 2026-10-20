@@ -61,6 +61,8 @@ When the site name, logo or colors are changed in Site Settings, a small "Powere
 
 TypstDrive uses the [Typst](https://github.com/typst/typst) compiler, which is also released under the Apache License 2.0.
 
+TypstDrive is a community application and is not affiliated with, endorsed by, or supported by the official Typst project. Links to Typst documentation and Typst Universe open the official Typst website.
+
 ## Screenshots
 
 <p align="center">
