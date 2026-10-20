@@ -1,6 +1,8 @@
 use argon2::password_hash::phc::PasswordHash;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 
+pub const NO_PASSWORD: &str = "!";
+
 pub fn hash_password(password: &str) -> Result<String, String> {
     Argon2::default()
         .hash_password(password.as_bytes())
@@ -13,4 +15,8 @@ pub fn verify_password(password: &str, stored_hash: &str) -> bool {
         Ok(parsed_hash) => Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok(),
         Err(_) => false,
     }
+}
+
+pub fn has_password(stored_hash: &str) -> bool {
+    !stored_hash.is_empty() && stored_hash != NO_PASSWORD
 }

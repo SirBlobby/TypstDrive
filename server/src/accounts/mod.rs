@@ -1,6 +1,17 @@
 pub mod auth;
+pub mod auth_settings;
 pub mod avatars;
+pub mod client_info;
+pub mod cookies;
+pub mod email_code;
+pub mod email_tokens;
+pub mod login_guard;
+pub mod lookup;
+pub mod password_reset;
 pub mod passwords;
 pub mod policy;
+pub mod sessions;
 pub mod setup;
+pub mod sso;
 pub mod storage;
+pub mod verification;

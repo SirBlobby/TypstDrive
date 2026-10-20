@@ -79,9 +79,10 @@ pub async fn get_policy(
 pub async fn update_policy(
     State(state): State<AppState>,
     jar: SignedCookieJar,
+    client: crate::accounts::client_info::ClientInfo,
     Json(payload): Json<AccountPolicy>,
 ) -> Result<Json<AccountPolicy>, ApiError> {
-    require_admin(&state, &jar).await?;
+    let admin_id = require_admin(&state, &jar).await?;
 
     let domains = normalize_domains(&payload.allowed_email_domains);
     if let Some(invalid) = domains.iter().find(|domain| !domain.contains('.') || domain.contains(char::is_whitespace)) {
@@ -97,6 +98,8 @@ pub async fn update_policy(
     save_settings(&state, &entries)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    crate::admin::audit::record(&state, &admin_id, &client, "settings.accounts", "", &format!("registration {}, email domains [{}]", payload.registration_enabled, domains.join(", "))).await;
 
     Ok(Json(load_policy(&state).await))
 }

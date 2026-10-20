@@ -1,0 +1,7 @@
+Hi {{username}},
+
+Your TypstDrive sign-in code is: {{code}}
+
+It expires in {{minutes}} minutes and works once.
+
+If you did not try to sign in, ignore this email. Nobody can sign in without the code.

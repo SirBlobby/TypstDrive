@@ -1,5 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
-use axum_extra::extract::cookie::{Cookie, SameSite, SignedCookieJar};
+use axum_extra::extract::cookie::CookieJar;
 use uuid::Uuid;
 
 
@@ -25,9 +25,10 @@ pub async fn setup_status(
 
 pub async fn run_setup(
     State(state): State<AppState>,
-    jar: SignedCookieJar,
+    client: crate::accounts::client_info::ClientInfo,
+    jar: CookieJar,
     Json(payload): Json<SetupRequest>,
-) -> Result<(SignedCookieJar, Json<User>), (StatusCode, String)> {
+) -> Result<(CookieJar, Json<User>), (StatusCode, String)> {
     let count: (i64,) = sqlx::query_as(sql("SELECT COUNT(*) FROM users"))
         .fetch_one(&state.db)
         .await
@@ -46,26 +47,24 @@ pub async fn run_setup(
 
     let user_id = Uuid::new_v4().to_string();
 
-    sqlx::query(sql("INSERT INTO users (id, username, email, password_hash, is_admin) VALUES ($1, $2, $3, $4, $5)"))
+    sqlx::query(sql("INSERT INTO users (id, username, email, password_hash, is_admin, email_verified) VALUES ($1, $2, $3, $4, $5, $6)"))
     .bind(&user_id)
     .bind(&payload.username)
     .bind(&payload.email)
     .bind(&password_hash)
     .bind(1i64)
+    .bind(1i64)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let user = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1"))
+    let user = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin, email_verified FROM users WHERE id = $1"))
     .bind(&user_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let mut cookie = Cookie::new("session_user_id", user.id.clone());
-    cookie.set_http_only(true);
-    cookie.set_same_site(SameSite::Lax);
-    cookie.set_path("/");
+    let cookie = crate::accounts::sessions::start_session(&state, &user.id, &client).await?;
 
     Ok((jar.add(cookie), Json(user)))
 }

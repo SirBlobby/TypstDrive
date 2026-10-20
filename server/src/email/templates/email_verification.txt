@@ -1,0 +1,11 @@
+Hi {{username}},
+
+Enter this code to confirm your email address and finish setting up your TypstDrive account. It expires in {{minutes}} minutes.
+
+{{code}}
+
+You can also confirm by opening this link. It expires in 48 hours.
+
+{{link}}
+
+If you did not create an account or change your email, you can ignore this message.

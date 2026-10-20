@@ -1,0 +1,5 @@
+{{inviter}} added you to the team "{{team}}" as {{role}}.
+
+Open the drive and choose the team under Teams in the sidebar to start working in its space.
+
+{{link}}

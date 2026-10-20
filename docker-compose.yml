@@ -28,6 +28,31 @@ services:
       - ALLOW_REGISTRATION=false
       # Log verbosity (default: server=debug,tower_http=debug)
       # - RUST_LOG=info
+      # Address people use to open TypstDrive. Needed for single sign-on and links in emails.
+      - PUBLIC_URL=http://localhost:3000
+      # Read the client address from X-Forwarded-For when running behind a reverse proxy
+      # - TRUST_PROXY_HEADERS=true
+
+      # --- Email (password reset, verification, team invitations) ---
+      # Google: turn on 2-Step Verification and create an app password
+      # - SMTP_PROVIDER=google
+      # - SMTP_USERNAME=you@gmail.com
+      # - SMTP_PASSWORD=your-app-password
+      # Any other server:
+      # - SMTP_HOST=smtp.example.com
+      # - SMTP_PORT=587
+      # - SMTP_SECURITY=starttls
+      # - SMTP_FROM=TypstDrive <typst@example.com>
+
+      # --- Single sign-on (redirect URL: PUBLIC_URL/api/auth/sso/<id>/callback) ---
+      # - OIDC_PROVIDERS=keycloak
+      # - OIDC_KEYCLOAK_ISSUER=https://sso.example.com/realms/main
+      # - OIDC_KEYCLOAK_CLIENT_ID=typstdrive
+      # - OIDC_KEYCLOAK_CLIENT_SECRET=change-me
+      # - GOOGLE_CLIENT_ID=
+      # - GOOGLE_CLIENT_SECRET=
+      # - GITHUB_CLIENT_ID=
+      # - GITHUB_CLIENT_SECRET=
 
       # --- Scaling ---
       # Redis or Valkey for real-time collaboration across app instances (uncomment the valkey service below):
