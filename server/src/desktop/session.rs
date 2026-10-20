@@ -1,0 +1,135 @@
+use super::*;
+
+#[derive(Deserialize)]
+pub struct DeviceLoginRequest {
+    pub email: String,
+    pub password: String,
+    pub device_name: Option<String>,
+    pub client_version: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct DeviceLoginResponse {
+    pub token: String,
+    pub user_id: String,
+    pub username: String,
+    pub email: String,
+}
+
+pub async fn login(
+    State(state): State<AppState>,
+    Json(payload): Json<DeviceLoginRequest>,
+) -> Result<Json<DeviceLoginResponse>, (StatusCode, String)> {
+    if let Some(client_version) = &payload.client_version {
+        if !version_at_least(client_version, MIN_DESKTOP_VERSION) {
+            return Err((
+                StatusCode::UPGRADE_REQUIRED,
+                format!(
+                    "This server requires typst-desktop v{} or newer (you have v{}). Please update the app.",
+                    MIN_DESKTOP_VERSION, client_version
+                ),
+            ));
+        }
+    }
+
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, username, email, password_hash, is_admin FROM users WHERE email = $1",
+    )
+    .bind(&payload.email)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((
+        StatusCode::UNAUTHORIZED,
+        "Invalid email or password".to_string(),
+    ))?;
+
+    if !crate::accounts::passwords::verify_password(&payload.password, &user.password_hash) {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            "Invalid email or password".to_string(),
+        ));
+    }
+
+    let token = generate_token();
+    let device_name = payload
+        .device_name
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or_else(|| "Typst Desktop".to_string());
+
+    sqlx::query(
+        "INSERT INTO device_tokens (id, user_id, name, token_hash, created_at) VALUES ($1, $2, $3, $4, $5)",
+    )
+    .bind(Uuid::new_v4().to_string())
+    .bind(&user.id)
+    .bind(&device_name)
+    .bind(hash_token(&token))
+    .bind(chrono::Utc::now().to_rfc3339())
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(DeviceLoginResponse {
+        token,
+        user_id: user.id,
+        username: user.username,
+        email: user.email,
+    }))
+}
+
+#[derive(Serialize)]
+pub struct DeviceUser {
+    pub user_id: String,
+    pub username: String,
+    pub email: String,
+}
+
+pub async fn me(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<DeviceUser>, (StatusCode, String)> {
+    let user_id = authenticate(&state, &headers).await?;
+
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, username, email, password_hash, is_admin FROM users WHERE id = $1",
+    )
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
+
+    Ok(Json(DeviceUser {
+        user_id: user.id,
+        username: user.username,
+        email: user.email,
+    }))
+}
+
+pub async fn logout(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let token = bearer_token(&headers).ok_or((
+        StatusCode::UNAUTHORIZED,
+        "Missing Authorization header".to_string(),
+    ))?;
+
+    let token_id = sqlx::query_as::<_, (String,)>("SELECT id FROM device_tokens WHERE token_hash = $1")
+        .bind(hash_token(&token))
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    sqlx::query("DELETE FROM device_tokens WHERE token_hash = $1")
+        .bind(hash_token(&token))
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if let Some((token_id,)) = token_id {
+        crate::sharing::access::revoke_device_sessions(&state, &token_id).await;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}

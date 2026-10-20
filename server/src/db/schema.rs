@@ -239,6 +239,38 @@ pub const TABLES: &[Table] = &[
         constraints: &["UNIQUE (project_id, user_id)"],
     },
     Table {
+        name: "folder_collaborators",
+        columns: &[
+            plain("id", "TEXT PRIMARY KEY"),
+            required_reference("folder_id", "folders", "TEXT NOT NULL REFERENCES folders(id) ON DELETE CASCADE"),
+            required_reference("user_id", "users", "TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE"),
+            plain("role", "TEXT NOT NULL"),
+            created_at("created_at"),
+        ],
+        constraints: &["UNIQUE (folder_id, user_id)"],
+    },
+    Table {
+        name: "document_shared_files",
+        columns: &[
+            required_reference("document_id", "documents", "TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE"),
+            required_reference("file_id", "files", "TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE"),
+            created_at("created_at"),
+        ],
+        constraints: &["PRIMARY KEY (document_id, file_id)"],
+    },
+    Table {
+        name: "ownership_transfers",
+        columns: &[
+            plain("id", "TEXT PRIMARY KEY"),
+            plain("item_kind", "TEXT NOT NULL"),
+            plain("item_id", "TEXT NOT NULL"),
+            required_reference("from_user_id", "users", "TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE"),
+            required_reference("to_user_id", "users", "TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE"),
+            created_at("created_at"),
+        ],
+        constraints: &["UNIQUE (item_kind, item_id)"],
+    },
+    Table {
         name: "packages",
         columns: &[
             plain("id", "TEXT PRIMARY KEY"),
@@ -312,6 +344,9 @@ pub const INDEXES: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_projects_owner_folder ON projects (owner_id, folder_id)",
     "CREATE INDEX IF NOT EXISTS idx_projects_folder ON projects (folder_id)",
     "CREATE INDEX IF NOT EXISTS idx_project_collaborators_user ON project_collaborators (user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_folder_collaborators_user ON folder_collaborators (user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_document_shared_files_file ON document_shared_files (file_id)",
+    "CREATE INDEX IF NOT EXISTS idx_ownership_transfers_to_user ON ownership_transfers (to_user_id)",
     "CREATE INDEX IF NOT EXISTS idx_packages_owner ON packages (owner_id)",
     "CREATE INDEX IF NOT EXISTS idx_device_tokens_user ON device_tokens (user_id)",
 ];

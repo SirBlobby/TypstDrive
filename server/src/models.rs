@@ -49,6 +49,9 @@ pub struct Folder {
     pub parent_id: Option<String>,
     pub name: String,
     pub created_at: String,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub effective_role: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -221,15 +224,6 @@ pub struct UpdateDocumentRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct Collaborator {
-    pub id: String,
-    pub document_id: String,
-    pub user_id: String,
-    pub role: String,
-    pub created_at: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct CollaboratorView {
     pub id: String,
     pub user_id: String,
@@ -237,16 +231,6 @@ pub struct CollaboratorView {
     pub email: String,
     pub role: String,
     pub created_at: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct Invitation {
-    pub id: String,
-    pub document_id: String,
-    pub role: String,
-    pub token: String,
-    pub created_at: String,
-    pub expires_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
