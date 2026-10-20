@@ -1,458 +1,207 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Icon from '@iconify/svelte';
+	import PresentationHeader from './presentation/PresentationHeader.svelte';
+	import PresentationToolbar from './presentation/PresentationToolbar.svelte';
+	import SlideCanvas from './presentation/SlideCanvas.svelte';
+	import SlideOverview from './presentation/SlideOverview.svelte';
+	import { collectSlides, defaultAspectRatio, type Slide } from './presentation/slides';
+	import {
+		commitStrokes,
+		emptyInk,
+		redoInk,
+		undoInk,
+		type DrawingTool,
+		type SlideInk,
+		type Stroke
+	} from './presentation/drawing';
 
 	let { onClose }: { onClose: () => void } = $props();
 
-	let svgs = $state<string[]>([]);
-	let slideAspectRatios = $state<number[]>([]);
+	const toolShortcuts: Record<string, DrawingTool> = { l: 'laser', p: 'pen', h: 'highlighter', e: 'eraser' };
+	const nextKeys = ['arrowright', 'arrowdown', 'pagedown', ' '];
+	const previousKeys = ['arrowleft', 'arrowup', 'pageup', 'backspace'];
+
+	let container = $state<HTMLDivElement | null>(null);
+	let slides = $state<Slide[]>([]);
 	let currentSlide = $state(0);
 	let stageWidth = $state(0);
 	let stageHeight = $state(0);
+	let tool = $state<DrawingTool>('laser');
+	let color = $state('#ef4444');
+	let inkBySlide = $state<Record<number, SlideInk>>({});
+	let overviewOpen = $state(false);
+	let controlsVisible = $state(true);
+	let elapsedSeconds = $state(0);
+	let timerPaused = $state(true);
+	let hideControlsTimeout: number | undefined;
 
-	const defaultAspectRatio = 16 / 9;
-
-	let slideSize = $derived.by(() => {
-		const aspectRatio = slideAspectRatios[currentSlide] || defaultAspectRatio;
+	const currentInk = $derived(inkBySlide[currentSlide] ?? emptyInk());
+	const progressPercent = $derived(slides.length > 1 ? (currentSlide / (slides.length - 1)) * 100 : 100);
+	const slideSize = $derived.by(() => {
+		const aspectRatio = slides[currentSlide]?.aspectRatio ?? defaultAspectRatio;
 		const width = Math.min(stageWidth, stageHeight * aspectRatio);
 		return { width, height: width / aspectRatio };
 	});
-	
-	let canvas = $state<HTMLCanvasElement | null>(null);
-	let activeCanvas = $state<HTMLCanvasElement | null>(null);
-	let ctx: CanvasRenderingContext2D | null = null;
-	let activeCtx: CanvasRenderingContext2D | null = null;
-	let isDrawing = false;
-	let currentPath = $state<{x: number, y: number}[]>([]);
-	
-	let tool = $state<'pen' | 'highlighter' | 'eraser' | 'laser'>('laser');
-	let selectedColor = $state('#ef4444');
-	let showGrid = $state(false);
-	let laserPos = $state({ x: 0, y: 0, visible: false });
-	let uiVisible = $state(true);
-	
-	const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ffffff', '#000000'];
 
-	let drawings = $state<Record<number, string>>({});
-	let undoStack = $state<Record<number, string[]>>({});
-	let redoStack = $state<Record<number, string[]>>({});
+	function goTo(index: number) {
+		currentSlide = Math.max(0, Math.min(slides.length - 1, index));
+	}
 
-	let inactivityTimeout: number;
+	function updateInk(ink: SlideInk) {
+		inkBySlide[currentSlide] = ink;
+	}
 
-	function resetInactivityTimeout() {
-		uiVisible = true;
-		if (inactivityTimeout) window.clearTimeout(inactivityTimeout);
-		inactivityTimeout = window.setTimeout(() => {
-			if (!showGrid && !isDrawing) {
-				uiVisible = false;
-			}
-		}, 3000);
+	function saveStrokes(strokes: Stroke[]) {
+		updateInk(commitStrokes(currentInk, strokes));
+	}
+
+	function clearInk() {
+		if (currentInk.strokes.length > 0) saveStrokes([]);
+	}
+
+	function toggleOverview() {
+		overviewOpen = !overviewOpen;
+	}
+
+	function selectFromOverview(index: number) {
+		goTo(index);
+		overviewOpen = false;
+	}
+
+	function exit() {
+		if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+		onClose();
+	}
+
+	function showControls() {
+		controlsVisible = true;
+		window.clearTimeout(hideControlsTimeout);
+		hideControlsTimeout = window.setTimeout(() => {
+			if (!overviewOpen) controlsVisible = false;
+		}, 2500);
+	}
+
+	function handleKeyDown(event: KeyboardEvent) {
+		const key = event.key.toLowerCase();
+
+		if ((event.ctrlKey || event.metaKey) && key === 'z') {
+			event.preventDefault();
+			updateInk(event.shiftKey ? redoInk(currentInk) : undoInk(currentInk));
+			return;
+		}
+		if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+		if (key === 'escape') {
+			if (overviewOpen) overviewOpen = false;
+			else exit();
+		} else if (key === 'g') {
+			toggleOverview();
+		} else if (key === 'c') {
+			clearInk();
+		} else if (toolShortcuts[key]) {
+			tool = toolShortcuts[key];
+		} else if (nextKeys.includes(key)) {
+			event.preventDefault();
+			goTo(currentSlide + 1);
+		} else if (previousKeys.includes(key)) {
+			event.preventDefault();
+			goTo(currentSlide - 1);
+		} else if (key === 'home') {
+			goTo(0);
+		} else if (key === 'end') {
+			goTo(slides.length - 1);
+		}
+	}
+
+	function handleFullscreenChange() {
+		if (!document.fullscreenElement) onClose();
 	}
 
 	onMount(() => {
-		const previewSvgs = document.querySelectorAll<SVGSVGElement>('.preview-container svg');
-		const svgStrings: string[] = [];
-		const aspectRatios: number[] = [];
-		previewSvgs.forEach(svgElement => {
-			svgStrings.push(svgElement.outerHTML);
-			const viewBox = svgElement.viewBox.baseVal;
-			aspectRatios.push(viewBox && viewBox.height > 0 ? viewBox.width / viewBox.height : defaultAspectRatio);
-		});
-		svgs = svgStrings;
-		slideAspectRatios = aspectRatios;
+		slides = collectSlides();
+		container?.requestFullscreen?.().catch(() => {});
 
-		const el = document.getElementById('presentation-container');
-		if (el && el.requestFullscreen) {
-			el.requestFullscreen().catch(err => console.error(err));
-		}
+		const timer = window.setInterval(() => {
+			if (!timerPaused) elapsedSeconds += 1;
+		}, 1000);
 
-		const handleFullscreenChange = () => {
-			if (!document.fullscreenElement) {
-				onClose();
-			}
-		};
 		document.addEventListener('fullscreenchange', handleFullscreenChange);
-		
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key.toLowerCase() === 'g') {
-				showGrid = !showGrid;
-				return;
-			}
-
-			if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
-				nextSlide();
-			} else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-				prevSlide();
-			} else if (e.key === 'Escape') {
-				if (showGrid) {
-					showGrid = false;
-				} else if (document.fullscreenElement) {
-					document.exitFullscreen();
-				} else {
-					onClose();
-				}
-			}
-		};
-		window.addEventListener('keydown', handleKeyDown);
-		window.addEventListener('mousemove', resetInactivityTimeout);
-		window.addEventListener('mousedown', resetInactivityTimeout);
-		window.addEventListener('touchstart', resetInactivityTimeout);
-		
-		resetInactivityTimeout();
+		showControls();
 
 		return () => {
-			clearTimeout(inactivityTimeout);
+			window.clearInterval(timer);
+			window.clearTimeout(hideControlsTimeout);
 			document.removeEventListener('fullscreenchange', handleFullscreenChange);
-			window.removeEventListener('keydown', handleKeyDown);
-			window.removeEventListener('mousemove', resetInactivityTimeout);
-			window.removeEventListener('mousedown', resetInactivityTimeout);
-			window.removeEventListener('touchstart', resetInactivityTimeout);
-			if (document.fullscreenElement) {
-				document.exitFullscreen().catch(() => {});
-			}
+			if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 		};
 	});
-
-	$effect(() => {
-		if (canvas && currentSlide !== undefined && !showGrid) {
-			const canvasWidth = Math.round(slideSize.width);
-			const canvasHeight = Math.round(slideSize.height);
-			if (canvasWidth > 0 && canvasHeight > 0) {
-				canvas.width = canvasWidth;
-				canvas.height = canvasHeight;
-				ctx = canvas.getContext('2d');
-				
-				if (activeCanvas) {
-					activeCanvas.width = canvasWidth;
-					activeCanvas.height = canvasHeight;
-					activeCtx = activeCanvas.getContext('2d');
-					if (activeCtx) {
-						activeCtx.lineCap = 'round';
-						activeCtx.lineJoin = 'round';
-					}
-				}
-
-				if (ctx) {
-					ctx.lineCap = 'round';
-					ctx.lineJoin = 'round';
-					
-					if (drawings[currentSlide]) {
-						const img = new Image();
-						img.onload = () => {
-							ctx?.drawImage(img, 0, 0, canvasWidth, canvasHeight);
-						};
-						img.src = drawings[currentSlide];
-					}
-				}
-			}
-		}
-	});
-
-	function hexToRgba(hex: string, alpha: number) {
-		const r = parseInt(hex.slice(1, 3), 16);
-		const g = parseInt(hex.slice(3, 5), 16);
-		const b = parseInt(hex.slice(5, 7), 16);
-		return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-	}
-
-	function nextSlide() {
-		saveDrawing();
-		if (currentSlide < svgs.length - 1) currentSlide++;
-	}
-
-	function prevSlide() {
-		saveDrawing();
-		if (currentSlide > 0) currentSlide--;
-	}
-
-	function saveDrawing() {
-		if (canvas) {
-			drawings[currentSlide] = canvas.toDataURL();
-		}
-	}
-
-	function startDrawing(e: MouseEvent | TouchEvent) {
-		if (tool === 'laser') return;
-		isDrawing = true;
-		
-		if (!undoStack[currentSlide]) undoStack[currentSlide] = [];
-		if (canvas) undoStack[currentSlide].push(canvas.toDataURL());
-		redoStack[currentSlide] = [];
-
-		currentPath = [];
-		addPointToPath(e);
-	}
-
-	function addPointToPath(e: MouseEvent | TouchEvent) {
-		if (!canvas) return;
-		const rect = canvas.getBoundingClientRect();
-		const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-		const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-		const x = clientX - rect.left;
-		const y = clientY - rect.top;
-		currentPath.push({x, y});
-	}
-
-	function stopDrawing() {
-		if (!isDrawing) return;
-		isDrawing = false;
-		
-		if (tool !== 'eraser' && ctx && activeCanvas && activeCtx) {
-			ctx.globalCompositeOperation = 'source-over';
-			ctx.drawImage(activeCanvas, 0, 0);
-			activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
-		}
-		saveDrawing();
-	}
-
-	function handlePointerMove(e: MouseEvent | TouchEvent) {
-		if (tool === 'laser') {
-			laserPos.visible = true;
-			const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-			const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-			laserPos.x = clientX;
-			laserPos.y = clientY;
-		} else {
-			laserPos.visible = false;
-			if (isDrawing) draw(e);
-		}
-	}
-
-	function handlePointerLeave() {
-		stopDrawing();
-		laserPos.visible = false;
-	}
-
-	function draw(e: MouseEvent | TouchEvent) {
-		if (!isDrawing || !activeCtx || !canvas || tool === 'laser') return;
-		e.preventDefault();
-
-		addPointToPath(e);
-
-		if (tool === 'eraser') {
-			if (ctx) {
-				ctx.globalCompositeOperation = 'destination-out';
-				ctx.lineWidth = 30;
-				ctx.strokeStyle = 'rgba(0,0,0,1)';
-				
-				const prev = currentPath[currentPath.length - 2] || currentPath[0];
-				ctx.beginPath();
-				ctx.moveTo(prev.x, prev.y);
-				ctx.lineTo(currentPath[currentPath.length - 1].x, currentPath[currentPath.length - 1].y);
-				ctx.stroke();
-			}
-			return;
-		}
-
-		if (activeCanvas) {
-			activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
-			activeCtx.beginPath();
-			activeCtx.moveTo(currentPath[0].x, currentPath[0].y);
-			for (let i = 1; i < currentPath.length; i++) {
-				activeCtx.lineTo(currentPath[i].x, currentPath[i].y);
-			}
-
-			if (tool === 'pen') {
-				activeCtx.globalCompositeOperation = 'source-over';
-				activeCtx.lineWidth = 3;
-				activeCtx.strokeStyle = selectedColor;
-			} else if (tool === 'highlighter') {
-				activeCtx.globalCompositeOperation = 'source-over';
-				activeCtx.lineWidth = 20;
-				activeCtx.strokeStyle = hexToRgba(selectedColor, 0.4);
-			}
-			activeCtx.stroke();
-		}
-	}
-
-	function clearSlide() {
-		if (ctx && canvas) {
-			if (!undoStack[currentSlide]) undoStack[currentSlide] = [];
-			undoStack[currentSlide].push(canvas.toDataURL());
-			redoStack[currentSlide] = [];
-
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			delete drawings[currentSlide];
-		}
-	}
-
-	function undo() {
-		if (!undoStack[currentSlide] || undoStack[currentSlide].length === 0) return;
-		if (!redoStack[currentSlide]) redoStack[currentSlide] = [];
-		if (canvas) redoStack[currentSlide].push(canvas.toDataURL());
-		
-		const prevState = undoStack[currentSlide].pop();
-		applyState(prevState);
-	}
-
-	function redo() {
-		if (!redoStack[currentSlide] || redoStack[currentSlide].length === 0) return;
-		if (!undoStack[currentSlide]) undoStack[currentSlide] = [];
-		if (canvas) undoStack[currentSlide].push(canvas.toDataURL());
-		
-		const nextState = redoStack[currentSlide].pop();
-		applyState(nextState);
-	}
-
-	function applyState(dataUrl: string | undefined) {
-		if (ctx && canvas) {
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			if (dataUrl) {
-				const img = new Image();
-				img.onload = () => ctx?.drawImage(img, 0, 0);
-				img.src = dataUrl;
-				drawings[currentSlide] = dataUrl;
-			} else {
-				delete drawings[currentSlide];
-			}
-		}
-	}
 </script>
 
-<div id="presentation-container" class="fixed inset-0 z-[100] flex flex-col items-center justify-center">
-	
-	{#if tool === 'laser' && laserPos.visible && !showGrid}
-		<div 
-			class="pointer-events-none fixed z-[150] w-3 h-3 bg-red-500 rounded-full shadow-[0_0_15px_5px_rgba(239,68,68,0.8)] -translate-x-1/2 -translate-y-1/2"
-			style="left: {laserPos.x}px; top: {laserPos.y}px;"
-		></div>
-	{/if}
+<svelte:window onkeydown={handleKeyDown} />
 
-	{#if showGrid}
-		<div class="absolute inset-0 z-[50] p-8 overflow-y-auto">
-			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 max-w-7xl mx-auto pb-24">
-				{#each svgs as svg, i}
-					<button 
-						class="relative aspect-video rounded-lg overflow-hidden shadow-lg border-4 transition-all focus:outline-none {currentSlide === i ? 'border-blue-500 scale-105 shadow-blue-500/20' : 'border-transparent hover:border-white/50'} bg-[var(--theme-bg)] text-[var(--theme-text)]"
-						onclick={() => { currentSlide = i; showGrid = false; }}
-					>
-						<div class="w-full h-full pointer-events-none flex items-center justify-center p-2 presentation-grid-svg">
-							{@html svg}
-						</div>
-						<div class="absolute bottom-2 right-2 bg-black/60 text-xs font-mono px-2 py-1 rounded-md backdrop-blur-sm">
-							{i + 1}
-						</div>
-					</button>
-				{/each}
-			</div>
-		</div>
-	{/if}
-
-	<div class="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between px-6 transition-opacity duration-300 z-[110] {uiVisible || showGrid ? 'opacity-100' : 'opacity-0'}">
-		<div class="flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md px-4 py-2 rounded-xl border shadow-2xl border-[var(--theme-border)]">
-			<button class="p-2 rounded-lg transition-colors {tool === 'laser' ? 'bg-red-500/20 text-red-400' : 'text-gray-300 hover:bg-white/10'}" onclick={() => tool = 'laser'} title="Laser Pointer">
-				<Icon icon="mdi:laser-pointer" class="text-xl" />
-			</button>
-			<button class="p-2 rounded-lg transition-colors {tool === 'pen' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-300 hover:bg-white/10'}" onclick={() => tool = 'pen'} title="Pen">
-				<Icon icon="mdi:lead-pencil" class="text-xl" />
-			</button>
-			<button class="p-2 rounded-lg transition-colors {tool === 'highlighter' ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-300 hover:bg-white/10'}" onclick={() => tool = 'highlighter'} title="Highlighter">
-				<Icon icon="mdi:marker" class="text-xl" />
-			</button>
-			<button class="p-2 rounded-lg transition-colors {tool === 'eraser' ? 'bg-white/20 text-white' : 'text-gray-300 hover:bg-white/10'}" onclick={() => tool = 'eraser'} title="Eraser">
-				<Icon icon="mdi:eraser" class="text-xl" />
-			</button>
-			
-			{#if tool === 'pen' || tool === 'highlighter'}
-				<div class="w-px h-6 bg-white/10 mx-1"></div>
-				<div class="flex gap-1.5">
-					{#each colors as color}
-						<button 
-							class="w-5 h-5 rounded-full border transition-transform hover:scale-110 {selectedColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900' : ''} border-[var(--theme-border)]"
-							style="background-color: {color};"
-							onclick={() => selectedColor = color}
-							title="Select Color"
-						></button>
-					{/each}
-				</div>
-			{/if}
-
-			<div class="w-px h-6 bg-white/10 mx-1"></div>
-			<button class="p-2 rounded-lg hover:bg-white/20 hover:text-white transition-colors" onclick={undo} disabled={!undoStack[currentSlide]?.length} title="Undo">
-				<Icon icon="mdi:undo" class="text-xl" />
-			</button>
-			<button class="p-2 rounded-lg hover:bg-white/20 hover:text-white transition-colors" onclick={redo} disabled={!redoStack[currentSlide]?.length} title="Redo">
-				<Icon icon="mdi:redo" class="text-xl" />
-			</button>
-			<button class="p-2 rounded-lg hover:bg-red-500/20 hover:text-red-400 transition-colors" onclick={clearSlide} title="Clear Drawings">
-				<Icon icon="mdi:delete-sweep-outline" class="text-xl" />
-			</button>
-		</div>
-
-		<div class="flex items-center gap-3">
-			<button onclick={() => showGrid = !showGrid} class="p-2 text-white/70 hover:text-white bg-black/50 hover:bg-white/10 rounded-md transition-colors flex items-center justify-center w-10 h-10" title="Toggle Grid (G)">
-				<Icon icon="mdi:view-grid" class="text-xl" />
-			</button>
-			<button onclick={() => { if(document.fullscreenElement) document.exitFullscreen(); onClose(); }} class="p-2 text-white/70 hover:text-white bg-black/50 hover:bg-white/10 rounded-md transition-colors flex items-center justify-center w-10 h-10" title="Exit Presentation">
-				<Icon icon="mdi:close" class="text-xl" />
-			</button>
-		</div>
-	</div>
-
-	<div bind:clientWidth={stageWidth} bind:clientHeight={stageHeight} class="relative w-full h-full flex items-center justify-center">
-		{#if svgs.length > 0 && !showGrid}
-			<div
-				id="presentation-svg"
-				class="relative shadow-2xl bg-[var(--theme-bg)] text-[var(--theme-text)]"
-				style="width: {slideSize.width}px; height: {slideSize.height}px;"
-			>
-				{@html svgs[currentSlide]}
-				
-				<canvas 
-					bind:this={canvas} 
-					class="absolute inset-0 z-10 touch-none pointer-events-none"
-				></canvas>
-
-				<canvas 
-					bind:this={activeCanvas} 
-					class="absolute inset-0 z-20 touch-none {tool === 'laser' ? 'cursor-none' : 'cursor-crosshair'}"
-					onmousedown={startDrawing}
-					onmousemove={handlePointerMove}
-					onmouseup={stopDrawing}
-					onmouseleave={handlePointerLeave}
-					ontouchstart={startDrawing}
-					ontouchmove={handlePointerMove}
-					ontouchend={handlePointerLeave}
-				></canvas>
-			</div>
-		{:else if svgs.length === 0}
-			<div class="text-white/50 text-xl">No slides available to present.</div>
+<div
+	bind:this={container}
+	class="fixed inset-0 z-[100] select-none overflow-hidden bg-neutral-950 text-white"
+	role="dialog"
+	aria-modal="true"
+	aria-label="Presentation"
+	tabindex="-1"
+	onpointermove={showControls}
+	onpointerdown={showControls}
+>
+	<div bind:clientWidth={stageWidth} bind:clientHeight={stageHeight} class="absolute inset-0 flex items-center justify-center">
+		{#if slides.length === 0}
+			<p class="text-lg text-white/50">No slides available to present.</p>
+		{:else}
+			{#key currentSlide}
+				<SlideCanvas
+					slide={slides[currentSlide]}
+					width={slideSize.width}
+					height={slideSize.height}
+					{tool}
+					{color}
+					strokes={currentInk.strokes}
+					oncommit={saveStrokes}
+				/>
+			{/key}
 		{/if}
 	</div>
 
-	{#if svgs.length > 1}
-		<div class="absolute bottom-6 flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md px-6 py-3 rounded-md border shadow-2xl transition-opacity duration-300 z-[110] {uiVisible || showGrid ? 'opacity-100' : 'opacity-0'} border-[var(--theme-border)]">
-			<button onclick={prevSlide} disabled={currentSlide === 0} class="p-2 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-md transition-all">
-				<Icon icon="mdi:chevron-left" class="text-3xl" />
-			</button>
-			<button onclick={() => showGrid = !showGrid} class="font-mono font-semibold text-lg text-white/90 min-w-[3rem] text-center hover:bg-white/10 px-2 py-1 rounded-md transition-colors" title="Show Grid (G)">
-				{currentSlide + 1} / {svgs.length}
-			</button>
-			<button onclick={nextSlide} disabled={currentSlide === svgs.length - 1} class="p-2 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent rounded-md transition-all">
-				<Icon icon="mdi:chevron-right" class="text-3xl" />
-			</button>
-		</div>
+	{#if overviewOpen}
+		<SlideOverview {slides} {currentSlide} onselect={selectFromOverview} />
 	{/if}
 
+	<PresentationHeader
+		visible={controlsVisible || overviewOpen}
+		{elapsedSeconds}
+		{timerPaused}
+		{overviewOpen}
+		ontoggletimer={() => (timerPaused = !timerPaused)}
+		onresettimer={() => (elapsedSeconds = 0)}
+		onoverview={toggleOverview}
+		onexit={exit}
+	/>
+
+	{#if !overviewOpen}
+		<PresentationToolbar
+			visible={controlsVisible}
+			bind:tool
+			bind:color
+			{currentSlide}
+			slideCount={slides.length}
+			canUndo={currentInk.past.length > 0}
+			canRedo={currentInk.future.length > 0}
+			canClear={currentInk.strokes.length > 0}
+			onprevious={() => goTo(currentSlide - 1)}
+			onnext={() => goTo(currentSlide + 1)}
+			onoverview={toggleOverview}
+			onundo={() => updateInk(undoInk(currentInk))}
+			onredo={() => updateInk(redoInk(currentInk))}
+			onclear={clearInk}
+		/>
+	{/if}
+
+	<div class="absolute inset-x-0 bottom-0 z-20 h-1 bg-white/10">
+		<div class="h-full bg-blue-500 transition-[width] duration-300" style="width: {progressPercent}%"></div>
+	</div>
 </div>
-
-<style>
-	:global(#presentation-svg svg) {
-		display: block;
-		width: 100% !important;
-		height: 100% !important;
-	}
-
-	:global(.presentation-grid-svg) {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.5rem;
-	}
-
-	:global(.presentation-grid-svg svg) {
-		width: 100%;
-		height: 100%;
-		object-fit: contain;
-	}
-</style>
