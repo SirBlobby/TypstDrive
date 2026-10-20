@@ -27,6 +27,12 @@
     let info = $state<ItemInfo | null>(null);
     let errorMsg = $state('');
 
+    const linkAccessVerbs: Record<string, string> = {
+        editor: 'edit',
+        suggester: 'suggest changes',
+        viewer: 'view'
+    };
+
     let title = $derived(info?.name ?? selectedInfo.title ?? selectedInfo.name ?? 'Details');
     let locationLabel = $derived.by(() => {
         if (!info) return '';
@@ -74,7 +80,7 @@
                     {@render detail('Last edited by', info.last_edited_by?.name ?? 'Not recorded yet')}
                 {/if}
                 {#if info.link_access}
-                    {@render detail('Link sharing', `Anyone with the link can ${info.link_access === 'editor' ? 'edit' : 'view'}`)}
+                    {@render detail('Link sharing', `Anyone with the link can ${linkAccessVerbs[info.link_access] ?? 'view'}`)}
                 {/if}
             </div>
 

@@ -7,7 +7,7 @@
     import TeamMembersAccess from './sharing/TeamMembersAccess.svelte';
     import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind, type TeamAccess } from '$lib/ts/ownership';
 
-    let { onClose, itemId = undefined, kind = 'document' } = $props<{ onClose: () => void, itemId?: string, kind?: ShareKind }>();
+    let { onClose, itemId = undefined, kind = 'document' }: { onClose: () => void, itemId?: string, kind?: ShareKind } = $props();
 
     const apiBase: Record<ShareKind, string> = { document: '/api/docs', project: '/api/projects', folder: '/api/folders' };
     const pageBase: Record<ShareKind, string | null> = { document: '/doc', project: '/project', folder: null };
@@ -176,6 +176,9 @@
                 <div class="h-6 w-px bg-[var(--color-line)]"></div>
                 <select bind:value={inviteRole} class="bg-transparent border-none text-sm text-[var(--color-ink-muted)] px-2 py-2 focus:ring-0 focus:outline-none cursor-pointer font-medium">
                     <option value="editor">Editor</option>
+                    {#if kind === 'document'}
+                        <option value="suggester">Suggester</option>
+                    {/if}
                     <option value="viewer">Viewer</option>
                 </select>
                 <button

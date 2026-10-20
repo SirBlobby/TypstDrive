@@ -1,28 +1,35 @@
 <script lang="ts">
 	import { exportTypst } from '../ts/typst-api';
 	import { text } from '../ts/yjs-setup';
-	import { connectionStatus, connectedUsers, editorViewStore, documentZoomStore, commentsSidebarOpen, versionHistoryOpen, triggerLspReconnect, documentStatsStore, previewOpenStore } from '../ts/store';
+	import { editorViewStore, commentsSidebarOpen, previewOpenStore } from '../ts/store';
+	import { saveVersion } from '../ts/versions';
 	import { themes } from '../ts/themes';
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
 	import DocumentAssetsModal from './DocumentAssetsModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
-	import CommentsSidebar from "./CommentsSidebar.svelte";
-	import VersionHistorySidebar from "./VersionHistorySidebar.svelte";
-	import Modal from './Modal.svelte';
+	import CommentsPanel from './comments/CommentsPanel.svelte';
 	import InfoModal from './drive/InfoModal.svelte';
+	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
+	import EditingModeSwitch from './editor/EditingModeSwitch.svelte';
+	import FormattingBar from './editor/FormattingBar.svelte';
+	import InsertDialogs from './editor/insert/InsertDialogs.svelte';
+	import { insertDialogStore, insertOptions } from '../ts/insert-dialog';
+	import { openFind, openReplace } from '../ts/editor-insert';
 	import PromptModal from './PromptModal.svelte';
 	import ConfirmModal from './ConfirmModal.svelte';
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
+	import type { DocumentRole } from '$lib/ts/document-role';
+	import { suggestingModeStore } from '$lib/ts/suggestions';
 
 	let isShareModalOpen = $state(false);
 	let isAssetsModalOpen = $state(false);
 	let unsharedFileCount = $state(0);
 
 	async function checkUnsharedFiles() {
-		if (!docId || isViewer) return;
+		if (!docId || readOnly) return;
 		try {
 			const [collaboratorsRes, filesRes] = await Promise.all([
 				fetch(`/api/docs/${docId}/collaborators`),
@@ -42,20 +49,12 @@
 	});
 	let isPageSettingsOpen = $state(false);
 	let isPresentationOpen = $state(false);
-	let fileInput = $state<HTMLInputElement | null>(null);
 	
-	let { title = 'Untitled Document', docId = undefined, isViewer = false } = $props<{ title?: string, docId?: string, isViewer?: boolean }>();
+	let { title = 'Untitled Document', docId = undefined, role = 'viewer' }: { title?: string, docId?: string, role?: DocumentRole } = $props();
 
-	let uploadedFonts = $state<string[]>([]);
-
-	$effect(() => {
-		fetch(docId ? `/api/docs/${docId}/fonts` : '/api/fonts')
-			.then(res => res.json())
-			.then(data => {
-				uploadedFonts = Array.isArray(data) ? data : [];
-			})
-			.catch(console.error);
-	});
+	let readOnly = $derived(role !== 'owner' && role !== 'editor');
+	let directEditing = $derived(!readOnly && !$suggestingModeStore);
+	let canComment = $derived(role === 'owner' || role === 'editor' || role === 'suggester');
 
 	function handleExport(format: 'pdf' | 'png' | 'svg' | 'typ') {
 		if (!text) return;
@@ -81,21 +80,38 @@
 		});
 	}
 
-	function handleSaveVersion() {
-		if (!text || !docId) return;
-		const content = text.toString();
-		fetch(`/api/docs/${docId}/versions`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ content })
-		}).then(res => {
-			if (!res.ok) throw new Error("Failed to save version");
-			alert("Version saved successfully.");
-		}).catch(err => {
+	let saveStatus = $state<'idle' | 'saving' | 'saved' | 'unchanged' | 'error'>('idle');
+	let saveStatusTimer: ReturnType<typeof setTimeout> | undefined;
+
+	async function handleSaveVersion() {
+		if (!docId) return;
+		saveStatus = 'saving';
+		try {
+			const result = await saveVersion(docId);
+			saveStatus = result.created ? 'saved' : 'unchanged';
+		} catch (err) {
 			console.error(err);
-			alert("Failed to save version.");
-		});
+			saveStatus = 'error';
+		}
+		clearTimeout(saveStatusTimer);
+		saveStatusTimer = setTimeout(() => (saveStatus = 'idle'), 2500);
 	}
+
+	const saveStatusLabels = {
+		idle: '',
+		saving: 'Saving...',
+		saved: 'Version saved',
+		unchanged: 'No changes',
+		error: 'Save failed'
+	};
+
+	const saveStatusIcons = {
+		idle: '',
+		saving: 'mdi:loading',
+		saved: 'mdi:check',
+		unchanged: 'mdi:check',
+		error: 'mdi:alert-circle-outline'
+	};
 
 	function handlePrint() {
 		if (!text) return;
@@ -167,54 +183,6 @@
 		});
 	}
 
-	function insertTypstConfig(setting: string, value: string) {
-		if (!text) return;
-		const content = text.toString();
-		
-		const regex = new RegExp(`^#set\\s+${setting}\\s*\\(([^)]*)\\)`, 'm');
-		const match = content.match(regex);
-		
-		const [propKey, ...propValParts] = value.split(':');
-		const propKeyTrimmed = propKey.trim();
-		const propValTrimmed = propValParts.join(':').trim();
-		
-		if (match) {
-			const index = match.index!;
-			const oldArgs = match[1];
-			
-			
-			const propRegex = new RegExp(`${propKeyTrimmed}\\s*:\\s*(?:\\([^)]*\\)|"[^"]*"|[^,)]+)`);
-			let newArgs;
-			if (propRegex.test(oldArgs)) {
-				newArgs = oldArgs.replace(propRegex, `${propKeyTrimmed}: ${propValTrimmed}`);
-			} else {
-				newArgs = oldArgs.trim() ? `${oldArgs}, ${propKeyTrimmed}: ${propValTrimmed}` : `${propKeyTrimmed}: ${propValTrimmed}`;
-			}
-			
-			const newRule = `#set ${setting}(${newArgs})`;
-			const lengthToReplace = match[0].length;
-			text.delete(index, lengthToReplace);
-			text.insert(index, newRule);
-		} else {
-			text.insert(0, `#set ${setting}(${value})\n`);
-		}
-	}
-	
-	function applyFormat(prefix: string, suffix: string, defaultText: string = '') {
-		const view = $editorViewStore;
-		if (!view) return;
-		
-		const selection = view.state.selection.main;
-		const selectedText = view.state.doc.sliceString(selection.from, selection.to);
-		const replacement = prefix + (selectedText || defaultText) + suffix;
-		
-		view.dispatch({
-			changes: { from: selection.from, to: selection.to, insert: replacement },
-			selection: { anchor: selection.from + prefix.length, head: selection.from + prefix.length + (selectedText || defaultText).length }
-		});
-		view.focus();
-	}
-
 	function insertLinkedFile(file: { name: string }) {
 		isAssetsModalOpen = false;
 		const view = $editorViewStore;
@@ -226,56 +194,6 @@
 			selection: { anchor: selection.from + replacement.length }
 		});
 		view.focus();
-	}
-
-	function handleImageUpload(e: Event) {
-		const target = e.target as HTMLInputElement;
-		if (!target.files || target.files.length === 0) return;
-		const file = target.files[0];
-		if (!docId) return alert('Please save the document before uploading images.');
-		
-		const formData = new FormData();
-		formData.append('file', file);
-		
-		fetch(`/api/docs/${docId}/files`, {
-			method: 'POST',
-			body: formData
-		}).then(res => res.json()).then(data => {
-			if (data.filename) {
-				if (data.filename.toLowerCase().endsWith('.ttf') || data.filename.toLowerCase().endsWith('.otf')) {
-					triggerLspReconnect.update(n => n + 1);
-					const fontName = data.font_family || data.filename.substring(0, data.filename.lastIndexOf('.'));
-					if (!uploadedFonts.includes(fontName)) {
-						uploadedFonts = [...uploadedFonts, fontName];
-					}
-				}
-				const view = $editorViewStore;
-				if (view) {
-					const selection = view.state.selection.main;
-					const isFont = data.filename.toLowerCase().endsWith('.ttf') || data.filename.toLowerCase().endsWith('.otf');
-					let replacement = "";
-					if (isFont) {
-						if (data.font_family) {
-							replacement = `#set text(font: "${data.font_family}")\n`;
-						} else {
-							replacement = `// The font ${data.filename} is available!\n// Type #set text(font: "") and use autocomplete to select its name.\n`;
-						}
-					} else {
-						replacement = `#image("${data.filename}")\n`;
-					}
-					view.dispatch({
-						changes: { from: selection.from, to: selection.to, insert: replacement },
-						selection: { anchor: selection.from + replacement.length }
-					});
-					view.focus();
-				}
-			}
-		}).catch(err => {
-			console.error(err);
-			alert('Failed to upload image');
-		});
-		
-		target.value = '';
 	}
 
 	function handlePageSettings(settings: Record<string, string>, docSettings: Record<string, string>) {
@@ -357,10 +275,6 @@
 		return settings;
 	}
 
-	
-	function getInitials(name: string) {
-		return name.substring(0, 2).toUpperCase();
-	}
 
 	let isMenuOpen = $state(false);
 	let activeMenu = $state<string | null>(null);
@@ -403,6 +317,13 @@
 		showDeleteModal = true;
 	}
 
+	function handleShortcut(event: KeyboardEvent) {
+		if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+			event.preventDefault();
+			if (!readOnly) handleSaveVersion();
+		}
+	}
+
 	function handleWindowClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 		if (!target.closest('.action-menu-container')) {
@@ -422,7 +343,7 @@
 	}
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={handleWindowClick} onkeydown={handleShortcut} />
 
 <header class="flex flex-col border-b border-[var(--theme-border)] bg-[var(--theme-bg)] text-[var(--theme-text)] backdrop-blur-md select-none w-full relative z-[70]" style="background-color: var(--theme-bg); color: var(--theme-text); border-color: var(--theme-border);">
 	
@@ -442,10 +363,14 @@
 					<h1 class="text-[16px] font-semibold text-[var(--color-ink)] tracking-tight truncate max-w-[200px] md:max-w-xs" title={title}>
 						{title}
 					</h1>
-
+					{#if saveStatus !== 'idle'}
+						<span class="flex items-center gap-1 text-xs {saveStatus === 'error' ? 'text-[var(--color-danger)]' : 'text-[var(--color-ink-muted)]'}">
+							<Icon icon={saveStatusIcons[saveStatus]} class="text-sm {saveStatus === 'saving' ? 'animate-spin' : ''}" />
+							{saveStatusLabels[saveStatus]}
+						</span>
+					{/if}
 				</div>
 
-				
 				<div class="flex items-center gap-0.5 text-[13px] font-medium text-[var(--color-ink-muted)] -ml-1 action-menu-container">
 					<div class="relative">
 						<button 
@@ -458,9 +383,9 @@
 							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100] max-h-[calc(100vh-8rem)] overflow-y-auto">
 								<button onclick={() => { activeMenu = null; goto('/drive'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">New / Open</button>
 								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Document Info</button>
-								{#if !isViewer}
+								{#if !readOnly}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; handleSaveVersion(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Save Version</button>
+								<button onclick={() => { activeMenu = null; handleSaveVersion(); }} disabled={saveStatus === 'saving'} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Save Version <span class="text-xs opacity-60">Ctrl+S</span></button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<button onclick={() => { activeMenu = null; openRename(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Rename</button>
 								<button onclick={() => { activeMenu = null; isShareModalOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Share</button>
@@ -480,7 +405,7 @@
 								<button onclick={() => { activeMenu = null; handlePandocExport('latex'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">LaTeX (.tex)</button>
 								<button onclick={() => { activeMenu = null; handlePandocExport('markdown'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Markdown (.md)</button>
 								<button onclick={() => { activeMenu = null; handlePandocExport('html'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">HTML (.html)</button>
-								{#if !isViewer}
+								{#if !readOnly}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<button onclick={() => { activeMenu = null; deleteDoc(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10">Delete</button>
 								{/if}
@@ -488,7 +413,7 @@
 						{/if}
 					</div>
 
-					{#if !isViewer}
+					{#if !readOnly}
 					<div class="relative">
 						<button 
 							onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'edit' ? null : 'edit'; }} 
@@ -504,6 +429,30 @@
 								<button onclick={() => { activeMenu = null; document.execCommand('cut'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Cut (Ctrl+X)</button>
 								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Copy (Ctrl+C)</button>
 								<button onclick={() => { activeMenu = null; navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t)); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Paste (Ctrl+V)</button>
+								<div class="h-px bg-[var(--theme-border)] my-1"></div>
+								<button onclick={() => { activeMenu = null; if ($editorViewStore) openFind($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Find (Ctrl+F)</button>
+								<button onclick={() => { activeMenu = null; if ($editorViewStore) openReplace($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Search and Replace</button>
+							</div>
+						{/if}
+					</div>
+					{/if}
+
+					{#if !readOnly}
+					<div class="relative">
+						<button
+							onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'insert' ? null : 'insert'; }}
+							class="px-2 py-0.5 rounded transition-colors {activeMenu === 'insert' ? 'bg-[var(--theme-border)] text-[var(--theme-text)]' : 'hover:bg-[var(--theme-border)]'}"
+						>
+							Insert
+						</button>
+						{#if activeMenu === 'insert'}
+							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+								{#each insertOptions as option (option.dialog)}
+									<button onclick={() => { activeMenu = null; insertDialogStore.set(option.dialog); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
+										<Icon icon={option.icon} class="text-base" />
+										{option.label}
+									</button>
+								{/each}
 							</div>
 						{/if}
 					</div>
@@ -518,7 +467,7 @@
 						</button>
 						{#if activeMenu === 'view'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
-								<button onclick={() => { activeMenu = null; $versionHistoryOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
+								<button onclick={() => { activeMenu = null; goto(`/doc/${docId}/history`); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
 									Version History
 								</button>
 							</div>
@@ -530,19 +479,7 @@
 
 		<div class="flex items-center gap-3">
 			
-			{#if $connectedUsers.length > 0}
-				<div class="flex items-center -space-x-2 mr-2">
-					{#each $connectedUsers as user}
-						<div 
-							class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-[var(--color-surface)] shadow-sm"
-							style="background-color: {user.color}; z-index: {user.isLocal ? 10 : 1};"
-							title={user.name + (user.isLocal ? ' (You)' : '')}
-						>
-							{getInitials(user.name)}
-						</div>
-					{/each}
-				</div>
-			{/if}
+			<CollaboratorAvatars />
 
 			
 			<div class="flex items-center gap-1.5 px-2">
@@ -557,21 +494,22 @@
 			<div class="w-px h-5 bg-[var(--color-line)]"></div>
 
 			
-			{#if !isViewer}
+			{#if !readOnly}
+			<button
+				onclick={() => goto(`/doc/${docId}/history`)}
+				class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors"
+				title="Version history"
+				aria-label="Version history"
+			>
+				<Icon icon="mdi:history" class="text-[18px]" />
+			</button>
+
 			<button
 				onclick={() => (isPresentationOpen = true)}
 				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors"
 			>
 				<Icon icon="mdi:presentation-play" class="text-[16px]" />
 				Present
-			</button>
-
-			<button
-				onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors"
-			>
-				<Icon icon="mdi:comment-outline" class="text-[16px]" />
-				Comments
 			</button>
 
 			<button
@@ -582,6 +520,18 @@
 				Share
 			</button>
 			{/if}
+
+			{#if canComment}
+				<EditingModeSwitch canEdit={!readOnly} />
+			{/if}
+
+			<button
+				onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)}
+				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-md transition-colors {$commentsSidebarOpen ? 'text-[var(--color-accent)] bg-[var(--color-accent-soft)]' : 'text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)]'}"
+			>
+				<Icon icon="mdi:comment-outline" class="text-[16px]" />
+				Comments
+			</button>
 
 			<div class="w-px h-5 bg-[var(--color-line)]"></div>
 
@@ -630,122 +580,26 @@
 		</div>
 	</div>
 
-	
-	<div class="flex items-center px-4 py-1.5 bg-[var(--color-surface-muted)] border-t border-[var(--color-line)] gap-4 overflow-x-auto no-scrollbar">
-		
-		
-		<div class="flex items-center gap-1">
-			<button onclick={() => applyFormat('*', '*', 'bold')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Bold">
-				<Icon icon="mdi:format-bold" class="text-lg" />
-			</button>
-			<button onclick={() => applyFormat('_', '_', 'italic')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Italic">
-				<Icon icon="mdi:format-italic" class="text-lg" />
-			</button>
-			<button onclick={() => applyFormat('`', '`', 'code')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Code">
-				<Icon icon="mdi:code-tags" class="text-lg" />
-			</button>
-			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
-			<button onclick={() => applyFormat('$ ', ' $', 'x = y')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Math (Inline)">
-				<Icon icon="mdi:sigma" class="text-lg" />
-			</button>
-			<button onclick={() => applyFormat('$ \n  ', '\n$ ', 'x = y')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Math (Block)">
-				<Icon icon="mdi:math-integral" class="text-lg" />
-			</button>
-			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
-			<button onclick={() => applyFormat('- ', '', 'List item')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Bullet List">
-				<Icon icon="mdi:format-list-bulleted" class="text-lg" />
-			</button>
-			<button onclick={() => applyFormat('+ ', '', 'Numbered item')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Numbered List">
-				<Icon icon="mdi:format-list-numbered" class="text-lg" />
-			</button>
-			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
-			<input type="file" bind:this={fileInput} onchange={handleImageUpload} class="hidden" accept="image/*,.ttf,.otf" />
-			{#if !isViewer}
-			<button onclick={() => fileInput?.click()} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Upload Image / Font">
-				<Icon icon="mdi:image-plus" class="text-lg" />
-			</button>
-			{/if}
-			{#if docId}
-			<button onclick={() => (isAssetsModalOpen = true)} class="relative p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title={unsharedFileCount > 0 ? `${unsharedFileCount} file(s) used in this document are not shared with collaborators` : 'Document files'}>
-				<Icon icon="mdi:paperclip" class="text-lg" />
-				{#if unsharedFileCount > 0}
-					<span class="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-amber-500"></span>
-				{/if}
-			</button>
-			{/if}
-		</div>
-
-		<div class="w-px h-4 bg-[var(--color-line)]"></div>
-
-		<div class="flex items-center gap-2">
-			<label for="font-select" class="text-[11px] font-semibold uppercase tracking-wider opacity-60">Font</label>
-			<select 
-				id="font-select"
-				onchange={(e) => insertTypstConfig('text', `font: "${e.currentTarget.value}"`)}
-				class="bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] text-xs rounded shadow-sm focus:border-[var(--color-accent)] focus:outline-none block py-1 pl-2 pr-6 appearance-none cursor-pointer transition-colors"
-			>
-				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="New Computer Modern">Default (New CM)</option>
-				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="Libertinus Serif">Libertinus Serif</option>
-				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="PT Sans">PT Sans</option>
-				<option class="bg-[var(--theme-bg)] text-[var(--theme-text)]" value="Roboto">Roboto</option>
-				{#if uploadedFonts.length > 0}
-					<optgroup label="Uploaded Fonts" class="bg-[var(--theme-bg)] text-[var(--theme-text)] font-semibold italic">
-						{#each uploadedFonts as font}
-							<option class="bg-[var(--theme-bg)] text-[var(--theme-text)] not-italic font-normal" value={font}>{font}</option>
-						{/each}
-					</optgroup>
-				{/if}
-			</select>
-		</div>
-
-		<div class="w-px h-4 bg-[var(--color-line)]"></div>
-
-		<div class="flex items-center gap-2">
-			{#if !isViewer}
-			<button
-				onclick={() => (isPageSettingsOpen = true)}
-				class="flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] rounded shadow-sm transition-colors opacity-90 hover:opacity-100"
-			>
-				<Icon icon="mdi:file-document-edit-outline" class="text-sm" />
-				Page Settings
-			</button>
-			{/if}
-		</div>
-
-		<div class="w-px h-4 bg-[var(--color-line)]"></div>
-
-		<div class="flex items-center gap-1 bg-[var(--color-surface)] border border-[var(--color-line)] rounded shadow-sm overflow-hidden">
-			<button
-				onclick={() => $documentZoomStore = Math.max(10, $documentZoomStore - 10)}
-				class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors"
-				title="Zoom Out"
-			>
-				<Icon icon="mdi:minus" class="text-sm" />
-			</button>
-			<span role="button" tabindex="0" onkeydown={(e) => { if (e.key === "Enter") $documentZoomStore = 100; }} class="text-[11px] font-semibold text-[var(--color-ink-muted)] min-w-[3rem] text-center select-none" ondblclick={() => $documentZoomStore = 100}>
-				{$documentZoomStore}%
-			</span>
-			<button
-				onclick={() => $documentZoomStore = Math.min(500, $documentZoomStore + 10)}
-				class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors"
-				title="Zoom In"
-			>
-				<Icon icon="mdi:plus" class="text-sm" />
-			</button>
-		</div>
-
-		<div class="flex-grow"></div>
-
-
-	</div>
+	<FormattingBar
+		{docId}
+		readOnly={!directEditing}
+		{canComment}
+		{unsharedFileCount}
+		onOpenAssets={() => (isAssetsModalOpen = true)}
+		onOpenPageSettings={() => (isPageSettingsOpen = true)}
+	/>
 </header>
+
+{#if docId && !readOnly}
+	<InsertDialogs {docId} />
+{/if}
 
 {#if isShareModalOpen}
 	<ShareModal itemId={docId} kind="document" onClose={() => { isShareModalOpen = false; checkUnsharedFiles(); }} />
 {/if}
 
 {#if isAssetsModalOpen && docId}
-	<DocumentAssetsModal {docId} canEdit={!isViewer} onInsert={insertLinkedFile} onClose={() => { isAssetsModalOpen = false; checkUnsharedFiles(); }} />
+	<DocumentAssetsModal {docId} canEdit={!readOnly} onInsert={insertLinkedFile} onClose={() => { isAssetsModalOpen = false; checkUnsharedFiles(); }} />
 {/if}
 
 {#if isPageSettingsOpen}
@@ -757,14 +611,11 @@
 {/if}
 
 {#if $commentsSidebarOpen && docId}
-	<CommentsSidebar docId={docId} onClose={() => ($commentsSidebarOpen = false)} />
+	<CommentsPanel {docId} {canComment} canReview={!readOnly} isOwner={role === 'owner'} onClose={() => ($commentsSidebarOpen = false)} />
 {/if}
 
-{#if $versionHistoryOpen && docId}
-	<VersionHistorySidebar docId={docId} onClose={() => ($versionHistoryOpen = false)} />
-{/if}
 
-{#if showInfoModal}
+{#if showInfoModal && docId}
 	<InfoModal selectedInfo={{ id: docId, type: 'document', title }} onClose={() => (showInfoModal = false)} />
 {/if}
 

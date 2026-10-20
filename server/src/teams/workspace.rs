@@ -23,7 +23,7 @@ const TEAM_SCOPED_PREFIXES: &[&str] = &[
     "/api/auth/storage",
 ];
 
-const PERSONAL_SEGMENTS: &[&str] = &["/comments", "/versions"];
+const PERSONAL_SEGMENTS: &[&str] = &["/comments", "/versions", "/suggestions"];
 
 fn requested_team(headers: &HeaderMap, uri: &Uri) -> Option<String> {
     let from_header = headers

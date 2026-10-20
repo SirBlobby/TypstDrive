@@ -10,7 +10,15 @@
 	import { compileTypst } from '$lib/ts/typst-api';
 	import type { Diagnostic } from '$lib/ts/typst-api';
 	import { page } from '$app/stores';
-	import { commentsSidebarOpen, commentReference, editorViewStore, editorErrors, documentStatsStore, previewOpenStore } from '$lib/ts/store';
+	import EditorContextMenu from '$lib/components/editor/EditorContextMenu.svelte';
+	import CommentHighlights from '$lib/components/comments/CommentHighlights.svelte';
+	import SuggestionHighlights from '$lib/components/suggestions/SuggestionHighlights.svelte';
+	import SuggestionComposer from '$lib/components/suggestions/SuggestionComposer.svelte';
+	import { editorErrors, documentStatsStore, previewOpenStore } from '$lib/ts/store';
+	import { reviewExtensions } from '$lib/ts/review-extensions';
+	import { suggestingModeStore, suggestionDraftStore } from '$lib/ts/suggestions';
+	import { activeThreadStore, pendingCommentStore } from '$lib/ts/comments';
+	import type { DocumentRole } from '$lib/ts/document-role';
 
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -18,40 +26,12 @@
 	let lastCompiledContent: string | null = null;
 	let initialized = $state(false);
 	let documentTitle = $state('Untitled Document');
-	let isViewer = $state(false);
+	let role = $state<DocumentRole>('viewer');
+	let roleLoaded = $state(false);
 
-	let contextMenu = $state({ show: false, x: 0, y: 0, text: '' });
-
-	function handleContextMenu(e: MouseEvent) {
-		const view = $editorViewStore;
-		if (!view) return;
-		
-		const target = e.target as HTMLElement;
-		if (!target.closest('.cm-editor') && !target.closest('.cm-content')) return;
-
-		const selection = view.state.selection.main;
-		const selectedText = view.state.doc.sliceString(selection.from, selection.to);
-		
-		if (selectedText.trim()) {
-			e.preventDefault();
-			contextMenu = {
-				show: true,
-				x: e.clientX,
-				y: e.clientY,
-				text: selectedText.trim()
-			};
-		}
-	}
-
-	function closeContextMenu() {
-		contextMenu.show = false;
-	}
-
-	function handleAddComment() {
-		$commentReference = contextMenu.text;
-		$commentsSidebarOpen = true;
-		closeContextMenu();
-	}
+	let isViewer = $derived(roleLoaded && role === 'viewer');
+	let canComment = $derived(role !== 'viewer');
+	const editorExtensions = reviewExtensions();
 
 	function triggerCompile() {
 		if (!text || !$previewOpenStore) return;
@@ -90,16 +70,20 @@
 		const docId = $page.params.id;
 		if (!docId) return;
 
-		
+		suggestingModeStore.set(false);
+		suggestionDraftStore.set(null);
+		pendingCommentStore.set(null);
+		activeThreadStore.set(null);
+
 		fetch(`/api/docs/${docId}`)
 			.then(res => res.json())
 			.then(doc => {
 				if (doc && doc.title) {
 					documentTitle = doc.title;
 				}
-				if (doc && doc.effective_role === 'viewer') {
-					isViewer = true;
-				}
+				role = doc?.effective_role ?? 'viewer';
+				roleLoaded = true;
+				suggestingModeStore.set(role === 'suggester');
 			})
 			.catch(err => console.error("Failed to fetch document:", err));
 
@@ -113,6 +97,7 @@
 
 		return () => {
 			if (timeoutId) clearTimeout(timeoutId);
+			suggestingModeStore.set(false);
 			cleanupYjs();
 		};
 	});
@@ -124,17 +109,17 @@
 	<meta property="og:title" content={`${documentTitle} - ${$brandingStore.site_name}`} />
 </svelte:head>
 
-<svelte:window onclick={closeContextMenu} />
-
 <div class="flex flex-col h-screen relative">
-	<Toolbar title={documentTitle} docId={$page.params.id} isViewer={isViewer} />
+	<Toolbar title={documentTitle} docId={$page.params.id ?? ''} {role} />
 
-	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative" oncontextmenu={handleContextMenu}>
+	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
 		{#if !isViewer}
 		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 {$previewOpenStore ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'w-full'}">
-			{#if initialized}
-				<Editor />
+			{#if initialized && roleLoaded}
+				<Editor extensions={editorExtensions} />
+				<CommentHighlights />
+				<SuggestionHighlights />
 			{/if}
 		</div>
 		{/if}
@@ -150,19 +135,7 @@
 	<DocFooter />
 </div>
 
-{#if contextMenu.show}
-	<div 
-		class="fixed z-[9999] bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-lg shadow-xl border border-[var(--theme-border)] py-1 min-w-[200px] overflow-hidden" 
-		style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
-	>
-		<button onclick={handleAddComment} class="w-full text-left px-4 py-2 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2">
-			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-			Add Comment on Selection
-		</button>
-		<div class="h-px bg-[var(--theme-border)] my-1"></div>
-		<button onclick={() => { navigator.clipboard.writeText(contextMenu.text); closeContextMenu(); }} class="w-full text-left px-4 py-2 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2">
-			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--color-ink-muted)]"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-			Copy Text
-		</button>
-	</div>
+{#if initialized && !isViewer}
+	<EditorContextMenu {canComment} />
+	<SuggestionComposer docId={$page.params.id ?? ''} />
 {/if}

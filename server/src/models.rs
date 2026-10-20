@@ -256,45 +256,6 @@ pub struct CollaboratorView {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct Comment {
-    pub id: String,
-    pub document_id: String,
-    pub user_id: String,
-    pub content: String,
-    #[serde(with = "serde_i64_bool")]
-    pub resolved: i64,
-    pub created_at: String,
-    pub author_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateCommentRequest {
-    pub content: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateCommentRequest {
-    pub content: Option<String>,
-    pub resolved: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct DocumentVersion {
-    pub id: String,
-    pub document_id: String,
-    pub user_id: String,
-    pub content: String,
-    pub created_at: String,
-    #[sqlx(default)]
-    pub author_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateVersionRequest {
-    pub content: String,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InviteRequest {
     pub email: String,

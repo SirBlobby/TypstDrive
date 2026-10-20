@@ -26,6 +26,13 @@ enum LinkKind {
     Project,
 }
 
+fn invalid_role_message(kind: LinkKind) -> &'static str {
+    match kind {
+        LinkKind::Document => "Role must be viewer, suggester, editor or none",
+        LinkKind::Project => "Role must be viewer, editor or none",
+    }
+}
+
 impl LinkKind {
     fn parse(value: &str) -> Result<Self, ApiError> {
         match value {
@@ -237,8 +244,9 @@ pub async fn update_link(
     let public_role = match payload.public_role.as_deref().map(str::trim) {
         Some("viewer") => Some("viewer".to_string()),
         Some("editor") => Some("editor".to_string()),
+        Some("suggester") if matches!(kind, LinkKind::Document) => Some("suggester".to_string()),
         Some("none") | Some("") => None,
-        Some(_) => return Err((StatusCode::BAD_REQUEST, "Role must be viewer, editor or none".to_string())),
+        Some(_) => return Err((StatusCode::BAD_REQUEST, invalid_role_message(kind).to_string())),
         None => link.public_role.clone(),
     };
 

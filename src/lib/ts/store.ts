@@ -14,8 +14,6 @@ export const connectionStatus = writable('connecting');
 export const editorViewStore = writable<any>(null);
 export const documentZoomStore = writable(100);
 export const commentsSidebarOpen = writable(false);
-export const versionHistoryOpen = writable(false);
-export const commentReference = writable('');
 export const editorErrors = writable<Diagnostic[]>([]);
 export const documentStatsStore = writable<{pages: number; words: number; characters: number; characters_excluding_spaces: number} | null>(null);
 export const triggerLspReconnect = writable(0);
@@ -23,7 +21,9 @@ export const previewOpenStore = writable(true);
 
 export interface AwarenessUser {
     clientId: number;
+    id?: string | null;
     name: string;
+    avatar?: string | null;
     color: string;
     colorLight: string;
     isLocal?: boolean;

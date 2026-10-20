@@ -60,6 +60,9 @@
             <select bind:value={publicRole} disabled={!canManage} class="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] focus:outline-none cursor-pointer disabled:opacity-60">
                 <option value="none">Off</option>
                 <option value="viewer">Viewer</option>
+                {#if kind === 'document'}
+                    <option value="suggester">Suggester</option>
+                {/if}
                 <option value="editor">Editor</option>
             </select>
         </div>

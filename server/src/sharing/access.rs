@@ -13,6 +13,7 @@ use crate::db::sql;
 pub enum AccessRole {
     Owner,
     Editor,
+    Suggester,
     Viewer,
 }
 
@@ -20,6 +21,7 @@ impl AccessRole {
     pub fn from_share_role(role: &str) -> Option<Self> {
         match role {
             "editor" => Some(Self::Editor),
+            "suggester" => Some(Self::Suggester),
             "viewer" => Some(Self::Viewer),
             _ => None,
         }
@@ -29,18 +31,28 @@ impl AccessRole {
         matches!(self, Self::Owner | Self::Editor)
     }
 
+    pub fn can_suggest(self) -> bool {
+        matches!(self, Self::Owner | Self::Editor | Self::Suggester)
+    }
+
+    pub fn can_comment(self) -> bool {
+        self.can_suggest()
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Owner => "owner",
             Self::Editor => "editor",
+            Self::Suggester => "suggester",
             Self::Viewer => "viewer",
         }
     }
 
     fn rank(self) -> u8 {
         match self {
-            Self::Owner => 2,
-            Self::Editor => 1,
+            Self::Owner => 3,
+            Self::Editor => 2,
+            Self::Suggester => 1,
             Self::Viewer => 0,
         }
     }
