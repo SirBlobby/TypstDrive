@@ -3,12 +3,14 @@
     import Icon from '@iconify/svelte';
     import { userStore } from '$lib/ts/auth';
     import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
+    import SetPasswordModal from './users/SetPasswordModal.svelte';
 
     type AdminUser = {
         id: string;
         username: string;
         email: string;
         is_admin: boolean;
+        email_verified: boolean;
         created_at: string;
     };
 
@@ -55,6 +57,29 @@
         if (res.ok) {
             const updated: AdminUser = await res.json();
             adminUsers = adminUsers.map(u => u.id === updated.id ? updated : u);
+        }
+    }
+
+    async function toggleVerified(user: AdminUser) {
+        const res = await fetch(`/api/admin/users/${user.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email_verified: !user.email_verified })
+        });
+        if (res.ok) {
+            const updated: AdminUser = await res.json();
+            adminUsers = adminUsers.map(u => u.id === updated.id ? updated : u);
+        }
+    }
+
+    let signedOutUserId = $state<string | null>(null);
+    let passwordUser = $state<AdminUser | null>(null);
+
+    async function signOutEverywhere(user: AdminUser) {
+        const res = await fetch(`/api/admin/users/${user.id}/sessions`, { method: 'DELETE' });
+        if (res.ok) {
+            signedOutUserId = user.id;
+            setTimeout(() => (signedOutUserId = null), 2000);
         }
     }
 
@@ -210,11 +235,37 @@
                                     <span class="text-xs px-1.5 py-0.5 rounded-md bg-[var(--color-accent-soft)] text-[var(--color-accent)] flex-shrink-0">You</span>
                                 {/if}
                             </div>
-                            <p class="text-xs text-[var(--color-ink-muted)] truncate">{user.email}</p>
+                            <p class="flex items-center gap-1 text-xs text-[var(--color-ink-muted)] truncate">
+                                {user.email}
+                                {#if !user.email_verified}
+                                    <span class="text-[10px] font-semibold uppercase text-amber-600 dark:text-amber-400">unverified</span>
+                                {/if}
+                            </p>
                         </div>
                         <p class="text-xs text-[var(--color-ink-muted)] flex-shrink-0 hidden sm:block">{formatDate(user.created_at)}</p>
                         <div class="flex items-center gap-2 flex-shrink-0">
+                            <button
+                                onclick={() => toggleVerified(user)}
+                                title={user.email_verified ? 'Mark email as unverified' : 'Mark email as verified'}
+                                class="p-1.5 rounded-md transition-colors {user.email_verified ? 'text-[var(--color-success)]' : 'text-[var(--color-ink-muted)]'} hover:bg-[var(--color-surface-sunken)]"
+                            >
+                                <Icon icon={user.email_verified ? 'mdi:email-check-outline' : 'mdi:email-alert-outline'} class="text-lg" />
+                            </button>
+                            <button
+                                onclick={() => (passwordUser = user)}
+                                title="Set password"
+                                class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors"
+                            >
+                                <Icon icon="mdi:key-variant" class="text-lg" />
+                            </button>
                             {#if user.id !== $userStore?.id}
+                                <button
+                                    onclick={() => signOutEverywhere(user)}
+                                    title="Sign out of all sessions"
+                                    class="p-1.5 rounded-md text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors"
+                                >
+                                    <Icon icon={signedOutUserId === user.id ? 'mdi:check' : 'mdi:logout-variant'} class="text-lg" />
+                                </button>
                                 <button
                                     onclick={() => toggleAdmin(user)}
                                     title={user.is_admin ? 'Revoke admin' : 'Grant admin'}
@@ -256,3 +307,7 @@
         {/if}
     </div>
 </div>
+
+{#if passwordUser}
+    <SetPasswordModal user={passwordUser} onClose={() => (passwordUser = null)} />
+{/if}
