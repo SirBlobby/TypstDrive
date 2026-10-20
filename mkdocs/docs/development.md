@@ -1,39 +1,40 @@
 # Development
 
-## Repository layout
+## Contributing
 
-| Path | Contents |
-|---|---|
-| `src/` | SvelteKit web app. |
-| `server/` | Rust server built on Axum, sqlx and the Typst compiler. |
-| `typst/` | The Typst compiler, checked out at the commit the server builds against. |
-| `mkdocs/` | This documentation site. |
+Contributions are welcome, whether that is a bug fix, a new feature or an improvement to the documentation.
 
-## Server layout
+### Workflow
 
-The server code in `server/src/` is grouped by feature.
+1. Open an [issue](https://github.com/SirBlobby/TypstDrive/issues) first for anything larger than a small fix, so the approach can be agreed before you write code.
+2. Fork the repository and create a branch from `dev`.
+3. Make your change, keeping each pull request focused on one thing.
+4. Run the checks below and make sure they pass.
+5. Open a pull request against `dev`. Describe what changed, why, and how you tested it. Add screenshots for interface changes.
 
-| Path | Contents |
-|---|---|
-| `main.rs` | Startup and the shared `AppState`. |
-| `routes.rs` | Every HTTP route and the handler it calls. |
-| `request_context.rs` | Middleware that resolves the browser session, the active team space and share link grants for each request. |
-| `site_url.rs` | The public address from `PUBLIC_URL`, used for links and redirects. |
-| `accounts/` | Sign-in, server-side sessions, lockout, email verification, password reset, avatars, first-run setup, account rules and storage quotas. |
-| `accounts/sso/` | OpenID Connect, Google and GitHub sign-in, and linking provider accounts. |
-| `admin/` | User management, site settings, authentication settings, branding and the audit log. |
-| `api/` | API keys with scopes and expiry, rate limits, `/v1/render` and the read endpoints. |
-| `cluster/` | Redis or Valkey pub/sub that shares edits and events between app instances. |
-| `compile/` | The Typst compiler, its file world, fonts, and the compile and export handlers. |
-| `db/` | Database connection, schema, migrations and MySQL query translation. |
-| `email/` | The SMTP mailer and the messages it sends. The HTML and plain-text templates live in `email/templates/` and are built into the server. |
-| `desktop/` | The Typst Desktop sync API: devices, sessions, projects, folders, documents and files. |
-| `drive/` | Documents, document files, uploaded files, folders, projects, stars, downloads, comments, suggestions, version history and the editor's insert library. |
-| `file_storage/` | Where uploaded file bytes live: the database or S3-compatible object storage, with a memory cache. |
-| `packages/` | The package registry and publishing rules. |
-| `realtime/` | Yjs collaboration, live document state and the relay to other instances. |
-| `sharing/` | Access checks, members, share links and ownership transfers. |
-| `teams/` | Team spaces, their members and roles, the admin rules for teams, and switching the acting account. |
+### Code style
+
+- Use clear, descriptive names for variables and functions. Avoid abbreviations.
+- Keep files short and grouped by feature. Split a file when it grows past a few hundred lines.
+- On the server, return errors instead of panicking. Do not use `unwrap` or `expect` on values that come from requests, the database or the network.
+
+### Checks
+
+Every pull request runs the same checks in CI. Run them locally first:
+
+```bash
+bun run check
+bun run build
+cargo clippy --manifest-path server/Cargo.toml -- -D warnings
+```
+
+### Documentation
+
+Update the pages in `mkdocs/docs/` in the same pull request when you change behavior, settings, the API or the interface. New settings belong in the [Settings reference](self-hosting/configuration.md), and new API endpoints in the [API section](api/index.md).
+
+### Reporting bugs
+
+Open an issue with the TypstDrive version, how it is installed, the database in use, the steps to reproduce the problem, and what you expected to happen. Include relevant server logs with personal details removed.
 
 ## Running locally
 
@@ -90,3 +91,5 @@ Write SQL with numbered placeholders (`$1`, `$2`, ...) and wrap every query stri
 
 - Number placeholders in order and use each one once. Bind a value twice if it is needed twice.
 - Do not use `RETURNING`. Run the write, then select the row.
+- Add indexes to `INDEXES` in `db/schema/mod.rs`. On MySQL, only index columns that are keys, references, unique or have a default, because other `TEXT` columns become `LONGTEXT`, which cannot be indexed.
+- Select only the columns you need. Avoid loading document content or file data in list queries.

@@ -35,7 +35,22 @@ Each entry in `files` has:
 | `name` | string | File name used in your Typst code, for example `logo.png`. |
 | `data` | string | File contents, base64-encoded. |
 
-Inline files are added on top of your account's uploaded files. An inline file with the same name as an uploaded file replaces it for that request. Entries whose `data` is not valid base64 are ignored.
+Inline files are added on top of your account's uploaded fonts and the uploaded files whose name appears in `code`. An inline file with the same name as an uploaded file replaces it for that request. Entries whose `data` is not valid base64 are ignored.
+
+## Rendering stored items
+
+Keys with the `render` scope can also render a document or project that is already stored in TypstDrive:
+
+| Method | Endpoint | Renders |
+|---|---|---|
+| `POST` | `/v1/documents/{id}/render` | The document's current text with its attached files and fonts. |
+| `POST` | `/v1/projects/{id}/render` | The project from its entrypoint, with every project file. |
+
+```json
+{ "format": "pdf" }
+```
+
+The item must belong to the key's account, or to the team named in `X-Workspace`. Responses match the ones below. For projects, compile errors in `details` have no `line` or `column`. Stored renders are not cached.
 
 ## Responses
 
