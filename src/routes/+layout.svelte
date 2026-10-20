@@ -4,7 +4,7 @@
 	import { installWorkspaceHeader } from '$lib/ts/workspace';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { themeStore, darkModeStore } from '$lib/ts/store';
 	import { themes } from '$lib/ts/themes';
 	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '$lib/ts/branding';
@@ -20,7 +20,7 @@
 		if (setupRes.ok) {
 			const { needs_setup } = await setupRes.json();
 			if (needs_setup) {
-				if ($page.url.pathname !== '/setup') {
+				if (page.url.pathname !== '/setup') {
 					await goto('/setup');
 				}
 				loaded = true;

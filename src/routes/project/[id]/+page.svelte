@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { brandingStore } from '$lib/ts/branding';
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import Editor from '$lib/components/Editor.svelte';
 	import Preview from '$lib/components/Preview.svelte';
 	import ErrorBanner from '$lib/components/ErrorBanner.svelte';
@@ -22,7 +22,7 @@
 		kind: string;
 	}
 
-	const projectId = $page.params.id as string;
+	const projectId = page.params.id as string;
 
 	let projectName = $state('Project');
 	let entrypoint = $state('main.typ');

@@ -11,7 +11,7 @@
 	import { text, provider } from '../ts/yjs-setup';
 	import { getThemeExtension } from '../ts/themes';
 	import { themeStore, darkModeStore, editorViewStore, editorErrors, triggerLspReconnect } from '../ts/store';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { LSPClient } from "@codemirror/lsp-client";
 	import { typstLspExtensions } from '../ts/editor-lsp';
 	import { setDiagnostics, lintGutter } from '@codemirror/lint';
@@ -170,17 +170,17 @@
 		themeStore.subscribe(t => { currentTheme = t; })();
 		darkModeStore.subscribe(d => { isDark = d; })();
 
-		const t = typst();
-		const myParser = new (TypstParser as any)(typstHighlight);
-		const myLang = new Language(
-			t.language.data,
-			myParser,
-			[myParser.updateListener()],
+		const typstSupport = typst();
+		const typstParser = new (TypstParser as any)(typstHighlight);
+		const typstLanguage = new Language(
+			typstSupport.language.data,
+			typstParser,
+			[typstParser.updateListener()],
 			'typst'
 		);
 
 		const isToml = (filePath ?? '').toLowerCase().endsWith('.toml');
-		const languageExtension = isToml ? StreamLanguage.define(toml) : [myLang, typstBracketSettings(myLang)];
+		const languageExtension = isToml ? StreamLanguage.define(toml) : [typstLanguage, typstBracketSettings(typstLanguage)];
 		const completionExtensions = isToml ? [] : [autocompletion({ override: [typstCompletions] })];
 
 		state = EditorState.create({
@@ -264,7 +264,7 @@
 
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		const host = window.location.host;
-		const docId = lspDocId ?? $page.params.id;
+		const docId = lspDocId ?? page.params.id;
 
 		let lsHandlers: ((value: string) => void)[] = [];
 		let lspInitialized = false;

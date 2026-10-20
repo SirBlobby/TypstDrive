@@ -3,7 +3,7 @@
 # build host (no emulation) regardless of the target platform.
 FROM --platform=$BUILDPLATFORM oven/bun:alpine AS frontend-builder
 WORKDIR /app
-COPY package.json ./
+COPY package.json bun.lock ./
 RUN bun install
 COPY . .
 RUN bun run build

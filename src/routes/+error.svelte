@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import Icon from '@iconify/svelte';
 </script>
 
@@ -10,7 +10,7 @@
 		</div>
 
 		<h1 class="text-6xl font-bold text-[var(--color-ink)] mb-2 tracking-tight">
-			{$page.status}
+			{page.status}
 		</h1>
 
 		<h2 class="text-xl font-semibold text-[var(--color-ink)] mb-4">
@@ -18,7 +18,7 @@
 		</h2>
 
 		<p class="text-base text-[var(--color-ink-muted)] mb-8 leading-relaxed">
-			{$page.error?.message || 'We experienced an unexpected error processing your request.'}
+			{page.error?.message || 'We experienced an unexpected error processing your request.'}
 		</p>
 
 		<a

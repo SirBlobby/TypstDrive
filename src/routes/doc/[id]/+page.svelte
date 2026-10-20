@@ -9,7 +9,7 @@
 	import { text, initYjs, cleanupYjs } from '$lib/ts/yjs-setup';
 	import { compileTypst } from '$lib/ts/typst-api';
 	import type { Diagnostic } from '$lib/ts/typst-api';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import EditorContextMenu from '$lib/components/editor/EditorContextMenu.svelte';
 	import CommentHighlights from '$lib/components/comments/CommentHighlights.svelte';
 	import SuggestionHighlights from '$lib/components/suggestions/SuggestionHighlights.svelte';
@@ -38,7 +38,7 @@
 		const content = text.toString();
 		if (content === lastCompiledContent) return;
 		lastCompiledContent = content;
-		const docId = $page.params.id;
+		const docId = page.params.id;
 		compileTypst(content, docId)
 			.then((res) => {
 				if (res.stats) {
@@ -67,7 +67,7 @@
 	});
 
 	onMount(() => {
-		const docId = $page.params.id;
+		const docId = page.params.id;
 		if (!docId) return;
 
 		suggestingModeStore.set(false);
@@ -110,7 +110,7 @@
 </svelte:head>
 
 <div class="flex flex-col h-screen relative">
-	<Toolbar title={documentTitle} docId={$page.params.id ?? ''} {role} />
+	<Toolbar title={documentTitle} docId={page.params.id ?? ''} {role} />
 
 	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
@@ -137,5 +137,5 @@
 
 {#if initialized && !isViewer}
 	<EditorContextMenu {canComment} />
-	<SuggestionComposer docId={$page.params.id ?? ''} />
+	<SuggestionComposer docId={page.params.id ?? ''} />
 {/if}

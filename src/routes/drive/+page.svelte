@@ -2,7 +2,7 @@
     import { brandingStore } from '$lib/ts/branding';
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
     import { userStore } from '$lib/ts/auth';
     import Icon from '@iconify/svelte';
     import Navbar from '$lib/components/drive/Navbar.svelte';
@@ -323,7 +323,7 @@
         }
 
         fetchStarred();
-        const view = $page.url.searchParams.get('view');
+        const view = page.url.searchParams.get('view');
         if (view === 'shared') {
             activeTeamStore.set(null);
             enterSharedDrive();
