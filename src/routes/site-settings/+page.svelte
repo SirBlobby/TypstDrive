@@ -9,13 +9,15 @@
     import RegistrationSettings from '$lib/components/site-settings/RegistrationSettings.svelte';
     import StorageSettings from '$lib/components/site-settings/StorageSettings.svelte';
     import PackageSettings from '$lib/components/site-settings/PackageSettings.svelte';
+    import ServerSettings from '$lib/components/site-settings/ServerSettings.svelte';
 
     const navItems = [
         { id: 'users', label: 'Users', icon: 'mdi:account-group-outline' },
         { id: 'accounts', label: 'Registration & Accounts', icon: 'mdi:account-cog-outline' },
         { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
         { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
-        { id: 'api-access', label: 'API Access', icon: 'mdi:api' }
+        { id: 'api-access', label: 'API Access', icon: 'mdi:api' },
+        { id: 'server', label: 'Server', icon: 'mdi:server-outline' }
     ];
 
     let activeSection = $state('users');
@@ -67,6 +69,8 @@
                     <PackageSettings />
                 {:else if activeSection === 'api-access'}
                     <ApiAccessSettings />
+                {:else if activeSection === 'server'}
+                    <ServerSettings />
                 {/if}
             {/if}
         </main>
