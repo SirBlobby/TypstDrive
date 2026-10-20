@@ -75,6 +75,17 @@ pub const TABLES: &[Table] = &[
         constraints: &[],
     },
     Table {
+        name: "desktop_link_codes",
+        columns: &[
+            plain("id", "TEXT PRIMARY KEY"),
+            required_reference("user_id", "users", "TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE"),
+            plain("code_hash", "TEXT NOT NULL UNIQUE"),
+            created_at("created_at"),
+            plain("expires_at", "TEXT NOT NULL"),
+        ],
+        constraints: &[],
+    },
+    Table {
         name: "user_sessions",
         columns: &[
             plain("id", "TEXT PRIMARY KEY"),

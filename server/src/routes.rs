@@ -152,6 +152,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/packages/{name}/access/users/{user_id}", delete(packages::sharing::remove_user))
         .route("/packages/{name}/access/teams", post(packages::sharing::add_team))
         .route("/packages/{name}/access/teams/{team_id}", delete(packages::sharing::remove_team))
+        .route("/desktop-link-codes", post(desktop::link_codes::create_link_code))
         .route("/devices", get(desktop::devices::list_devices))
         .route("/devices/{id}", delete(desktop::devices::revoke_device));
 
@@ -159,6 +160,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/version", get(desktop::version_info))
         .route("/auth/login", post(desktop::session::login))
         .route("/auth/logout", post(desktop::session::logout))
+        .route("/auth/exchange", post(desktop::link_codes::exchange_link_code))
         .route("/auth/me", get(desktop::session::me))
         .route("/projects", get(desktop::projects::list_projects).post(desktop::projects::create_project))
         .route("/projects/{id}", get(desktop::project_files::pull_project).delete(desktop::projects::delete_project).patch(desktop::projects::move_project))
@@ -173,6 +175,14 @@ pub fn build_router(state: AppState) -> Router {
         .route("/files/{id}", get(desktop::files::pull_account_file).patch(desktop::files::rename_account_file).delete(desktop::files::delete_account_file))
         .route("/files/{id}/move", patch(desktop::files::move_account_file))
         .route("/projects/{id}/file", get(desktop::project_files::pull_file).put(desktop::project_files::push_file).delete(desktop::project_files::delete_file))
+        .route("/documents/{id}/versions", get(drive::versions::get_versions).post(drive::versions::create_version))
+        .route("/documents/{id}/versions/{version_id}", patch(drive::versions::rename_version))
+        .route("/documents/{id}/versions/{version_id}/restore", post(drive::versions::restore_version))
+        .route("/documents/{id}/comments", get(drive::comments::get_comments).post(drive::comments::add_comment))
+        .route("/comments/{id}", patch(drive::comments::update_comment).delete(drive::comments::delete_comment))
+        .route("/documents/{id}/suggestions", get(drive::suggestions::list_suggestions).post(drive::suggestions::create_suggestion))
+        .route("/suggestions/{id}", patch(drive::suggestions::update_suggestion))
+        .route("/users/{id}/avatar", get(accounts::avatars::get_user_avatar))
         .route("/ws", get(desktop::devices::ws_handler));
 
     let v1_routes = Router::new()

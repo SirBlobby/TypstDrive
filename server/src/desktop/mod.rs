@@ -18,6 +18,7 @@ use crate::db::sql;
 
 pub mod devices;
 pub mod session;
+pub mod link_codes;
 pub mod projects;
 pub mod project_files;
 pub mod folders;

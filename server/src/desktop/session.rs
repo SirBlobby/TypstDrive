@@ -19,22 +19,50 @@ pub struct DeviceLoginResponse {
     pub email: String,
 }
 
+pub(super) fn ensure_supported_client(client_version: Option<&str>) -> Result<(), (StatusCode, String)> {
+    match client_version {
+        Some(version) if !version_at_least(version, MIN_DESKTOP_VERSION) => Err((
+            StatusCode::UPGRADE_REQUIRED,
+            format!(
+                "This server requires typst-desktop v{} or newer (you have v{}). Please update the app.",
+                MIN_DESKTOP_VERSION, version
+            ),
+        )),
+        _ => Ok(()),
+    }
+}
+
+pub(super) async fn issue_device_token(
+    state: &AppState,
+    user_id: &str,
+    device_name: Option<String>,
+) -> Result<String, (StatusCode, String)> {
+    let token = generate_token();
+    let device_name = device_name
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or_else(|| "Typst Desktop".to_string());
+
+    sqlx::query(
+        sql("INSERT INTO device_tokens (id, user_id, name, token_hash, created_at) VALUES ($1, $2, $3, $4, $5)"),
+    )
+    .bind(Uuid::new_v4().to_string())
+    .bind(user_id)
+    .bind(&device_name)
+    .bind(hash_token(&token))
+    .bind(chrono::Utc::now().to_rfc3339())
+    .execute(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(token)
+}
+
 pub async fn login(
     State(state): State<AppState>,
     client: crate::accounts::client_info::ClientInfo,
     Json(payload): Json<DeviceLoginRequest>,
 ) -> Result<Json<DeviceLoginResponse>, (StatusCode, String)> {
-    if let Some(client_version) = &payload.client_version {
-        if !version_at_least(client_version, MIN_DESKTOP_VERSION) {
-            return Err((
-                StatusCode::UPGRADE_REQUIRED,
-                format!(
-                    "This server requires typst-desktop v{} or newer (you have v{}). Please update the app.",
-                    MIN_DESKTOP_VERSION, client_version
-                ),
-            ));
-        }
-    }
+    ensure_supported_client(payload.client_version.as_deref())?;
 
     let settings = crate::accounts::auth_settings::load(&state).await;
     state.login_guard.ensure_allowed(DESKTOP_LOGIN_SCOPE, &payload.email, &client.ip_address)?;
@@ -56,23 +84,7 @@ pub async fn login(
     }
     state.login_guard.record_success(DESKTOP_LOGIN_SCOPE, &payload.email);
 
-    let token = generate_token();
-    let device_name = payload
-        .device_name
-        .filter(|name| !name.trim().is_empty())
-        .unwrap_or_else(|| "Typst Desktop".to_string());
-
-    sqlx::query(
-        sql("INSERT INTO device_tokens (id, user_id, name, token_hash, created_at) VALUES ($1, $2, $3, $4, $5)"),
-    )
-    .bind(Uuid::new_v4().to_string())
-    .bind(&user.id)
-    .bind(&device_name)
-    .bind(hash_token(&token))
-    .bind(chrono::Utc::now().to_rfc3339())
-    .execute(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let token = issue_device_token(&state, &user.id, payload.device_name).await?;
 
     Ok(Json(DeviceLoginResponse {
         token,
