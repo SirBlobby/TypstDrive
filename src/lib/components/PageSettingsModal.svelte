@@ -1,11 +1,11 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
 
-	let props = $props<{
+	let props: {
 		onClose: () => void;
 		onApply: (settings: Record<string, string>, docSettings: Record<string, string>) => void;
 		currentSettings?: Record<string, string>;
-	}>();
+	} = $props();
 
 	let settings = $derived(props.currentSettings || {});
 

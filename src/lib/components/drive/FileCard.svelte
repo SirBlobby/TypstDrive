@@ -3,7 +3,7 @@
     import { fileDataUrl } from '$lib/ts/item-info';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
 
-    let { file, deleteFile, openRename, openPreview, openInfo = undefined, onReplaced = undefined, readOnly = false } = $props<{
+    let { file, deleteFile, openRename, openPreview, openInfo = undefined, onReplaced = undefined, readOnly = false }: {
         file: any;
         readOnly?: boolean;
         deleteFile: (id: string, name: string) => void;
@@ -11,7 +11,7 @@
         openPreview: (file: any) => void;
         openInfo?: (file: any, type: string) => void;
         onReplaced?: (file: any) => void;
-    }>();
+    } = $props();
 
     const actionButtonClass = 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] p-1 rounded-md hover:bg-[var(--color-surface-sunken)]';
 

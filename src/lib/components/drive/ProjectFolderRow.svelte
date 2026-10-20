@@ -4,7 +4,7 @@
     import { downloadProject } from '$lib/ts/downloads';
     import StarButton from '$lib/components/drive/stars/StarButton.svelte';
 
-    let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, shareItem = undefined, readOnly = false } = $props<{
+    let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, shareItem = undefined, readOnly = false }: {
         project: any;
         activeMenu: string | null;
         setActiveMenu: (id: string | null) => void;
@@ -13,7 +13,7 @@
         deleteProject: (id: string, name: string) => void;
         shareItem?: (item: any, kind: 'project') => void;
         readOnly?: boolean;
-    }>();
+    } = $props();
 
     let dropUp = $state(false);
 

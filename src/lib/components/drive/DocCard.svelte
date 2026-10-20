@@ -3,7 +3,7 @@
     import { goto } from '$app/navigation';
     import StarButton from '$lib/components/drive/stars/StarButton.svelte';
 
-    let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, readOnly = false } = $props<{
+    let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, readOnly = false }: {
         doc: any;
         activeMenu: string | null;
         setActiveMenu: (id: string | null) => void;
@@ -12,7 +12,7 @@
         shareItem: (item: any) => void;
         deleteDoc: (id: string, name: string) => void;
         readOnly?: boolean;
-    }>();
+    } = $props();
 
     let dropUp = $state(false);
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { fileDataUrl } from '$lib/ts/item-info';
     import Icon from '@iconify/svelte';
 
@@ -11,7 +12,7 @@
     const minZoom = 0.25;
     const maxZoom = 4;
 
-    let currentIndex = $state(Math.max(0, files.findIndex((file) => file.id === startFileId)));
+    let currentIndex = $state(untrack(() => Math.max(0, files.findIndex((file) => file.id === startFileId))));
     let zoom = $state(1);
     let imageFailed = $state(false);
 

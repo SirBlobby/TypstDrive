@@ -2,7 +2,7 @@
 	import type { Diagnostic } from '../ts/typst-api';
 	import { documentZoomStore } from '../ts/store';
 
-	let { svgs = [] } = $props<{ svgs?: string[] }>();
+	let { svgs = [] }: { svgs?: string[] } = $props();
 </script>
 
 <div class="relative h-full w-full overflow-auto bg-transparent py-8 px-4 flex flex-col items-center gap-8">

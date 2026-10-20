@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Diagnostic } from '../ts/typst-api';
 
-	let { errors = [] } = $props<{ errors: Diagnostic[] }>();
+	let { errors = [] }: { errors: Diagnostic[] } = $props();
 </script>
 
 {#if errors && errors.length > 0}

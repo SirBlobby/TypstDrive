@@ -2,7 +2,7 @@
     import Icon from '@iconify/svelte';
     import { downloadFolder } from '$lib/ts/downloads';
 
-    let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId, shareFolder = undefined, openInfo = undefined, readOnly = false } = $props<{
+    let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId, shareFolder = undefined, openInfo = undefined, readOnly = false }: {
         folder: any;
         dragOverFolderId: string | null;
         navigateToFolder: (folder: any) => void;
@@ -12,7 +12,7 @@
         shareFolder?: (folder: any) => void;
         openInfo?: (folder: any, type: string) => void;
         readOnly?: boolean;
-    }>();
+    } = $props();
 
     function allowDrop(e: DragEvent) {
         if (readOnly) return;
