@@ -33,6 +33,7 @@
     import DriveSectionTitle from '$lib/components/drive/DriveSectionTitle.svelte';
     import StarredView from '$lib/components/drive/stars/StarredView.svelte';
     import { fetchStarred } from '$lib/ts/stars';
+    import { saveFolderColor } from '$lib/ts/folder-colors';
     import { activeTeamStore, refreshTeams } from '$lib/ts/workspace';
 
     let documents = $state<any[]>([]);
@@ -220,6 +221,15 @@
 
     async function deleteFolder(id: string, name: string) {
         openDelete(id, 'folder', name);
+    }
+
+    async function changeFolderColor(folder: any, color: string | null) {
+        try {
+            const savedColor = await saveFolderColor(folder.id, color);
+            folders = folders.map((item) => (item.id === folder.id ? { ...item, color: savedColor } : item));
+        } catch (err) {
+            alert((err as Error).message);
+        }
     }
 
     function openCreateModal() {
@@ -717,6 +727,7 @@
                                         {deleteFolder}
                                         setDragOverFolderId={(id) => dragOverFolderId = id}
                                         shareFolder={(target) => shareItem(target, 'folder')}
+                                        changeColor={changeFolderColor}
                                         {openInfo}
                                         readOnly={browsingSharedFolder}
                                     />

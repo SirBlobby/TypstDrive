@@ -14,6 +14,8 @@ Folders hold documents, projects, files and other folders. Projects appear next 
 
 Deleting a folder deletes everything inside it, after a confirmation. Share a folder or project from its share button.
 
+Give a folder its own color from the palette button on the folder. The color also shows in Typst Desktop, where you can change it from the folder's menu.
+
 ## Downloading
 
 Download any folder or project as a ZIP file from its download button, or from the project menu.

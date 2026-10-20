@@ -29,7 +29,7 @@ pub async fn list_folders(
     let folders = if let Some(parent_id) = query.parent_id {
         crate::sharing::access::require_folder_access(&state, &parent_id, &user_id).await?;
         sqlx::query_as::<_, Folder>(
-            sql("SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE parent_id = $1 AND owner_id = (SELECT p.owner_id FROM folders p WHERE p.id = $2) ORDER BY name ASC")
+            sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE parent_id = $1 AND owner_id = (SELECT p.owner_id FROM folders p WHERE p.id = $2) ORDER BY name ASC")
         )
         .bind(&parent_id)
         .bind(&parent_id)
@@ -38,7 +38,7 @@ pub async fn list_folders(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Folder>(
-            sql("SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE owner_id = $1 AND parent_id IS NULL ORDER BY name ASC")
+            sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE owner_id = $1 AND parent_id IS NULL ORDER BY name ASC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -57,7 +57,7 @@ pub async fn list_shared_folders(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let folders = sqlx::query_as::<_, Folder>(
-        sql("SELECT f.id, f.owner_id, f.parent_id, f.name, f.created_at, c.role AS effective_role \
+        sql("SELECT f.id, f.owner_id, f.parent_id, f.name, f.created_at, f.color, c.role AS effective_role \
          FROM folders f INNER JOIN folder_collaborators c ON c.folder_id = f.id AND c.user_id = $1 \
          ORDER BY f.name ASC")
     )
@@ -89,7 +89,7 @@ pub async fn create_folder(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE id = $1"))
+    let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE id = $1"))
     .bind(&folder_id)
     .fetch_one(&state.db)
     .await
@@ -190,7 +190,7 @@ pub async fn update_folder(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at FROM folders WHERE id = $1 AND owner_id = $2"))
+    let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)

@@ -6,6 +6,7 @@ pub struct CloudFolder {
     pub id: String,
     pub name: String,
     pub parent_id: Option<String>,
+    pub color: Option<String>,
 }
 
 pub async fn list_folders(
@@ -14,8 +15,8 @@ pub async fn list_folders(
 ) -> Result<Json<Vec<CloudFolder>>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
-        sql("SELECT id, name, parent_id FROM folders WHERE owner_id = $1 ORDER BY name ASC"),
+    let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>)>(
+        sql("SELECT id, name, parent_id, color FROM folders WHERE owner_id = $1 ORDER BY name ASC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -24,10 +25,11 @@ pub async fn list_folders(
 
     Ok(Json(
         rows.into_iter()
-            .map(|(id, name, parent_id)| CloudFolder {
+            .map(|(id, name, parent_id, color)| CloudFolder {
                 id,
                 name,
                 parent_id,
+                color,
             })
             .collect(),
     ))
@@ -72,6 +74,7 @@ pub async fn create_folder(
         id: folder_id,
         name,
         parent_id: payload.parent_id,
+        color: None,
     }))
 }
 
@@ -100,7 +103,7 @@ pub async fn rename_folder(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, Option<String>)>(sql("SELECT name, parent_id FROM folders WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(sql("SELECT name, parent_id, color FROM folders WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -114,6 +117,7 @@ pub async fn rename_folder(
         id,
         name: row.0,
         parent_id: row.1,
+        color: row.2,
     }))
 }
 
@@ -189,7 +193,7 @@ pub async fn move_folder(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, Option<String>)>(sql("SELECT name, parent_id FROM folders WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(sql("SELECT name, parent_id, color FROM folders WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -203,6 +207,7 @@ pub async fn move_folder(
         id,
         name: row.0,
         parent_id: row.1,
+        color: row.2,
     }))
 }
 

@@ -63,6 +63,7 @@ Tokens are stored hashed. Signing out with `POST /api/desktop/auth/logout`, or r
 | `POST` | `/api/desktop/folders` | Create a folder. |
 | `PATCH` | `/api/desktop/folders/{id}` | Rename a folder. |
 | `PATCH` | `/api/desktop/folders/{id}/move` | Move a folder. |
+| `PATCH` | `/api/desktop/folders/{id}/color` | Set a folder's color with `color` as `#rrggbb`, or `null` for the default. |
 | `DELETE` | `/api/desktop/folders/{id}` | Delete a folder. |
 
 ### Documents

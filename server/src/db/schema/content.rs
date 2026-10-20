@@ -9,6 +9,7 @@ pub const TABLES: &[Table] = &[
             optional_reference("parent_id", "folders", "TEXT REFERENCES {self}(id) ON DELETE CASCADE"),
             plain("name", "TEXT NOT NULL"),
             created_at("created_at"),
+            plain("color", "TEXT"),
         ],
         constraints: &[],
     },

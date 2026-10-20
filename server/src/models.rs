@@ -57,6 +57,9 @@ pub struct Folder {
     pub created_at: String,
     #[serde(default)]
     #[sqlx(default)]
+    pub color: Option<String>,
+    #[serde(default)]
+    #[sqlx(default)]
     pub effective_role: Option<String>,
 }
 

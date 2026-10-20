@@ -2,6 +2,7 @@
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
     import { fileType, formatSize, itemModified, itemName, type DriveEntry } from '$lib/ts/drive-filters';
+    import { folderIconStyle } from '$lib/ts/folder-colors';
     import { downloadFolder, downloadProject } from '$lib/ts/downloads';
     import StarButton from '$lib/components/drive/stars/StarButton.svelte';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
@@ -123,7 +124,11 @@
                 : 'hover:bg-[var(--color-surface-muted)]'}"
         >
             <span role="cell" class="flex items-center gap-3 min-w-0">
-                <Icon icon={typeIcons[type].icon} class="text-xl flex-shrink-0 {typeIcons[type].color}" />
+                {#if isFolder}
+                    <Icon icon={typeIcons.folder.icon} class="text-xl flex-shrink-0" style={folderIconStyle(entry.item.color)} />
+                {:else}
+                    <Icon icon={typeIcons[type].icon} class="text-xl flex-shrink-0 {typeIcons[type].color}" />
+                {/if}
                 <span class="truncate text-[var(--color-ink)] font-medium" title={itemName(entry.item)}>{itemName(entry.item)}</span>
                 {#if entry.category === 'document' || entry.category === 'project'}
                     <StarButton kind={entry.category} id={entry.item.id} name={itemName(entry.item)} sizeClass="text-sm" />

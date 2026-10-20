@@ -6,6 +6,7 @@ pub mod downloads;
 pub mod editor_library;
 pub mod file_replace;
 pub mod files;
+pub mod folder_colors;
 pub mod folders;
 pub mod item_info;
 pub mod people;

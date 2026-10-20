@@ -5,7 +5,7 @@ use sqlx::{AnyConnection, AnyPool, AssertSqlSafe, Connection};
 use super::dialect::Dialect;
 use super::schema::{tables, Column, CopyRule, Table, BACKFILLS, INDEXES, LEGACY_RENAMES, RETIRED_TABLES};
 
-pub const CURRENT_VERSION: i64 = 13;
+pub const CURRENT_VERSION: i64 = 14;
 const REBUILD_SUFFIX: &str = "__rebuild";
 
 async fn run(connection: &mut AnyConnection, sql: String) -> Result<(), sqlx::Error> {
