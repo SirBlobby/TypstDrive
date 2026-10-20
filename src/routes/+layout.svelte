@@ -31,7 +31,7 @@
 		loaded = true;
 	});
 
-	let currentTheme = $derived(themes[$themeStore as keyof typeof themes] || themes['Catppuccin']);
+	let currentTheme = $derived(themes[$themeStore as keyof typeof themes] || themes['Cerberus']);
 	let currentColors = $derived($darkModeStore ? currentTheme.dark : currentTheme.light);
 
 	$effect(() => applyAccentColor($brandingStore.accent_color));

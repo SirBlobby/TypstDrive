@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import type { Diagnostic } from './typst-api';
 
-export const themeStore = writable('Catppuccin');
+export const themeStore = writable('Cerberus');
 export const darkModeStore = writable(true);
 export type TextSize = 'small' | 'default' | 'large';
 export const textSizeStore = writable<TextSize>('default');
