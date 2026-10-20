@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { EditorState, Compartment } from '@codemirror/state';
-	import { EditorView, lineNumbers, keymap } from '@codemirror/view';
+	import { EditorState, Compartment, type Extension } from '@codemirror/state';
+	import { EditorView, keymap } from '@codemirror/view';
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { autocompletion, snippetCompletion, type CompletionContext } from '@codemirror/autocomplete';
 	import { typst, TypstParser, typstHighlight } from 'codemirror-lang-typst';
@@ -16,29 +16,39 @@
 	import { typstLspExtensions } from '../ts/editor-lsp';
 	import { setDiagnostics, lintGutter } from '@codemirror/lint';
 	import { bracketExtensions, typstBracketSettings } from '../ts/editor-brackets';
+	import { lineCommentKeymap } from '../ts/editor-comments';
+	import { searchKeymap } from '@codemirror/search';
+	import { searchExtensions } from '../ts/editor-search';
+	import { editorSettingsStore } from '../ts/editor-settings';
+	import { editorPreferenceExtensions } from '../ts/editor-preferences';
+	import { loadEditorFont } from '../ts/editor-fonts';
 
 	let {
 		ytext = undefined,
 		awarenessProvider = undefined,
 		lspDocId = undefined,
 		enableLsp = true,
-		filePath = undefined
+		filePath = undefined,
+		extensions = []
 	}: {
 		ytext?: any;
 		awarenessProvider?: any;
 		lspDocId?: string;
 		enableLsp?: boolean;
 		filePath?: string;
+		extensions?: Extension[];
 	} = $props();
 
 	let editorContainer: HTMLElement;
 	let view: EditorView;
 	let themeCompartment = new Compartment();
 	let lspCompartment = new Compartment();
+	let preferencesCompartment = new Compartment();
 	let unsubscribeTheme: () => void;
 	let unsubscribeDark: () => void;
 	let unsubscribeErrors: () => void;
 	let unsubscribeLspReconnect: () => void;
+	let unsubscribePreferences: () => void;
 
 	let currentTheme = 'Catppuccin';
 	let isDark = true;
@@ -176,19 +186,21 @@
 		state = EditorState.create({
 			doc: activeText.toString(),
 			extensions: [
-				lineNumbers(),
+				preferencesCompartment.of(editorPreferenceExtensions($editorSettingsStore)),
 				lintGutter(),
 				history(),
 				...bracketExtensions,
-				keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab] as any),
+				...searchExtensions(),
+				keymap.of([...lineCommentKeymap(isToml ? '#' : '//'), ...searchKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab] as any),
 				languageExtension,
 				yCollab(activeText, activeProvider.awareness),
 				...completionExtensions,
 				themeCompartment.of(getThemeExtension(currentTheme as any, isDark)),
 				lspCompartment.of([]),
 				EditorView.lineWrapping,
+				...extensions,
 				EditorView.theme({
-					'&': { height: '100%', fontSize: '14px' },
+					'&': { height: '100%' },
 					'.cm-scroller': { overflow: 'auto' },
 					'.cm-tooltip': { maxWidth: '500px' },
 					'.cm-tooltip-hover': { maxHeight: '300px', overflow: 'auto' }
@@ -202,6 +214,11 @@
 		});
 		
 		editorViewStore.set(view);
+
+		unsubscribePreferences = editorSettingsStore.subscribe((settings) => {
+			view?.dispatch({ effects: preferencesCompartment.reconfigure(editorPreferenceExtensions(settings)) });
+			loadEditorFont(settings.fontFamily).then(() => view?.requestMeasure());
+		});
 
 		let lastCompilerDiagnostics = '';
 		unsubscribeErrors = editorErrors.subscribe((errors) => {
@@ -330,6 +347,7 @@
 		if (unsubscribeDark) unsubscribeDark();
 		if (unsubscribeErrors) unsubscribeErrors();
 		if (unsubscribeLspReconnect) unsubscribeLspReconnect();
+		if (unsubscribePreferences) unsubscribePreferences();
 		if (view) {
 			view.destroy();
 		}
