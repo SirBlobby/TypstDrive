@@ -401,6 +401,7 @@ pub async fn lsp_handler(
             .env("RUST_LOG", "warn")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
+            .stderr(Stdio::null())
             .kill_on_drop(true)
             .spawn()
             .expect("Failed to start tinymist lsp");
