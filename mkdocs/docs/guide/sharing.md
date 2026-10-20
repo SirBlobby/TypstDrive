@@ -1,81 +1,61 @@
-# Sharing and Permissions
+# Sharing
 
-Owners can share documents, projects and folders with other users by email, or make documents and projects available to anyone with the link. Open the **Share** dialog from the editor toolbar, or from the share button on a folder or project in the Drive.
+You decide who can see and change your work. Open **Share** from the editor toolbar, or from the share button on a folder or project in the drive.
 
 ## Roles
 
-| Role | Can view | Can edit | Can suggest | Can comment | Can manage sharing |
+| Role | Read | Comment | Suggest changes | Edit | Manage sharing |
 |---|---|---|---|---|---|
 | Owner | Yes | Yes | Yes | Yes | Yes |
 | Editor | Yes | Yes | Yes | Yes | No |
-| Suggester | Yes | No | Yes | Yes | No |
+| Suggester | Yes | Yes | Yes | No | No |
 | Viewer | Yes | No | No | No | No |
 
-The suggester role is only available for documents. Suggesters propose changes that owners and editors accept or reject. See [Suggesting](editor.md#suggesting).
+The suggester role is for documents only. Suggesters propose changes that the owner or editors accept or reject. See [Suggesting changes](collaboration.md#suggesting-changes).
 
-Viewers and suggesters cannot change the document directly:
+Viewers and suggesters truly cannot change the document. The server ignores any change they try to send.
 
-- Their editor connection only receives changes. Anything they try to send is dropped by the server.
-- Previews and exports for viewers are compiled from the saved document, not from text sent by the browser.
-- The language server, which has access to the owner's files, is only available to owners and editors.
+## Sharing with people
 
-## Team spaces
+Type the email address of someone's TypstDrive account, choose a role, and add them. They find the item under **Shared** in their drive. Change or remove their role from the same dialog at any time.
 
-Items in a team space belong to the team. Every member of the team has access, and the **Share** dialog lists them all with their team role. Admins and members can edit, and viewers can only view. Change roles in the team settings. You can still share a team item with people outside the team by email.
+## Share links
 
-## Link sharing
+Under **General access**, choose **Viewer**, **Suggester** or **Editor** to let anyone with the link open the document or project. Copy the link and send it.
 
-Under **General access** in the Share dialog, choose **Viewer**, **Suggester** (documents only) or **Editor** to let anyone with the link open a document or project without being shared with them. Set it back to **Off** to stop the link working. Visitors need to be signed in to add comments or suggestions.
+- **Password**: visitors type it once before the item opens.
+- **Expires**: after this date and time the link stops working.
+- Choose **Off** to stop the link working.
 
-- **Password**: visitors enter it once per browser before the item opens. Changing or removing it takes effect immediately.
-- **Expires**: after this date and time the link stops working and visitors see that it has expired.
-
-Choose **Save link settings** to apply the changes.
-
-## Who can be found by email
-
-When an administrator requires verified email, sharing by email only finds accounts that confirmed their address. Someone who registers an unverified account with an address a document was shared with does not get access.
+Choose **Save link settings** to apply changes. Visitors need to sign in to comment or suggest.
 
 ## Sharing folders
 
-Sharing a folder gives the member the same role on everything inside it: documents, projects, files and subfolders, including items added later. If someone also has a role directly on an item inside the folder, the stronger of the two roles applies.
+Sharing a folder gives the person the same role on everything inside it, including things added later. If they also have a role on an item inside, the stronger of the two applies.
 
-Only items owned by the folder's owner are shared this way. Items another user moves or creates in the folder are never shared through it.
-
-## Shared with me
-
-**Shared** in the Drive sidebar lists the documents, projects and folders others have shared with you, with your role on each. Open a shared folder to browse its contents. Shared folders are read-only in the Drive: you cannot upload, move or delete items in them, even as an editor.
+Shared folders are read-only in the other person's drive: they can open and edit what is inside, depending on their role, but cannot upload, move or delete items there.
 
 ## Document files
 
-A document can use the owner's uploaded images, data files and fonts. Collaborators can only use the files the document is linked to, files in folders shared with them, and fonts.
+A document can use your uploaded images, data files and fonts. People you share it with can use your fonts, files linked to the document, and files in folders shared with them.
 
-- Open the paperclip button in the editor toolbar to see and upload the document's files. Files uploaded there are linked to the document.
-- When a document is shared with people but uses files they cannot access, the paperclip shows a dot, and the Share dialog lists the files. **Share these files** links them to the document so every collaborator can use them.
-- Font files used by their family name, such as `#set text(font: "Noto Sans")`, are always available and are not listed.
+- The paperclip button in the editor lists the document's files. Files uploaded there are linked to the document automatically.
+- If the document uses files your collaborators cannot see, the paperclip shows a dot, and **Share these files** links them.
 
-## Transferring ownership
+## Giving away ownership
 
-The owner of a document, project or folder can make a member the new owner.
+You can hand a document, project or folder to someone else.
 
-1. Share the item with the person first.
-2. In the Share dialog, choose the crown button next to their name and confirm.
-3. The new owner sees a request at the top of their Drive and chooses **Accept** or **Decline**. The current owner can cancel a pending request from the Share dialog.
+1. Share it with them first.
+2. In **Share**, click the crown next to their name and confirm.
+3. They accept or decline the request from the top of their drive. You can cancel it while it is waiting.
 
-When the transfer is accepted:
+After they accept, the item moves to their drive and counts toward their storage, and you stay on as an editor. Files linked to a document move with it.
 
-- The item moves to the root of the new owner's Drive and counts toward their storage. The transfer fails if they do not have enough space.
-- A folder moves with everything inside it.
-- Files linked to a document move with it. Files that other documents still use are copied instead.
-- The previous owner stays on as an editor.
+## Team spaces
 
-## Changes take effect immediately
+Everything in a [team space](teams.md) is shared with every member of the team automatically. You can still share team items with people outside the team.
 
-When access changes, open connections are checked again and closed if they no longer match. This happens when you:
+## Changes apply right away
 
-- add, change or remove a collaborator;
-- change link sharing, its password or its expiry;
-- transfer ownership;
-- delete a document, project or folder.
-
-A collaborator who still has access reconnects automatically with their new role. Deleting a user account or revoking a device also closes that user's or device's connections.
+When you remove someone, change their role, change a share link or delete an item, anyone who has it open is updated or disconnected immediately.

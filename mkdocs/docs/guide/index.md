@@ -1,0 +1,18 @@
+# User Guide
+
+This guide explains everything you can do in TypstDrive, one topic at a time. You do not need to read it in order.
+
+| Page | What it covers |
+|---|---|
+| [Your drive](drive.md) | Folders, colors, search, stars, uploads, downloads and importing files. |
+| [Writing in the editor](editor.md) | The toolbar, inserting images and tables, find and replace, spell checking and keyboard shortcuts. |
+| [Preview and export](preview-and-export.md) | The live preview, downloading PDFs and images, printing and converting to other formats. |
+| [Working together](collaboration.md) | Editing at the same time, comments, suggestions and version history. |
+| [Presenting](presenting.md) | Showing your document as full-screen slides and drawing on them. |
+| [Projects](projects.md) | Documents made of many files, such as books, theses and templates. |
+| [Packages](packages.md) | Sharing reusable templates and code with everyone on your server. |
+| [Fonts and images](fonts-and-images.md) | Uploading your own fonts and pictures and using them in documents. |
+| [Sharing](sharing.md) | Who can see and change your work, share links and handing over ownership. |
+| [Team spaces](teams.md) | Shared drives that belong to a group. |
+| [Your settings](settings.md) | Your profile, sign-in, appearance, editor preferences, API keys and devices. |
+| [Typst Desktop](desktop.md) | The desktop app that keeps your documents on your computer. |

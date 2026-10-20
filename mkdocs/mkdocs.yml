@@ -1,18 +1,21 @@
 site_name: TypstDrive
-site_description: Documentation for TypstDrive, a self-hosted collaborative editor for Typst.
+site_description: A friendly, self-hosted place to write, share and work together on Typst documents.
 site_url: https://sirblobby.github.io/TypstDrive/
 repo_url: https://github.com/SirBlobby/TypstDrive
 repo_name: SirBlobby/TypstDrive
 edit_uri: edit/main/mkdocs/docs/
-copyright: TypstDrive is licensed under the Apache License 2.0.
+copyright: TypstDrive is licensed under the Apache License 2.0. It is a community project and is not affiliated with, endorsed by, or supported by the official Typst project.
 
 theme:
   name: material
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.indexes
     - navigation.top
     - navigation.footer
+    - navigation.instant
     - content.code.copy
     - content.tabs.link
     - search.highlight
@@ -48,34 +51,57 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
+  - pymdownx.keys
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
 
 nav:
-  - Documentation:
-      - Home: index.md
-      - Getting Started:
-          - Self-Hosting: getting-started/self-hosting.md
-          - Configuration: getting-started/configuration.md
-          - Authentication: getting-started/authentication.md
-          - Email: getting-started/email.md
-          - Scaling: getting-started/scaling.md
-      - User Guide:
-          - The Drive: guide/drive.md
-          - Editor: guide/editor.md
-          - Projects and Packages: guide/projects-and-packages.md
-          - Fonts and Images: guide/fonts-and-images.md
-          - Sharing and Permissions: guide/sharing.md
-          - Team Spaces: guide/teams.md
-          - Account Settings: guide/settings.md
-      - Administration:
-          - Site Settings: admin/site-settings.md
-      - Development: development.md
-  - API Reference:
-      - Overview: api/index.md
+  - Home:
+      - Welcome: index.md
+      - Your first document: start/first-document.md
+      - A short Typst primer: start/typst-primer.md
+      - Questions and answers: faq.md
+      - About and disclaimer: about.md
+  - User Guide:
+      - guide/index.md
+      - Your drive: guide/drive.md
+      - Writing in the editor: guide/editor.md
+      - Preview and export: guide/preview-and-export.md
+      - Working together: guide/collaboration.md
+      - Presenting: guide/presenting.md
+      - Projects: guide/projects.md
+      - Packages: guide/packages.md
+      - Fonts and images: guide/fonts-and-images.md
+      - Sharing: guide/sharing.md
+      - Team spaces: guide/teams.md
+      - Your settings: guide/settings.md
+      - Typst Desktop: guide/desktop.md
+  - Self-Hosting:
+      - self-hosting/index.md
+      - Install with Docker: self-hosting/install.md
+      - HTTPS and reverse proxies: self-hosting/reverse-proxy.md
+      - Updates and backups: self-hosting/updates-and-backups.md
+      - Databases: self-hosting/databases.md
+      - Sign-in and single sign-on: self-hosting/sign-in.md
+      - Email: self-hosting/email.md
+      - Settings reference: self-hosting/configuration.md
+      - Bigger installs: self-hosting/scaling.md
+  - Administration:
+      - admin/index.md
+      - Users and accounts: admin/users.md
+      - Sign-in and security: admin/security.md
+      - Look and feel: admin/branding.md
+      - Team spaces: admin/teams.md
+      - Storage and history: admin/storage.md
+      - Packages: admin/packages.md
+      - API access: admin/api.md
+      - Server and about: admin/server.md
+  - Developers:
+      - API overview: api/index.md
       - POST /v1/render: api/render.md
-      - Read Endpoints: api/read.md
+      - Read endpoints: api/read.md
       - Examples: api/examples.md
-      - Limits and Caching: api/limits.md
-      - Desktop Sync API: api/desktop.md
+      - Limits and caching: api/limits.md
+      - Desktop sync API: api/desktop.md
+      - Contributing: development.md

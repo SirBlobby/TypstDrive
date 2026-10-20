@@ -1,40 +1,34 @@
-# Team Spaces
+# Team spaces
 
-A team space is a shared drive that belongs to a team instead of one person. It has its own documents, projects, folders, files, fonts, packages and storage quota.
+A team space is a shared drive that belongs to a group instead of one person. It has its own documents, projects, folders, files, fonts, packages and storage. Because the team owns the work, it stays put when someone leaves.
 
 ## Switching spaces
 
-The Drive sidebar lists your teams under **Teams**, below **Home** and **Shared**. Choose a team to open its drive, or **Home** to go back to your own. The choice is remembered in your browser.
-
-Everything you create while a team is selected belongs to the team, so it stays when members leave.
+Your teams are listed under **Teams** in the drive sidebar. Choose one to open its drive, or **Home** to go back to yours. Anything you create while a team is open belongs to that team.
 
 ## Creating a team
 
-Choose the **+** button next to **Teams** and give the team a name. You become its owner. An administrator decides who can create teams and how many each person can own. See [Site Settings](../admin/site-settings.md#team-spaces).
+Choose the **+** next to **Teams** and give it a name. You become its owner. Your administrator decides who can create teams and how many.
 
 ## Roles
 
-| Role | Projects, documents and templates | Invite and remove | Change roles | Rename | Delete the team |
+| Role | Work on documents and projects | Invite and remove people | Change roles | Rename the team | Delete the team |
 |---|---|---|---|---|---|
-| Owner | Create, edit, delete | Yes | Yes | Yes | Yes |
-| Admin | Create, edit, delete | Members and viewers | Members and viewers | Yes | No |
-| Member | Create, edit, delete | No | No | No | No |
-| Viewer | Open and read | No | No | No | No |
+| Owner | Yes | Everyone | Everyone | Yes | Yes |
+| Admin | Yes | Members and viewers | Members and viewers | Yes | No |
+| Member | Yes | No | No | No | No |
+| Viewer | Read only | No | No | No | No |
 
-A team has exactly one owner. Only the owner can add, change or remove admins.
+Each team has exactly one owner.
 
-## Managing members
+## Managing a team
 
-Hover over a team in the sidebar and choose the gear button to open its settings.
+Hover over the team in the sidebar and choose the gear button.
 
-- **Invite** someone by the email of their TypstDrive account and choose a role. When email is configured, they receive a message with a link to the team.
-- **Change** a member's role or **remove** them.
-- **Leave** a team you no longer want to be part of. The owner has to hand the team over first.
+- **Invite** someone by the email of their TypstDrive account and choose a role. If email is set up, they get a message with a link.
+- **Change** someone's role or **remove** them.
+- **Leave** a team. The owner has to hand the team to someone else first.
 - **Make owner** hands the team to another member. You stay on as an admin.
-- **Delete** the team, which deletes its drive and everything in it.
+- **Delete** the team and everything in its drive.
 
-If the owner's account is deleted, the team passes to an admin, then a member, then a viewer. A team with no one left is deleted.
-
-## Sharing from a team
-
-Items in a team drive can be shared with people outside the team in the usual way. See [Sharing and Permissions](sharing.md).
+If the owner's account is deleted, the team passes to an admin, then a member, then a viewer.

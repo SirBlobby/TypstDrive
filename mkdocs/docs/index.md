@@ -1,48 +1,64 @@
-# TypstDrive
+# Welcome to TypstDrive
 
-TypstDrive is a self-hosted, collaborative web editor for [Typst](https://typst.app/). Write documents and multi-file projects in the browser, see a live preview as you type, work on the same file with other people in real time, and render Typst from your own code through a REST API.
+TypstDrive is a place to write, organize and share [Typst](https://typst.app/) documents from your web browser. Think of it as a shared drive and a document editor in one: you write on the left, see the finished pages on the right, and invite other people to work on the same document with you at the same time.
 
-## Features
+You run TypstDrive on your own server, so your documents stay with you.
 
-- **Real-time collaboration** powered by Yjs and CodeMirror 6, with live cursors for every collaborator.
-- **Instant preview** that compiles Typst to SVG as you type, with zoom controls and a collapsible preview pane.
-- **Editor tools**: find and replace, line comments, heading and quote buttons, and quick insert for images, tables, documents, symbols and emoji. Font, font size, spell checking, line numbers and a minimap are set per browser.
-- **Version history** saved automatically when collaborators leave the editor, with a timeline of who edited and when, side-by-side changes and one-click restore.
-- **Comments and suggestions**: comment on a selection, reply and resolve threads, or suggest edits that owners and editors accept or reject.
-- **Projects** for multi-file work: any number of `.typ`, `.bib`, `.toml` and asset files that import one another, each with its own `typst.toml`.
-- **Packages** published from a project and importable everywhere on the instance as `@typstdrive/<name>:<version>`.
-- **Sharing** of documents, projects and folders with editor or viewer roles, plus a suggester role for documents and ownership transfer. Viewers are strictly read-only.
-- **Share links** that anyone can open, optionally protected by a password or set to expire.
-- **Team spaces** with their own drive, an owner, admins, members and viewers.
-- **Sign-in options**: OpenID Connect single sign-on (Keycloak, Authentik, Authelia and others), GitHub and Google, with optional account creation on first sign-in.
-- **Account security**: sign-in codes by email, email verification, password reset, active session management, sign-in lockout and an audit log of administrator changes.
-- **Export** to PDF, PNG, SVG and HTML, plus Markdown, Word and LaTeX through Pandoc.
-- **Fonts and images** uploaded once and available in every document, including emoji and system fonts on the server.
-- **Presentation mode** with slide controls and a drawing and annotation overlay.
-- **Render API** at `POST /v1/render` for PNG, PDF and HTML output, plus read endpoints for documents and projects. Keys have scopes, optional expiry and their own rate limits.
-- **Admin tools** for users, registration rules, sign-in methods, email, team spaces, API access, storage quotas, version history limits and package publishing, with a first-run setup wizard.
-- **Desktop sync** for [Typst Desktop](https://github.com/SirBlobby/typst-desktop.git) through a dedicated API.
-- **SQLite, PostgreSQL or MySQL/MariaDB**, with automatic schema upgrades.
-- **Horizontal scaling** with Redis or Valkey for real-time collaboration across instances, and S3-compatible object storage for uploads.
+!!! info "Not an official Typst product"
+    TypstDrive is a community project. It is not affiliated with, endorsed by, or supported by the official Typst project. It uses the open-source Typst compiler to turn your writing into finished documents. See [About and disclaimer](about.md).
 
-## Where to start
+## What you can do
+
+**Write**
+:   A comfortable editor with syntax colors, suggestions as you type, a formatting toolbar, find and replace, spell checking and shortcuts you can change. The preview updates as you type.
+
+**Organize**
+:   Folders with colors, search, sorting, a grid or list view, and stars for the things you open most.
+
+**Work together**
+:   Several people can type in the same document at once and see each other's cursors. Leave comments, suggest changes for someone else to accept, and look back through the version history.
+
+**Share**
+:   Share with people by email as editors, suggesters or viewers, or send a link that anyone can open, with an optional password and expiry date.
+
+**Go bigger**
+:   Projects hold many files for books, theses and templates. Turn a project into a package that everyone on your server can use.
+
+**Finish**
+:   Export to PDF, PNG, SVG, HTML, Markdown, Word or LaTeX, or present your slides full screen and draw on them while you talk.
+
+**Teams**
+:   Team spaces are shared drives that belong to a group instead of one person.
+
+**Take it offline**
+:   The [Typst Desktop](guide/desktop.md) app keeps your TypstDrive documents in sync on your computer.
+
+## Where to go next
 
 <div class="grid cards" markdown>
 
-- **Run your own instance**
+- **New to TypstDrive?**
 
-    Start with [Self-Hosting](getting-started/self-hosting.md), then review the [Configuration](getting-started/configuration.md) options, [Authentication](getting-started/authentication.md) and [Email](getting-started/email.md).
+    ---
 
-- **Use TypstDrive**
+    Write [your first document](start/first-document.md) in a few minutes, then take a quick look at [how Typst works](start/typst-primer.md).
 
-    Learn about [the Drive](guide/drive.md), [the editor](guide/editor.md), [sharing](guide/sharing.md) and [team spaces](guide/teams.md).
+- **Learn every feature**
 
-- **Administer an instance**
+    ---
 
-    See [Site Settings](admin/site-settings.md) for users, sign-in, email, team spaces, the audit log, API access, storage and packages.
+    The [User Guide](guide/index.md) explains the drive, the editor, sharing, teams and everything else, one topic at a time.
 
-- **Build on the API**
+- **Run your own server**
 
-    Read the [API overview](api/index.md) and the [render endpoint](api/render.md).
+    ---
+
+    [Self-Hosting](self-hosting/index.md) walks you through installing TypstDrive with Docker, adding HTTPS and keeping it backed up.
+
+- **Look after a server**
+
+    ---
+
+    [Administration](admin/index.md) covers users, sign-in rules, branding, storage limits and more.
 
 </div>

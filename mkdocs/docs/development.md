@@ -57,7 +57,7 @@ The development server proxies `/api` and `/yjs` to the Rust server on `localhos
 
 1. Install system dependencies, for example `sudo apt-get install pkg-config libssl-dev lld` on Ubuntu. The server links with `lld` on Linux, set in `server/.cargo/config.toml`.
 2. Install [tinymist](https://github.com/Myriad-Dreamin/tinymist) and make sure it is on your `PATH`. The server uses it for language server features.
-3. Export the environment variables from [Configuration](getting-started/configuration.md).
+3. Export the environment variables from [Settings reference](self-hosting/configuration.md).
 4. Run the server:
 
     ```bash

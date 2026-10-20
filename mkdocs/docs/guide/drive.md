@@ -1,53 +1,59 @@
-# The Drive
+# Your drive
 
-The Drive at `/drive` is where everything you own lives: folders, projects, documents and uploaded files.
+The drive is the first thing you see after signing in. It holds everything you own: folders, documents, projects and uploaded files.
 
-## Layout
+## Finding your way around
 
-- **Sidebar**: Home, Shared, Starred, your [team spaces](teams.md), Packages and a link to Typst Universe, plus your storage usage against your quota and the TypstDrive version, with a notice when a newer release is available. Collapse it with the button at the bottom; the choice is remembered in your browser.
-- **Header**: the folder path, the current folder name, a filter box, **Upload**, and **New document** with a menu for a new project, folder or import.
-- **Toolbar**: sort by name, last modified or size, flip the sort direction, and switch between the grid and list views.
+- **Sidebar** on the left: **Home** (your own files), **Shared** (things other people shared with you), **Starred**, your [team spaces](teams.md), **Packages**, and a link to Typst Universe. At the bottom you can see how much storage you use and which version of TypstDrive is running. Collapse the sidebar with the button at the bottom.
+- **Header** at the top: where you are, a search box, **Upload**, and **New document**. The arrow next to **New document** also creates a project, a folder, or imports a file.
+- **Toolbar**: sort by name, date or size, flip the order, and switch between a grid of cards and a compact list.
 
-## Folders and projects
+TypstDrive remembers your view, sort order and sidebar choice in your browser.
 
-Folders hold documents, projects, files and other folders. Projects appear next to folders with a star icon and open the project editor. Drag a document, project or file onto a folder, or onto the folder path at the top, to move it.
+## Folders
 
-Deleting a folder deletes everything inside it, after a confirmation. Share a folder or project from its share button.
+Folders hold documents, projects, files and other folders.
 
-Give a folder its own color from the palette button on the folder. The color also shows in Typst Desktop, where you can change it from the folder's menu.
+- **Move** something by dragging it onto a folder, or onto a folder name in the path at the top.
+- **Color** a folder with the palette button on it. The color also shows in [Typst Desktop](desktop.md).
+- **Delete** a folder to delete everything inside it. You are asked to confirm first.
+- **Share** a folder to give someone access to everything inside it. See [Sharing](sharing.md#sharing-folders).
 
-## Downloading
+## Documents and projects
 
-Download any folder or project as a ZIP file from its download button, or from the project menu.
+A **document** is a single Typst file. A **project** holds many files, which is handy for longer work. Projects show a star-shaped folder icon. See [Projects](projects.md).
 
-- **Folders** keep their structure. Documents are saved as `.typ` files named after their titles, uploaded files keep their names, and subfolders become directories.
-- **Projects** inside the folder are included as their own directory, packaged the same way as a project download.
-- Files with the same name in one directory get a number added, such as `notes (2).typ`.
+Documents show a small picture of their first page so you can recognize them at a glance.
 
-## Documents and files
+## Uploaded files
 
-Documents and uploaded files are shown together in the **Files** section.
+Images, fonts, PDFs and other files you upload appear alongside your documents.
 
-- Documents open in the editor and show a thumbnail of their first page.
-- Images and PDFs show a preview and open in the built-in viewer. Use the arrow keys to move between files, and zoom images with the toolbar or `+` and `-`.
-- Fonts are listed so you can manage them, and are used automatically by the compiler.
-- Files can be renamed and deleted from the card or list row. Typst refers to files by name, so renaming a file breaks references to the old name.
-- **Replace** uploads a new version of a file while keeping its name, so documents that use it pick up the new version without changes. Editors can also replace files from **Document files** in the editor.
+- Images and PDFs open in a viewer. Use the arrow keys to move between files and ++plus++ or ++minus++ to zoom.
+- Fonts are used automatically by every document. See [Fonts and images](fonts-and-images.md).
+- **Rename** and **Delete** are on each file. Documents refer to files by name, so renaming a file means updating the documents that use it.
+- **Replace** uploads a new version of a file but keeps its name, so every document that uses it picks up the change.
 
-## Item info
+## Stars
 
-**Info** on a document, project, folder or file shows its owner, storage size, location, creation and modification dates, who last edited it, link sharing, and everyone who has access with where that access comes from. The same details open from the info button in the editor.
+Click the star on any document or project to add it to **Starred** in the sidebar. Stars are personal: nobody else sees them.
+
+## Details about an item
+
+**Info** on any item shows who owns it, how big it is, where it lives, when it was created and changed, who edited it last, and everyone who has access.
 
 ## Shared with me
 
-**Shared** lists the documents, projects and folders other people have shared with you, with your role on each. Open a shared folder to browse it. See [Sharing and Permissions](sharing.md).
+**Shared** lists everything other people have shared with you, along with what you are allowed to do. If someone wants to hand you ownership of something, the request shows at the top of your drive with **Accept** and **Decline** buttons.
 
-Requests to become the owner of an item appear at the top of the Drive, with **Accept** and **Decline** buttons.
+## Downloading
 
-## Starred
+Download a folder or project as a ZIP file from its download button.
 
-Click the star on a document or project card, or in the list view, to star it. **Starred** in the sidebar lists everything you starred, projects first, and works with search, sorting and the grid and list views. Stars are personal, and items you can no longer open are left out. Click the star again to remove it.
+- Folders keep their structure. Documents become `.typ` files named after their titles.
+- Projects inside a folder get their own folder in the ZIP.
+- If two files would have the same name, a number is added, such as `notes (2).typ`.
 
 ## Importing
 
-**New → Import** converts a `.docx`, `.tex`, `.md` or `.html` file to Typst with Pandoc and opens it as a new document.
+Choose **New → Import** to turn a Word (`.docx`), LaTeX (`.tex`), Markdown (`.md`) or web page (`.html`) file into a Typst document. The result usually needs a little tidying, but saves a lot of retyping.
