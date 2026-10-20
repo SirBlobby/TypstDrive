@@ -120,18 +120,21 @@ async fn thread_root(state: &AppState, document_id: &str, parent_id: &str) -> Re
     Ok(grandparent_id.unwrap_or(id))
 }
 
+pub async fn document_comments(state: &AppState, document_id: &str) -> Result<Vec<CommentView>, sqlx::Error> {
+    let rows = sqlx::query_as::<_, CommentRow>(sql_owned(format!("{COMMENT_COLUMNS} WHERE document_id = $1 ORDER BY created_at ASC")))
+        .bind(document_id)
+        .fetch_all(&state.db)
+        .await?;
+    Ok(to_views(state, rows).await)
+}
+
 pub async fn get_comments(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
     SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<Vec<CommentView>>, ApiError> {
     document_access(&state, &document_id, &user_id).await?;
-    let rows = sqlx::query_as::<_, CommentRow>(sql_owned(format!("{COMMENT_COLUMNS} WHERE document_id = $1 ORDER BY created_at ASC")))
-        .bind(&document_id)
-        .fetch_all(&state.db)
-        .await
-        .map_err(internal_error)?;
-    Ok(Json(to_views(&state, rows).await))
+    Ok(Json(document_comments(&state, &document_id).await.map_err(internal_error)?))
 }
 
 pub async fn add_comment(

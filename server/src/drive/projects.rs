@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 use axum_extra::extract::cookie::SignedCookieJar;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 use yrs::{Doc, GetString, ReadTxn, StateVector, Text, Transact};
 use yrs::updates::decoder::Decode;
@@ -125,22 +125,6 @@ pub async fn assemble_project(
     project: &Project,
     overrides: HashMap<String, String>,
 ) -> ProjectInput {
-    let mut files: HashMap<String, Vec<u8>> = HashMap::new();
-
-    // Account-level uploaded files (fonts, images) come first as a base layer so
-    // they are available inside projects; project files below override them by name.
-    if let Ok(account_files) = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(
-        sql("SELECT name, data, storage_key FROM files WHERE owner_id = $1"),
-    )
-    .bind(&project.owner_id)
-    .fetch_all(&state.db)
-    .await
-    {
-        for (name, data) in state.file_storage.load_named_skipping_failures(account_files).await {
-            files.insert(name, data);
-        }
-    }
-
     let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
         sql("SELECT path, kind, content FROM project_files WHERE project_id = $1"),
     )
@@ -149,19 +133,31 @@ pub async fn assemble_project(
     .await
     .unwrap_or_default();
 
+    let mut files: HashMap<String, Vec<u8>> = HashMap::new();
+    let mut sources: Vec<String> = Vec::new();
     for (path, kind, content) in rows {
         if let Some(live) = overrides.get(&path) {
+            sources.push(live.clone());
             files.insert(path, live.clone().into_bytes());
         } else if kind == "binary" {
             files.insert(path, content.unwrap_or_default());
         } else {
-            files.insert(path, decode_text_blob(&content.unwrap_or_default()).into_bytes());
+            let text = decode_text_blob(&content.unwrap_or_default());
+            sources.push(text.clone());
+            files.insert(path, text.into_bytes());
+        }
+    }
+    for (path, content) in overrides {
+        if !files.contains_key(&path) {
+            sources.push(content.clone());
+            files.insert(path, content.into_bytes());
         }
     }
 
-    for (path, content) in overrides {
-        files.entry(path).or_insert_with(|| content.into_bytes());
-    }
+    let project_paths: HashSet<String> = files.keys().cloned().collect();
+    let source_texts: Vec<&str> = sources.iter().map(String::as_str).collect();
+    let uploaded = crate::drive::file_data::account_files(state, &project.owner_id, &source_texts, &project_paths).await;
+    files.extend(uploaded);
 
     ProjectInput {
         entrypoint: project.entrypoint.clone(),

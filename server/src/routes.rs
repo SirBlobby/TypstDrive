@@ -189,11 +189,22 @@ pub fn build_router(state: AppState) -> Router {
 
     let v1_routes = Router::new()
         .route("/render", post(api::render::render_handler))
-        .route("/documents", get(api::read::list_documents))
-        .route("/documents/{id}", get(api::read::get_document))
-        .route("/projects", get(api::read::list_projects))
-        .route("/projects/{id}", get(api::read::get_project))
-        .route("/projects/{id}/files/{file_id}", get(api::read::get_project_file));
+        .route("/documents", get(api::read::documents::list_documents))
+        .route("/documents/{id}", get(api::read::documents::get_document))
+        .route("/documents/{id}/render", post(api::stored_render::render_document))
+        .route("/documents/{id}/versions", get(api::read::documents::get_document_versions))
+        .route("/documents/{id}/versions/{version_id}", get(api::read::documents::get_document_version))
+        .route("/documents/{id}/comments", get(api::read::documents::get_document_comments))
+        .route("/documents/{id}/suggestions", get(api::read::documents::get_document_suggestions))
+        .route("/projects", get(api::read::projects::list_projects))
+        .route("/projects/{id}", get(api::read::projects::get_project))
+        .route("/projects/{id}/render", post(api::stored_render::render_project))
+        .route("/projects/{id}/files/{file_id}", get(api::read::projects::get_project_file))
+        .route("/folders", get(api::read::folders::list_folders))
+        .route("/files", get(api::read::files::list_files))
+        .route("/files/{id}", get(api::read::files::get_file))
+        .route("/starred", get(api::read::starred::list_starred))
+        .route("/teams", get(api::read::teams::list_teams));
 
     let yjs_routes = Router::new()
         .route("/{id}", get(realtime::yjs::yjs_handler));

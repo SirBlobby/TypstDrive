@@ -86,6 +86,23 @@ fn bearer_token(headers: &HeaderMap) -> Option<String> {
         .map(|value| value[7..].to_string())
 }
 
+const TOKEN_USE_INTERVAL_SECONDS: i64 = 60;
+
+async fn note_token_use(state: &AppState, token_id: &str, last_used_at: Option<&str>) {
+    let now = chrono::Utc::now();
+    let recently_used = last_used_at
+        .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+        .is_some_and(|used_at| now.signed_duration_since(used_at.with_timezone(&chrono::Utc)).num_seconds() < TOKEN_USE_INTERVAL_SECONDS);
+    if recently_used {
+        return;
+    }
+    let _ = sqlx::query(sql("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2"))
+        .bind(now.to_rfc3339())
+        .bind(token_id)
+        .execute(&state.db)
+        .await;
+}
+
 pub async fn authenticate(
     state: &AppState,
     headers: &HeaderMap,
@@ -95,22 +112,17 @@ pub async fn authenticate(
         "Missing Authorization header. Use: Authorization: Bearer <device-token>".to_string(),
     ))?;
 
-    let row = sqlx::query_as::<_, (String, String)>(
-        sql("SELECT id, user_id FROM device_tokens WHERE token_hash = $1"),
+    let row = sqlx::query_as::<_, (String, String, Option<String>)>(
+        sql("SELECT id, user_id, last_used_at FROM device_tokens WHERE token_hash = $1"),
     )
     .bind(hash_token(&token))
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let (token_id, user_id) =
+    let (token_id, user_id, last_used_at) =
         row.ok_or((StatusCode::UNAUTHORIZED, "Invalid device token".to_string()))?;
-
-    let _ = sqlx::query(sql("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2"))
-        .bind(chrono::Utc::now().to_rfc3339())
-        .bind(&token_id)
-        .execute(&state.db)
-        .await;
+    note_token_use(state, &token_id, last_used_at.as_deref()).await;
 
     Ok(user_id)
 }
@@ -120,21 +132,16 @@ pub(crate) async fn user_id_for_token(state: &AppState, token: &str) -> Option<S
 }
 
 pub(crate) async fn device_token_for(state: &AppState, token: &str) -> Option<(String, String)> {
-    let row = sqlx::query_as::<_, (String, String)>(
-        sql("SELECT id, user_id FROM device_tokens WHERE token_hash = $1"),
+    let row = sqlx::query_as::<_, (String, String, Option<String>)>(
+        sql("SELECT id, user_id, last_used_at FROM device_tokens WHERE token_hash = $1"),
     )
     .bind(hash_token(token))
     .fetch_optional(&state.db)
     .await
     .ok()??;
 
-    let (token_id, user_id) = row;
-
-    let _ = sqlx::query(sql("UPDATE device_tokens SET last_used_at = $1 WHERE id = $2"))
-        .bind(chrono::Utc::now().to_rfc3339())
-        .bind(&token_id)
-        .execute(&state.db)
-        .await;
+    let (token_id, user_id, last_used_at) = row;
+    note_token_use(state, &token_id, last_used_at.as_deref()).await;
 
     Some((token_id, user_id))
 }

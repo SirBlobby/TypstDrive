@@ -87,6 +87,7 @@ pub struct Document {
     pub folder_id: Option<String>,
     pub title: String,
     #[serde(skip_serializing)]
+    #[sqlx(default)]
     pub content: Option<Vec<u8>>,
     pub thumbnail_svg: Option<String>,
     pub public_role: Option<String>,

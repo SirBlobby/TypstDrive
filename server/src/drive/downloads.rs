@@ -99,25 +99,28 @@ async fn project_entries(state: &AppState, project: &Project, prefix: &str) -> R
     }
 
     let input = assemble_project(state, project, HashMap::new()).await;
-    let used = {
-        let compiler = state.compiler.lock().await;
-        compiler.used_resources(input)
-    };
+    let used = crate::compile::compiler::run_blocking(move |compiler| compiler.used_resources(input))
+        .await
+        .unwrap_or_default();
 
-    let account_files = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(sql("SELECT name, data, storage_key FROM files WHERE owner_id = $1"))
+    let account_files = sqlx::query_as::<_, (String, String)>(sql("SELECT id, name FROM files WHERE owner_id = $1"))
         .bind(&project.owner_id)
         .fetch_all(&state.db)
         .await
         .map_err(internal_error)?;
 
     let mut included = HashSet::new();
-    let used_files: Vec<_> = account_files
+    let used_files: Vec<(String, String)> = account_files
         .into_iter()
-        .filter(|(name, _, _)| used.paths.contains(name) || used.font_files.contains(name))
-        .filter(|(name, _, _)| !project_paths.contains(name) && included.insert(name.clone()))
+        .filter(|(_, name)| used.paths.contains(name) || used.font_files.contains(name))
+        .filter(|(_, name)| !project_paths.contains(name) && included.insert(name.clone()))
         .collect();
-    for (name, data) in state.file_storage.load_named(used_files).await? {
-        entries.push(ArchiveEntry::File(format!("{prefix}{}", safe_relative_path(&name)), data));
+    let used_ids: Vec<String> = used_files.iter().map(|(id, _)| id.clone()).collect();
+    let mut loaded = crate::drive::file_data::load_many(state, &used_ids).await;
+    for (id, name) in used_files {
+        if let Some(data) = loaded.remove(&id) {
+            entries.push(ArchiveEntry::File(format!("{prefix}{}", safe_relative_path(&name)), data));
+        }
     }
 
     Ok(entries)

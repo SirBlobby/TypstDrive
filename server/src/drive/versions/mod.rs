@@ -2,7 +2,7 @@ mod history;
 mod merge;
 pub mod retention;
 
-pub use history::save_when_leaving;
+pub use history::{current_text, find_version, list_versions, save_when_leaving, VersionView};
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -15,7 +15,7 @@ use crate::drive::projects::encode_text_blob;
 use crate::realtime::live_documents;
 use crate::sharing::access;
 use crate::AppState;
-use history::{find_version, list_versions, save_version, NewVersion, VersionView, KIND_AUTO, KIND_MANUAL, KIND_RESTORE};
+use history::{save_version, NewVersion, KIND_AUTO, KIND_MANUAL, KIND_RESTORE};
 
 type ApiError = (StatusCode, String);
 

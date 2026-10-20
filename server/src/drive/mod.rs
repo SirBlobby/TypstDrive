@@ -4,6 +4,7 @@ pub mod document_assets;
 pub mod documents;
 pub mod downloads;
 pub mod editor_library;
+pub mod file_data;
 pub mod file_replace;
 pub mod files;
 pub mod folder_colors;

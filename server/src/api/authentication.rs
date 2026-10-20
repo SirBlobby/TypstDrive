@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicI64, Ordering};
+
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 
@@ -6,6 +8,10 @@ use crate::db::sql;
 use crate::AppState;
 
 const RATE_WINDOW_SECONDS: u64 = 60;
+const USAGE_PRUNE_INTERVAL_SECONDS: i64 = 60;
+const WORKSPACE_HEADER: &str = "x-workspace";
+
+static LAST_USAGE_PRUNE: AtomicI64 = AtomicI64::new(0);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ApiScope {
@@ -34,6 +40,7 @@ pub fn scopes_from_text(text: &str) -> Vec<ApiScope> {
 
 pub struct ApiCaller {
     pub user_id: String,
+    pub account_id: String,
 }
 
 fn reject(status: StatusCode, message: &str) -> Response {
@@ -96,11 +103,39 @@ async fn record_usage(state: &AppState, key_id: &str) {
     .execute(&state.db)
     .await;
 
+    let last_prune = LAST_USAGE_PRUNE.load(Ordering::Relaxed);
+    let now_seconds = now.timestamp();
+    if now_seconds - last_prune < USAGE_PRUNE_INTERVAL_SECONDS
+        || LAST_USAGE_PRUNE.compare_exchange(last_prune, now_seconds, Ordering::Relaxed, Ordering::Relaxed).is_err()
+    {
+        return;
+    }
     let cutoff_minute = (now - chrono::TimeDelta::hours(25)).format("%Y-%m-%d %H:%M").to_string();
     let _ = sqlx::query(sql("DELETE FROM api_key_usage_detail WHERE minute < $1"))
         .bind(cutoff_minute)
         .execute(&state.db)
         .await;
+}
+
+fn requested_workspace(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(WORKSPACE_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty() && value != "personal")
+}
+
+async fn acting_account(state: &AppState, headers: &HeaderMap, user_id: &str) -> Result<String, Response> {
+    let Some(team_id) = requested_workspace(headers) else {
+        return Ok(user_id.to_string());
+    };
+    if !crate::teams::policy::load_policy(state).await.enabled {
+        return Err(reject(StatusCode::FORBIDDEN, "Team spaces are turned off on this server"));
+    }
+    if crate::teams::membership(state, &team_id, user_id).await.is_none() {
+        return Err(reject(StatusCode::FORBIDDEN, "You are not a member of this team"));
+    }
+    Ok(team_id)
 }
 
 pub async fn authenticate(state: &AppState, headers: &HeaderMap, scope: ApiScope) -> Result<ApiCaller, Response> {
@@ -143,6 +178,7 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap, scope: ApiScope
         return Err(reject(StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded. Max requests per minute reached."));
     }
 
+    let account_id = acting_account(state, headers, &user_id).await?;
     record_usage(state, &key_id).await;
-    Ok(ApiCaller { user_id })
+    Ok(ApiCaller { user_id, account_id })
 }

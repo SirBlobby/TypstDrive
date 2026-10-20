@@ -25,6 +25,10 @@ pub async fn register(state: &AppState, room_id: &str, awareness: Arc<RwLock<Awa
     state.live_documents.lock().await.insert(room_id.to_string(), awareness);
 }
 
+pub async fn unregister(state: &AppState, room_id: &str) {
+    state.live_documents.lock().await.remove(room_id);
+}
+
 pub async fn room(state: &AppState, room_id: &str) -> Option<Arc<RwLock<Awareness>>> {
     state.live_documents.lock().await.get(room_id).cloned()
 }

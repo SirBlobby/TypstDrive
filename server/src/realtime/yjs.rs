@@ -12,11 +12,12 @@ use tokio::sync::{Mutex, RwLock};
 use yrs::sync::protocol::{Message, MessageReader, SyncMessage};
 use yrs::sync::Awareness;
 use yrs::updates::decoder::{Decode, DecoderV1};
-use yrs::{Doc, ReadTxn, Transact, Update};
+use yrs::updates::encoder::Encode;
+use yrs::{Doc, ReadTxn, StateVector, Transact, Update};
 use yrs_axum::broadcast::BroadcastGroup;
 use yrs_axum::ws::AxumSink;
 
-use crate::realtime::relay;
+use crate::realtime::{relay, rooms};
 use crate::sharing::access::{self, AccessRole, Resource};
 use crate::desktop::devices::{notify_devices, DeviceEvent};
 use crate::AppState;
@@ -86,7 +87,6 @@ impl Stream for ViewerFilterStream {
 
 struct YjsSaveTarget {
     room_id: String,
-    table: &'static str,
     row_id: String,
     project_id: Option<String>,
     owner_id: String,
@@ -96,30 +96,27 @@ struct YjsSaveTarget {
 struct YjsRoom {
     resource: Resource,
     role: AccessRole,
-    initial_content: Option<Vec<u8>>,
     save_target: YjsSaveTarget,
 }
+
+const AUTOSAVE_INTERVAL_SECONDS: u64 = 5;
 
 async fn resolve_room(state: &AppState, room_id: &str, user_id: &Option<String>) -> Option<YjsRoom> {
     if let Some(rest) = room_id.strip_prefix("project:") {
         let (project_id, file_id) = rest.split_once(':')?;
         let (project, role) = access::project_access(state, project_id, user_id).await?;
-        let (content,) = sqlx::query_as::<_, (Option<Vec<u8>>,)>(
-            sql("SELECT content FROM project_files WHERE id = $1 AND project_id = $2")
-        )
-        .bind(file_id)
-        .bind(project_id)
-        .fetch_optional(&state.db)
-        .await
-        .ok()??;
+        sqlx::query_as::<_, (String,)>(sql("SELECT id FROM project_files WHERE id = $1 AND project_id = $2"))
+            .bind(file_id)
+            .bind(project_id)
+            .fetch_optional(&state.db)
+            .await
+            .ok()??;
 
         return Some(YjsRoom {
             resource: Resource::Project(project_id.to_string()),
             role,
-            initial_content: content,
             save_target: YjsSaveTarget {
                 room_id: room_id.to_string(),
-                table: "project_files",
                 row_id: file_id.to_string(),
                 project_id: Some(project_id.to_string()),
                 owner_id: project.owner_id,
@@ -132,10 +129,8 @@ async fn resolve_room(state: &AppState, room_id: &str, user_id: &Option<String>)
     Some(YjsRoom {
         resource: Resource::Document(room_id.to_string()),
         role,
-        initial_content: document.content,
         save_target: YjsSaveTarget {
             room_id: room_id.to_string(),
-            table: "documents",
             row_id: room_id.to_string(),
             project_id: None,
             owner_id: document.owner_id,
@@ -144,67 +139,100 @@ async fn resolve_room(state: &AppState, room_id: &str, user_id: &Option<String>)
     })
 }
 
+async fn initial_content(state: &AppState, target: &YjsSaveTarget) -> Option<Vec<u8>> {
+    if target.project_id.is_none() {
+        return crate::drive::documents::stored_content(state, &target.row_id).await;
+    }
+    sqlx::query_as::<_, (Option<Vec<u8>>,)>(sql("SELECT content FROM project_files WHERE id = $1"))
+        .bind(&target.row_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .and_then(|(content,)| content)
+}
+
+async fn save_content(state: &AppState, target: &YjsSaveTarget, content: &[u8]) -> bool {
+    let query = if target.project_id.is_some() {
+        "UPDATE project_files SET content = $1, updated_at = $2 WHERE id = $3"
+    } else {
+        "UPDATE documents SET content = $1, updated_at = $2 WHERE id = $3"
+    };
+    let result = sqlx::query(sql(query))
+        .bind(content.to_vec())
+        .bind(crate::db::timestamp_now())
+        .bind(&target.row_id)
+        .execute(&state.db)
+        .await;
+    if result.is_err() {
+        return false;
+    }
+
+    let editor = crate::drive::activity::live_editor(&target.room_id);
+    match &target.project_id {
+        Some(project_id) => crate::drive::activity::mark_project_edited(state, project_id, editor.as_deref()).await,
+        None => crate::drive::activity::mark_document_edited(state, &target.row_id, editor.as_deref()).await,
+    }
+    notify_devices(state, &target.owner_id, target.event.clone()).await;
+    true
+}
+
+async fn encoded_state_vector(awareness: &RwLock<Awareness>) -> Vec<u8> {
+    awareness.read().await.doc().transact().state_vector().encode_v1()
+}
+
+async fn changed_content(awareness: &RwLock<Awareness>, saved_state: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+    let awareness = awareness.read().await;
+    let transaction = awareness.doc().transact();
+    let current_state = transaction.state_vector().encode_v1();
+    if current_state == saved_state {
+        return None;
+    }
+    let content = transaction.encode_state_as_update_v1(&StateVector::default());
+    Some((current_state, content))
+}
+
 fn spawn_autosave(state: AppState, awareness: Arc<RwLock<Awareness>>, target: YjsSaveTarget) {
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
-        let mut last_content: Option<Vec<u8>> = None;
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(AUTOSAVE_INTERVAL_SECONDS));
+        let mut saved_state = encoded_state_vector(&awareness).await;
         loop {
             interval.tick().await;
-            let doc = awareness.read().await;
-            let content = doc.doc().transact().encode_state_as_update_v1(&yrs::StateVector::default());
-            drop(doc);
-
-            if last_content.as_ref() == Some(&content) {
-                continue;
-            }
-
-            let query = if target.table == "project_files" {
-                "UPDATE project_files SET content = $1, updated_at = $2 WHERE id = $3"
-            } else {
-                "UPDATE documents SET content = $1, updated_at = $2 WHERE id = $3"
-            };
-            let result = sqlx::query(sql(query))
-                .bind(&content)
-                .bind(crate::db::timestamp_now())
-                .bind(&target.row_id)
-                .execute(&state.db)
-                .await;
-
-            if result.is_ok() {
-                last_content = Some(content);
-                let editor = crate::drive::activity::live_editor(&target.room_id);
-                match &target.project_id {
-                    Some(project_id) => crate::drive::activity::mark_project_edited(&state, project_id, editor.as_deref()).await,
-                    None => crate::drive::activity::mark_document_edited(&state, &target.row_id, editor.as_deref()).await,
+            match changed_content(&awareness, &saved_state).await {
+                Some((current_state, content)) => {
+                    if save_content(&state, &target, &content).await {
+                        saved_state = current_state;
+                    }
                 }
-                notify_devices(&state, &target.owner_id, target.event.clone()).await;
+                None => {
+                    if rooms::close_if_idle(&state, &target.room_id).await {
+                        break;
+                    }
+                }
             }
         }
     });
 }
 
-async fn room_broadcast(state: &AppState, room_id: &str, room: YjsRoom) -> (Arc<BroadcastGroup>, Resource, AccessRole) {
-    let YjsRoom { resource, role, initial_content, save_target } = room;
-    let mut bcast_map = state.bcast_map.lock().await;
-    if let Some(existing) = bcast_map.get(room_id) {
-        return (existing.clone(), resource, role);
+async fn join_room(state: &AppState, room_id: &str, save_target: YjsSaveTarget) -> Arc<BroadcastGroup> {
+    if let Some(broadcast) = rooms::join_existing(state, room_id).await {
+        return broadcast;
     }
 
     let ydoc = Doc::new();
-    if let Some(content) = initial_content {
+    if let Some(content) = initial_content(state, &save_target).await {
         if let Ok(update) = Update::decode_v1(&content) {
             ydoc.transact_mut().apply_update(update);
         }
     }
 
     let awareness = Arc::new(RwLock::new(Awareness::new(ydoc)));
-    let bcast = Arc::new(BroadcastGroup::new(awareness.clone(), 10).await);
-    bcast_map.insert(room_id.to_string(), bcast.clone());
-    crate::realtime::live_documents::register(state, room_id, awareness.clone()).await;
-    relay::request_missing_updates(state, room_id, &awareness).await;
-    spawn_autosave(state.clone(), awareness, save_target);
-
-    (bcast, resource, role)
+    let (broadcast, created) = rooms::join_or_create(state, room_id, awareness.clone()).await;
+    if created {
+        relay::request_missing_updates(state, room_id, &awareness).await;
+        spawn_autosave(state.clone(), awareness, save_target);
+    }
+    broadcast
 }
 
 pub async fn yjs_handler(
@@ -225,14 +253,13 @@ pub async fn yjs_handler(
         },
     };
 
-    let room = match resolve_room(&state, &room_id, &user_id).await {
+    let YjsRoom { resource, role, save_target } = match resolve_room(&state, &room_id, &user_id).await {
         Some(room) => room,
         None => return access::forbidden().into_response(),
     };
 
-    let (bcast, resource, role) = room_broadcast(&state, &room_id, room).await;
-
     ws.on_upgrade(move |socket| async move {
+        let bcast = join_room(&state, &room_id, save_target).await;
         let session = access::register_session(&state, resource, user_id.clone(), device_token_id, role.can_edit()).await;
 
         let (sink, stream) = socket.split();
@@ -270,5 +297,6 @@ pub async fn yjs_handler(
         if let Some(editor_id) = user_id.as_deref().filter(|_| edited_document) {
             crate::drive::versions::save_when_leaving(&state, &room_id, editor_id).await;
         }
+        rooms::leave(&state, &room_id).await;
     })
 }

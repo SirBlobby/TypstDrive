@@ -101,20 +101,23 @@ async fn load_suggestion(state: &AppState, suggestion_id: &str) -> Result<Sugges
     to_views(state, vec![row]).await.pop().ok_or_else(not_found)
 }
 
+pub async fn document_suggestions(state: &AppState, document_id: &str) -> Result<Vec<SuggestionView>, sqlx::Error> {
+    let rows = sqlx::query_as::<_, SuggestionRow>(sql_owned(format!(
+        "{SUGGESTION_COLUMNS} WHERE document_id = $1 ORDER BY created_at DESC"
+    )))
+    .bind(document_id)
+    .fetch_all(&state.db)
+    .await?;
+    Ok(to_views(state, rows).await)
+}
+
 pub async fn list_suggestions(
     State(state): State<AppState>,
     Path(document_id): Path<String>,
     SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<Vec<SuggestionView>>, ApiError> {
     document_access(&state, &document_id, &user_id).await?;
-    let rows = sqlx::query_as::<_, SuggestionRow>(sql_owned(format!(
-        "{SUGGESTION_COLUMNS} WHERE document_id = $1 ORDER BY created_at DESC"
-    )))
-    .bind(&document_id)
-    .fetch_all(&state.db)
-    .await
-    .map_err(internal_error)?;
-    Ok(Json(to_views(&state, rows).await))
+    Ok(Json(document_suggestions(&state, &document_id).await.map_err(internal_error)?))
 }
 
 pub async fn create_suggestion(

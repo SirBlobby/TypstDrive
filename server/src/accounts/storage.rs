@@ -82,29 +82,21 @@ pub struct UserQuotaResponse {
     pub quota_bytes: i64,
 }
 
-const DOCUMENTS_SIZE_SQL: &str =
-    "SELECT CAST(COALESCE(SUM(LENGTH(content)), 0) AS BIGINT) FROM documents WHERE owner_id = $1";
-const FILES_SIZE_SQL: &str =
-    "SELECT CAST(COALESCE(SUM(size_bytes), 0) AS BIGINT) FROM files WHERE owner_id = $1";
-const PROJECTS_SIZE_SQL: &str =
-    "SELECT CAST(COALESCE(SUM(LENGTH(pf.content)), 0) AS BIGINT) FROM project_files pf \
-     INNER JOIN projects p ON p.id = pf.project_id WHERE p.owner_id = $1";
+const USAGE_SQL: &str = "SELECT \
+     CAST(COALESCE((SELECT SUM(LENGTH(content)) FROM documents WHERE owner_id = $1), 0) AS BIGINT), \
+     CAST(COALESCE((SELECT SUM(size_bytes) FROM files WHERE owner_id = $2), 0) AS BIGINT), \
+     CAST(COALESCE((SELECT SUM(LENGTH(pf.content)) FROM project_files pf \
+         INNER JOIN projects p ON p.id = pf.project_id WHERE p.owner_id = $3), 0) AS BIGINT)";
 
-async fn sum_for_user(state: &AppState, statement: &'static str, user_id: &str) -> i64 {
-    sqlx::query_as::<_, (i64,)>(sql(statement))
+pub async fn usage_for(state: &AppState, user_id: &str) -> StorageUsage {
+    let (documents, files, projects) = sqlx::query_as::<_, (i64, i64, i64)>(sql(USAGE_SQL))
+        .bind(user_id)
+        .bind(user_id)
         .bind(user_id)
         .fetch_one(&state.db)
         .await
-        .map(|(size,)| size)
-        .unwrap_or(0)
-}
-
-pub async fn usage_for(state: &AppState, user_id: &str) -> StorageUsage {
-    StorageUsage::new(
-        sum_for_user(state, DOCUMENTS_SIZE_SQL, user_id).await,
-        sum_for_user(state, FILES_SIZE_SQL, user_id).await,
-        sum_for_user(state, PROJECTS_SIZE_SQL, user_id).await,
-    )
+        .unwrap_or((0, 0, 0));
+    StorageUsage::new(documents, files, projects)
 }
 
 pub async fn project_file_size(state: &AppState, project_id: &str, path: &str) -> i64 {

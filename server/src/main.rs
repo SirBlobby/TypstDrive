@@ -3,7 +3,6 @@ use sqlx::AnyPool;
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::{broadcast, Mutex};
-use yrs_axum::broadcast::BroadcastGroup;
 
 use desktop::devices::{DeviceEvent, DevicePresence};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -30,14 +29,11 @@ mod site_url;
 mod teams;
 mod user_content;
 
-use compile::compiler::TypstCompiler;
-
 pub type RateLimiterMap = Arc<Mutex<HashMap<String, (u32, std::time::Instant)>>>;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub compiler: Arc<Mutex<TypstCompiler>>,
-    pub bcast_map: Arc<Mutex<HashMap<String, Arc<BroadcastGroup>>>>,
+    pub live_rooms: Arc<Mutex<realtime::rooms::LiveRooms>>,
     pub db: AnyPool,
     pub key: Key,
     pub rate_limiter: RateLimiterMap,
@@ -90,8 +86,7 @@ async fn main() {
     };
 
     let state = AppState {
-        compiler: Arc::new(Mutex::new(TypstCompiler::new())),
-        bcast_map: Arc::new(Mutex::new(HashMap::new())),
+        live_rooms: Arc::new(Mutex::new(HashMap::new())),
         db,
         key,
         rate_limiter: Arc::new(Mutex::new(HashMap::new())),

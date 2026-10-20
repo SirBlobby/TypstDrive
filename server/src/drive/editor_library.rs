@@ -5,7 +5,6 @@ use crate::accounts::signed_in::SignedInUser;
 use serde::Serialize;
 
 use crate::db::sql;
-use crate::drive::projects::decode_text_blob;
 use crate::sharing::access::{self, AccessRole};
 use crate::AppState;
 
@@ -100,7 +99,7 @@ pub async fn document_text(
     let room_id = crate::realtime::live_documents::document_room(&document_id);
     let text = match crate::realtime::live_documents::live_text(&state, &room_id).await {
         Some(text) => text,
-        None => decode_text_blob(document.content.as_deref().unwrap_or_default()),
+        None => crate::drive::documents::saved_text(&state, &document_id).await,
     };
     Ok(Json(DocumentText { title: document.title, text }))
 }

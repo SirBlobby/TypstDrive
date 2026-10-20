@@ -1,14 +1,16 @@
 use axum::{
     extract::{Path, State},
     http::{header, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     Json,
 };
+use axum_extra::extract::cookie::SignedCookieJar;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use crate::compile::compiler::{run_blocking, CompileFailure, DocumentStats, ProjectInput};
 use crate::sharing::access;
 use crate::AppState;
-use crate::drive::projects::decode_text_blob;
 use crate::db::sql;
 
 #[derive(Deserialize)]
@@ -18,23 +20,7 @@ pub struct CompileRequest {
     pub document_id: Option<String>,
     pub project_id: Option<String>,
     #[serde(default)]
-    pub files: Option<std::collections::HashMap<String, String>>,
-}
-
-use crate::compile::compiler::{DocumentStats, ProjectInput};
-
-fn map_diagnostics(
-    diags: Vec<(typst::diag::SourceDiagnostic, Option<std::ops::Range<usize>>)>,
-) -> Vec<Diagnostic> {
-    diags
-        .into_iter()
-        .map(|(d, range)| Diagnostic {
-            message: d.message.to_string(),
-            severity: format!("{:?}", d.severity),
-            from: range.as_ref().map(|r| r.start),
-            to: range.as_ref().map(|r| r.end),
-        })
-        .collect()
+    pub files: Option<HashMap<String, String>>,
 }
 
 #[derive(Serialize)]
@@ -52,11 +38,33 @@ pub struct Diagnostic {
     pub to: Option<usize>,
 }
 
-fn unauthorized_compile() -> Json<CompileResponse> {
+enum ThumbnailTarget {
+    Document(String),
+    Project(String),
+}
+
+struct CompileSource {
+    input: ProjectInput,
+    thumbnail_target: Option<ThumbnailTarget>,
+}
+
+fn map_diagnostics(diagnostics: CompileFailure) -> Vec<Diagnostic> {
+    diagnostics
+        .into_iter()
+        .map(|(diagnostic, range)| Diagnostic {
+            message: diagnostic.message.to_string(),
+            severity: format!("{:?}", diagnostic.severity),
+            from: range.as_ref().map(|range| range.start),
+            to: range.as_ref().map(|range| range.end),
+        })
+        .collect()
+}
+
+fn error_response(message: &str) -> Json<CompileResponse> {
     Json(CompileResponse {
         svgs: None,
         errors: Some(vec![Diagnostic {
-            message: "Unauthorized".to_string(),
+            message: message.to_string(),
             severity: "Error".to_string(),
             from: None,
             to: None,
@@ -65,163 +73,94 @@ fn unauthorized_compile() -> Json<CompileResponse> {
     })
 }
 
-async fn document_source(
-    state: &AppState,
-    payload: &CompileRequest,
-    user_id: &Option<String>,
-) -> Result<(String, HashMap<String, Vec<u8>>, bool), ()> {
+async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<CompileSource> {
+    if let Some(project_id) = &payload.project_id {
+        let (project, role) = access::project_access(state, project_id, user_id).await?;
+        let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
+        let input = crate::drive::projects::assemble_project(state, &project, overrides).await;
+        let thumbnail_target = role.can_edit().then(|| ThumbnailTarget::Project(project.id.clone()));
+        return Some(CompileSource { input, thumbnail_target });
+    }
+
     let submitted_text = payload.text.clone().unwrap_or_default();
     let Some(document_id) = &payload.document_id else {
-        if user_id.is_none() {
-            return Err(());
-        }
-        return Ok((submitted_text, HashMap::new(), false));
+        user_id.as_ref()?;
+        return Some(CompileSource { input: ProjectInput::single(submitted_text, HashMap::new()), thumbnail_target: None });
     };
 
-    let (document, role) = access::document_role(state, document_id, user_id).await.ok_or(())?;
-    let files_map = crate::drive::document_assets::compile_files(state, &document, role, user_id).await;
+    let (document, role) = access::document_role(state, document_id, user_id).await?;
+    let files = crate::drive::document_assets::compile_files(state, &document, role, user_id).await;
     if role.can_edit() {
-        Ok((submitted_text, files_map, true))
+        let thumbnail_target = Some(ThumbnailTarget::Document(document.id.clone()));
+        Some(CompileSource { input: ProjectInput::single(submitted_text, files), thumbnail_target })
     } else {
-        let saved_text = decode_text_blob(document.content.as_deref().unwrap_or_default());
-        Ok((saved_text, files_map, false))
+        let saved_text = crate::drive::documents::saved_text(state, &document.id).await;
+        Some(CompileSource { input: ProjectInput::single(saved_text, files), thumbnail_target: None })
     }
+}
+
+async fn save_thumbnail(state: &AppState, target: ThumbnailTarget, thumbnail: &str) {
+    let (statement, item_id) = match &target {
+        ThumbnailTarget::Document(id) => ("UPDATE documents SET thumbnail_svg = $1 WHERE id = $2", id),
+        ThumbnailTarget::Project(id) => ("UPDATE projects SET thumbnail_svg = $1 WHERE id = $2", id),
+    };
+    let _ = sqlx::query(sql(statement)).bind(thumbnail).bind(item_id).execute(&state.db).await;
 }
 
 pub async fn compile_handler(
     State(state): State<AppState>,
-    jar: axum_extra::extract::cookie::SignedCookieJar,
+    jar: SignedCookieJar,
     Json(payload): Json<CompileRequest>,
-) -> impl IntoResponse {
-    let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-
-    if let Some(project_id) = &payload.project_id {
-        let Some((project, role)) = access::project_access(&state, project_id, &user_id_opt).await else {
-            return unauthorized_compile();
-        };
-
-        let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
-        let input = crate::drive::projects::assemble_project(&state, &project, overrides).await;
-
-        let compiler = state.compiler.lock().await;
-        let result = compiler.compile_svg(input);
-        drop(compiler);
-
-        return match result {
-            Ok((svgs, thumbnail, stats)) => {
-                if role.can_edit() {
-                    let _ = sqlx::query(sql("UPDATE projects SET thumbnail_svg = $1 WHERE id = $2"))
-                        .bind(&thumbnail)
-                        .bind(&project.id)
-                        .execute(&state.db)
-                        .await;
-                }
-                Json(CompileResponse {
-                    svgs: Some(svgs),
-                    errors: None,
-                    stats: Some(stats),
-                })
-            }
-            Err(diags) => Json(CompileResponse {
-                svgs: None,
-                errors: Some(map_diagnostics(diags)),
-                stats: None,
-            }),
-        };
-    }
-
-    let Ok((source_text, files_map, can_save_thumbnail)) = document_source(&state, &payload, &user_id_opt).await else {
-        return unauthorized_compile();
+) -> Json<CompileResponse> {
+    let user_id = jar.get("session_user_id").map(|cookie| cookie.value().to_string());
+    let Some(source) = resolve_source(&state, &payload, &user_id).await else {
+        return error_response("Unauthorized");
     };
 
-    let compiler = state.compiler.lock().await;
-    let result = compiler.compile_svg(ProjectInput::single(source_text, files_map));
-    drop(compiler);
+    let Some(result) = run_blocking(move |compiler| compiler.compile_svg(source.input)).await else {
+        return error_response("Compilation stopped unexpectedly");
+    };
 
     match result {
         Ok((svgs, thumbnail, stats)) => {
-            if let (Some(doc_id), true) = (&payload.document_id, can_save_thumbnail) {
-                let _ = sqlx::query(sql("UPDATE documents SET thumbnail_svg = $1 WHERE id = $2"))
-                    .bind(&thumbnail)
-                    .bind(doc_id)
-                    .execute(&state.db)
-                    .await;
+            if let Some(target) = source.thumbnail_target {
+                save_thumbnail(&state, target, &thumbnail).await;
             }
-
-            Json(CompileResponse {
-                svgs: Some(svgs),
-                errors: None,
-                stats: Some(stats),
-            })
+            Json(CompileResponse { svgs: Some(svgs), errors: None, stats: Some(stats) })
         }
-        Err(diags) => Json(CompileResponse {
-            svgs: None,
-            errors: Some(map_diagnostics(diags)),
-            stats: None,
-        }),
+        Err(diagnostics) => Json(CompileResponse { svgs: None, errors: Some(map_diagnostics(diagnostics)), stats: None }),
     }
+}
+
+fn file_response(content_type: &'static str, bytes: Vec<u8>) -> Response {
+    (StatusCode::OK, [(header::CONTENT_TYPE, content_type)], bytes).into_response()
 }
 
 pub async fn export_handler(
     State(state): State<AppState>,
-    jar: axum_extra::extract::cookie::SignedCookieJar,
+    jar: SignedCookieJar,
     Path(format): Path<String>,
     Json(payload): Json<CompileRequest>,
-) -> impl IntoResponse {
-    let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
+) -> Response {
+    if !matches!(format.as_str(), "pdf" | "png" | "svg") {
+        return (StatusCode::NOT_FOUND, "Format not supported").into_response();
+    }
 
-    let input = if let Some(project_id) = &payload.project_id {
-        match access::project_access(&state, project_id, &user_id_opt).await {
-            Some((project, role)) => {
-                let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
-                crate::drive::projects::assemble_project(&state, &project, overrides).await
-            }
-            None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
-        }
-    } else {
-        match document_source(&state, &payload, &user_id_opt).await {
-            Ok((source_text, files_map, _)) => ProjectInput::single(source_text, files_map),
-            Err(()) => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
-        }
+    let user_id = jar.get("session_user_id").map(|cookie| cookie.value().to_string());
+    let Some(source) = resolve_source(&state, &payload, &user_id).await else {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     };
 
-    let compiler = state.compiler.lock().await;
+    let input = source.input;
+    let exported = run_blocking(move |compiler| match format.as_str() {
+        "pdf" => compiler.export_pdf(input).map(|bytes| ("application/pdf", bytes)),
+        "png" => compiler.export_png(input).map(|bytes| ("image/png", bytes)),
+        _ => compiler.compile_svg(input).map(|(svgs, _, _)| ("image/svg+xml", svgs.join("\n").into_bytes())),
+    })
+    .await;
 
-    match format.as_str() {
-        "pdf" => match compiler.export_pdf(input) {
-            Ok(bytes) => (
-                StatusCode::OK,
-                [(header::CONTENT_TYPE, "application/pdf")],
-                bytes,
-            )
-                .into_response(),
-            Err(_) => (StatusCode::BAD_REQUEST, "Compilation failed").into_response(),
-        },
-        "png" => match compiler.export_png(input) {
-            Ok(bytes) => (
-                StatusCode::OK,
-                [(header::CONTENT_TYPE, "image/png")],
-                bytes,
-            )
-                .into_response(),
-            Err(_) => (StatusCode::BAD_REQUEST, "Compilation failed").into_response(),
-        },
-        "svg" => match compiler.compile_svg(input) {
-            Ok((svgs, _, _)) => {
-                let mut combined = String::new();
-                for svg in svgs {
-                    combined.push_str(&svg);
-                    combined.push('\n');
-                }
-                (
-                    StatusCode::OK,
-                    [(header::CONTENT_TYPE, "image/svg+xml")],
-                    combined.into_bytes(),
-                )
-                    .into_response()
-            }
-            Err(_) => (StatusCode::BAD_REQUEST, "Compilation failed").into_response(),
-        },
-        _ => (StatusCode::NOT_FOUND, "Format not supported").into_response(),
+    match exported {
+        Some(Ok((content_type, bytes))) => file_response(content_type, bytes),
+        _ => (StatusCode::BAD_REQUEST, "Compilation failed").into_response(),
     }
 }

@@ -114,21 +114,23 @@ pub async fn team_members(state: &AppState, team_id: &str) -> Result<Vec<TeamMem
     .map_err(internal_error)
 }
 
-pub async fn list_teams(State(state): State<AppState>, jar: SignedCookieJar) -> Result<Json<Vec<TeamSummary>>, ApiError> {
-    let user_id = session_user(&jar)?;
-    if !policy::load_policy(&state).await.enabled {
-        return Ok(Json(Vec::new()));
+pub async fn user_teams(state: &AppState, user_id: &str) -> Result<Vec<TeamSummary>, sqlx::Error> {
+    if !policy::load_policy(state).await.enabled {
+        return Ok(Vec::new());
     }
-    let teams = sqlx::query_as::<_, TeamSummary>(sql(
+    sqlx::query_as::<_, TeamSummary>(sql(
         "SELECT t.id, t.name, m.role, \
          CAST((SELECT COUNT(*) FROM team_members c WHERE c.team_id = t.id) AS BIGINT) AS member_count, t.created_at \
          FROM teams t INNER JOIN team_members m ON m.team_id = t.id WHERE m.user_id = $1 ORDER BY t.name ASC",
     ))
-    .bind(&user_id)
+    .bind(user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(internal_error)?;
-    Ok(Json(teams))
+}
+
+pub async fn list_teams(State(state): State<AppState>, jar: SignedCookieJar) -> Result<Json<Vec<TeamSummary>>, ApiError> {
+    let user_id = session_user(&jar)?;
+    Ok(Json(user_teams(&state, &user_id).await.map_err(internal_error)?))
 }
 
 pub async fn create_team(

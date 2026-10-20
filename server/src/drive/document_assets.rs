@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use axum::{
     extract::{Multipart, Path, State},
     http::StatusCode,
-    response::IntoResponse,
+    response::Response,
     Json,
 };
 use axum_extra::extract::cookie::SignedCookieJar;
@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::{
     sharing::access::{self, forbidden, AccessRole},
     models::{Document, File},
-    drive::projects::decode_text_blob,
+    drive::documents::saved_text,
     AppState,
 };
 use crate::db::sql;
@@ -27,14 +27,21 @@ pub struct LinkedFile {
     shared_with_collaborators: bool,
 }
 
-struct StoredFile {
+struct FileEntry {
     file: File,
-    data: Vec<u8>,
     linked_to_document: bool,
 }
 
+type ReadableFile = (FileEntry, Option<Vec<u8>>);
+
+type FileEntryRow = (String, String, Option<String>, Option<String>, String, String, String, i64, i64);
+
 fn internal_error(error: sqlx::Error) -> ApiError {
     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+}
+
+fn not_found() -> ApiError {
+    (StatusCode::NOT_FOUND, "File not found".to_string())
 }
 
 fn is_font_name(name: &str) -> bool {
@@ -42,9 +49,8 @@ fn is_font_name(name: &str) -> bool {
     lower.ends_with(".ttf") || lower.ends_with(".otf")
 }
 
-fn is_real_font(file: &StoredFile) -> bool {
-    is_font_name(&file.file.name)
-        && typst::text::Font::iter(typst::foundations::Bytes::new(file.data.clone())).next().is_some()
+fn is_font_data(data: &[u8]) -> bool {
+    typst::text::Font::iter(typst::foundations::Bytes::new(data.to_vec())).next().is_some()
 }
 
 fn is_referenced(source: &str, file_name: &str) -> bool {
@@ -59,9 +65,9 @@ async fn document_with_role(state: &AppState, document_id: &str, user_id: &Optio
     access::document_role(state, document_id, user_id).await.ok_or_else(forbidden)
 }
 
-async fn stored_files(state: &AppState, document: &Document) -> Result<Vec<StoredFile>, ApiError> {
-    let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>, String, String, String, Vec<u8>, i64, Option<String>, i64)>(
-        sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, data, size_bytes, storage_key, \
+async fn file_entries(state: &AppState, document: &Document) -> Result<Vec<FileEntry>, ApiError> {
+    let rows = sqlx::query_as::<_, FileEntryRow>(
+        sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, \
          CAST(CASE WHEN document_id = $1 OR id IN (SELECT file_id FROM document_shared_files WHERE document_id = $2) THEN 1 ELSE 0 END AS BIGINT) \
          FROM files WHERE document_id = $3 OR owner_id = $4 ORDER BY name ASC")
     )
@@ -73,65 +79,97 @@ async fn stored_files(state: &AppState, document: &Document) -> Result<Vec<Store
     .await
     .map_err(internal_error)?;
 
-    let loads = rows.into_iter().map(
-        |(id, owner_id, document_id, folder_id, name, mime_type, created_at, data, size_bytes, storage_key, linked)| async move {
-            StoredFile {
-                file: File {
-                    id,
-                    owner_id,
-                    document_id,
-                    folder_id,
-                    name,
-                    mime_type,
-                    created_at,
-                    size_bytes: Some(size_bytes),
-                    updated_at: None,
-                },
-                data: state.file_storage.load(data, storage_key).await.unwrap_or_default(),
-                linked_to_document: linked != 0,
-            }
-        },
-    );
-    Ok(futures_util::future::join_all(loads).await)
+    Ok(rows
+        .into_iter()
+        .map(|(id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, linked)| FileEntry {
+            file: File {
+                id,
+                owner_id,
+                document_id,
+                folder_id,
+                name,
+                mime_type,
+                created_at,
+                size_bytes: Some(size_bytes),
+                updated_at: None,
+            },
+            linked_to_document: linked != 0,
+        })
+        .collect())
 }
 
-async fn readable_by_collaborator(
+async fn file_data(state: &AppState, file_id: &str) -> Result<Vec<u8>, ApiError> {
+    let (data, storage_key) = sqlx::query_as::<_, (Vec<u8>, Option<String>)>(sql("SELECT data, storage_key FROM files WHERE id = $1"))
+        .bind(file_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(internal_error)?
+        .ok_or_else(not_found)?;
+    state.file_storage.load(data, storage_key).await
+}
+
+async fn is_real_font(state: &AppState, entry: &FileEntry, loaded_data: &Option<Vec<u8>>) -> bool {
+    if !is_font_name(&entry.file.name) {
+        return false;
+    }
+    match loaded_data {
+        Some(data) => is_font_data(data),
+        None => file_data(state, &entry.file.id).await.is_ok_and(|data| is_font_data(&data)),
+    }
+}
+
+async fn readable_files(
     state: &AppState,
+    document: &Document,
+    role: AccessRole,
     user_id: &Option<String>,
-    files: Vec<StoredFile>,
-) -> Vec<StoredFile> {
+) -> Result<Vec<ReadableFile>, ApiError> {
+    let entries = file_entries(state, document).await?;
+    if role == AccessRole::Owner {
+        return Ok(entries.into_iter().map(|entry| (entry, None)).collect());
+    }
+
     let mut readable_folders: HashMap<String, bool> = HashMap::new();
     let mut readable = Vec::new();
-    for stored in files {
-        let attached = stored.linked_to_document;
-        let in_shared_folder = match &stored.file.folder_id {
+    for entry in entries {
+        let in_shared_folder = match &entry.file.folder_id {
             Some(folder_id) if user_id.is_some() => {
                 if !readable_folders.contains_key(folder_id) {
-                    let allowed = access::inherited_role(state, &Some(folder_id.clone()), &stored.file.owner_id, user_id).await.is_some();
+                    let allowed = access::inherited_role(state, &Some(folder_id.clone()), &entry.file.owner_id, user_id).await.is_some();
                     readable_folders.insert(folder_id.clone(), allowed);
                 }
                 readable_folders[folder_id]
             }
             _ => false,
         };
-        if attached || in_shared_folder || is_real_font(&stored) {
-            readable.push(stored);
+        if entry.linked_to_document || in_shared_folder {
+            readable.push((entry, None));
+        } else if is_font_name(&entry.file.name) {
+            if let Ok(data) = file_data(state, &entry.file.id).await {
+                if is_font_data(&data) {
+                    readable.push((entry, Some(data)));
+                }
+            }
         }
     }
-    readable
+    Ok(readable)
 }
 
-async fn files_for_role(
-    state: &AppState,
-    document: &Document,
-    role: AccessRole,
-    user_id: &Option<String>,
-) -> Result<Vec<StoredFile>, ApiError> {
-    let files = stored_files(state, document).await?;
-    if role == AccessRole::Owner {
-        return Ok(files);
-    }
-    Ok(readable_by_collaborator(state, user_id, files).await)
+async fn with_data(state: &AppState, files: Vec<ReadableFile>) -> Vec<(File, Vec<u8>)> {
+    let missing_ids: Vec<String> = files
+        .iter()
+        .filter(|(_, data)| data.is_none())
+        .map(|(entry, _)| entry.file.id.clone())
+        .collect();
+    let mut stored = crate::drive::file_data::load_many(state, &missing_ids).await;
+
+    files
+        .into_iter()
+        .map(|(entry, loaded_data)| {
+            let data = loaded_data.or_else(|| stored.remove(&entry.file.id)).unwrap_or_default();
+            (entry.file, data)
+        })
+        .collect()
 }
 
 pub async fn compile_files(
@@ -140,11 +178,13 @@ pub async fn compile_files(
     role: AccessRole,
     user_id: &Option<String>,
 ) -> HashMap<String, Vec<u8>> {
-    files_for_role(state, document, role, user_id)
+    let Ok(files) = readable_files(state, document, role, user_id).await else {
+        return HashMap::new();
+    };
+    with_data(state, files)
         .await
-        .unwrap_or_default()
         .into_iter()
-        .map(|stored| (stored.file.name, stored.data))
+        .map(|(file, data)| (file.name, data))
         .collect()
 }
 
@@ -155,17 +195,17 @@ pub async fn list_assets(
 ) -> Result<Json<Vec<LinkedFile>>, ApiError> {
     let user_id = session_user(&jar);
     let (document, role) = document_with_role(&state, &document_id, &user_id).await?;
-    let source = decode_text_blob(document.content.as_deref().unwrap_or_default());
+    let source = saved_text(&state, &document.id).await;
 
-    let linked = files_for_role(&state, &document, role, &user_id)
-        .await?
-        .into_iter()
-        .filter(|stored| stored.linked_to_document || is_font_name(&stored.file.name) || is_referenced(&source, &stored.file.name))
-        .map(|stored| LinkedFile {
-            shared_with_collaborators: stored.linked_to_document || is_real_font(&stored),
-            file: stored.file,
-        })
-        .collect();
+    let mut linked = Vec::new();
+    for (entry, loaded_data) in readable_files(&state, &document, role, &user_id).await? {
+        let visible = entry.linked_to_document || is_font_name(&entry.file.name) || is_referenced(&source, &entry.file.name);
+        if !visible {
+            continue;
+        }
+        let shared_with_collaborators = entry.linked_to_document || is_real_font(&state, &entry, &loaded_data).await;
+        linked.push(LinkedFile { file: entry.file, shared_with_collaborators });
+    }
 
     Ok(Json(linked))
 }
@@ -174,16 +214,20 @@ pub async fn get_asset_data(
     State(state): State<AppState>,
     Path((document_id, file_id)): Path<(String, String)>,
     jar: SignedCookieJar,
-) -> Result<impl IntoResponse, ApiError> {
+) -> Result<Response, ApiError> {
     let user_id = session_user(&jar);
     let (document, role) = document_with_role(&state, &document_id, &user_id).await?;
-    let stored = files_for_role(&state, &document, role, &user_id)
+    let (entry, loaded_data) = readable_files(&state, &document, role, &user_id)
         .await?
         .into_iter()
-        .find(|stored| stored.file.id == file_id)
-        .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
+        .find(|(entry, _)| entry.file.id == file_id)
+        .ok_or_else(not_found)?;
 
-    Ok(crate::user_content::response(&stored.file.mime_type, stored.data))
+    let data = match loaded_data {
+        Some(data) => data,
+        None => file_data(&state, &entry.file.id).await?,
+    };
+    Ok(crate::user_content::response(&entry.file.mime_type, data))
 }
 
 async fn require_document_owner(state: &AppState, document_id: &str, jar: &SignedCookieJar) -> Result<Document, ApiError> {
@@ -222,7 +266,7 @@ pub async fn attach_asset(
         .await
         .map_err(internal_error)?;
     if owned_file.is_none() {
-        return Err((StatusCode::NOT_FOUND, "File not found".to_string()));
+        return Err(not_found());
     }
 
     link_file(&state, &document.id, &file_id).await?;
@@ -235,16 +279,16 @@ pub async fn attach_unshared_assets(
     jar: SignedCookieJar,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let document = require_document_owner(&state, &document_id, &jar).await?;
-    let source = decode_text_blob(document.content.as_deref().unwrap_or_default());
+    let source = saved_text(&state, &document.id).await;
 
     let mut shared_count = 0;
-    for stored in stored_files(&state, &document).await? {
-        let needs_sharing = stored.file.owner_id == document.owner_id
-            && !stored.linked_to_document
-            && !is_real_font(&stored)
-            && is_referenced(&source, &stored.file.name);
+    for entry in file_entries(&state, &document).await? {
+        let needs_sharing = entry.file.owner_id == document.owner_id
+            && !entry.linked_to_document
+            && is_referenced(&source, &entry.file.name)
+            && !is_real_font(&state, &entry, &None).await;
         if needs_sharing {
-            link_file(&state, &document.id, &stored.file.id).await?;
+            link_file(&state, &document.id, &entry.file.id).await?;
             shared_count += 1;
         }
     }
@@ -312,12 +356,16 @@ pub async fn list_fonts(
     let user_id = session_user(&jar);
     let (document, role) = document_with_role(&state, &document_id, &user_id).await?;
 
-    let mut families = std::collections::BTreeSet::new();
-    for stored in files_for_role(&state, &document, role, &user_id).await? {
-        if is_font_name(&stored.file.name) {
-            for font in typst::text::Font::iter(typst::foundations::Bytes::new(stored.data)) {
-                families.insert(font.info().family.clone());
-            }
+    let font_files: Vec<ReadableFile> = readable_files(&state, &document, role, &user_id)
+        .await?
+        .into_iter()
+        .filter(|(entry, _)| is_font_name(&entry.file.name))
+        .collect();
+
+    let mut families = BTreeSet::new();
+    for (_, data) in with_data(&state, font_files).await {
+        for font in typst::text::Font::iter(typst::foundations::Bytes::new(data)) {
+            families.insert(font.info().family.clone());
         }
     }
 

@@ -95,30 +95,34 @@ async fn remove_star(state: &AppState, kind: StarKind, item_id: &str, user_id: &
     Ok(())
 }
 
-pub async fn list_starred(
-    State(state): State<AppState>,
-    jar: SignedCookieJar,
-) -> Result<Json<StarredItems>, ApiError> {
-    let user_id = session_user_id(&jar)?;
-    let user = Some(user_id.clone());
+pub async fn starred_items(state: &AppState, user_id: &str) -> Result<StarredItems, ApiError> {
+    let user = Some(user_id.to_string());
 
     let mut documents = Vec::new();
-    for id in starred_ids(&state, StarKind::Document, &user_id).await? {
-        if let Some((mut document, role)) = document_role(&state, &id, &user).await {
+    for id in starred_ids(state, StarKind::Document, user_id).await? {
+        if let Some((mut document, role)) = document_role(state, &id, &user).await {
             document.effective_role = Some(role.as_str().to_string());
             documents.push(document);
         }
     }
 
     let mut projects = Vec::new();
-    for id in starred_ids(&state, StarKind::Project, &user_id).await? {
-        if let Some((mut project, role)) = project_role(&state, &id, &user).await {
+    for id in starred_ids(state, StarKind::Project, user_id).await? {
+        if let Some((mut project, role)) = project_role(state, &id, &user).await {
             project.effective_role = Some(role);
             projects.push(project);
         }
     }
 
-    Ok(Json(StarredItems { documents, projects }))
+    Ok(StarredItems { documents, projects })
+}
+
+pub async fn list_starred(
+    State(state): State<AppState>,
+    jar: SignedCookieJar,
+) -> Result<Json<StarredItems>, ApiError> {
+    let user_id = session_user_id(&jar)?;
+    Ok(Json(starred_items(&state, &user_id).await?))
 }
 
 pub async fn star_item(

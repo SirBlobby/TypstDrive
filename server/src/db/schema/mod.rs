@@ -79,6 +79,16 @@ pub const INDEXES: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_user_identities_user ON user_identities (user_id)",
     "CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log (created_at)",
     "CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members (user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_document_versions_document_created ON document_versions (document_id, created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_ownership_transfers_from_user ON ownership_transfers (from_user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_document_stars_document ON document_stars (document_id)",
+    "CREATE INDEX IF NOT EXISTS idx_project_stars_project ON project_stars (project_id)",
+    "CREATE INDEX IF NOT EXISTS idx_desktop_link_codes_user ON desktop_link_codes (user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_package_members_user ON package_members (user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_package_teams_team ON package_teams (team_id)",
+    "CREATE INDEX IF NOT EXISTS idx_teams_created_by ON teams (created_by)",
+    "CREATE INDEX IF NOT EXISTS idx_api_render_cache_created ON api_render_cache (created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_api_key_usage_detail_minute ON api_key_usage_detail (minute)",
 ];
 
 pub struct Backfill {

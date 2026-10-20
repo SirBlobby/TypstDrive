@@ -85,13 +85,33 @@ impl ProjectInput {
     }
 }
 
+pub type CompileFailure = Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>;
+
+const MEMO_CACHE_MAX_AGE: usize = 10;
+
 pub struct TypstCompiler;
 
-impl TypstCompiler {
-    pub fn new() -> Self {
-        Self
+pub async fn run_blocking<T, F>(job: F) -> Option<T>
+where
+    F: FnOnce(&TypstCompiler) -> T + Send + 'static,
+    T: Send + 'static,
+{
+    let result = tokio::task::spawn_blocking(move || {
+        let output = job(&TypstCompiler);
+        typst::comemo::evict(MEMO_CACHE_MAX_AGE);
+        output
+    })
+    .await;
+    match result {
+        Ok(output) => Some(output),
+        Err(error) => {
+            tracing::error!("Typst compilation task failed: {error}");
+            None
+        }
     }
+}
 
+impl TypstCompiler {
     pub fn used_resources(&self, input: ProjectInput) -> UsedResources {
         let world = input.into_world(false);
         let _ = typst::compile::<PagedDocument>(&world);

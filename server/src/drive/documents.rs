@@ -5,13 +5,30 @@ use axum::{
 };
 use axum_extra::extract::cookie::SignedCookieJar;
 use uuid::Uuid;
-use yrs::{Doc, ReadTxn, Transact, Text};
 
 use crate::{
+    drive::projects::{decode_text_blob, encode_text_blob},
     models::{Document, CreateDocumentRequest},
     AppState,
 };
 use crate::db::sql;
+
+const DOCUMENT_BY_ID: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1";
+const OWNED_DOCUMENT: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2";
+
+pub async fn stored_content(state: &AppState, document_id: &str) -> Option<Vec<u8>> {
+    sqlx::query_as::<_, (Option<Vec<u8>>,)>(sql("SELECT content FROM documents WHERE id = $1"))
+        .bind(document_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .and_then(|(content,)| content)
+}
+
+pub async fn saved_text(state: &AppState, document_id: &str) -> String {
+    decode_text_blob(&stored_content(state, document_id).await.unwrap_or_default())
+}
 
 #[derive(serde::Deserialize)]
 pub struct ListDocsQuery {
@@ -26,7 +43,7 @@ pub async fn list_shared_documents(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let docs = sqlx::query_as::<_, Document>(
-        sql("SELECT d.id, d.owner_id, d.folder_id, d.title, d.content, d.thumbnail_svg, \
+        sql("SELECT d.id, d.owner_id, d.folder_id, d.title, d.thumbnail_svg, \
          d.public_role, d.created_at, d.updated_at, c.role as effective_role \
          FROM documents d \
          INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = $1 \
@@ -51,7 +68,7 @@ pub async fn list_documents(
     let docs = if let Some(folder_id) = query.folder_id {
         crate::sharing::access::require_folder_access(&state, &folder_id, &user_id).await?;
         sqlx::query_as::<_, Document>(
-            sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY updated_at DESC")
+            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY updated_at DESC")
         )
         .bind(&folder_id)
         .bind(&folder_id)
@@ -60,7 +77,7 @@ pub async fn list_documents(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Document>(
-            sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC")
+            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -83,16 +100,8 @@ pub async fn create_document(
 
     let doc_id = Uuid::new_v4().to_string();
 
-    let content = {
-        let ydoc = Doc::new();
-        let text = ydoc.get_or_insert_text("typst");
-        let initial_text = payload.content.clone().unwrap_or_else(|| "== New Document".to_string());
-        println!("Creating document with content length: {}", initial_text.len());
-        text.insert(&mut ydoc.transact_mut(), 0, &initial_text);
-        let encoded = ydoc.transact().encode_state_as_update_v1(&yrs::StateVector::default());
-        println!("Encoded Yjs state length: {}", encoded.len());
-        encoded
-    };
+    let initial_text = payload.content.as_deref().unwrap_or("== New Document");
+    let content = encode_text_blob(initial_text);
     crate::accounts::storage::ensure_room(&state, &user_id, content.len() as i64).await?;
 
     sqlx::query(sql("INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5)"))
@@ -105,7 +114,7 @@ pub async fn create_document(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let doc = sqlx::query_as::<_, Document>(sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1"))
+    let doc = sqlx::query_as::<_, Document>(sql(DOCUMENT_BY_ID))
     .bind(&doc_id)
     .fetch_one(&state.db)
     .await
@@ -139,7 +148,7 @@ pub async fn update_document(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut doc = sqlx::query_as::<_, Document>(
-        sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2")
+        sql(OWNED_DOCUMENT)
     )
     .bind(&id)
     .bind(&user_id)
@@ -174,7 +183,7 @@ pub async fn update_document(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let doc = sqlx::query_as::<_, Document>(sql("SELECT id, owner_id, folder_id, title, content, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2"))
+    let doc = sqlx::query_as::<_, Document>(sql(OWNED_DOCUMENT))
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
