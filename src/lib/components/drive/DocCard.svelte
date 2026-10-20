@@ -2,7 +2,7 @@
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
 
-    let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc } = $props<{
+    let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, readOnly = false } = $props<{
         doc: any;
         activeMenu: string | null;
         setActiveMenu: (id: string | null) => void;
@@ -10,6 +10,7 @@
         openRename: (id: string, title: string, type: 'document'|'folder'|'file') => void;
         shareItem: (item: any) => void;
         deleteDoc: (id: string, name: string) => void;
+        readOnly?: boolean;
     }>();
 
     let dropUp = $state(false);
@@ -32,7 +33,7 @@
 </script>
 
 <div
-    class="bg-[var(--color-surface)] rounded-lg shadow-sm border border-[var(--color-line)] flex flex-col hover:border-[var(--color-accent)] transition relative group cursor-pointer overflow-visible"
+    class="bg-[var(--color-surface)] rounded-lg shadow-sm border border-[var(--color-line)] flex flex-col hover:border-[var(--color-accent)] transition relative group cursor-pointer overflow-visible {activeMenu === doc.id ? 'z-30' : ''}"
     role="button"
     tabindex="0"
     onclick={() => goto(`/doc/${doc.id}`)}
@@ -74,6 +75,7 @@
                             <Icon icon="mdi:information-outline" class="text-lg text-blue-500" />
                             View Info
                         </button>
+                        {#if !readOnly}
                         <button onclick={(e) => { e.stopPropagation(); openRename(doc.id, doc.title, 'document'); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                             <Icon icon="mdi:pencil-outline" class="text-lg text-yellow-500" />
                             Rename
@@ -87,6 +89,7 @@
                             <Icon icon="mdi:trash-can-outline" class="text-lg" />
                             Delete
                         </button>
+                        {/if}
                     </div>
                 {/if}
             </div>

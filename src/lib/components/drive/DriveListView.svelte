@@ -15,7 +15,8 @@
         handleDrop,
         openPreview,
         onRename,
-        onDelete
+        onDelete,
+        onShare = undefined
     }: {
         entries: DriveEntry[];
         readOnly?: boolean;
@@ -26,7 +27,14 @@
         openPreview: (file: any) => void;
         onRename: (id: string, name: string, type: RenameType) => void;
         onDelete: (id: string, name: string, type: RenameType) => void;
+        onShare?: (item: any, kind: ShareKind) => void;
     } = $props();
+
+    type ShareKind = 'document' | 'project' | 'folder';
+
+    function shareKind(entry: DriveEntry): ShareKind | null {
+        return entry.category === 'file' ? null : entry.category;
+    }
 
     const typeLabels: Record<string, string> = {
         folder: 'Folder',
@@ -81,7 +89,7 @@
 </script>
 
 <div class="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] overflow-hidden" role="table" aria-label="Drive items">
-    <div role="row" class="grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_6.5rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_6.5rem] gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)] border-b border-[var(--color-line)] bg-[var(--color-surface-muted)]">
+    <div role="row" class="grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_8rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_8rem] gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)] border-b border-[var(--color-line)] bg-[var(--color-surface-muted)]">
         <span role="columnheader">Name</span>
         <span role="columnheader">Type</span>
         <span role="columnheader">Modified</span>
@@ -102,7 +110,7 @@
             ondrop={(e) => isFolder && !readOnly && handleDrop(e, entry.item.id)}
             onclick={() => openEntry(entry)}
             onkeydown={(e) => e.key === 'Enter' && openEntry(entry)}
-            class="group grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_6.5rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_6.5rem] gap-3 items-center px-4 py-2 text-sm border-b border-[var(--color-line)] last:border-b-0 cursor-pointer transition-colors {dragOverFolderId === entry.item.id && isFolder
+            class="group grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_8rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_8rem] gap-3 items-center px-4 py-2 text-sm border-b border-[var(--color-line)] last:border-b-0 cursor-pointer transition-colors {dragOverFolderId === entry.item.id && isFolder
                 ? 'bg-[var(--color-accent-soft)]'
                 : 'hover:bg-[var(--color-surface-muted)]'}"
         >
@@ -114,7 +122,7 @@
             <span role="cell" class="text-[var(--color-ink-muted)] truncate">{formatModified(entry)}</span>
             <span role="cell" class="text-[var(--color-ink-muted)] text-right tabular-nums">{formatEntrySize(entry)}</span>
             <span role="cell" class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                {#if entry.category === 'project' || (entry.category === 'folder' && !readOnly)}
+                {#if entry.category === 'project' || entry.category === 'folder'}
                     <button
                         onclick={(e) => { e.stopPropagation(); if (entry.category === 'folder') downloadFolder(entry.item.id); else downloadProject(entry.item.id); }}
                         title="Download as ZIP"
@@ -122,6 +130,16 @@
                         class="p-1 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)]"
                     >
                         <Icon icon="mdi:download" class="text-base" />
+                    </button>
+                {/if}
+                {#if !readOnly && onShare && shareKind(entry)}
+                    <button
+                        onclick={(e) => { e.stopPropagation(); onShare(entry.item, shareKind(entry)!); }}
+                        title="Share"
+                        aria-label={`Share ${itemName(entry.item)}`}
+                        class="p-1 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-surface-sunken)]"
+                    >
+                        <Icon icon="mdi:share-variant-outline" class="text-base" />
                     </button>
                 {/if}
                 {#if !readOnly}

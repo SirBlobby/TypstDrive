@@ -3,13 +3,14 @@
     import { goto } from '$app/navigation';
     import { downloadProject } from '$lib/ts/downloads';
 
-    let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, readOnly = false } = $props<{
+    let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, shareItem = undefined, readOnly = false } = $props<{
         project: any;
         activeMenu: string | null;
         setActiveMenu: (id: string | null) => void;
         openInfo: (project: any, type: string) => void;
         openRename: (id: string, name: string, type: 'project') => void;
         deleteProject: (id: string, name: string) => void;
+        shareItem?: (item: any, kind: 'project') => void;
         readOnly?: boolean;
     }>();
 
@@ -36,7 +37,7 @@
 </script>
 
 <div
-    class="flex flex-row items-center p-3 bg-[var(--color-surface)] border border-[var(--color-line)] rounded-lg shadow-sm cursor-pointer group transition relative hover:border-[var(--color-accent)]"
+    class="flex flex-row items-center p-3 bg-[var(--color-surface)] border border-[var(--color-line)] rounded-lg shadow-sm cursor-pointer group transition relative hover:border-[var(--color-accent)] {activeMenu === project.id ? 'z-30' : ''}"
     role="button"
     tabindex="0"
     draggable={!readOnly}
@@ -73,6 +74,12 @@
                     Download ZIP
                 </button>
                 {#if !readOnly}
+                    {#if shareItem}
+                        <button onclick={(e) => { e.stopPropagation(); shareItem(project, 'project'); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
+                            <Icon icon="mdi:share-variant-outline" class="text-lg text-[var(--color-accent)]" />
+                            Share
+                        </button>
+                    {/if}
                     <button onclick={(e) => { e.stopPropagation(); openRename(project.id, project.name, 'project'); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                         <Icon icon="mdi:pencil-outline" class="text-lg text-yellow-500" />
                         Rename

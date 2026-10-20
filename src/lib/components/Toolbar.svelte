@@ -5,6 +5,7 @@
 	import { themes } from '../ts/themes';
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
+	import DocumentAssetsModal from './DocumentAssetsModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
 	import CommentsSidebar from "./CommentsSidebar.svelte";
@@ -16,6 +17,28 @@
 	import { undo, redo } from '@codemirror/commands';
 
 	let isShareModalOpen = $state(false);
+	let isAssetsModalOpen = $state(false);
+	let unsharedFileCount = $state(0);
+
+	async function checkUnsharedFiles() {
+		if (!docId || isViewer) return;
+		try {
+			const [collaboratorsRes, filesRes] = await Promise.all([
+				fetch(`/api/docs/${docId}/collaborators`),
+				fetch(`/api/docs/${docId}/files`)
+			]);
+			if (!collaboratorsRes.ok || !filesRes.ok) return;
+			const collaborators = await collaboratorsRes.json();
+			const files: { name: string; shared_with_collaborators: boolean }[] = await filesRes.json();
+			unsharedFileCount = collaborators.length === 0
+				? 0
+				: files.filter((file) => !file.shared_with_collaborators && !/\.(ttf|otf)$/i.test(file.name)).length;
+		} catch {}
+	}
+
+	$effect(() => {
+		checkUnsharedFiles();
+	});
 	let isPageSettingsOpen = $state(false);
 	let isPresentationOpen = $state(false);
 	let fileInput = $state<HTMLInputElement | null>(null);
@@ -25,7 +48,7 @@
 	let uploadedFonts = $state<string[]>([]);
 
 	$effect(() => {
-		fetch('/api/fonts')
+		fetch(docId ? `/api/docs/${docId}/fonts` : '/api/fonts')
 			.then(res => res.json())
 			.then(data => {
 				uploadedFonts = Array.isArray(data) ? data : [];
@@ -187,6 +210,19 @@
 		view.dispatch({
 			changes: { from: selection.from, to: selection.to, insert: replacement },
 			selection: { anchor: selection.from + prefix.length, head: selection.from + prefix.length + (selectedText || defaultText).length }
+		});
+		view.focus();
+	}
+
+	function insertLinkedFile(file: { name: string }) {
+		isAssetsModalOpen = false;
+		const view = $editorViewStore;
+		if (!view) return;
+		const selection = view.state.selection.main;
+		const replacement = `#image("${file.name}")\n`;
+		view.dispatch({
+			changes: { from: selection.from, to: selection.to, insert: replacement },
+			selection: { anchor: selection.from + replacement.length }
 		});
 		view.focus();
 	}
@@ -637,6 +673,14 @@
 				<Icon icon="mdi:image-plus" class="text-lg" />
 			</button>
 			{/if}
+			{#if docId}
+			<button onclick={() => (isAssetsModalOpen = true)} class="relative p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title={unsharedFileCount > 0 ? `${unsharedFileCount} file(s) used in this document are not shared with collaborators` : 'Document files'}>
+				<Icon icon="mdi:paperclip" class="text-lg" />
+				{#if unsharedFileCount > 0}
+					<span class="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-amber-500"></span>
+				{/if}
+			</button>
+			{/if}
 		</div>
 
 		<div class="w-px h-4 bg-[var(--color-line)]"></div>
@@ -705,7 +749,11 @@
 </header>
 
 {#if isShareModalOpen}
-	<ShareModal {docId} onClose={() => (isShareModalOpen = false)} />
+	<ShareModal itemId={docId} kind="document" onClose={() => { isShareModalOpen = false; checkUnsharedFiles(); }} />
+{/if}
+
+{#if isAssetsModalOpen && docId}
+	<DocumentAssetsModal {docId} canEdit={!isViewer} onInsert={insertLinkedFile} onClose={() => { isAssetsModalOpen = false; checkUnsharedFiles(); }} />
 {/if}
 
 {#if isPageSettingsOpen}

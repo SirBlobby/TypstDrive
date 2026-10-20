@@ -1,8 +1,9 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
 
-    let { file, deleteFile, openRename, openPreview } = $props<{
+    let { file, deleteFile, openRename, openPreview, readOnly = false } = $props<{
         file: any;
+        readOnly?: boolean;
         deleteFile: (id: string, name: string) => void;
         openRename: (id: string, name: string, type: 'file') => void;
         openPreview: (file: any) => void;
@@ -60,6 +61,7 @@
     <div class="p-4 flex flex-col flex-grow">
         <div class="flex items-start justify-between gap-2">
             <h3 class="text-lg font-semibold text-[var(--color-ink)] truncate pointer-events-none" title={file.name}>{file.name}</h3>
+            {#if !readOnly}
             <div class="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                 <button
                     aria-label="Rename file"
@@ -78,6 +80,7 @@
                     <Icon icon="mdi:trash-can-outline" class="text-lg" />
                 </button>
             </div>
+            {/if}
         </div>
         <p class="text-xs text-[var(--color-ink-muted)] flex items-center gap-1 mt-2 pointer-events-none">
             <Icon icon={isFont ? 'mdi:format-font' : isImage ? 'mdi:image-outline' : 'mdi:clock-outline'} class="text-sm" />

@@ -1,10 +1,22 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { page } from '$app/stores';
     import Icon from '@iconify/svelte';
     import Modal from './Modal.svelte';
+    import UnsharedFilesWarning from './UnsharedFilesWarning.svelte';
+    import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind } from '$lib/ts/ownership';
 
-    let { onClose, docId = undefined } = $props<{ onClose: () => void, docId?: string }>();
+    let { onClose, itemId = undefined, kind = 'document' } = $props<{ onClose: () => void, itemId?: string, kind?: ShareKind }>();
+
+    const apiBase: Record<ShareKind, string> = { document: '/api/docs', project: '/api/projects', folder: '/api/folders' };
+    const pageBase: Record<ShareKind, string | null> = { document: '/doc', project: '/project', folder: null };
+    const shareDescriptions: Record<ShareKind, string> = {
+        document: 'Editors can also use the images, fonts and files this document links to.',
+        project: 'Editors can change every file in this project.',
+        folder: 'People get access to every subfolder, document, project and file inside.'
+    };
+
+    let itemApi = $derived(itemId ? `${apiBase[kind as ShareKind]}/${itemId}` : null);
+    let itemPage = $derived(pageBase[kind as ShareKind]);
 
     type CollaboratorView = { id: string; user_id: string; username: string; email: string; role: string; created_at: string };
 
@@ -16,26 +28,65 @@
     let collabLoading = $state(false);
     let removingId = $state<string | null>(null);
 
+    let isOwner = $state(false);
+    let pendingTransfer = $state<OwnershipTransfer | null>(null);
+    let confirmTransferTo = $state<CollaboratorView | null>(null);
+    let transferBusy = $state(false);
+    let transferError = $state('');
+
+    async function loadShareInfo() {
+        if (!itemId) return;
+        const info = await fetchShareInfo(kind as ShareKind, itemId);
+        isOwner = info?.is_owner ?? false;
+        pendingTransfer = info?.pending_transfer ?? null;
+    }
+
+    async function startTransfer(collab: CollaboratorView) {
+        if (!itemId) return;
+        transferBusy = true;
+        transferError = '';
+        try {
+            pendingTransfer = await requestTransfer(kind as ShareKind, itemId, collab.user_id);
+            confirmTransferTo = null;
+        } catch (err) {
+            transferError = (err as Error).message;
+        }
+        transferBusy = false;
+    }
+
+    async function stopTransfer() {
+        if (!pendingTransfer) return;
+        transferBusy = true;
+        transferError = '';
+        try {
+            await cancelTransfer(pendingTransfer.id);
+            pendingTransfer = null;
+        } catch (err) {
+            transferError = (err as Error).message;
+        }
+        transferBusy = false;
+    }
+
     let inviteEmail = $state('');
     let inviteRole = $state('editor');
     let inviteStatus = $state<'idle' | 'loading' | 'success' | 'error'>('idle');
     let inviteMessage = $state('');
 
     async function loadCollaborators() {
-        if (!docId) return;
+        if (!itemApi) return;
         collabLoading = true;
         try {
-            const res = await fetch(`/api/docs/${docId}/collaborators`);
+            const res = await fetch(`${itemApi}/collaborators`);
             if (res.ok) collaborators = await res.json();
         } catch {}
         collabLoading = false;
     }
 
     async function removeCollaborator(collab: CollaboratorView) {
-        if (!docId) return;
+        if (!itemApi) return;
         removingId = collab.id;
         try {
-            const res = await fetch(`/api/docs/${docId}/collaborators/${collab.id}`, { method: 'DELETE' });
+            const res = await fetch(`${itemApi}/collaborators/${collab.id}`, { method: 'DELETE' });
             if (res.ok) collaborators = collaborators.filter(c => c.id !== collab.id);
         } catch {}
         removingId = null;
@@ -43,13 +94,13 @@
 
     async function inviteUser(e: Event) {
         e.preventDefault();
-        if (!docId || !inviteEmail.trim()) return;
+        if (!itemApi || !inviteEmail.trim()) return;
 
         inviteStatus = 'loading';
         inviteMessage = '';
 
         try {
-            const res = await fetch(`/api/docs/${docId}/invite`, {
+            const res = await fetch(`${itemApi}/invite`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole })
@@ -72,17 +123,13 @@
     }
 
     onMount(() => {
-        const baseUrl = window.location.origin;
-        const docUrl = docId ? `${baseUrl}/doc/${docId}` : window.location.href;
-        link = `${docUrl}?role=${role}`;
         loadCollaborators();
+        loadShareInfo();
     });
 
     $effect(() => {
-        const baseUrl = window.location.origin;
-
-        let docUrl = docId ? `${baseUrl}/doc/${docId}` : window.location.href.split('?')[0];
-        link = `${docUrl}?role=${role}`;
+        const itemUrl = itemId && itemPage ? `${window.location.origin}${itemPage}/${itemId}` : window.location.href.split('?')[0];
+        link = `${itemUrl}?role=${role}`;
     });
 
     function copyLink() {
@@ -104,8 +151,12 @@
     }
 </script>
 
-<Modal title="Share document" icon="ph:share-network" width="max-w-[500px]" onclose={onClose}>
+<Modal title="Share {kind}" icon="ph:share-network" width="max-w-[500px]" onclose={onClose}>
     <div class="flex flex-col gap-5">
+        <p class="text-xs text-[var(--color-ink-muted)]">{shareDescriptions[kind as ShareKind]}</p>
+        {#if kind === 'document' && itemId}
+            <UnsharedFilesWarning docId={itemId} />
+        {/if}
         <div class="flex flex-col gap-2">
             <div class="text-xs font-medium text-[var(--color-ink-muted)]">Invite collaborator</div>
             <form onsubmit={inviteUser} class="flex items-center gap-2 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5 focus-within:border-[var(--color-accent)] transition">
@@ -149,6 +200,29 @@
             <div class="h-px bg-[var(--color-line)]"></div>
             <div class="flex flex-col gap-2">
                 <div class="text-xs font-medium text-[var(--color-ink-muted)]">People with access</div>
+                {#if pendingTransfer}
+                    <div class="flex items-center gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-muted)] p-3">
+                        <Icon icon="mdi:account-arrow-right-outline" class="text-xl flex-shrink-0 text-[var(--color-accent)]" />
+                        <p class="flex-1 text-xs text-[var(--color-ink)]">Waiting for <span class="font-semibold">{pendingTransfer.to_username}</span> to accept ownership.</p>
+                        <button onclick={stopTransfer} disabled={transferBusy} class="rounded-md px-2.5 py-1 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] disabled:opacity-50">Cancel</button>
+                    </div>
+                {/if}
+                {#if confirmTransferTo}
+                    <div class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                        <p class="text-xs text-[var(--color-ink)]">
+                            Make <span class="font-semibold">{confirmTransferTo.username}</span> the owner of this {kind}? Once they accept, it moves to their drive and you stay on as an editor.
+                        </p>
+                        <div class="mt-2 flex justify-end gap-2">
+                            <button onclick={() => (confirmTransferTo = null)} disabled={transferBusy} class="rounded-md px-2.5 py-1 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]">Cancel</button>
+                            <button onclick={() => confirmTransferTo && startTransfer(confirmTransferTo)} disabled={transferBusy} class="rounded-md bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                                {transferBusy ? 'Sending...' : 'Send request'}
+                            </button>
+                        </div>
+                    </div>
+                {/if}
+                {#if transferError}
+                    <p class="text-xs text-[var(--color-danger)]">{transferError}</p>
+                {/if}
                 {#each collaborators as collab (collab.id)}
                     <div class="flex items-center gap-3 py-1.5">
                         <div class="w-8 h-8 rounded-full bg-[var(--color-accent-soft)] flex items-center justify-center text-[var(--color-accent)] text-sm font-bold flex-shrink-0">
@@ -161,6 +235,18 @@
                         <span class="text-xs font-semibold px-2 py-0.5 rounded-md flex-shrink-0 {collab.role === 'editor' ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' : 'bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]'}">
                             {collab.role}
                         </span>
+                        {#if isOwner}
+                        {#if pendingTransfer?.to_user_id !== collab.user_id}
+                            <button
+                                onclick={() => { transferError = ''; confirmTransferTo = collab; }}
+                                disabled={transferBusy}
+                                title="Make owner"
+                                aria-label={`Make ${collab.username} the owner`}
+                                class="flex-shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-surface-sunken)] hover:text-amber-500 disabled:opacity-40"
+                            >
+                                <Icon icon="mdi:crown-outline" class="text-base" />
+                            </button>
+                        {/if}
                         <button
                             onclick={() => removeCollaborator(collab)}
                             disabled={removingId === collab.id}
@@ -173,11 +259,13 @@
                                 <Icon icon="mdi:close" class="text-base" />
                             {/if}
                         </button>
+                        {/if}
                     </div>
                 {/each}
             </div>
         {/if}
 
+        {#if itemPage}
         <div class="h-px bg-[var(--color-line)]"></div>
 
         <div class="flex flex-col gap-2">
@@ -196,9 +284,11 @@
                 </select>
             </div>
         </div>
+        {/if}
     </div>
 
     {#snippet footer()}
+        {#if itemPage}
         <button
             onclick={copyLink}
             class="mr-auto flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-[var(--color-accent)] transition hover:bg-[var(--color-accent-soft)]"
@@ -211,6 +301,7 @@
                 <span>Copy link</span>
             {/if}
         </button>
+        {/if}
 
         <button onclick={onClose} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90">
             Done

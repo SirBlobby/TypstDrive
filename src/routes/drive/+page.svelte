@@ -27,6 +27,7 @@
     import InfoModal from '$lib/components/drive/InfoModal.svelte';
     import DriveSidebar from '$lib/components/drive/DriveSidebar.svelte';
     import DriveHeader from '$lib/components/drive/DriveHeader.svelte';
+    import IncomingTransfers from '$lib/components/drive/IncomingTransfers.svelte';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);
@@ -175,15 +176,29 @@
         }
     }
 
-    function navigateToFolder(folder: {id: string, name: string}) {
+    function navigateToFolder(folder: {id: string, name: string, effective_role?: string}) {
         searchQuery = '';
-        folderPath = [...folderPath, folder];
+        if (inSharedDrive) {
+            inSharedDrive = false;
+            sharedFolderRole = folder.effective_role ?? 'viewer';
+            folderPath = [];
+        }
+        folderPath = [...folderPath, { id: folder.id, name: folder.name }];
         currentFolderId = folder.id;
         loadDocs();
     }
 
+    function goHome() {
+        sharedFolderRole = null;
+        navigateToBreadcrumb(-1);
+    }
+
     function navigateToBreadcrumb(index: number) {
         searchQuery = '';
+        if (index === -1 && sharedFolderRole) {
+            enterSharedDrive();
+            return;
+        }
         inSharedDrive = false;
         if (index === -1) {
             folderPath = [];
@@ -359,6 +374,9 @@
     }
 
     let inSharedDrive = $state(false);
+    let sharedFolderRole = $state<string | null>(null);
+    let browsingSharedFolder = $derived(sharedFolderRole !== null);
+    let sharedFolders = $state<any[]>([]);
     let sharedDocs = $state<any[]>([]);
     let sharedProjects = $state<any[]>([]);
     let sharedDocsLoading = $state(false);
@@ -396,12 +414,13 @@
     let previewableFiles = $derived(
         visibleFiles.filter((file) => !/\.(ttf|otf)$/i.test(file.name))
     );
+    let visibleSharedFolders = $derived(visibleItems(sharedFolders));
     let visibleSharedDocs = $derived(visibleItems(sharedDocs));
     let visibleSharedProjects = $derived(visibleItems(sharedProjects));
 
     let listEntries = $derived(
         inSharedDrive
-            ? [...sortedEntries([[visibleSharedProjects, 'project']]), ...sortedEntries([[visibleSharedDocs, 'document']])]
+            ? [...sortedEntries([[visibleSharedFolders, 'folder'], [visibleSharedProjects, 'project']]), ...sortedEntries([[visibleSharedDocs, 'document']])]
             : [
                   ...sortedEntries([[visibleFolders, 'folder'], [visibleProjects, 'project']]),
                   ...sortedEntries([[visibleDocuments, 'document'], [visibleFiles, 'file']])
@@ -410,7 +429,7 @@
 
     let visibleItemCount = $derived(
         inSharedDrive
-            ? visibleSharedDocs.length + visibleSharedProjects.length
+            ? visibleSharedFolders.length + visibleSharedDocs.length + visibleSharedProjects.length
             : visibleFolders.length + visibleProjects.length + visibleDocuments.length + visibleFiles.length
     );
 
@@ -419,10 +438,12 @@
     async function loadSharedDocs() {
         sharedDocsLoading = true;
         try {
-            const [resDocs, resProjects] = await Promise.all([
+            const [resFolders, resDocs, resProjects] = await Promise.all([
+                fetch('/api/folders/shared'),
                 fetch('/api/docs/shared'),
                 fetch('/api/projects/shared')
             ]);
+            if (resFolders.ok) sharedFolders = await resFolders.json();
             if (resDocs.ok) sharedDocs = await resDocs.json();
             if (resProjects.ok) sharedProjects = await resProjects.json();
         } catch {}
@@ -432,18 +453,20 @@
     function enterSharedDrive() {
         searchQuery = '';
         inSharedDrive = true;
+        sharedFolderRole = null;
         folderPath = [];
         currentFolderId = null;
         loadSharedDocs();
     }
 
-    let showShareModal = $state(false);
-    let shareTarget = $state<any>(null);
+    type ShareKind = 'document' | 'project' | 'folder';
 
-    function shareItem(item: any) {
-        
+    let showShareModal = $state(false);
+    let shareTarget = $state<{ id: string; kind: ShareKind } | null>(null);
+
+    function shareItem(item: any, kind: ShareKind = 'document') {
+        shareTarget = { id: item.id, kind };
         showShareModal = true;
-        shareTarget = item;
         activeMenu = null;
     }
 
@@ -518,8 +541,8 @@
 
     <div class="flex flex-1 min-h-0">
         <DriveSidebar
-            activeView={inSharedDrive ? 'shared' : 'drive'}
-            onMyDrive={() => navigateToBreadcrumb(-1)}
+            activeView={inSharedDrive || browsingSharedFolder ? 'shared' : 'drive'}
+            onMyDrive={goHome}
             onShared={enterSharedDrive}
         />
         <input type="file" bind:this={fileInput} accept="image/*,font/*,.typ,.ttf,.otf,.pdf,application/pdf" multiple onchange={handleFileUpload} class="hidden" />
@@ -529,7 +552,10 @@
             <DriveHeader
                 title={headerTitle}
                 {folderPath}
-                showActions={!inSharedDrive}
+                showActions={!inSharedDrive && !browsingSharedFolder}
+                showPath={browsingSharedFolder}
+                rootLabel={browsingSharedFolder ? 'Shared with me' : 'Home'}
+                rootIcon={browsingSharedFolder ? 'mdi:account-multiple-outline' : 'mdi:home-outline'}
                 {isImporting}
                 {dragOverBreadcrumbIndex}
                 bind:searchQuery
@@ -543,6 +569,8 @@
                 onImport={() => importFileInput?.click()}
             />
 
+            <IncomingTransfers onAccepted={() => (inSharedDrive ? loadSharedDocs() : loadDocs())} />
+
             <DriveFilters bind:filters bind:viewMode />
 
             {#if inSharedDrive}
@@ -550,8 +578,8 @@
                     <div class="min-h-[45vh] flex items-center justify-center text-[var(--color-ink-muted)]">
                         <Icon icon="mdi:loading" class="text-3xl animate-spin" />
                     </div>
-                {:else if sharedDocs.length === 0 && sharedProjects.length === 0}
-                    {@render emptyState('mdi:account-multiple-outline', 'Nothing shared yet', 'Documents and projects other people share with you will appear here.')}
+                {:else if sharedFolders.length === 0 && sharedDocs.length === 0 && sharedProjects.length === 0}
+                    {@render emptyState('mdi:account-multiple-outline', 'Nothing shared yet', 'Folders, documents and projects other people share with you will appear here.')}
                 {:else if visibleItemCount === 0}
                     {@render emptyState('mdi:magnify-remove-outline', 'No matches', 'Nothing here matches your search.')}
                 {:else}
@@ -568,10 +596,21 @@
                             onDelete={(id, name, type) => openDelete(id, type, name)}
                         />
                     {:else}
-                        {#if visibleSharedProjects.length > 0}
+                        {#if visibleSharedFolders.length > 0 || visibleSharedProjects.length > 0}
                             <section class="mb-8">
-                                {@render sectionTitle('Projects')}
+                                {@render sectionTitle('Folders & projects')}
                                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                                    {#each visibleSharedFolders as folder (folder.id)}
+                                        <FolderRow
+                                            {folder}
+                                            {dragOverFolderId}
+                                            {navigateToFolder}
+                                            {handleDrop}
+                                            {deleteFolder}
+                                            setDragOverFolderId={(id) => dragOverFolderId = id}
+                                            readOnly
+                                        />
+                                    {/each}
                                     {#each visibleSharedProjects as project (project.id)}
                                         <ProjectFolderRow
                                             {project}
@@ -599,6 +638,7 @@
                                             openRename={() => {}}
                                             {shareItem}
                                             deleteDoc={() => {}}
+                                            readOnly
                                         />
                                     {/each}
                                 </div>
@@ -615,7 +655,7 @@
                 {@render emptyState(
                     currentFolderId === null ? 'mdi:text-box-plus-outline' : 'mdi:folder-open-outline',
                     currentFolderId === null ? 'Start your first document' : 'This folder is empty',
-                    'Create a document, project or folder, or upload images and fonts to use in your Typst files.'
+                    browsingSharedFolder ? 'Nothing has been added to this shared folder yet.' : 'Create a document, project or folder, or upload images and fonts to use in your Typst files.'
                 )}
             {:else if visibleItemCount === 0}
                 {@render emptyState('mdi:magnify-remove-outline', 'No matches', 'Nothing in this folder matches your search.')}
@@ -623,6 +663,7 @@
                 {#if viewMode === 'list'}
                     <DriveListView
                         entries={listEntries}
+                        readOnly={browsingSharedFolder}
                         {dragOverFolderId}
                         setDragOverFolderId={(id) => dragOverFolderId = id}
                         {navigateToFolder}
@@ -630,6 +671,7 @@
                         openPreview={(file) => previewFileId = file.id}
                         onRename={openRename}
                         onDelete={(id, name, type) => openDelete(id, type, name)}
+                        onShare={shareItem}
                     />
                 {:else}
                     {#if visibleFolders.length > 0 || visibleProjects.length > 0}
@@ -644,6 +686,8 @@
                                         {handleDrop}
                                         {deleteFolder}
                                         setDragOverFolderId={(id) => dragOverFolderId = id}
+                                        shareFolder={(target) => shareItem(target, 'folder')}
+                                        readOnly={browsingSharedFolder}
                                     />
                                 {/each}
                                 {#each visibleProjects as project (project.id)}
@@ -654,6 +698,8 @@
                                         {openInfo}
                                         {openRename}
                                         {deleteProject}
+                                        {shareItem}
+                                        readOnly={browsingSharedFolder}
                                     />
                                 {/each}
                             </div>
@@ -673,10 +719,11 @@
                                         {openRename}
                                         {shareItem}
                                         {deleteDoc}
+                                        readOnly={browsingSharedFolder}
                                     />
                                 {/each}
                                 {#each visibleFiles as file}
-                                    <FileCard {file} {deleteFile} {openRename} openPreview={(target) => previewFileId = target.id} />
+                                    <FileCard {file} {deleteFile} {openRename} openPreview={(target) => previewFileId = target.id} readOnly={browsingSharedFolder} />
                                 {/each}
                             </div>
                         </section>
@@ -688,8 +735,7 @@
 </div>
 
 {#if showShareModal && shareTarget}
-    
-    <ShareModal docId={shareTarget.id} onClose={() => showShareModal = false} />
+    <ShareModal itemId={shareTarget.id} kind={shareTarget.kind} onClose={() => showShareModal = false} />
 {/if}
 
 {#if showDeleteModal && deleteTarget}

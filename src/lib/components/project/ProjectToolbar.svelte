@@ -15,6 +15,7 @@
 	import Modal from '../Modal.svelte';
 	import PromptModal from '../PromptModal.svelte';
 	import ConfirmModal from '../ConfirmModal.svelte';
+	import ShareModal from '../ShareModal.svelte';
 
 	let {
 		projectName = 'Project',
@@ -55,6 +56,7 @@
 	let showInfoModal = $state(false);
 	let showRenameModal = $state(false);
 	let showDeleteModal = $state(false);
+	let showShareModal = $state(false);
 	let renameName = $state('');
 
 	$effect(() => { renameName = projectName; });
@@ -308,6 +310,7 @@
 								<button onclick={() => { activeMenu = null; goto('/drive'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Back to Drive</button>
 								<button onclick={() => { activeMenu = null; showInfoModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Project Info</button>
 								<button onclick={() => { activeMenu = null; downloadProject(projectId); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Download Project (.zip)</button>
+								<button onclick={() => { activeMenu = null; showShareModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Share</button>
 								{#if !isViewer}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
 									<button onclick={() => { activeMenu = null; renameName = projectName; showRenameModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Rename</button>
@@ -371,6 +374,10 @@
 			{/if}
 
 			<div class="w-px h-5 bg-[var(--color-line)]"></div>
+
+			<button onclick={() => (showShareModal = true)} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors">
+				<Icon icon="mdi:share-variant-outline" class="text-[16px]" /> Share
+			</button>
 
 			{#if !isViewer}
 				<button onclick={() => (isPresentationOpen = true)} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors">
@@ -495,6 +502,10 @@
 		onsubmit={submitRename}
 		onclose={() => showRenameModal = false}
 	/>
+{/if}
+
+{#if showShareModal}
+	<ShareModal itemId={projectId} kind="project" onClose={() => (showShareModal = false)} />
 {/if}
 
 {#if showDeleteModal}

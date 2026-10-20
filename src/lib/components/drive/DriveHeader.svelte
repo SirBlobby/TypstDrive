@@ -7,6 +7,9 @@
         title,
         folderPath,
         showActions,
+        showPath = false,
+        rootLabel = 'Home',
+        rootIcon = 'mdi:home-outline',
         isImporting,
         dragOverBreadcrumbIndex,
         searchQuery = $bindable(''),
@@ -22,6 +25,9 @@
         title: string;
         folderPath: FolderCrumb[];
         showActions: boolean;
+        showPath?: boolean;
+        rootLabel?: string;
+        rootIcon?: string;
         isImporting: boolean;
         dragOverBreadcrumbIndex: number | null;
         searchQuery?: string;
@@ -58,7 +64,7 @@
 <svelte:window onclick={handleWindowClick} />
 
 <header class="mb-6">
-    {#if showActions}
+    {#if showActions || showPath}
         <nav class="flex items-center gap-1 text-xs text-[var(--color-ink-muted)] mb-2 flex-wrap" aria-label="Folder path">
             <button
                 onclick={() => onNavigate(-1)}
@@ -67,8 +73,8 @@
                 ondrop={(e) => onDropOnCrumb(e, null)}
                 class="flex items-center gap-1 px-1.5 py-0.5 rounded hover:text-[var(--color-ink)] transition-colors {dragOverBreadcrumbIndex === -1 ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' : ''}"
             >
-                <Icon icon="mdi:home-outline" class="text-sm" />
-                Home
+                <Icon icon={rootIcon} class="text-sm" />
+                {rootLabel}
             </button>
             {#each folderPath as folder, index}
                 <span class="opacity-50">/</span>
