@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { brandingStore } from '$lib/ts/branding';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { onMount } from 'svelte';
@@ -10,9 +11,11 @@
     import StorageSection from '$lib/components/settings/sections/StorageSection.svelte';
     import ApiKeysSection from '$lib/components/settings/sections/ApiKeysSection.svelte';
     import DevicesSection from '$lib/components/settings/sections/DevicesSection.svelte';
+    import SecuritySection from '$lib/components/settings/sections/SecuritySection.svelte';
 
     const navItems = [
         { id: 'account', label: 'Account', icon: 'mdi:account-outline' },
+        { id: 'security', label: 'Security', icon: 'mdi:shield-lock-outline' },
         { id: 'appearance', label: 'Appearance', icon: 'mdi:palette-outline' },
         { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
         { id: 'api-keys', label: 'API Keys', icon: 'mdi:key-outline' },
@@ -34,8 +37,8 @@
 </script>
 
 <svelte:head>
-    <title>Settings - TypstDrive</title>
-    <meta name="description" content="Manage your TypstDrive settings." />
+    <title>Settings - {$brandingStore.site_name}</title>
+    <meta name="description" content={`Manage your ${$brandingStore.site_name} settings.`} />
 </svelte:head>
 
 <div class="h-screen flex flex-col">
@@ -57,6 +60,8 @@
             {#if $userStore}
                 {#if activeSection === 'account'}
                     <AccountSection />
+                {:else if activeSection === 'security'}
+                    <SecuritySection />
                 {:else if activeSection === 'appearance'}
                     <AppearanceSection />
                 {:else if activeSection === 'storage'}

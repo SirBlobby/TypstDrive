@@ -204,6 +204,7 @@ pub async fn overview(
                       INNER JOIN api_keys k ON k.id = daily_usage.key_id \
                       WHERE k.user_id = u.id AND daily_usage.date = $1) AS BIGINT) \
          FROM users u LEFT JOIN user_api_limits l ON l.user_id = u.id \
+         WHERE u.account_kind = 'user' \
          ORDER BY u.username ASC")
     )
     .bind(today())
@@ -239,9 +240,10 @@ pub async fn overview(
 pub async fn update_defaults(
     State(state): State<AppState>,
     jar: SignedCookieJar,
+    client: crate::accounts::client_info::ClientInfo,
     Json(payload): Json<ApiLimits>,
 ) -> Result<Json<ApiLimits>, ApiError> {
-    require_admin(&state, &jar).await?;
+    let admin_id = require_admin(&state, &jar).await?;
     validate_limits(Some(payload.rate_limit), Some(payload.max_keys), Some(payload.daily_quota))?;
 
     let entries = [
@@ -253,16 +255,19 @@ pub async fn update_defaults(
 
     crate::admin::site_settings::save_settings(&state, &entries).await.map_err(internal_error)?;
 
+    crate::admin::audit::record(&state, &admin_id, &client, "settings.api_defaults", "", &format!("enabled {}, rate limit {}, max keys {}, daily quota {}", payload.api_enabled, payload.rate_limit, payload.max_keys, payload.daily_quota)).await;
+
     Ok(Json(payload))
 }
 
 pub async fn update_user_limits(
     State(state): State<AppState>,
     jar: SignedCookieJar,
+    client: crate::accounts::client_info::ClientInfo,
     Path(user_id): Path<String>,
     Json(payload): Json<ApiLimitOverrides>,
 ) -> Result<Json<ApiLimits>, ApiError> {
-    require_admin(&state, &jar).await?;
+    let admin_id = require_admin(&state, &jar).await?;
     validate_limits(payload.rate_limit, payload.max_keys, payload.daily_quota)?;
 
     let user_exists = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM users WHERE id = $1"))
@@ -297,6 +302,8 @@ pub async fn update_user_limits(
         .await
         .map_err(internal_error)?;
     }
+
+    crate::admin::audit::record(&state, &admin_id, &client, "api.user_limits", &user_id, &format!("{:?}", payload)).await;
 
     Ok(Json(effective_limits(&state, &user_id).await))
 }

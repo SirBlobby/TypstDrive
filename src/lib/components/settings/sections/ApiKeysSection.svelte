@@ -1,20 +1,13 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { dangerButtonClass, formatDate, inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
+    import { dangerButtonClass, formatDate, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
     import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
     import ApiUsageChart from '$lib/components/settings/ApiUsageChart.svelte';
     import { API_DOCS_URL } from '$lib/ts/links';
-
-    type ApiKey = {
-        id: string;
-        name: string;
-        key_prefix: string;
-        created_at: string;
-        last_used_at: string | null;
-        rate_limit: number;
-    };
+    import { isExpired, keyFromCreated, scopeLabels, type ApiKey, type CreatedApiKey } from '$lib/ts/api-keys';
+    import CreateKeyForm from '$lib/components/settings/api-keys/CreateKeyForm.svelte';
 
     type OwnLimits = {
         api_enabled: boolean;
@@ -31,9 +24,6 @@
     let loadError = $state('');
 
     let showCreateForm = $state(false);
-    let newKeyName = $state('');
-    let createError = $state('');
-    let creating = $state(false);
     let revealedKey = $state<{ key: string; name: string } | null>(null);
     let copied = $state(false);
 
@@ -57,30 +47,11 @@
         loading = false;
     }
 
-    async function createKey(e: Event) {
-        e.preventDefault();
-        creating = true;
-        createError = '';
-        try {
-            const res = await fetch('/api/keys', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newKeyName.trim() })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                revealedKey = { key: data.key, name: data.name };
-                copied = false;
-                keys = [{ id: data.id, name: data.name, key_prefix: data.prefix, created_at: data.created_at, last_used_at: null, rate_limit: data.rate_limit }, ...keys];
-                showCreateForm = false;
-                newKeyName = '';
-            } else {
-                createError = (await res.text()) || 'Failed to create key.';
-            }
-        } catch {
-            createError = 'Network error.';
-        }
-        creating = false;
+    function keyCreated(created: CreatedApiKey) {
+        revealedKey = { key: created.key, name: created.name };
+        copied = false;
+        keys = [keyFromCreated(created), ...keys];
+        showCreateForm = false;
     }
 
     async function confirmAction(key: ApiKey) {
@@ -124,7 +95,7 @@
 
 <SettingsHeader
     title="API Keys"
-    description="Render Typst documents from your own scripts and services with POST /v1/render."
+    description="Render Typst code or read your documents from your own scripts. Each key has its own scopes, expiry and rate limit."
     icon="mdi:key-outline"
 >
     {#snippet actions()}
@@ -133,7 +104,7 @@
             API docs
         </a>
         <button
-            onclick={() => { showCreateForm = !showCreateForm; createError = ''; }}
+            onclick={() => (showCreateForm = !showCreateForm)}
             disabled={apiDisabled || (atKeyLimit && !showCreateForm)}
             class={primaryButtonClass}
         >
@@ -183,21 +154,8 @@
         </div>
     {/if}
 
-    {#if showCreateForm}
-        <form onsubmit={createKey} class="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-            <label for="new-key-name" class="block text-sm font-medium text-[var(--color-ink)]">Key name</label>
-            <p class="mt-0.5 text-xs text-[var(--color-ink-muted)]">A label to recognise where this key is used.</p>
-            <div class="mt-3 flex flex-col gap-2 sm:flex-row">
-                <input id="new-key-name" type="text" required bind:value={newKeyName} placeholder="e.g. CI pipeline" class="{inputClass} sm:!max-w-none flex-1" />
-                <button type="submit" disabled={creating || !newKeyName.trim()} class={primaryButtonClass}>
-                    <Icon icon={creating ? 'mdi:loading' : 'mdi:key-plus'} class="text-base {creating ? 'animate-spin' : ''}" />
-                    {creating ? 'Creating...' : 'Create key'}
-                </button>
-            </div>
-            {#if createError}
-                <p class="mt-2 text-xs text-[var(--color-danger)]">{createError}</p>
-            {/if}
-        </form>
+    {#if showCreateForm && limits}
+        <CreateKeyForm maxRateLimit={limits.rate_limit} onCreated={keyCreated} />
     {/if}
 
     <SettingsCard title="Usage" description="Requests across all of your keys, in UTC.">
@@ -221,9 +179,18 @@
                         <Icon icon="mdi:key-variant" class="text-lg" />
                     </div>
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-medium text-[var(--color-ink)]">{key.name}</p>
+                        <p class="flex flex-wrap items-center gap-1.5 text-sm font-medium text-[var(--color-ink)]">
+                            <span class="truncate">{key.name}</span>
+                            {#each scopeLabels(key.scopes) as scope (scope)}
+                                <span class="rounded bg-[var(--color-surface-sunken)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-ink-muted)]">{scope}</span>
+                            {/each}
+                            {#if isExpired(key.expires_at)}
+                                <span class="rounded bg-[var(--color-danger)]/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-danger)]">Expired</span>
+                            {/if}
+                        </p>
                         <p class="text-xs text-[var(--color-ink-muted)]">
                             <span class="font-mono">{key.key_prefix}…</span> · Created {formatDate(key.created_at)} · {key.last_used_at ? `Last used ${formatDate(key.last_used_at)}` : 'Never used'}
+                            · {key.expires_at ? `Expires ${formatDate(key.expires_at)}` : 'No expiry'} · {key.rate_limit}/min
                         </p>
                     </div>
                     {#if pendingAction?.id === key.id}

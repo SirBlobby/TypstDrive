@@ -10,7 +10,7 @@ use sha2::{Sha256, Digest};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::{api::keys::hash_key, compile::compiler::ProjectInput, AppState};
+use crate::{api::authentication::{authenticate, ApiScope}, compile::compiler::ProjectInput, AppState};
 use crate::db::sql;
 
 #[derive(Deserialize)]
@@ -23,7 +23,7 @@ pub struct RenderRequest {
 #[derive(Deserialize)]
 pub struct InlineFile {
     pub name: String,
-    pub data: String, // base64-encoded
+    pub data: String,
 }
 
 #[derive(Serialize)]
@@ -81,16 +81,11 @@ pub async fn render_handler(
     headers: axum::http::HeaderMap,
     Json(payload): Json<RenderRequest>,
 ) -> impl IntoResponse {
-    // Extract Bearer token
-    let api_key = match headers
-        .get("Authorization")
-        .and_then(|v| v.to_str().ok())
-        .filter(|v| v.starts_with("Bearer "))
-        .map(|v| v[7..].to_string())
-    {
-        Some(k) => k,
-        None => return (StatusCode::UNAUTHORIZED, "Missing or invalid Authorization header. Use: Authorization: Bearer <api-key>").into_response(),
+    let caller = match authenticate(&state, &headers, ApiScope::Render).await {
+        Ok(caller) => caller,
+        Err(response) => return response,
     };
+    let user_id = caller.user_id;
 
     if payload.format != "png" && payload.format != "pdf" && payload.format != "html" {
         return (StatusCode::BAD_REQUEST, "Invalid format. Must be 'png', 'pdf', or 'html'").into_response();
@@ -100,87 +95,8 @@ pub async fn render_handler(
         return (StatusCode::BAD_REQUEST, "code cannot be empty").into_response();
     }
 
-    let key_hash = hash_key(&api_key);
+    let now_str = chrono::Utc::now().to_rfc3339();
 
-    let key_row = sqlx::query_as::<_, (String, String)>(
-        sql("SELECT id, user_id FROM api_keys WHERE key_hash = $1")
-    )
-    .bind(&key_hash)
-    .fetch_optional(&state.db)
-    .await;
-
-    let (key_id, user_id) = match key_row {
-        Ok(Some(row)) => row,
-        Ok(None) => return (StatusCode::UNAUTHORIZED, "Invalid API key").into_response(),
-        Err(e) => {
-            let msg = format!("Database error: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, msg).into_response();
-        }
-    };
-
-    let limits = crate::api::limits::effective_limits(&state, &user_id).await;
-    if !limits.api_enabled {
-        return (StatusCode::FORBIDDEN, "API access is disabled for this account").into_response();
-    }
-    if limits.daily_quota > 0 && crate::api::limits::requests_today(&state, &user_id).await >= limits.daily_quota {
-        return (StatusCode::TOO_MANY_REQUESTS, "Daily request quota reached for this account.").into_response();
-    }
-    let rate_limit = limits.rate_limit;
-
-    // Rate limiting: fixed window of 60 seconds
-    {
-        let mut limiter = state.rate_limiter.lock().await;
-        let now = std::time::Instant::now();
-        let window = std::time::Duration::from_secs(60);
-        let entry = limiter.entry(key_id.clone()).or_insert((0u32, now));
-        if now.duration_since(entry.1) > window {
-            entry.0 = 1;
-            entry.1 = now;
-        } else if entry.0 < rate_limit as u32 {
-            entry.0 += 1;
-        } else {
-            return (StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded. Max requests per minute reached.").into_response();
-        }
-    }
-
-    let now = chrono::Utc::now();
-    let now_str = now.to_rfc3339();
-    let today = now.format("%Y-%m-%d").to_string();
-
-    let _ = sqlx::query(sql("UPDATE api_keys SET last_used_at = $1 WHERE id = $2"))
-        .bind(&now_str)
-        .bind(&key_id)
-        .execute(&state.db)
-        .await;
-
-    let _ = sqlx::query(
-        sql("INSERT INTO api_key_usage (key_id, date, count) VALUES ($1, $2, 1) \
-         ON CONFLICT (key_id, date) DO UPDATE SET count = api_key_usage.count + 1")
-    )
-    .bind(&key_id)
-    .bind(&today)
-    .execute(&state.db)
-    .await;
-
-    let minute_str = now.format("%Y-%m-%d %H:%M").to_string();
-    let _ = sqlx::query(
-        sql("INSERT INTO api_key_usage_detail (key_id, minute, count) VALUES ($1, $2, 1) \
-         ON CONFLICT (key_id, minute) DO UPDATE SET count = api_key_usage_detail.count + 1")
-    )
-    .bind(&key_id)
-    .bind(&minute_str)
-    .execute(&state.db)
-    .await;
-
-    let cutoff_minute = (chrono::Utc::now() - chrono::TimeDelta::hours(25))
-        .format("%Y-%m-%d %H:%M")
-        .to_string();
-    let _ = sqlx::query(sql("DELETE FROM api_key_usage_detail WHERE minute < $1"))
-        .bind(&cutoff_minute)
-        .execute(&state.db)
-        .await;
-
-    // Check cache
     let cache_key = compute_cache_key(&user_id, &payload.format, &payload.code, &payload.files);
     let content_type: &'static str = match payload.format.as_str() {
         "pdf" => "application/pdf",
@@ -204,7 +120,6 @@ pub async fn render_handler(
         }
     }
 
-    // Load user's account files
     let mut files_map: HashMap<String, Vec<u8>> = HashMap::new();
     if let Ok(files) = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(
         sql("SELECT name, data, storage_key FROM files WHERE owner_id = $1")
@@ -218,7 +133,6 @@ pub async fn render_handler(
         }
     }
 
-    // Inline files override account files
     if let Some(inline_files) = &payload.files {
         for f in inline_files {
             if let Ok(decoded) = BASE64.decode(&f.data) {
@@ -227,7 +141,6 @@ pub async fn render_handler(
         }
     }
 
-    // Compile
     let compiler = state.compiler.lock().await;
     let result = match payload.format.as_str() {
         "pdf" => compiler.export_pdf(ProjectInput::single(payload.code.clone(), files_map)),

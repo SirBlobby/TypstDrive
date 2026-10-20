@@ -11,6 +11,7 @@ use crate::{
     models::{ApiKeyView, CreateApiKeyRequest, UsagePoint},
     AppState,
 };
+use crate::api::authentication::{effective_rate_limit, ApiScope};
 use crate::db::sql;
 
 fn get_user_id(jar: &SignedCookieJar) -> Option<String> {
@@ -19,6 +20,35 @@ fn get_user_id(jar: &SignedCookieJar) -> Option<String> {
 
 pub fn hash_key(key: &str) -> String {
     crate::hashing::sha256_hex(key.as_bytes())
+}
+
+const MAX_KEY_LIFETIME_DAYS: i64 = 3650;
+
+fn requested_scopes(requested: &Option<Vec<String>>) -> Result<String, (StatusCode, String)> {
+    let Some(requested) = requested else {
+        return Ok(ApiScope::Render.as_str().to_string());
+    };
+    let mut scopes = Vec::new();
+    for name in requested {
+        let scope = ApiScope::parse(name).ok_or((StatusCode::BAD_REQUEST, format!("Unknown scope '{name}'")))?;
+        if !scopes.contains(&scope) {
+            scopes.push(scope);
+        }
+    }
+    if scopes.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Choose at least one scope".to_string()));
+    }
+    Ok(scopes.iter().map(|scope| scope.as_str()).collect::<Vec<_>>().join(","))
+}
+
+fn expiry_from_days(days: Option<i64>) -> Result<Option<String>, (StatusCode, String)> {
+    match days {
+        None | Some(0) => Ok(None),
+        Some(days) if !(1..=MAX_KEY_LIFETIME_DAYS).contains(&days) => {
+            Err((StatusCode::BAD_REQUEST, format!("Expiry must be between 1 and {MAX_KEY_LIFETIME_DAYS} days")))
+        }
+        Some(days) => Ok(Some(crate::accounts::sessions::format_time(chrono::Utc::now() + chrono::TimeDelta::days(days)))),
+    }
 }
 
 fn generate_api_key() -> String {
@@ -36,9 +66,9 @@ pub async fn list_keys(
     let user_id = get_user_id(&jar)
         .ok_or((StatusCode::UNAUTHORIZED, "Not authenticated".to_string()))?;
 
-    let rate_limit = crate::api::limits::effective_limits(&state, &user_id).await.rate_limit;
+    let account_rate_limit = crate::api::limits::effective_limits(&state, &user_id).await.rate_limit;
     let mut keys = sqlx::query_as::<_, ApiKeyView>(
-        sql("SELECT id, name, key_prefix, created_at, last_used_at, rate_limit FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC")
+        sql("SELECT id, name, key_prefix, created_at, last_used_at, rate_limit, scopes, expires_at FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -46,7 +76,8 @@ pub async fn list_keys(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     for key in &mut keys {
-        key.rate_limit = rate_limit;
+        key.custom_rate_limit = (key.rate_limit > 0).then_some(key.rate_limit);
+        key.rate_limit = effective_rate_limit(key.rate_limit, account_rate_limit);
     }
 
     Ok(Json(keys))
@@ -72,14 +103,24 @@ pub async fn create_key(
         return Err((StatusCode::CONFLICT, format!("Maximum of {} API keys per account", limits.max_keys)));
     }
 
+    let scopes = requested_scopes(&payload.scopes)?;
+    let expires_at = expiry_from_days(payload.expires_in_days)?;
+    let custom_rate_limit = match payload.rate_limit {
+        Some(limit) if limit < 1 || limit > limits.rate_limit => {
+            return Err((StatusCode::BAD_REQUEST, format!("Key rate limit must be between 1 and {}", limits.rate_limit)));
+        }
+        Some(limit) => limit,
+        None => 0,
+    };
+
     let key = generate_api_key();
     let hash = hash_key(&key);
-    let prefix = key[..11].to_string(); // "td_" + 8 hex chars
+    let prefix = key[..11].to_string();
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
     sqlx::query(
-        sql("INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, created_at) VALUES ($1, $2, $3, $4, $5, $6)")
+        sql("INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, created_at, rate_limit, scopes, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
     )
     .bind(&id)
     .bind(&user_id)
@@ -87,6 +128,9 @@ pub async fn create_key(
     .bind(&hash)
     .bind(&prefix)
     .bind(&now)
+    .bind(custom_rate_limit)
+    .bind(&scopes)
+    .bind(&expires_at)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -97,7 +141,10 @@ pub async fn create_key(
         "key": key,
         "prefix": prefix,
         "created_at": now,
-        "rate_limit": crate::api::limits::effective_limits(&state, &user_id).await.rate_limit,
+        "scopes": scopes,
+        "expires_at": expires_at,
+        "custom_rate_limit": (custom_rate_limit > 0).then_some(custom_rate_limit),
+        "rate_limit": effective_rate_limit(custom_rate_limit, limits.rate_limit),
     }))))
 }
 

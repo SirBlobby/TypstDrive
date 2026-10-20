@@ -32,7 +32,21 @@
     });
 
     let profileChanged = $derived(username !== $userStore?.username || email !== ($userStore?.email ?? ''));
-    let passwordReady = $derived(Boolean(currentPassword && newPassword && confirmPassword));
+    let hasPassword = $derived($userStore?.has_password ?? true);
+    let passwordReady = $derived(Boolean((currentPassword || !hasPassword) && newPassword && confirmPassword));
+    let verificationMessage = $state<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+    async function sendVerification() {
+        verificationMessage = null;
+        const res = await fetch('/api/auth/verify-email/resend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        verificationMessage = res.ok
+            ? { kind: 'success', text: 'Check your inbox for the verification link.' }
+            : { kind: 'error', text: (await res.text()) || 'Could not send the email.' };
+    }
 
     async function saveProfile() {
         if (!profileChanged) return;
@@ -76,7 +90,8 @@
                 body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
             });
             if (res.ok) {
-                passwordMessage = { kind: 'success', text: 'Password changed.' };
+                passwordMessage = { kind: 'success', text: 'Password saved. Other sessions were signed out.' };
+                if ($userStore) userStore.set({ ...$userStore, has_password: true });
                 currentPassword = '';
                 newPassword = '';
                 confirmPassword = '';
@@ -109,6 +124,17 @@
                 <p class="text-lg font-semibold text-[var(--color-ink)] truncate">{$userStore?.username}</p>
                 <p class="text-sm text-[var(--color-ink-muted)] truncate">{$userStore?.email}</p>
                 <div class="mt-2 flex flex-wrap gap-2">
+                    {#if $userStore?.email_verified}
+                        <span class="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                            <Icon icon="mdi:email-check-outline" class="text-sm" />
+                            Email verified
+                        </span>
+                    {:else}
+                        <button onclick={sendVerification} class="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 hover:underline">
+                            <Icon icon="mdi:email-alert-outline" class="text-sm" />
+                            Email not verified - send link
+                        </button>
+                    {/if}
                     {#if $userStore?.is_admin}
                         <span class="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
                             <Icon icon="mdi:shield-crown-outline" class="text-sm" />
@@ -121,6 +147,9 @@
                         </span>
                     {/if}
                 </div>
+                {#if verificationMessage}
+                    <p class="mt-2 text-xs font-medium {verificationMessage.kind === 'success' ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}">{verificationMessage.text}</p>
+                {/if}
                 <p class="mt-3 text-xs text-[var(--color-ink-muted)]">Hover over your picture to upload a new one. Images are stored losslessly.</p>
             </div>
         </div>
@@ -143,10 +172,12 @@
         {/snippet}
     </SettingsCard>
 
-    <SettingsCard title="Password" description="Choose a strong password you don't use anywhere else.">
-        <SettingsRow label="Current password" forId="current-password">
-            <input id="current-password" type="password" bind:value={currentPassword} autocomplete="current-password" class={inputClass} />
-        </SettingsRow>
+    <SettingsCard title={hasPassword ? 'Password' : 'Set a password'} description={hasPassword ? "Choose a strong password you don't use anywhere else." : 'You sign in with single sign-on. Add a password to also sign in with your email.'}>
+        {#if hasPassword}
+            <SettingsRow label="Current password" forId="current-password">
+                <input id="current-password" type="password" bind:value={currentPassword} autocomplete="current-password" class={inputClass} />
+            </SettingsRow>
+        {/if}
         <SettingsRow label="New password" forId="new-password">
             <input id="new-password" type="password" bind:value={newPassword} autocomplete="new-password" class={inputClass} />
         </SettingsRow>
