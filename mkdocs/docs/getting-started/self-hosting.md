@@ -23,6 +23,7 @@ TypstDrive ships as a single Docker image that contains both the Rust server and
           - DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
           - DB_TYPE=sqlite
           - COOKIE_SECRET=your-64-plus-byte-secret-here
+          - PUBLIC_URL=http://localhost:3000
           - ALLOW_REGISTRATION=false
           - RUST_LOG=info
         volumes:
@@ -50,6 +51,9 @@ On first launch, when the database has no users, TypstDrive redirects to the **S
 
 !!! warning "Set a stable cookie secret"
     Without `COOKIE_SECRET`, a random key is generated on every start and everyone is signed out whenever the container restarts.
+
+!!! tip "Sign-in and email"
+    Set `PUBLIC_URL` to the address people use, then add a [mail server](email.md) for password resets and email verification, and [single sign-on](authentication.md) if you use an identity provider.
 
 ## Updating
 

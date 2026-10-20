@@ -16,6 +16,23 @@ Viewers are strictly read-only:
 - Previews and exports for viewers are compiled from the saved document, not from text sent by the browser.
 - The language server, which has access to the owner's files, is only available to owners and editors.
 
+## Team spaces
+
+Items in a team space belong to the team. Every member of the team has access, and the **Share** dialog lists them all with their team role. Admins and members can edit, and viewers can only view. Change roles in the team settings. You can still share a team item with people outside the team by email.
+
+## Link sharing
+
+Under **General access** in the Share dialog, choose **Viewer** or **Editor** to let anyone with the link open a document or project without being shared with them. Set it back to **Off** to stop the link working.
+
+- **Password**: visitors enter it once per browser before the item opens. Changing or removing it takes effect immediately.
+- **Expires**: after this date and time the link stops working and visitors see that it has expired.
+
+Choose **Save link settings** to apply the changes.
+
+## Who can be found by email
+
+When an administrator requires verified email, sharing by email only finds accounts that confirmed their address. Someone who registers an unverified account with an address a document was shared with does not get access.
+
 ## Sharing folders
 
 Sharing a folder gives the member the same role on everything inside it: documents, projects, files and subfolders, including items added later. If someone also has a role directly on an item inside the folder, the stronger of the two roles applies.
@@ -54,7 +71,7 @@ When the transfer is accepted:
 When access changes, open connections are checked again and closed if they no longer match. This happens when you:
 
 - add, change or remove a collaborator;
-- change public access on a document or project;
+- change link sharing, its password or its expiry;
 - transfer ownership;
 - delete a document, project or folder.
 

@@ -4,7 +4,7 @@ The Drive at `/drive` is where everything you own lives: folders, projects, docu
 
 ## Layout
 
-- **Sidebar**: Home, Shared, Packages and a link to Typst Universe, plus your storage usage against your quota and the TypstDrive version, with a notice when a newer release is available. Collapse it with the button at the bottom; the choice is remembered in your browser.
+- **Sidebar**: Home, Shared, Starred, your [team spaces](teams.md), Packages and a link to Typst Universe, plus your storage usage against your quota and the TypstDrive version, with a notice when a newer release is available. Collapse it with the button at the bottom; the choice is remembered in your browser.
 - **Header**: the folder path, the current folder name, a filter box, **Upload**, and **New document** with a menu for a new project, folder or import.
 - **Toolbar**: sort by name, last modified or size, flip the sort direction, and switch between the grid and list views.
 
@@ -30,12 +30,21 @@ Documents and uploaded files are shown together in the **Files** section.
 - Images and PDFs show a preview and open in the built-in viewer. Use the arrow keys to move between files, and zoom images with the toolbar or `+` and `-`.
 - Fonts are listed so you can manage them, and are used automatically by the compiler.
 - Files can be renamed and deleted from the card or list row. Typst refers to files by name, so renaming a file breaks references to the old name.
+- **Replace** uploads a new version of a file while keeping its name, so documents that use it pick up the new version without changes. Editors can also replace files from **Document files** in the editor.
+
+## Item info
+
+**Info** on a document, project, folder or file shows its owner, storage size, location, creation and modification dates, who last edited it, link sharing, and everyone who has access with where that access comes from. The same details open from the info button in the editor.
 
 ## Shared with me
 
 **Shared** lists the documents, projects and folders other people have shared with you, with your role on each. Open a shared folder to browse it. See [Sharing and Permissions](sharing.md).
 
 Requests to become the owner of an item appear at the top of the Drive, with **Accept** and **Decline** buttons.
+
+## Starred
+
+Click the star on a document or project card, or in the list view, to star it. **Starred** in the sidebar lists everything you starred, projects first, and works with search, sorting and the grid and list views. Stars are personal, and items you can no longer open are left out. Click the star again to remove it.
 
 ## Importing
 

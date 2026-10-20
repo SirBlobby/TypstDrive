@@ -75,7 +75,8 @@ The Typst code did not compile. The body lists every error:
 |---|---|
 | `400 Bad Request` | Unsupported `format`, empty `code`, or a body that is not valid JSON. |
 | `401 Unauthorized` | Missing or malformed `Authorization` header, or an unknown key. |
-| `403 Forbidden` | API access is turned off for your account. |
+| `401 Unauthorized` | The key has expired. |
+| `403 Forbidden` | API access is turned off for your account, or the key has no `render` scope. |
 | `422 Unprocessable Entity` | The Typst code failed to compile, or the JSON body is missing a required field. Compile errors include the JSON body shown above. |
 | `429 Too Many Requests` | Your per-minute rate limit or daily quota was reached. See [Limits and Caching](limits.md). |
 | `500 Internal Server Error` | Unexpected server error. Retry after a short delay. |

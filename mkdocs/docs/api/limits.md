@@ -13,6 +13,7 @@ Administrators set the limits for each instance and can change them per account.
 Your current limits, key usage and today's request count are shown in **Settings → API Keys**.
 
 - The per-minute limit is a fixed 60-second window for each key. When it is reached, requests return `429` until the window resets.
+- A key created with its own **Requests per minute** uses the lower of that value and the account limit.
 - The daily quota counts requests across all of your keys. When it is reached, requests return `429` until the next UTC day.
 - If an administrator turns off API access for your account, requests return `403` and new keys cannot be created.
 

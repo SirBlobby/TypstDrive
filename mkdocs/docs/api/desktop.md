@@ -13,6 +13,16 @@ The desktop API uses **device tokens** instead of session cookies.
     Authorization: Bearer <device-token>
     ```
 
+Sign-in can fail with:
+
+| Status | Meaning |
+|---|---|
+| `401` | Wrong email or password. |
+| `403` | Password sign-in is turned off for members. Accounts that only use single sign-on cannot sign in to the desktop app. |
+| `426` | The app is older than the server supports. |
+| `428` | The account's email must be verified first. |
+| `429` | Too many failed attempts. Try again after the lockout ends. |
+
 Tokens are stored hashed. Signing out with `POST /api/desktop/auth/logout`, or revoking the device in **Settings → Devices**, invalidates the token and closes the device's live connections.
 
 ## Endpoints

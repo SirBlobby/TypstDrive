@@ -11,6 +11,8 @@ All settings are environment variables. Set them in the `environment:` section o
 | `PORT` | `3000` | Port the HTTP server listens on. |
 | `STATIC_DIR` | `/app/build` | Path to the built web app. |
 | `COOKIE_SECRET` | random | Secret of at least 64 bytes used to sign session cookies. Generate one with `openssl rand -hex 64`. |
+| `PUBLIC_URL` | not set | Address people use to open TypstDrive, such as `https://typst.example.com`. Needed for single sign-on and links in emails. |
+| `TRUST_PROXY_HEADERS` | `false` | Read the client address from `X-Forwarded-For` or `X-Real-IP`. Turn on only behind a reverse proxy. |
 | `ALLOW_REGISTRATION` | `true` | Starting value for public sign-up. Once an administrator saves **Site Settings → Registration & Accounts**, the saved setting is used instead. |
 | `RUST_LOG` | `server=debug,tower_http=debug` | Log filter. Use `info` for quieter production logs. |
 | `REDIS_URL` | not set | Redis or Valkey server, such as `redis://redis:6379`. Needed to run more than one app instance. See [Scaling](scaling.md). |
@@ -23,6 +25,12 @@ All settings are environment variables. Set them in the `environment:` section o
 | `S3_PREFIX` | `typstdrive` | Folder inside the bucket where files are kept. |
 | `S3_VIRTUAL_HOSTED_STYLE` | `false` | Use `bucket.host` URLs instead of `host/bucket`. |
 | `OBJECT_CACHE_MB` | `256` | Memory used to cache files read from object storage. |
+| `SMTP_PROVIDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | not set | Outgoing mail. See [Email](email.md). |
+| `OIDC_PROVIDERS` and `OIDC_<ID>_*` | not set | OpenID Connect single sign-on. See [Authentication](authentication.md). |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_HOSTED_DOMAIN` | not set | Sign in with Google. |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | not set | Sign in with GitHub. |
+
+Features that need these variables, such as sign-in codes, password reset, email verification or a provider button, stay off until they are set.
 
 Administrators can see which of these variables are set in **Site Settings → Server**. Values are never shown.
 
@@ -34,8 +42,12 @@ environment:
   - DB_TYPE=sqlite
   - PORT=3000
   - COOKIE_SECRET=your-64-plus-byte-secret-here
+  - PUBLIC_URL=https://typst.example.com
   - ALLOW_REGISTRATION=false
   - RUST_LOG=info
+  - SMTP_PROVIDER=google
+  - SMTP_USERNAME=you@gmail.com
+  - SMTP_PASSWORD=your-app-password
 ```
 
 ## Database
@@ -65,4 +77,4 @@ TypstDrive stores its schema version in a `schema_version` table and upgrades th
 
 ## Instance settings
 
-Most instance-wide behaviour is configured in the web app rather than through environment variables. See [Site Settings](../admin/site-settings.md) for registration rules, account rules and API access.
+Most instance-wide behaviour is configured in the web app rather than through environment variables. See [Site Settings](../admin/site-settings.md) for registration rules, sign-in methods, team spaces and API access.

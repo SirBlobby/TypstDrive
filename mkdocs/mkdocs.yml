@@ -58,6 +58,8 @@ nav:
       - Getting Started:
           - Self-Hosting: getting-started/self-hosting.md
           - Configuration: getting-started/configuration.md
+          - Authentication: getting-started/authentication.md
+          - Email: getting-started/email.md
           - Scaling: getting-started/scaling.md
       - User Guide:
           - The Drive: guide/drive.md
@@ -65,6 +67,7 @@ nav:
           - Projects and Packages: guide/projects-and-packages.md
           - Fonts and Images: guide/fonts-and-images.md
           - Sharing and Permissions: guide/sharing.md
+          - Team Spaces: guide/teams.md
           - Account Settings: guide/settings.md
       - Administration:
           - Site Settings: admin/site-settings.md
@@ -72,6 +75,7 @@ nav:
   - API Reference:
       - Overview: api/index.md
       - POST /v1/render: api/render.md
+      - Read Endpoints: api/read.md
       - Examples: api/examples.md
       - Limits and Caching: api/limits.md
       - Desktop Sync API: api/desktop.md

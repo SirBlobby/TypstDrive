@@ -9,11 +9,15 @@ TypstDrive is a self-hosted, collaborative web editor for [Typst](https://typst.
 - **Projects** for multi-file work: any number of `.typ`, `.bib`, `.toml` and asset files that import one another, each with its own `typst.toml`.
 - **Packages** published from a project and importable everywhere on the instance as `@typstdrive/<name>:<version>`.
 - **Sharing** of documents, projects and folders with editor or viewer roles, plus ownership transfer. Viewers are strictly read-only.
+- **Share links** that anyone can open, optionally protected by a password or set to expire.
+- **Team spaces** with their own drive, an owner, admins, members and viewers.
+- **Sign-in options**: OpenID Connect single sign-on (Keycloak, Authentik, Authelia and others), GitHub and Google, with optional account creation on first sign-in.
+- **Account security**: sign-in codes by email, email verification, password reset, active session management, sign-in lockout and an audit log of administrator changes.
 - **Export** to PDF, PNG, SVG and HTML, plus Markdown, Word and LaTeX through Pandoc.
 - **Fonts and images** uploaded once and available in every document, including emoji and system fonts on the server.
 - **Presentation mode** with slide controls and a drawing and annotation overlay.
-- **Render API** at `POST /v1/render` for PNG, PDF and HTML output, with per-account rate limits and quotas.
-- **Admin tools** for users, registration rules, API access, storage quotas and package publishing, with a first-run setup wizard.
+- **Render API** at `POST /v1/render` for PNG, PDF and HTML output, plus read endpoints for documents and projects. Keys have scopes, optional expiry and their own rate limits.
+- **Admin tools** for users, registration rules, sign-in methods, email, team spaces, API access, storage quotas and package publishing, with a first-run setup wizard.
 - **Desktop sync** for [Typst Desktop](https://github.com/SirBlobby/typst-desktop.git) through a dedicated API.
 - **SQLite, PostgreSQL or MySQL/MariaDB**, with automatic schema upgrades.
 - **Horizontal scaling** with Redis or Valkey for real-time collaboration across instances, and S3-compatible object storage for uploads.
@@ -24,15 +28,15 @@ TypstDrive is a self-hosted, collaborative web editor for [Typst](https://typst.
 
 - **Run your own instance**
 
-    Start with [Self-Hosting](getting-started/self-hosting.md), then review the [Configuration](getting-started/configuration.md) options.
+    Start with [Self-Hosting](getting-started/self-hosting.md), then review the [Configuration](getting-started/configuration.md) options, [Authentication](getting-started/authentication.md) and [Email](getting-started/email.md).
 
 - **Use TypstDrive**
 
-    Learn about [the Drive](guide/drive.md), [the editor](guide/editor.md) and [sharing](guide/sharing.md).
+    Learn about [the Drive](guide/drive.md), [the editor](guide/editor.md), [sharing](guide/sharing.md) and [team spaces](guide/teams.md).
 
 - **Administer an instance**
 
-    See [Site Settings](admin/site-settings.md) for users, registration, API access, storage and packages.
+    See [Site Settings](admin/site-settings.md) for users, sign-in, email, team spaces, the audit log, API access, storage and packages.
 
 - **Build on the API**
 
