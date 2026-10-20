@@ -1,6 +1,6 @@
 # Desktop Sync API
 
-[Typst Desktop](https://github.com/SirBlobby/typst-desktop) uses a separate API under `/api/desktop` to browse an account's folders, documents, projects and files and keep them in sync locally.
+[Typst Desktop](https://github.com/SirBlobby/typst-desktop.git) uses a separate API under `/api/desktop` to browse an account's folders, documents, projects and files and keep them in sync locally.
 
 ## Authentication
 
