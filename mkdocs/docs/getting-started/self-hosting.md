@@ -82,6 +82,22 @@ environment:
   - DB_TYPE=postgres
 ```
 
+## Using MySQL or MariaDB
+
+Point `DATABASE_URL` at an empty database:
+
+```yaml
+environment:
+  - DATABASE_URL=mysql://typstdrive:password@db:3306/typstdrive
+  - DB_TYPE=mysql
+```
+
+See [Configuration](configuration.md#mysql-and-mariadb) for the supported versions and settings.
+
+## Running more than one instance
+
+Add Redis or Valkey so collaboration works across instances, and S3-compatible object storage for uploads. See [Scaling](scaling.md).
+
 ## Fonts on the server
 
 The image includes Noto Color Emoji so emoji render in previews and exports. TypstDrive also loads any fonts installed on the host system. When running outside Docker, install an emoji font (for example `noto-fonts-emoji` on Arch Linux) to get emoji support.

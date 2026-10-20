@@ -15,7 +15,8 @@ TypstDrive is a self-hosted, collaborative web editor for [Typst](https://typst.
 - **Render API** at `POST /v1/render` for PNG, PDF and HTML output, with per-account rate limits and quotas.
 - **Admin tools** for users, registration rules, API access, storage quotas and package publishing, with a first-run setup wizard.
 - **Desktop sync** for [Typst Desktop](https://github.com/SirBlobby/typst-desktop.git) through a dedicated API.
-- **SQLite or PostgreSQL**, with automatic schema upgrades.
+- **SQLite, PostgreSQL or MySQL/MariaDB**, with automatic schema upgrades.
+- **Horizontal scaling** with Redis or Valkey for real-time collaboration across instances, and S3-compatible object storage for uploads.
 
 ## Where to start
 

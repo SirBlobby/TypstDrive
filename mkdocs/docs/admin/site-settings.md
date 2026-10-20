@@ -57,3 +57,14 @@ When an account is full, new uploads are blocked. Existing data is never removed
 | Maximum versions per package | Publishing stops once a package reaches this many versions. `0` means no limit. |
 
 Administrators can always publish and delete packages, but the size and version limits apply to them too.
+
+## Server
+
+Shows how the instance is set up. Nothing here can be changed from the browser; it all comes from environment variables.
+
+- **Database**: the type (SQLite, PostgreSQL or MySQL/MariaDB), server version, schema version and connection pool size.
+- **Real-time collaboration**: whether Redis or Valkey coordination is on and connected, and a short ID for the instance you are talking to.
+- **File storage**: whether uploads are kept in the database or in S3-compatible object storage, and how many files are in each.
+- **Environment variables**: every variable TypstDrive reads, with a description and whether it is set. Values are never sent to the browser, even for administrators.
+
+See [Configuration](../getting-started/configuration.md) and [Scaling](../getting-started/scaling.md).

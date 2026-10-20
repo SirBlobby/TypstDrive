@@ -9,6 +9,7 @@ copyright: TypstDrive is licensed under the Apache License 2.0.
 theme:
   name: material
   features:
+    - navigation.tabs
     - navigation.sections
     - navigation.top
     - navigation.footer
@@ -52,23 +53,25 @@ markdown_extensions:
       alternate_style: true
 
 nav:
-  - Home: index.md
-  - Getting Started:
-      - Self-Hosting: getting-started/self-hosting.md
-      - Configuration: getting-started/configuration.md
-  - User Guide:
-      - The Drive: guide/drive.md
-      - Editor: guide/editor.md
-      - Projects and Packages: guide/projects-and-packages.md
-      - Fonts and Images: guide/fonts-and-images.md
-      - Sharing and Permissions: guide/sharing.md
-      - Account Settings: guide/settings.md
-  - Administration:
-      - Site Settings: admin/site-settings.md
+  - Documentation:
+      - Home: index.md
+      - Getting Started:
+          - Self-Hosting: getting-started/self-hosting.md
+          - Configuration: getting-started/configuration.md
+          - Scaling: getting-started/scaling.md
+      - User Guide:
+          - The Drive: guide/drive.md
+          - Editor: guide/editor.md
+          - Projects and Packages: guide/projects-and-packages.md
+          - Fonts and Images: guide/fonts-and-images.md
+          - Sharing and Permissions: guide/sharing.md
+          - Account Settings: guide/settings.md
+      - Administration:
+          - Site Settings: admin/site-settings.md
+      - Development: development.md
   - API Reference:
       - Overview: api/index.md
       - POST /v1/render: api/render.md
       - Examples: api/examples.md
       - Limits and Caching: api/limits.md
       - Desktop Sync API: api/desktop.md
-  - Development: development.md

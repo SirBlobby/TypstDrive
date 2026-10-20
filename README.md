@@ -25,6 +25,8 @@ Full documentation, including self-hosting, configuration, administration and th
 - **Global Packages**: Publish any Space as an instance-local Typst package, immutably versioned and importable everywhere as `@typstdrive/<name>:<version>` (e.g. `#import "@typstdrive/charged-ieee:0.1.4": ieee`). The name, version, and entrypoint are read from the Space's `typst.toml`. Browse published packages at `/packages`.
 - **Public REST API**: Programmatically render Typst documents to PNG, PDF, or HTML via `POST /v1/render`. Compilation failures return a `422` with a JSON body detailing each Typst error, including its message and source line and column. Manage API keys from the Settings panel, with a live usage chart supporting 1-hour, 1-day, and 1-week views. Full API reference available in the [documentation](https://sirblobby.github.io/TypstDrive/api/).
 - **Admin System**: First-run setup wizard creates an admin account. Admins can manage all users, create new accounts with temporary passwords, toggle admin privileges, and delete accounts from the Settings panel.
+- **Horizontal Scaling**: Run several instances behind a load balancer. Redis or Valkey shares collaborative edits, cursors and access changes between instances, and uploads can live in S3-compatible object storage instead of the database.
+- **Databases**: SQLite, PostgreSQL or MySQL/MariaDB, with automatic schema upgrades. Site Settings shows the database in use and which environment variables are set, without their values.
 - **Storage Quotas**: Admins see storage usage per account and set a default quota or per-account quotas from Site Settings.
 - **Package Rules**: Admins can turn package publishing off, limit it to admins, cap package size and versions, and control whether owners can delete their packages.
 - **Presentation Mode**: Turn your documents into instant slideshows with built-in slide controls and a live drawing/annotation tool overlay.
@@ -188,13 +190,15 @@ All variables can be set in the `environment:` section of `docker-compose.yml` o
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `sqlite:///data/typstdrive.db?mode=rwc` | Database connection URL. Use `sqlite:///path/to/file.db?mode=rwc` for SQLite or `postgres://user:pass@host:5432/db` for PostgreSQL. |
-| `DB_TYPE` | auto-detected | Database backend. Set to `sqlite` or `postgres`. Auto-detected from `DATABASE_URL` prefix if omitted. |
+| `DATABASE_URL` | `sqlite:///data/typstdrive.db?mode=rwc` | Database connection URL. Use `sqlite:///path/to/file.db?mode=rwc` for SQLite, `postgres://user:pass@host:5432/db` for PostgreSQL, or `mysql://user:pass@host:3306/db` for MySQL and MariaDB. |
+| `DB_TYPE` | auto-detected | Database backend. Set to `sqlite`, `postgres`, `mysql` or `mariadb`. Auto-detected from `DATABASE_URL` prefix if omitted. |
 | `PORT` | `3000` | Port the HTTP server listens on. |
 | `STATIC_DIR` | `/app/build` | Path to compiled frontend assets. |
 | `COOKIE_SECRET` | *(random)* | 64+ byte secret used to sign session cookies. **If not set, a random key is generated on startup and all sessions are invalidated on every container restart.** Generate a stable value with: `openssl rand -hex 64` |
 | `ALLOW_REGISTRATION` | `true` | Starting value for public self-registration. Once an admin saves **Site Settings → Registration & Accounts**, that setting takes over. When registration is off, the register link is hidden on the login page and the registration endpoint returns 403. Admins can still create accounts from Site Settings. |
 | `RUST_LOG` | `server=debug,tower_http=debug` | Log filter. Set to `info` for quieter production logs. |
+| `REDIS_URL` | *(not set)* | Redis or Valkey server shared by every app instance, such as `redis://redis:6379`. Needed to run more than one instance. |
+| `S3_BUCKET` | *(not set)* | Bucket for uploaded files. Turns on S3-compatible object storage. See the [scaling guide](https://sirblobby.github.io/TypstDrive/getting-started/scaling/) for `S3_ENDPOINT`, `S3_REGION`, the access keys and other options. |
 
 #### Example: production-ready `docker-compose.yml` snippet
 
@@ -223,6 +227,7 @@ The first account created via the setup wizard is automatically an administrator
 - **Delete User** — permanently remove any account other than your own
 - **Storage** — usage per account, with a default quota and per-account quotas
 - **Packages** — publishing rules, maximum package size and maximum versions per package
+- **Server** — database type and version, Redis and object storage status, and which environment variables are set (never their values)
 
 ## Continuous Integration
 

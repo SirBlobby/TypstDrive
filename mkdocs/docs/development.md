@@ -20,12 +20,14 @@ The server code in `server/src/` is grouped by feature.
 | `accounts/` | Sign-in, sessions, avatars, passwords, first-run setup, account rules and storage quotas. |
 | `admin/` | User management and site settings for administrators. |
 | `api/` | Render API keys, rate limits and the `/v1/render` endpoint. |
+| `cluster/` | Redis or Valkey pub/sub that shares edits and events between app instances. |
 | `compile/` | The Typst compiler, its file world, fonts, and the compile and export handlers. |
-| `db/` | Database connection, schema and migrations for SQLite and PostgreSQL. |
+| `db/` | Database connection, schema, migrations and MySQL query translation. |
 | `desktop/` | The Typst Desktop sync API: devices, sessions, projects, folders, documents and files. |
 | `drive/` | Documents, document files, uploaded files, folders, projects, downloads and comments. |
+| `file_storage/` | Where uploaded file bytes live: the database or S3-compatible object storage, with a memory cache. |
 | `packages/` | The package registry and publishing rules. |
-| `realtime/` | Yjs collaboration and live document state. |
+| `realtime/` | Yjs collaboration, live document state and the relay to other instances. |
 | `sharing/` | Access checks, members, and ownership transfers. |
 
 ## Running locally
@@ -76,3 +78,10 @@ mkdocs serve -f mkdocs/mkdocs.yml
 | `docs.yml` | Pushes to `main` that change `mkdocs/` | Builds this site and publishes it to GitHub Pages. |
 
 The image workflow signs in to `ghcr.io` with the built-in `GITHUB_TOKEN`. Run it manually with `linux/amd64,linux/arm64` to build arm images too.
+
+## Writing queries
+
+Write SQL with numbered placeholders (`$1`, `$2`, ...) and wrap every query string in `sql(...)`, or `sql_owned(...)` for one built with `format!`, both from `crate::db`. On MySQL these rewrite the placeholders to `?`, `CAST(... AS BIGINT)` to `SIGNED` and `ON CONFLICT` to `ON DUPLICATE KEY UPDATE`.
+
+- Number placeholders in order and use each one once. Bind a value twice if it is needed twice.
+- Do not use `RETURNING`. Run the write, then select the row.
