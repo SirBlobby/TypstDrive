@@ -7,6 +7,7 @@
     import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
     import QuotaInput from './QuotaInput.svelte';
+    import VersionHistorySettings from './VersionHistorySettings.svelte';
 
     type StorageUsage = {
         documents_size_bytes: number;
@@ -206,6 +207,8 @@
                 </button>
             {/snippet}
         </SettingsCard>
+
+        <VersionHistorySettings />
 
         <SettingsCard title="Usage by account" description="Sorted by usage. Set a quota to override the default for one account.">
             <div class="px-5 py-3">

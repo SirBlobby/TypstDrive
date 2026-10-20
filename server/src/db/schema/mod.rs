@@ -63,6 +63,8 @@ pub const INDEXES: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_comments_user ON comments (user_id)",
     "CREATE INDEX IF NOT EXISTS idx_document_versions_document ON document_versions (document_id)",
     "CREATE INDEX IF NOT EXISTS idx_document_versions_user ON document_versions (user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments (parent_id)",
+    "CREATE INDEX IF NOT EXISTS idx_document_suggestions_document ON document_suggestions (document_id)",
     "CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys (user_id)",
     "CREATE INDEX IF NOT EXISTS idx_projects_owner_folder ON projects (owner_id, folder_id)",
     "CREATE INDEX IF NOT EXISTS idx_projects_folder ON projects (folder_id)",

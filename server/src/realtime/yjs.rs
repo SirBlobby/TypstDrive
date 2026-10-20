@@ -29,6 +29,7 @@ pub struct ViewerFilterStream {
     state: AppState,
     room_id: String,
     user_id: Option<String>,
+    edited: Arc<AtomicBool>,
 }
 
 fn contains_document_change(bytes: &[u8]) -> bool {
@@ -70,6 +71,7 @@ impl Stream for ViewerFilterStream {
                     }
                     if let Some(user_id) = self.user_id.as_deref().filter(|_| contains_document_change(&bytes)) {
                         crate::drive::activity::note_live_edit(&self.room_id, user_id);
+                        self.edited.store(true, Ordering::SeqCst);
                     }
                     relay::forward_client_frame(&self.state, &self.room_id, &bytes);
                     return std::task::Poll::Ready(Some(Ok(bytes.to_vec())));
@@ -236,6 +238,7 @@ pub async fn yjs_handler(
         let (sink, stream) = socket.split();
         let sink = Arc::new(Mutex::new(AxumSink(sink)));
         let revoked_flag = Arc::new(AtomicBool::new(false));
+        let edited_flag = Arc::new(AtomicBool::new(false));
 
         let filtered_stream = ViewerFilterStream {
             inner: stream,
@@ -244,6 +247,7 @@ pub async fn yjs_handler(
             state: state.clone(),
             room_id: room_id.clone(),
             user_id: user_id.clone(),
+            edited: edited_flag.clone(),
         };
 
         let subscription = bcast.subscribe(sink.clone(), filtered_stream);
@@ -261,5 +265,10 @@ pub async fn yjs_handler(
         }
 
         access::unregister_session(&state, &session.resource, session.session_id).await;
+
+        let edited_document = edited_flag.load(Ordering::SeqCst) && !room_id.starts_with("project:");
+        if let Some(editor_id) = user_id.as_deref().filter(|_| edited_document) {
+            crate::drive::versions::save_when_leaving(&state, &room_id, editor_id).await;
+        }
     })
 }

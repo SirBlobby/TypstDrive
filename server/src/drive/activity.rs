@@ -1,14 +1,23 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::sync::{LazyLock, Mutex};
 
 use crate::db::{sql, timestamp_now};
 use crate::AppState;
 
 static LIVE_EDITORS: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+static EDITORS_SINCE_VERSION: LazyLock<Mutex<HashMap<String, BTreeSet<String>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 pub fn note_live_edit(room_id: &str, user_id: &str) {
     let mut editors = LIVE_EDITORS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     editors.insert(room_id.to_string(), user_id.to_string());
+    drop(editors);
+    let mut pending = EDITORS_SINCE_VERSION.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    pending.entry(room_id.to_string()).or_default().insert(user_id.to_string());
+}
+
+pub fn take_editors_since_version(room_id: &str) -> BTreeSet<String> {
+    let mut pending = EDITORS_SINCE_VERSION.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    pending.remove(room_id).unwrap_or_default()
 }
 
 pub fn live_editor(room_id: &str) -> Option<String> {
