@@ -2,6 +2,8 @@
 
 The editor has two halves: the text you write on the left and a live preview of the pages on the right.
 
+![The editor with a live preview](../assets/previews/editor.png)
+
 ## Writing
 
 - Typst code is colored so it is easy to read, and suggestions pop up as you type.

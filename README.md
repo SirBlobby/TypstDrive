@@ -143,7 +143,19 @@ TypstDrive is a community application and is not affiliated with, endorsed by, o
   <img src="preview/editor.png" alt="Editor view" width="100%">
 </p>
 <p align="center">
-  <img src="preview/login.png" alt="Authentication view" width="100%">
+  <img src="preview/packages.png" alt="Packages view" width="100%">
+</p>
+<p align="center">
+  <img src="preview/teams.png" alt="Team spaces view" width="100%">
+</p>
+<p align="center">
+  <img src="preview/settings.png" alt="Settings view" width="100%">
+</p>
+<p align="center">
+  <img src="preview/site-settings.png" alt="Site settings view" width="100%">
+</p>
+<p align="center">
+  <img src="preview/login.png" alt="Sign-in view" width="100%">
 </p>
 
 ## Donate

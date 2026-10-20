@@ -2,6 +2,8 @@
 
 Administrators look after a TypstDrive server from the browser. Open **Site Settings** from the account menu in the top right. The first account, created on the setup page, is an administrator, and administrators can make others administrators too.
 
+![The site settings page](../assets/previews/site-settings.png)
+
 | Page | What you can do |
 |---|---|
 | [Users and accounts](users.md) | Create, remove and help users, and decide who can sign up. |

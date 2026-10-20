@@ -2,6 +2,8 @@
 
 Open **Settings** from the account menu in the top right.
 
+![The settings page](../assets/previews/settings.png)
+
 ## Account
 
 - **Profile picture**: hover over it and choose an image, then drag and zoom to crop it.

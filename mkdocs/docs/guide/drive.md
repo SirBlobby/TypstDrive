@@ -2,6 +2,8 @@
 
 The drive is the first thing you see after signing in. It holds everything you own: folders, documents, projects and uploaded files.
 
+![The drive with folders, documents and projects](../assets/previews/drive.png)
+
 ## Finding your way around
 
 - **Sidebar** on the left: **Home** (your own files), **Shared** (things other people shared with you), **Starred**, your [team spaces](teams.md), **Packages**, and a link to Typst Universe. At the bottom you can see how much storage you use and which version of TypstDrive is running. Collapse the sidebar with the button at the bottom.

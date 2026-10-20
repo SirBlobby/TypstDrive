@@ -2,6 +2,8 @@
 
 A package is a reusable piece of Typst, such as a letter template or a set of helper functions, that other people can pull into their own documents with one line. TypstDrive has its own package library for everyone on your server.
 
+![The packages page](../assets/previews/packages.png)
+
 ## Using a package
 
 Open **Packages** in the drive sidebar to browse what is available. Each package shows its description, author, latest version and an import line. Copy the line into your document:

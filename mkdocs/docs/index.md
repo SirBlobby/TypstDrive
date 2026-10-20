@@ -4,6 +4,8 @@ TypstDrive is a place to write, organize and share [Typst](https://typst.app/) d
 
 You run TypstDrive on your own server, so your documents stay with you.
 
+![The TypstDrive editor with a live preview](assets/previews/editor.png)
+
 !!! info "Not an official Typst product"
     TypstDrive is a community project. It is not affiliated with, endorsed by, or supported by the official Typst project. It uses the open-source Typst compiler to turn your writing into finished documents. See [About and disclaimer](about.md).
 

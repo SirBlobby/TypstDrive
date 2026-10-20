@@ -1,5 +1,7 @@
 # Sign-in and single sign-on
 
+![The sign-in page](../assets/previews/login.png)
+
 Out of the box, people sign in with a username or email and a password. You can add:
 
 - **Email codes**: a one-time code sent by email instead of a password. Needs [email](email.md).

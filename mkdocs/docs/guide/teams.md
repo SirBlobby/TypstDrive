@@ -2,6 +2,8 @@
 
 A team space is a shared drive that belongs to a group instead of one person. It has its own documents, projects, folders, files, fonts, packages and storage. Because the team owns the work, it stays put when someone leaves.
 
+![A team space](../assets/previews/teams.png)
+
 ## Switching spaces
 
 Your teams are listed under **Teams** in the drive sidebar. Choose one to open its drive, or **Home** to go back to yours. Anything you create while a team is open belongs to that team.
