@@ -63,6 +63,11 @@ Full documentation, including a user guide, self-hosting, administration and the
 - **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, API limits and an audit log.
 - **Flexible Hosting**: SQLite, PostgreSQL or MySQL/MariaDB with automatic upgrades, plus Redis or Valkey and S3-compatible storage for larger installs.
 
+
+### Future Features
+- [] Add language support for more languages.
+- [] Add more themes or maybe allow users or site admins to upload new themes.
+
 ## Self-Hosting
 
 TypstDrive runs as a single Docker container.
@@ -129,14 +134,16 @@ TypstDrive uses the [Typst](https://github.com/typst/typst) compiler, which is a
 
 TypstDrive is a community application and is not affiliated with, endorsed by, or supported by the official Typst project or Typst GmbH. "Typst" is used only to describe the document language TypstDrive works with. Links to Typst documentation and Typst Universe open the official Typst website.
 
-## Screenshots
+## Previews
 
+<p align="center">
+  <img src="preview/drive.png" alt="Drive view" width="100%">
+</p>
 <p align="center">
   <img src="preview/editor.png" alt="Editor view" width="100%">
 </p>
 <p align="center">
-  <img src="preview/dashboard.png" alt="Dashboard view" width="49%">
-  <img src="preview/login.png" alt="Authentication view" width="49%">
+  <img src="preview/login.png" alt="Authentication view" width="100%">
 </p>
 
 ## Donate
