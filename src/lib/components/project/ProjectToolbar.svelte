@@ -4,7 +4,6 @@
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
 	import {
-		connectedUsers,
 		editorViewStore,
 		documentZoomStore,
 		previewOpenStore
@@ -14,6 +13,7 @@
 	import PresentationMode from '../PresentationMode.svelte';
 	import Modal from '../Modal.svelte';
 	import InfoModal from '../drive/InfoModal.svelte';
+	import CollaboratorAvatars from '../editor/CollaboratorAvatars.svelte';
 	import PromptModal from '../PromptModal.svelte';
 	import ConfirmModal from '../ConfirmModal.svelte';
 	import ShareModal from '../ShareModal.svelte';
@@ -258,10 +258,6 @@
 		target.value = '';
 	}
 
-	function getInitials(name: string) {
-		return name.substring(0, 2).toUpperCase();
-	}
-
 	function submitRename(name: string) {
 		if (name && name !== projectName) {
 			fetch(`/api/projects/${projectId}`, {
@@ -366,13 +362,7 @@
 		</div>
 
 		<div class="flex items-center gap-3">
-			{#if $connectedUsers.length > 0}
-				<div class="flex items-center -space-x-2 mr-2">
-					{#each $connectedUsers as user}
-						<div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-[var(--color-surface)] shadow-sm" style="background-color: {user.color}; z-index: {user.isLocal ? 10 : 1};" title={user.name + (user.isLocal ? ' (You)' : '')}>{getInitials(user.name)}</div>
-					{/each}
-				</div>
-			{/if}
+			<CollaboratorAvatars />
 
 			<div class="w-px h-5 bg-[var(--color-line)]"></div>
 

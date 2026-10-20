@@ -1,7 +1,6 @@
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { get } from 'svelte/store';
-import { userStore } from './auth';
+import { localAwarenessUser } from './awareness-user';
 import { connectionStatus, connectedUsers } from './store';
 import type { AwarenessUser } from './store';
 
@@ -12,11 +11,6 @@ export interface OpenFile {
 	text: Y.Text;
 	provider: WebsocketProvider;
 }
-
-const userColors = [
-	'#30bced', '#6eeb83', '#ffbc42', '#ecd444', '#ee6352',
-	'#9ac2c9', '#8acb88', '#1be7ff', '#ff0054', '#9e0059'
-];
 
 const open = new Map<string, OpenFile>();
 let projectId: string | null = null;
@@ -42,13 +36,7 @@ export function openFile(fileId: string, path: string): OpenFile {
 
 	const provider = new WebsocketProvider(`${protocol}//${host}/yjs`, `project:${projectId}:${fileId}`, doc);
 
-	const user = get(userStore);
-	const color = userColors[Math.floor(Math.random() * userColors.length)];
-	provider.awareness.setLocalStateField('user', {
-		name: user?.username || 'Anonymous',
-		color,
-		colorLight: color + '33'
-	});
+	provider.awareness.setLocalStateField('user', localAwarenessUser());
 
 	provider.on('status', (event: { status: string }) => {
 		connectionStatus.set(event.status);

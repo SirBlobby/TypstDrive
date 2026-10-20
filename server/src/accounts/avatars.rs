@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use axum::{
-    extract::{Multipart, State},
+    extract::{Multipart, Path, State},
     http::{header, StatusCode},
     response::IntoResponse,
 };
@@ -66,9 +66,21 @@ pub async fn get_avatar(
     jar: SignedCookieJar,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let user_id = session_user_id(&jar)?;
+    avatar_response(&state, &user_id).await
+}
 
+pub async fn get_user_avatar(
+    State(state): State<AppState>,
+    jar: SignedCookieJar,
+    Path(user_id): Path<String>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    session_user_id(&jar)?;
+    avatar_response(&state, &user_id).await
+}
+
+async fn avatar_response(state: &AppState, user_id: &str) -> Result<impl IntoResponse, (StatusCode, String)> {
     let avatar = sqlx::query_as::<_, (Vec<u8>,)>(sql("SELECT data FROM user_avatars WHERE user_id = $1"))
-        .bind(&user_id)
+        .bind(user_id)
         .fetch_optional(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

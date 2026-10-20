@@ -1,7 +1,6 @@
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { get } from 'svelte/store';
-import { userStore } from './auth';
+import { localAwarenessUser } from './awareness-user';
 import { connectionStatus, connectedUsers } from './store';
 import type { AwarenessUser } from './store';
 
@@ -9,11 +8,6 @@ export let doc: Y.Doc | null = null;
 export let text: Y.Text | null = null;
 export let provider: WebsocketProvider | null = null;
 export let undoManager: Y.UndoManager | null = null;
-
-const userColors = [
-	'#30bced', '#6eeb83', '#ffbc42', '#ecd444', '#ee6352',
-	'#9ac2c9', '#8acb88', '#1be7ff', '#ff0054', '#9e0059'
-];
 
 export function initYjs(docId: string) {
 	if (typeof window === 'undefined') return;
@@ -39,14 +33,7 @@ export function initYjs(docId: string) {
 		doc
 	);
 
-	const user = get(userStore);
-	const color = userColors[Math.floor(Math.random() * userColors.length)];
-	
-	provider.awareness.setLocalStateField('user', {
-		name: user?.username || 'Anonymous',
-		color: color,
-		colorLight: color + '33'
-	});
+	provider.awareness.setLocalStateField('user', localAwarenessUser());
 
 	provider.on('status', (event: { status: string }) => {
 		connectionStatus.set(event.status);
