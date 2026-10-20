@@ -18,10 +18,14 @@ Full documentation, including self-hosting, configuration, administration and th
 
 - **Real-Time Collaboration**: See changes and cursors from other people instantly while you write together.
 - **Instant Preview**: Your document updates as you type, with zoom controls and a preview pane you can collapse.
+- **Editor Tools**: Find and replace, line comments, heading sizes, quotes, and quick insert for images, tables, documents, symbols and emoji.
+- **Editor Settings**: Choose the editor font and size, and turn on spell checking, line numbers and a minimap.
+- **Version History**: Versions are saved automatically when people leave the editor. See who edited and when, compare changes and restore older versions.
+- **Comments and Suggestions**: Comment on text, reply and resolve threads, or suggest edits for others to accept or reject.
 - **Projects**: Multi-file workspaces for larger documents and full templates, with your own fonts and images.
 - **Organize Your Drive**: Folders, search, grid and list views, and starred documents and projects for quick access.
-- **Sharing**: Share documents, projects and folders with people as editors or viewers, or transfer ownership to someone else.
-- **Share Links**: Let anyone with the link view or edit, optionally with a password or an expiry date.
+- **Sharing**: Share documents, projects and folders with people as editors or viewers, share documents with suggesters, or transfer ownership to someone else.
+- **Share Links**: Let anyone with the link view, suggest or edit, optionally with a password or an expiry date.
 - **Team Spaces**: Shared drives owned by a team, where members create and edit documents and projects together.
 - **Export Options**: Export to PDF, PNG, SVG, HTML, Markdown, Word or LaTeX.
 - **Presentation Mode**: Turn a document into a slideshow and draw on the slides as you present.
@@ -29,7 +33,7 @@ Full documentation, including self-hosting, configuration, administration and th
 - **Sign-In Options**: Passwords, one-time codes by email, single sign-on, GitHub and Google, with email verification and password reset.
 - **Customizable Themes**: Choose from several themes (Catppuccin, Arch Linux, Cerberus) and switch dark mode on or off.
 - **Branding**: Admins can set the site name, logo, accent color, tagline and a message on the sign-in page.
-- **Admin Tools**: Manage users, storage quotas, sign-in rules, team spaces and packages, with an audit log of every change.
+- **Admin Tools**: Manage users, storage quotas, version history limits, sign-in rules, team spaces and packages, with an audit log of every change.
 
 ## Documentation
 

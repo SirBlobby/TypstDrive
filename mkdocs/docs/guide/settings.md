@@ -17,6 +17,14 @@ When email is configured, a badge shows whether your address is verified, with a
 
 Choose a color theme (Cerberus, Catppuccin or Arch Linux) in light or dark mode. Accessibility options include a text size setting and a high contrast mode. These settings are saved in your browser.
 
+## Editor
+
+These settings are saved in your browser.
+
+- **Font size** and **Font family** for the editor text.
+- **Spell checker** underlines misspelled words in prose, using your browser's dictionary for the chosen language. Code, math, labels and links are skipped.
+- **Line numbers** and **Minimap** can be turned on or off. **Minimap size** sets how wide the minimap is and how large it draws lines. Click or drag on the minimap to scroll.
+
 ## Storage
 
 Shows how much space your documents and uploaded files use, and your storage quota if an administrator has set one.

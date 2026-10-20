@@ -86,7 +86,7 @@ Tokens are stored hashed. Signing out with `POST /api/desktop/auth/logout`, or r
 
 ## Permissions
 
-Every response for a document or project includes the caller's `role`. Owners and editors can write; viewers receive `403`.
+Every response for a document or project includes the caller's `role`. Owners and editors can write; suggesters and viewers receive `403`.
 
 ## Conflict detection
 

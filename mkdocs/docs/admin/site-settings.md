@@ -21,7 +21,7 @@ Administrators open **Site Settings** from the account menu, or go to `/site-set
 | Members can change their username | When off, only administrators can rename accounts. |
 | Members can change their email | When off, the sign-up email stays fixed for members. |
 
-Administrators are not restricted by the username, email and domain rules. Until these settings are saved for the first time, public registration follows the `ALLOW_REGISTRATION` environment variable.
+Administrators are not restricted by the username, email and domain rules. Public registration is on until an administrator turns it off.
 
 ## Authentication
 
@@ -91,9 +91,12 @@ The user list shows each account's effective access, rate limit, key usage and r
 The Storage tab shows total usage across the instance and how much space each account uses, sorted by usage.
 
 - **Default quotas** set the maximum storage for every user and every team space without its own quota. Team storage is shared by all of the team's members. Use `0` for unlimited.
+- **Version history** sets the maximum number of versions kept for each document. When a document goes over the limit, its oldest versions are deleted. Lowering the limit removes extra versions from every document right away. Use `0` to keep every version.
 - **Usage by account** lets you search for a user and set a quota for that account only. Leave it empty to use the default.
 
-When an account is full, new uploads are blocked. Existing data is never removed.
+When an account is full, new uploads are blocked. Existing account data is never removed. Old versions are only removed by the version history limit.
+
+Auto saved versions made within 15 minutes of each other are merged into one version, so history does not fill up with small saves.
 
 ## Packages
 

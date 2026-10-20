@@ -28,7 +28,7 @@ The server code in `server/src/` is grouped by feature.
 | `db/` | Database connection, schema, migrations and MySQL query translation. |
 | `email/` | The SMTP mailer and the messages it sends. The HTML and plain-text templates live in `email/templates/` and are built into the server. |
 | `desktop/` | The Typst Desktop sync API: devices, sessions, projects, folders, documents and files. |
-| `drive/` | Documents, document files, uploaded files, folders, projects, stars, downloads and comments. |
+| `drive/` | Documents, document files, uploaded files, folders, projects, stars, downloads, comments, suggestions, version history and the editor's insert library. |
 | `file_storage/` | Where uploaded file bytes live: the database or S3-compatible object storage, with a memory cache. |
 | `packages/` | The package registry and publishing rules. |
 | `realtime/` | Yjs collaboration, live document state and the relay to other instances. |

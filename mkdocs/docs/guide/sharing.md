@@ -4,13 +4,16 @@ Owners can share documents, projects and folders with other users by email, or m
 
 ## Roles
 
-| Role | Can view | Can edit | Can comment | Can manage sharing |
-|---|---|---|---|---|
-| Owner | Yes | Yes | Yes | Yes |
-| Editor | Yes | Yes | Yes | No |
-| Viewer | Yes | No | No | No |
+| Role | Can view | Can edit | Can suggest | Can comment | Can manage sharing |
+|---|---|---|---|---|---|
+| Owner | Yes | Yes | Yes | Yes | Yes |
+| Editor | Yes | Yes | Yes | Yes | No |
+| Suggester | Yes | No | Yes | Yes | No |
+| Viewer | Yes | No | No | No | No |
 
-Viewers are strictly read-only:
+The suggester role is only available for documents. Suggesters propose changes that owners and editors accept or reject. See [Suggesting](editor.md#suggesting).
+
+Viewers and suggesters cannot change the document directly:
 
 - Their editor connection only receives changes. Anything they try to send is dropped by the server.
 - Previews and exports for viewers are compiled from the saved document, not from text sent by the browser.
@@ -22,7 +25,7 @@ Items in a team space belong to the team. Every member of the team has access, a
 
 ## Link sharing
 
-Under **General access** in the Share dialog, choose **Viewer** or **Editor** to let anyone with the link open a document or project without being shared with them. Set it back to **Off** to stop the link working.
+Under **General access** in the Share dialog, choose **Viewer**, **Suggester** (documents only) or **Editor** to let anyone with the link open a document or project without being shared with them. Set it back to **Off** to stop the link working. Visitors need to be signed in to add comments or suggestions.
 
 - **Password**: visitors enter it once per browser before the item opens. Changing or removing it takes effect immediately.
 - **Expires**: after this date and time the link stops working and visitors see that it has expired.
