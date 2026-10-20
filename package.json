@@ -1,7 +1,7 @@
 {
 	"name": "typstdrive",
 	"private": true,
-	"version": "1.5.0",
+	"version": "2.0.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev --host",
@@ -41,6 +41,7 @@
 		"chart.js": "^4.5.1",
 		"codemirror": "^6.0.2",
 		"codemirror-lang-typst": "^0.4.0",
+		"svelte-easy-crop": "^4.0.1",
 		"y-codemirror.next": "^0.3.6",
 		"y-websocket": "^3.1.0",
 		"yjs": "^13.6.33"
