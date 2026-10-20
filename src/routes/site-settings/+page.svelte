@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { brandingStore } from '$lib/ts/branding';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte';
@@ -10,13 +11,23 @@
     import StorageSettings from '$lib/components/site-settings/StorageSettings.svelte';
     import PackageSettings from '$lib/components/site-settings/PackageSettings.svelte';
     import ServerSettings from '$lib/components/site-settings/ServerSettings.svelte';
+    import AuthenticationSettings from '$lib/components/site-settings/AuthenticationSettings.svelte';
+    import EmailSettings from '$lib/components/site-settings/EmailSettings.svelte';
+    import TeamSettings from '$lib/components/site-settings/TeamSettings.svelte';
+    import BrandingSettings from '$lib/components/site-settings/BrandingSettings.svelte';
+    import AuditLog from '$lib/components/site-settings/AuditLog.svelte';
 
     const navItems = [
         { id: 'users', label: 'Users', icon: 'mdi:account-group-outline' },
         { id: 'accounts', label: 'Registration & Accounts', icon: 'mdi:account-cog-outline' },
+        { id: 'authentication', label: 'Authentication', icon: 'mdi:shield-key-outline' },
+        { id: 'email', label: 'Email', icon: 'mdi:email-outline' },
+        { id: 'branding', label: 'Branding', icon: 'mdi:palette-swatch-outline' },
+        { id: 'teams', label: 'Team Spaces', icon: 'mdi:account-multiple-outline' },
         { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
         { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
         { id: 'api-access', label: 'API Access', icon: 'mdi:api' },
+        { id: 'audit-log', label: 'Audit Log', icon: 'mdi:clipboard-text-clock-outline' },
         { id: 'server', label: 'Server', icon: 'mdi:server-outline' }
     ];
 
@@ -38,8 +49,8 @@
 </script>
 
 <svelte:head>
-    <title>Site Settings - TypstDrive</title>
-    <meta name="description" content="Manage site-wide TypstDrive settings." />
+    <title>Site Settings - {$brandingStore.site_name}</title>
+    <meta name="description" content={`Manage site-wide ${$brandingStore.site_name} settings.`} />
 </svelte:head>
 
 <div class="h-screen flex flex-col">
@@ -63,12 +74,22 @@
                     <UserManagement />
                 {:else if activeSection === 'accounts'}
                     <RegistrationSettings />
+                {:else if activeSection === 'authentication'}
+                    <AuthenticationSettings />
+                {:else if activeSection === 'email'}
+                    <EmailSettings />
+                {:else if activeSection === 'branding'}
+                    <BrandingSettings />
+                {:else if activeSection === 'teams'}
+                    <TeamSettings />
                 {:else if activeSection === 'storage'}
                     <StorageSettings />
                 {:else if activeSection === 'packages'}
                     <PackageSettings />
                 {:else if activeSection === 'api-access'}
                     <ApiAccessSettings />
+                {:else if activeSection === 'audit-log'}
+                    <AuditLog />
                 {:else if activeSection === 'server'}
                     <ServerSettings />
                 {/if}

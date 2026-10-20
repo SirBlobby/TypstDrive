@@ -4,6 +4,7 @@
     import Icon from '@iconify/svelte';
     import UserAvatar from '$lib/components/UserAvatar.svelte';
     import { DOCS_URL } from '$lib/ts/links';
+    import { brandingStore, logoUrl } from '$lib/ts/branding';
 
     let showUserMenu = $state(false);
 
@@ -38,9 +39,9 @@
 <nav class="bg-[var(--color-surface)] shadow-sm border-b border-[var(--color-line)] px-4 py-2 flex justify-between items-center sticky top-0 z-10 transition-colors duration-200">
     <h1 class="text-lg font-bold text-[var(--color-ink)] flex items-center gap-2">
         <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-accent)]">
-            <img src="/favicon.png" alt="TypstDrive" class="h-6 w-6" />
+            <img src={logoUrl($brandingStore)} alt={$brandingStore.site_name} class="h-6 w-6 object-contain" />
         </span>
-        TypstDrive
+        {$brandingStore.site_name}
     </h1>
     <div class="flex items-center gap-3">
         <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition-colors bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] px-2 py-1.5 rounded-md flex items-center gap-2" title="TypstDrive documentation">

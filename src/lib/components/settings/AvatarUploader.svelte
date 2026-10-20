@@ -2,6 +2,7 @@
     import Icon from '@iconify/svelte';
     import { userStore } from '$lib/ts/auth';
     import UserAvatar from '$lib/components/UserAvatar.svelte';
+    import ImageCropDialog from '$lib/components/ImageCropDialog.svelte';
 
     const maxUploadBytes = 15 * 1024 * 1024;
 
@@ -13,7 +14,9 @@
         userStore.update((user) => (user ? { ...user, avatar_updated_at: version } : user));
     }
 
-    async function uploadAvatar(event: Event) {
+    let cropSource = $state<string | null>(null);
+
+    function chooseImage(event: Event) {
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0];
         input.value = '';
@@ -24,21 +27,26 @@
             uploadError = 'Image must be 15 MB or smaller.';
             return;
         }
+        cropSource = URL.createObjectURL(file);
+    }
 
+    function closeCropper() {
+        if (cropSource) URL.revokeObjectURL(cropSource);
+        cropSource = null;
+    }
+
+    async function uploadAvatar(image: Blob) {
         isUploading = true;
         try {
             const formData = new FormData();
-            formData.append('avatar', file);
+            formData.append('avatar', image, 'avatar.png');
             const res = await fetch('/api/auth/avatar', { method: 'PUT', body: formData });
-            if (res.ok) {
-                setAvatarVersion(await res.text());
-            } else {
-                uploadError = (await res.text()) || 'Failed to upload image.';
-            }
-        } catch {
-            uploadError = 'Network error occurred.';
+            if (!res.ok) throw new Error((await res.text()) || 'Failed to upload image.');
+            setAvatarVersion(await res.text());
+            closeCropper();
+        } finally {
+            isUploading = false;
         }
-        isUploading = false;
     }
 
     async function removeAvatar() {
@@ -71,7 +79,7 @@
             <Icon icon={isUploading ? 'mdi:loading' : 'mdi:camera-outline'} class="text-2xl {isUploading ? 'animate-spin' : ''}" />
         </span>
     </button>
-    <input bind:this={fileInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange={uploadAvatar} />
+    <input bind:this={fileInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange={chooseImage} />
     {#if $userStore?.avatar_updated_at}
         <button type="button" onclick={removeAvatar} disabled={isUploading} class="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-danger)] transition-colors disabled:opacity-50">
             Remove
@@ -81,3 +89,7 @@
         <p class="text-xs text-[var(--color-danger)] max-w-40 text-center">{uploadError}</p>
     {/if}
 </div>
+
+{#if cropSource}
+    <ImageCropDialog image={cropSource} title="Crop profile picture" round onCancel={closeCropper} onConfirm={uploadAvatar} />
+{/if}

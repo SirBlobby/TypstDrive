@@ -24,7 +24,7 @@ fn session_user_id(jar: &SignedCookieJar) -> Result<String, (StatusCode, String)
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))
 }
 
-fn compress_avatar(source: &[u8]) -> Result<Vec<u8>, String> {
+pub fn compress_image(source: &[u8], max_dimension: u32) -> Result<Vec<u8>, String> {
     let mut limits = Limits::default();
     limits.max_image_width = Some(MAX_SOURCE_DIMENSION);
     limits.max_image_height = Some(MAX_SOURCE_DIMENSION);
@@ -38,8 +38,8 @@ fn compress_avatar(source: &[u8]) -> Result<Vec<u8>, String> {
         .decode()
         .map_err(|_| "Unsupported or corrupt image. Use PNG, JPEG, GIF or WebP.".to_string())?;
 
-    if image.width() > MAX_AVATAR_DIMENSION || image.height() > MAX_AVATAR_DIMENSION {
-        image = image.thumbnail(MAX_AVATAR_DIMENSION, MAX_AVATAR_DIMENSION);
+    if image.width() > max_dimension || image.height() > max_dimension {
+        image = image.thumbnail(max_dimension, max_dimension);
     }
 
     let pixels = image.to_rgba8();
@@ -103,7 +103,7 @@ pub async fn upload_avatar(
         .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?
         .to_vec();
 
-    let compressed = tokio::task::spawn_blocking(move || compress_avatar(&source))
+    let compressed = tokio::task::spawn_blocking(move || compress_image(&source, MAX_AVATAR_DIMENSION))
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;

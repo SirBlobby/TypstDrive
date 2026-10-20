@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { brandingStore } from '$lib/ts/branding';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { userStore } from '$lib/ts/auth';
@@ -13,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>TypstDrive</title>
+	<title>{$brandingStore.site_name}</title>
 	<meta name="description" content="Collaborative Typst Editor." />
 </svelte:head>
 
