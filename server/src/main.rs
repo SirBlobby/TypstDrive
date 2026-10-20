@@ -16,13 +16,17 @@ mod compile;
 mod db;
 mod desktop;
 mod drive;
+mod email;
 mod file_storage;
 mod hashing;
 mod models;
 mod packages;
 mod realtime;
+mod request_context;
 mod routes;
 mod sharing;
+mod site_url;
+mod teams;
 
 use compile::compiler::TypstCompiler;
 
@@ -42,6 +46,9 @@ pub struct AppState {
     pub live_documents: Arc<Mutex<realtime::live_documents::LiveDocuments>>,
     pub cluster: Arc<cluster::Cluster>,
     pub file_storage: Arc<file_storage::FileStorage>,
+    pub login_guard: Arc<accounts::login_guard::LoginGuard>,
+    pub mailer: Arc<email::Mailer>,
+    pub sso: Arc<accounts::sso::SsoRegistry>,
 }
 
 impl axum::extract::FromRef<AppState> for Key {
@@ -65,7 +72,6 @@ async fn main() {
 
     let db = db::init_db().await;
 
-    
     let key = match std::env::var("COOKIE_SECRET") {
         Ok(secret) => {
             let bytes = secret.as_bytes();
@@ -99,6 +105,9 @@ async fn main() {
         live_documents: Arc::new(Mutex::new(HashMap::new())),
         cluster: Arc::new(cluster::Cluster::from_environment()),
         file_storage: Arc::new(file_storage::FileStorage::from_environment()),
+        login_guard: Arc::new(accounts::login_guard::LoginGuard::default()),
+        mailer: Arc::new(email::Mailer::from_environment()),
+        sso: Arc::new(accounts::sso::SsoRegistry::from_environment()),
     };
 
     cluster::start(state.clone());
@@ -112,6 +121,8 @@ async fn main() {
         .await
         .unwrap();
     tracing::info!("Server listening on http://{}", addr);
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app.into_make_service_with_connect_info::<std::net::SocketAddr>())
+        .await
+        .unwrap();
 }
 

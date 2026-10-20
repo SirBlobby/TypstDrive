@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use sqlx::{AnyConnection, AnyPool, AssertSqlSafe, Connection};
 
 use super::dialect::Dialect;
-use super::schema::{Column, CopyRule, Table, BACKFILLS, INDEXES, LEGACY_RENAMES, RETIRED_TABLES, TABLES};
+use super::schema::{tables, Column, CopyRule, Table, BACKFILLS, INDEXES, LEGACY_RENAMES, RETIRED_TABLES};
 
-pub const CURRENT_VERSION: i64 = 7;
+pub const CURRENT_VERSION: i64 = 10;
 const REBUILD_SUFFIX: &str = "__rebuild";
 
 async fn run(connection: &mut AnyConnection, sql: String) -> Result<(), sqlx::Error> {
@@ -88,7 +88,7 @@ fn create_table_sql(dialect: Dialect, table: &Table, created_name: &str) -> Stri
 }
 
 async fn add_missing_columns(connection: &mut AnyConnection, dialect: Dialect) -> Result<(), sqlx::Error> {
-    for table in TABLES {
+    for table in tables() {
         let existing_columns = column_names(connection, dialect, table.name).await?;
         for column in table.columns.iter().filter(|column| !existing_columns.contains(column.name)) {
             let (definition, foreign_key) = column_sql(dialect, table, column, table.name);
@@ -102,9 +102,9 @@ async fn add_missing_columns(connection: &mut AnyConnection, dialect: Dialect) -
     Ok(())
 }
 
-async fn run_backfills(connection: &mut AnyConnection) -> Result<(), sqlx::Error> {
-    for statement in BACKFILLS {
-        run(connection, statement.to_string()).await?;
+async fn run_backfills(connection: &mut AnyConnection, upgraded_from: i64) -> Result<(), sqlx::Error> {
+    for backfill in BACKFILLS.iter().filter(|backfill| backfill.since_version > upgraded_from) {
+        run(connection, backfill.statement.to_string()).await?;
     }
     Ok(())
 }
@@ -157,7 +157,7 @@ fn copy_rows_sql(dialect: Dialect, table: &Table, existing_columns: &HashSet<Str
 }
 
 async fn create_fresh_schema(connection: &mut AnyConnection, dialect: Dialect) -> Result<(), sqlx::Error> {
-    for table in TABLES {
+    for table in tables() {
         run(connection, create_table_sql(dialect, table, table.name)).await?;
     }
     Ok(())
@@ -191,7 +191,7 @@ async fn upgrade_legacy_schema(connection: &mut AnyConnection, dialect: Dialect)
         }
     }
 
-    for table in TABLES {
+    for table in tables() {
         rebuild_table(connection, dialect, table).await?;
     }
 
@@ -210,15 +210,15 @@ async fn apply_migrations(connection: &mut AnyConnection, dialect: Dialect) -> R
     let has_existing_data = table_exists(connection, dialect, "users").await?;
     let mut transaction = connection.begin().await?;
 
-    if version.is_some() {
+    if let Some(previous_version) = version {
         tracing::info!("Adding new tables and columns for schema version {CURRENT_VERSION}");
         create_fresh_schema(&mut transaction, dialect).await?;
         add_missing_columns(&mut transaction, dialect).await?;
-        run_backfills(&mut transaction).await?;
+        run_backfills(&mut transaction, previous_version).await?;
     } else if has_existing_data {
         tracing::info!("Upgrading existing database to schema version {CURRENT_VERSION}");
         upgrade_legacy_schema(&mut transaction, dialect).await?;
-        run_backfills(&mut transaction).await?;
+        run_backfills(&mut transaction, 0).await?;
     } else {
         tracing::info!("Creating database schema version {CURRENT_VERSION}");
         create_fresh_schema(&mut transaction, dialect).await?;

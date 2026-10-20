@@ -23,6 +23,9 @@ pub struct User {
     pub password_hash: String,
     #[serde(with = "serde_i64_bool")]
     pub is_admin: i64,
+    #[serde(with = "serde_i64_bool", default)]
+    #[sqlx(default)]
+    pub email_verified: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -30,6 +33,7 @@ pub struct UserProfile {
     #[serde(flatten)]
     pub user: User,
     pub avatar_updated_at: Option<String>,
+    pub has_password: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -39,6 +43,8 @@ pub struct AdminUserView {
     pub email: String,
     #[serde(with = "serde_i64_bool")]
     pub is_admin: i64,
+    #[serde(with = "serde_i64_bool")]
+    pub email_verified: i64,
     pub created_at: String,
 }
 
@@ -66,6 +72,9 @@ pub struct File {
     #[serde(default)]
     #[sqlx(default)]
     pub size_bytes: Option<i64>,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -78,6 +87,12 @@ pub struct Document {
     pub content: Option<Vec<u8>>,
     pub thumbnail_svg: Option<String>,
     pub public_role: Option<String>,
+    #[serde(skip)]
+    #[sqlx(default)]
+    pub link_password_hash: Option<String>,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub link_expires_at: Option<String>,
     #[serde(default)]
     #[sqlx(default)]
     pub effective_role: Option<String>,
@@ -97,6 +112,12 @@ pub struct Project {
     pub entrypoint: String,
     pub thumbnail_svg: Option<String>,
     pub public_role: Option<String>,
+    #[serde(skip)]
+    #[sqlx(default)]
+    pub link_password_hash: Option<String>,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub link_expires_at: Option<String>,
     #[serde(default)]
     #[sqlx(default)]
     pub effective_role: Option<String>,
@@ -127,6 +148,7 @@ pub struct Package {
     pub namespace: String,
     pub name: String,
     pub description: Option<String>,
+    pub visibility: String,
     pub created_at: String,
     #[serde(default)]
     #[sqlx(default)]
@@ -176,6 +198,7 @@ pub struct UpdateProjectFileRequest {
 pub struct PublishPackageRequest {
     pub project_id: String,
     pub version: Option<String>,
+    pub visibility: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -300,11 +323,18 @@ pub struct ApiKeyView {
     pub created_at: String,
     pub last_used_at: Option<String>,
     pub rate_limit: i64,
+    pub scopes: String,
+    pub expires_at: Option<String>,
+    #[sqlx(default)]
+    pub custom_rate_limit: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateApiKeyRequest {
     pub name: String,
+    pub scopes: Option<Vec<String>>,
+    pub expires_in_days: Option<i64>,
+    pub rate_limit: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -323,6 +353,7 @@ pub struct SetupStatus {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateUserRequest {
     pub is_admin: Option<bool>,
+    pub email_verified: Option<bool>,
     pub username: Option<String>,
     pub email: Option<String>,
 }

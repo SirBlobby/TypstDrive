@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, compile, desktop, drive, packages, realtime, sharing, AppState,
+    accounts, admin, api, compile, desktop, drive, packages, realtime, request_context, sharing, teams, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -15,6 +15,23 @@ pub fn build_router(state: AppState) -> Router {
         .route("/setup", get(accounts::setup::setup_status).post(accounts::setup::run_setup))
         .route("/admin/users", get(admin::users::list_users).post(admin::users::create_user))
         .route("/admin/users/{id}", patch(admin::users::update_user).delete(admin::users::delete_user))
+        .route("/admin/users/{id}/sessions", delete(admin::users::revoke_user_sessions))
+        .route("/admin/users/{id}/password", put(admin::user_password::set_user_password))
+        .route("/admin/authentication", get(admin::authentication::get_authentication).put(admin::authentication::update_authentication))
+        .route("/admin/branding", put(admin::branding::update_branding))
+        .route(
+            "/admin/branding/logo",
+            put(admin::branding::upload_logo)
+                .delete(admin::branding::remove_logo)
+                .layer(DefaultBodyLimit::max(accounts::avatars::MAX_UPLOAD_BYTES)),
+        )
+        .route("/branding", get(admin::branding::public_branding))
+        .route("/branding/logo", get(admin::branding::get_logo))
+        .route("/admin/email/test", post(admin::authentication::send_test_email))
+        .route("/admin/audit-log", get(admin::audit::list_entries))
+        .route("/admin/teams", get(teams::admin::list_all_teams))
+        .route("/admin/teams/{id}", delete(teams::admin::delete_any_team))
+        .route("/admin/team-policy", get(teams::policy::get_policy).put(teams::policy::update_policy))
         .route("/admin/account-policy", get(accounts::policy::get_policy).put(accounts::policy::update_policy))
         .route("/admin/api-access", get(api::limits::overview))
         .route("/admin/api-access/defaults", put(api::limits::update_defaults))
@@ -43,6 +60,32 @@ pub fn build_router(state: AppState) -> Router {
         .route("/auth/storage", get(accounts::storage::own_storage))
         .route("/auth/policy", get(accounts::policy::public_policy))
         .route("/auth/change-password", put(accounts::auth::change_password))
+        .route("/auth/options", get(accounts::auth_settings::auth_options))
+        .route("/auth/sessions", get(accounts::sessions::list_sessions))
+        .route("/auth/sessions/revoke-others", post(accounts::sessions::revoke_other_sessions))
+        .route("/auth/sessions/{id}", delete(accounts::sessions::revoke_session))
+        .route("/auth/verify-email", post(accounts::verification::verify_email))
+        .route("/auth/verify-email/code", post(accounts::verification::verify_with_code))
+        .route("/auth/verify-email/resend", post(accounts::verification::resend_verification))
+        .route("/auth/email-code/request", post(accounts::email_code::request_code))
+        .route("/auth/email-code/sign-in", post(accounts::email_code::sign_in_with_code))
+        .route("/auth/password-reset/request", post(accounts::password_reset::request_reset))
+        .route("/auth/password-reset/confirm", post(accounts::password_reset::confirm_reset))
+        .route("/auth/sso/{provider}/start", get(accounts::sso::handlers::start))
+        .route("/auth/sso/{provider}/callback", get(accounts::sso::handlers::callback))
+        .route("/auth/identities", get(accounts::sso::list_identities))
+        .route("/auth/identities/{id}", delete(accounts::sso::unlink_identity))
+        .route("/teams", get(teams::handlers::list_teams).post(teams::handlers::create_team))
+        .route("/teams/policy", get(teams::policy::own_policy))
+        .route("/teams/{id}", get(teams::handlers::get_team).patch(teams::handlers::rename_team).delete(teams::handlers::delete_team))
+        .route("/teams/{id}/members", post(teams::members::add_member))
+        .route("/teams/{id}/members/{user_id}", patch(teams::members::change_member_role).delete(teams::members::remove_member))
+        .route("/teams/{id}/members/{user_id}/transfer", post(teams::members::transfer_ownership))
+        .route("/share-links/{kind}/{id}", get(sharing::links::link_status).put(sharing::links::update_link))
+        .route("/share-links/{kind}/{id}/unlock", post(sharing::links::unlock_link))
+        .route("/item-info/{kind}/{id}", get(drive::item_info::get_item_info))
+        .route("/stars", get(drive::stars::list_starred))
+        .route("/stars/{kind}/{id}", put(drive::stars::star_item).delete(drive::stars::unstar_item))
         .route("/folders", get(drive::folders::list_folders).post(drive::folders::create_folder))
         .route("/folders/shared", get(drive::folders::list_shared_folders))
         .route("/transfers", get(sharing::ownership::list_transfers).post(sharing::ownership::request_transfer))
@@ -57,7 +100,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/fonts", get(drive::files::list_fonts))
         .route("/files", get(drive::files::list_files).post(drive::files::upload_file_global))
         .route("/files/{id}", delete(drive::files::delete_file).patch(drive::files::update_file))
-        .route("/files/{id}/data", get(drive::files::get_file_data))
+        .route("/files/{id}/data", get(drive::files::get_file_data).put(drive::file_replace::replace_file_data))
         .route("/docs/shared", get(drive::documents::list_shared_documents))
         .route("/docs", get(drive::documents::list_documents).post(drive::documents::create_document))
         .route("/docs/{id}", get(drive::documents::get_document).delete(drive::documents::delete_document).patch(drive::documents::update_document))
@@ -91,6 +134,12 @@ pub fn build_router(state: AppState) -> Router {
         .route("/packages/publish", post(packages::registry::publish_package))
         .route("/packages/policy", get(packages::policy::own_policy))
         .route("/packages/{name}", get(packages::registry::list_versions).delete(packages::registry::delete_package))
+        .route("/packages/{name}/access", get(packages::sharing::get_access))
+        .route("/packages/{name}/access/visibility", put(packages::sharing::update_visibility))
+        .route("/packages/{name}/access/users", post(packages::sharing::add_user))
+        .route("/packages/{name}/access/users/{user_id}", delete(packages::sharing::remove_user))
+        .route("/packages/{name}/access/teams", post(packages::sharing::add_team))
+        .route("/packages/{name}/access/teams/{team_id}", delete(packages::sharing::remove_team))
         .route("/devices", get(desktop::devices::list_devices))
         .route("/devices/{id}", delete(desktop::devices::revoke_device));
 
@@ -115,7 +164,12 @@ pub fn build_router(state: AppState) -> Router {
         .route("/ws", get(desktop::devices::ws_handler));
 
     let v1_routes = Router::new()
-        .route("/render", post(api::render::render_handler));
+        .route("/render", post(api::render::render_handler))
+        .route("/documents", get(api::read::list_documents))
+        .route("/documents/{id}", get(api::read::get_document))
+        .route("/projects", get(api::read::list_projects))
+        .route("/projects/{id}", get(api::read::get_project))
+        .route("/projects/{id}/files/{file_id}", get(api::read::get_project_file));
 
     let yjs_routes = Router::new()
         .route("/{id}", get(realtime::yjs::yjs_handler));
@@ -127,5 +181,6 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/v1", v1_routes.layer(TraceLayer::new_for_http()))
         .nest("/yjs", yjs_routes.layer(TraceLayer::new_for_http()))
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))
+        .layer(axum::middleware::from_fn_with_state(state.clone(), request_context::attach_request_context))
         .with_state(state)
 }
