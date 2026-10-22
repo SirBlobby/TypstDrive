@@ -17,6 +17,11 @@ TypstDrive is a self-hosted place to write, organize and share [Typst](https://t
 
 Full documentation, including a user guide, self-hosting, administration and the API reference, is at **[sirblobby.github.io/TypstDrive](https://sirblobby.github.io/TypstDrive/)**.
 
+**Try it out @** [https://typ.sirblob.co/](https://typ.sirblob.co/)
+
+Username: test@sirblob.co
+Password: password
+
 ## Features
 
 ### Writing
@@ -164,5 +169,3 @@ If you like this project, consider donating to me. It will help me to maintain t
 As a broke college student, every donation goes straight to the important things: textbooks, energy drinks, and upgrading my diet from instant ramen to slightly more expensive instant ramen.
 <br>
 [![Ko-fi](https://img.shields.io/badge/Donate-Ko--fi-red)](https://ko-fi.com/sirblob)
-
-test
