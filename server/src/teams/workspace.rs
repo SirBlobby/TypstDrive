@@ -20,6 +20,7 @@ const TEAM_SCOPED_PREFIXES: &[&str] = &[
     "/api/share-info",
     "/api/item-info",
     "/api/share-links",
+    "/api/pdf-links",
     "/api/auth/storage",
 ];
 

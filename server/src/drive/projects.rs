@@ -148,10 +148,31 @@ pub async fn project_role(
     strongest_role(role, public_role).map(|role| (project, role.as_str().to_string()))
 }
 
+#[derive(Clone, Copy)]
+pub enum ProjectReader<'a> {
+    Owner,
+    Collaborator(Option<&'a str>),
+}
+
+impl<'a> ProjectReader<'a> {
+    pub fn for_role(role: AccessRole, user_id: &'a Option<String>) -> Self {
+        if role == AccessRole::Owner {
+            Self::Owner
+        } else {
+            Self::Collaborator(user_id.as_deref())
+        }
+    }
+}
+
+fn is_font_data(data: &[u8]) -> bool {
+    typst::text::Font::iter(typst::foundations::Bytes::new(data.to_vec())).next().is_some()
+}
+
 pub async fn assemble_project(
     state: &AppState,
     project: &Project,
     overrides: HashMap<String, String>,
+    reader: ProjectReader<'_>,
 ) -> ProjectInput {
     let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
         sql("SELECT path, kind, content FROM project_files WHERE project_id = $1"),
@@ -183,14 +204,21 @@ pub async fn assemble_project(
     }
 
     let project_paths: HashSet<String> = files.keys().cloned().collect();
-    let source_texts: Vec<&str> = sources.iter().map(String::as_str).collect();
+    let source_texts: Vec<&str> = match reader {
+        ProjectReader::Owner => sources.iter().map(String::as_str).collect(),
+        ProjectReader::Collaborator(_) => Vec::new(),
+    };
     let uploaded = crate::drive::file_data::account_files(state, &project.owner_id, &source_texts, &project_paths).await;
-    files.extend(uploaded);
+    files.extend(uploaded.into_iter().filter(|(_, data)| matches!(reader, ProjectReader::Owner) || is_font_data(data)));
 
+    let package_account = match reader {
+        ProjectReader::Owner => project.owner_id.as_str(),
+        ProjectReader::Collaborator(user_id) => user_id.unwrap_or_default(),
+    };
     ProjectInput {
         entrypoint: project.entrypoint.clone(),
         files,
-        packages: crate::packages::visibility::load_files_for(state, &project.owner_id).await,
+        packages: crate::packages::visibility::load_files_for(state, package_account).await,
     }
 }
 

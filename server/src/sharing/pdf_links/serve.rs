@@ -53,10 +53,9 @@ async fn document_input(state: &AppState, document_id: &str) -> Option<ProjectIn
         .fetch_optional(&state.db)
         .await
         .ok()??;
-    let account = Some(owner_id);
-    let (document, _) = access::document_role(state, document_id, &account).await?;
+    let (document, _) = access::document_role(state, document_id, &Some(owner_id)).await?;
     let text = current_text(state, &document.id).await.unwrap_or_default();
-    let files = crate::drive::document_assets::compile_files(state, &document, AccessRole::Owner, &account).await;
+    let files = crate::drive::document_assets::compile_files(state, &document, AccessRole::Viewer, &None).await;
     Some(latex::document_input(&document, text, files))
 }
 
@@ -68,7 +67,8 @@ async fn project_input(state: &AppState, project_id: &str) -> Option<ProjectInpu
     .fetch_optional(&state.db)
     .await
     .ok()??;
-    Some(crate::drive::projects::assemble_project(state, &project, HashMap::new()).await)
+    let reader = crate::drive::projects::ProjectReader::Collaborator(None);
+    Some(crate::drive::projects::assemble_project(state, &project, HashMap::new(), reader).await)
 }
 
 async fn record_view(state: &AppState, link_id: &str) {
@@ -93,6 +93,14 @@ pub async fn serve_pdf(State(state): State<AppState>, Path(slug): Path<String>, 
         return not_found();
     };
 
+    if let Some((fingerprint, bytes)) = cache::fresh(&link_id) {
+        record_view(&state, &link_id).await;
+        if matches_etag(&headers, &fingerprint) {
+            return not_modified(&fingerprint);
+        }
+        return pdf_response(&slug, &fingerprint, bytes);
+    }
+
     let input = match (document_id, project_id) {
         (Some(document_id), _) => document_input(&state, &document_id).await,
         (None, Some(project_id)) => project_input(&state, &project_id).await,
@@ -111,18 +119,33 @@ pub async fn serve_pdf(State(state): State<AppState>, Path(slug): Path<String>, 
     let previous = cache::latest(&link_id);
     if let Some((cached_fingerprint, bytes)) = &previous {
         if *cached_fingerprint == fingerprint {
+            cache::touch(&link_id);
             return pdf_response(&slug, &fingerprint, bytes.clone());
         }
     }
 
-    match run_blocking(move |compiler| compiler.export_pdf(input)).await {
+    let compiled = if cache::has_failed(&link_id, &fingerprint) {
+        None
+    } else {
+        run_blocking(move |compiler| compiler.export_pdf(input)).await
+    };
+    match compiled {
         Some(Ok(bytes)) => {
             cache::remember(&link_id, &fingerprint, &bytes);
             pdf_response(&slug, &fingerprint, bytes)
         }
-        _ => match previous {
-            Some((cached_fingerprint, bytes)) => pdf_response(&slug, &cached_fingerprint, bytes),
-            None => (StatusCode::UNPROCESSABLE_ENTITY, "This document has errors and cannot be compiled right now").into_response(),
-        },
+        failure => {
+            if matches!(failure, Some(Err(_))) {
+                cache::remember_failure(&link_id, &fingerprint);
+            }
+            unavailable(&slug, previous)
+        }
+    }
+}
+
+fn unavailable(slug: &str, previous: Option<(String, Vec<u8>)>) -> Response {
+    match previous {
+        Some((cached_fingerprint, bytes)) => pdf_response(slug, &cached_fingerprint, bytes),
+        None => (StatusCode::UNPROCESSABLE_ENTITY, "This document has errors and cannot be compiled right now").into_response(),
     }
 }

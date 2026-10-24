@@ -11,7 +11,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
 use crate::models::Project;
-use crate::drive::projects::{assemble_project, decode_text_blob};
+use crate::drive::projects::{assemble_project, decode_text_blob, ProjectReader};
 use crate::AppState;
 use crate::db::sql;
 
@@ -76,7 +76,7 @@ fn safe_relative_path(path: &str) -> String {
         .join("/")
 }
 
-async fn project_entries(state: &AppState, project: &Project, prefix: &str) -> Result<Vec<ArchiveEntry>, ApiError> {
+async fn project_entries(state: &AppState, project: &Project, prefix: &str, reader: ProjectReader<'_>) -> Result<Vec<ArchiveEntry>, ApiError> {
     let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
         sql("SELECT path, kind, content FROM project_files WHERE project_id = $1 ORDER BY path ASC")
     )
@@ -98,7 +98,11 @@ async fn project_entries(state: &AppState, project: &Project, prefix: &str) -> R
         entries.push(ArchiveEntry::File(format!("{prefix}{relative_path}"), data));
     }
 
-    let input = assemble_project(state, project, HashMap::new()).await;
+    if !matches!(reader, ProjectReader::Owner) {
+        return Ok(entries);
+    }
+
+    let input = assemble_project(state, project, HashMap::new(), reader).await;
     let used = crate::compile::compiler::run_blocking(move |compiler| compiler.used_resources(input))
         .await
         .unwrap_or_default();
@@ -126,7 +130,7 @@ async fn project_entries(state: &AppState, project: &Project, prefix: &str) -> R
     Ok(entries)
 }
 
-async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_id: &str) -> Result<Vec<ArchiveEntry>, ApiError> {
+async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_id: &str, reader: ProjectReader<'_>) -> Result<Vec<ArchiveEntry>, ApiError> {
     let mut entries = Vec::new();
     let mut pending = vec![(root_id.to_string(), format!("{}/", safe_segment(root_name, "folder")))];
 
@@ -185,7 +189,7 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
         .map_err(internal_error)?;
         for project in projects {
             let directory = names.claim(&safe_segment(&project.name, "project"));
-            entries.extend(project_entries(state, &project, &format!("{prefix}{directory}/")).await?);
+            entries.extend(project_entries(state, &project, &format!("{prefix}{directory}/"), reader).await?);
         }
     }
 
@@ -258,7 +262,8 @@ pub async fn download_folder(
         .map_err(internal_error)?
         .ok_or((StatusCode::NOT_FOUND, "Folder not found".to_string()))?;
 
-    let entries = folder_entries(&state, &id, &folder_name, &owner_id).await?;
+    let reader = if owner_id == user_id { ProjectReader::Owner } else { ProjectReader::Collaborator(Some(user_id.as_str())) };
+    let entries = folder_entries(&state, &id, &folder_name, &owner_id, reader).await?;
     zip_response(entries, &safe_segment(&folder_name, "folder")).await
 }
 
@@ -268,11 +273,12 @@ pub async fn download_project(
     jar: SignedCookieJar,
 ) -> Result<Response, ApiError> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (project, _) = crate::sharing::access::project_access(&state, &id, &user_id)
+    let (project, role) = crate::sharing::access::project_access(&state, &id, &user_id)
         .await
         .ok_or_else(crate::sharing::access::forbidden)?;
 
     let name = safe_segment(&project.name, "project");
-    let entries = project_entries(&state, &project, &format!("{name}/")).await?;
+    let reader = ProjectReader::for_role(role, &user_id);
+    let entries = project_entries(&state, &project, &format!("{name}/"), reader).await?;
     zip_response(entries, &name).await
 }

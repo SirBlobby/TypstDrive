@@ -14,10 +14,12 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
+use crate::compile::lsp_guard::LspGuard;
 use crate::sharing::access::{self, Resource};
 use crate::AppState;
 
 const CONTENT_LENGTH_HEADER: &str = "Content-Length: ";
+const INHERITED_VARIABLES: &[&str] = &["PATH", "HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "LANG"];
 
 fn is_safe_name(name: &str) -> bool {
     std::path::Path::new(name)
@@ -64,11 +66,17 @@ async fn bridge(state: AppState, socket: WebSocket, document_id: String, user_id
         return;
     };
 
+    let inherited: Vec<(String, String)> = INHERITED_VARIABLES
+        .iter()
+        .filter_map(|name| std::env::var(name).ok().map(|value| (name.to_string(), value)))
+        .collect();
     let spawned = Command::new("tinymist")
         .arg("lsp")
         .arg("--font-path")
         .arg(workspace.path())
         .current_dir(workspace.path())
+        .env_clear()
+        .envs(inherited)
         .env("RUST_LOG", "warn")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -88,14 +96,19 @@ async fn bridge(state: AppState, socket: WebSocket, document_id: String, user_id
 
     let session = access::register_session(&state, Resource::Document(document_id), user_id, None, true).await;
     let (mut ws_sender, mut ws_receiver) = socket.split();
+    let guard = std::sync::Arc::new(LspGuard::new(workspace.path()));
     let init_message = serde_json::json!({
         "type": "init",
-        "rootUri": format!("file://{}", workspace.path().display()),
+        "rootUri": guard.root_uri(),
     });
     let _ = ws_sender.send(Message::Text(init_message.to_string().into())).await;
 
+    let client_guard = guard.clone();
     let mut client_to_server = tokio::spawn(async move {
         while let Some(Ok(Message::Text(message))) = ws_receiver.next().await {
+            let Some(message) = client_guard.from_client(&message) else {
+                continue;
+            };
             let header = format!("{CONTENT_LENGTH_HEADER}{}\r\n\r\n", message.len());
             if stdin.write_all(header.as_bytes()).await.is_err() || stdin.write_all(message.as_bytes()).await.is_err() {
                 break;
@@ -109,6 +122,7 @@ async fn bridge(state: AppState, socket: WebSocket, document_id: String, user_id
             if message.is_empty() {
                 continue;
             }
+            guard.note_server_message(&message);
             if ws_sender.send(Message::Text(message.into())).await.is_err() {
                 break;
             }

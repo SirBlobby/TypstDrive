@@ -151,7 +151,13 @@ pub async fn get_item_info(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
     let (row, your_role, share_kind) = load_item(&state, &kind, &id, &user_id).await?;
 
-    let owner = person(&state, &row.owner_id).await.ok_or_else(not_found)?;
+    let is_member = your_role == "owner"
+        || crate::teams::content_role(&state, &row.owner_id, &user_id).await.is_some()
+        || match share_kind {
+            Some(kind) => crate::sharing::members::has_access(&state, kind, &id, &user_id).await.unwrap_or(false),
+            None => false,
+        };
+    let mut owner = person(&state, &row.owner_id).await.ok_or_else(not_found)?;
     let user = Some(user_id.clone());
     let location = match row.folder_id.as_deref() {
         None => Some(Vec::new()),
@@ -161,8 +167,19 @@ pub async fn get_item_info(
     let last_edited_by = match row.last_edited_by.as_deref() {
         Some(editor_id) => person(&state, editor_id).await,
         None => None,
+    }
+    .map(|mut editor| {
+        if !is_member {
+            editor.email = None;
+        }
+        editor
+    });
+    let access = if is_member {
+        who_has_access(&state, &owner, share_kind, &id, row.folder_id.as_deref()).await
+    } else {
+        owner.email = None;
+        Vec::new()
     };
-    let access = who_has_access(&state, &owner, share_kind, &id, row.folder_id.as_deref()).await;
 
     Ok(Json(ItemInfo {
         kind,

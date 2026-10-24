@@ -69,6 +69,6 @@ pub async fn render_project(
         _ => return not_found("Project"),
     };
 
-    let input = crate::drive::projects::assemble_project(&state, &project, HashMap::new()).await;
+    let input = crate::drive::projects::assemble_project(&state, &project, HashMap::new(), crate::drive::projects::ProjectReader::Owner).await;
     render_to_response(input, format, None).await
 }
