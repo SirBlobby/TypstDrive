@@ -10,6 +10,7 @@ pub struct CloudDocument {
     pub folder_id: Option<String>,
     pub role: String,
     pub updated_at: String,
+    pub thumbnail_svg: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -22,19 +23,19 @@ pub async fn list_documents(
     headers: HeaderMap,
     Query(query): Query<FolderQuery>,
 ) -> Result<Json<Vec<CloudDocument>>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = readable_space(&state, &headers).await?;
 
     let rows = match &query.folder_id {
-        Some(folder_id) => sqlx::query_as::<_, (String, String, Option<String>, String)>(
-            sql("SELECT id, title, folder_id, updated_at FROM documents \
+        Some(folder_id) => sqlx::query_as::<_, (String, String, Option<String>, String, Option<String>)>(
+            sql("SELECT id, title, folder_id, updated_at, thumbnail_svg FROM documents \
              WHERE owner_id = $1 AND folder_id = $2 ORDER BY updated_at DESC"),
         )
         .bind(&user_id)
         .bind(folder_id)
         .fetch_all(&state.db)
         .await,
-        None => sqlx::query_as::<_, (String, String, Option<String>, String)>(
-            sql("SELECT id, title, folder_id, updated_at FROM documents \
+        None => sqlx::query_as::<_, (String, String, Option<String>, String, Option<String>)>(
+            sql("SELECT id, title, folder_id, updated_at, thumbnail_svg FROM documents \
              WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC"),
         )
         .bind(&user_id)
@@ -45,12 +46,13 @@ pub async fn list_documents(
 
     Ok(Json(
         rows.into_iter()
-            .map(|(id, title, folder_id, updated_at)| CloudDocument {
+            .map(|(id, title, folder_id, updated_at, thumbnail_svg)| CloudDocument {
                 id,
                 title,
                 folder_id,
                 role: "owner".to_string(),
                 updated_at,
+                thumbnail_svg,
             })
             .collect(),
     ))
@@ -68,8 +70,8 @@ pub async fn list_shared(
 ) -> Result<Json<SharedItems>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
 
-    let documents = sqlx::query_as::<_, (String, String, Option<String>, String, String)>(
-        sql("SELECT d.id, d.title, d.folder_id, d.updated_at, c.role FROM documents d \
+    let documents = sqlx::query_as::<_, (String, String, Option<String>, String, String, Option<String>)>(
+        sql("SELECT d.id, d.title, d.folder_id, d.updated_at, c.role, d.thumbnail_svg FROM documents d \
          INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = $1 \
          ORDER BY d.updated_at DESC"),
     )
@@ -91,12 +93,13 @@ pub async fn list_shared(
     Ok(Json(SharedItems {
         documents: documents
             .into_iter()
-            .map(|(id, title, folder_id, updated_at, role)| CloudDocument {
+            .map(|(id, title, folder_id, updated_at, role, thumbnail_svg)| CloudDocument {
                 id,
                 title,
                 folder_id,
                 role,
                 updated_at,
+                thumbnail_svg,
             })
             .collect(),
         projects: projects
@@ -285,7 +288,7 @@ pub async fn create_document(
     headers: HeaderMap,
     Json(payload): Json<CreateDocumentRequest>,
 ) -> Result<Json<DocumentContent>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
     if let Some(folder_id) = &payload.folder_id {
         owned_folder(&state, folder_id, &user_id).await?;
     }
@@ -326,7 +329,7 @@ pub async fn move_document(
     Path(id): Path<String>,
     Json(payload): Json<MoveDocumentBody>,
 ) -> Result<Json<CloudDocument>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     if let Some(folder_id) = &payload.folder_id {
         owned_folder(&state, folder_id, &user_id).await?;
@@ -340,7 +343,7 @@ pub async fn move_document(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT id, title, folder_id, updated_at FROM documents WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String, Option<String>)>(sql("SELECT id, title, folder_id, updated_at, thumbnail_svg FROM documents WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -356,6 +359,7 @@ pub async fn move_document(
         folder_id: row.2,
         role: "owner".to_string(),
         updated_at: row.3,
+        thumbnail_svg: row.4,
     }))
 }
 
@@ -364,7 +368,7 @@ pub async fn delete_document(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     let result = sqlx::query(sql("DELETE FROM documents WHERE id = $1 AND owner_id = $2"))
         .bind(&id)

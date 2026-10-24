@@ -24,6 +24,9 @@ pub mod project_files;
 pub mod folders;
 pub mod documents;
 pub mod files;
+pub mod spaces;
+
+use spaces::{readable_space, writable_space};
 
 const TEXT_EXTENSIONS: [&str; 10] = [
     ".typ", ".toml", ".bib", ".csl", ".yml", ".yaml", ".json", ".md", ".txt", ".csv",

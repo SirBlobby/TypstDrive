@@ -13,7 +13,7 @@ pub async fn list_folders(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<CloudFolder>>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = readable_space(&state, &headers).await?;
 
     let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>)>(
         sql("SELECT id, name, parent_id, color FROM folders WHERE owner_id = $1 ORDER BY name ASC"),
@@ -46,7 +46,7 @@ pub async fn create_folder(
     headers: HeaderMap,
     Json(payload): Json<CreateFolderBody>,
 ) -> Result<Json<CloudFolder>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     if payload.name.trim().is_empty() {
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
@@ -89,7 +89,7 @@ pub async fn rename_folder(
     Path(id): Path<String>,
     Json(payload): Json<RenameFolderBody>,
 ) -> Result<Json<CloudFolder>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     if payload.name.trim().is_empty() {
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
@@ -164,7 +164,7 @@ pub async fn move_folder(
     Path(id): Path<String>,
     Json(payload): Json<MoveFolderBody>,
 ) -> Result<Json<CloudFolder>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
     owned_folder(&state, &id, &user_id).await?;
 
     if let Some(parent_id) = &payload.parent_id {
@@ -240,7 +240,7 @@ pub async fn delete_folder(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
     owned_folder(&state, &id, &user_id).await?;
 
     if !folder_is_empty(&state, &id, &user_id).await? {
@@ -264,4 +264,14 @@ pub async fn delete_folder(
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn set_folder_color(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<crate::drive::folder_colors::FolderColorRequest>,
+) -> Result<Json<crate::drive::folder_colors::FolderColorResponse>, (StatusCode, String)> {
+    let account_id = writable_space(&state, &headers).await?;
+    crate::drive::folder_colors::apply_folder_color(&state, id, &account_id, payload.color).await
 }

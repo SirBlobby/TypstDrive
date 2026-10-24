@@ -15,7 +15,7 @@ pub async fn list_projects(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<ProjectSummary>>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = readable_space(&state, &headers).await?;
 
     let owned = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
         sql("SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE owner_id = $1 ORDER BY updated_at DESC"),
@@ -75,7 +75,7 @@ pub async fn create_project(
     headers: HeaderMap,
     Json(payload): Json<CreateProjectBody>,
 ) -> Result<Json<ProjectSummary>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     if payload.name.trim().is_empty() {
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
@@ -124,7 +124,7 @@ pub async fn delete_project(
     headers: HeaderMap,
     Path(project_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     let (_, role) = project_with_role(&state, &project_id, &user_id).await?;
     if role != AccessRole::Owner {
@@ -155,7 +155,7 @@ pub async fn move_project(
     Path(project_id): Path<String>,
     Json(payload): Json<MoveProjectBody>,
 ) -> Result<Json<ProjectSummary>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     if let Some(folder_id) = &payload.folder_id {
         owned_folder(&state, folder_id, &user_id).await?;
