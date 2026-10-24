@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { exportTypst } from '../ts/typst-api';
 	import { text } from '../ts/yjs-setup';
-	import { editorViewStore, commentsSidebarOpen, previewOpenStore } from '../ts/store';
+	import { editorViewStore, commentsSidebarOpen } from '../ts/store';
 	import { saveVersion } from '../ts/versions';
 	import { themes } from '../ts/themes';
 	import { goto } from '$app/navigation';
@@ -15,6 +15,7 @@
 	import InfoModal from './drive/InfoModal.svelte';
 	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
 	import EditingModeSwitch from './editor/EditingModeSwitch.svelte';
+	import PreviewModeMenu from './editor/PreviewModeMenu.svelte';
 	import FormattingBar from './editor/FormattingBar.svelte';
 	import InsertDialogs from './editor/insert/InsertDialogs.svelte';
 	import { insertDialogStore, insertOptions } from '../ts/insert-dialog';
@@ -25,6 +26,7 @@
 	import { undo, redo } from '@codemirror/commands';
 	import type { DocumentRole } from '$lib/ts/document-role';
 	import { suggestingModeStore } from '$lib/ts/suggestions';
+	import { sourceExtension, type DocumentLanguage } from '$lib/ts/document-language';
 
 	let isShareModalOpen = $state(false);
 	let isAssetsModalOpen = $state(false);
@@ -52,23 +54,25 @@
 	let isPageSettingsOpen = $state(false);
 	let isPresentationOpen = $state(false);
 	
-	let { title = 'Untitled Document', docId = undefined, role = 'viewer' }: { title?: string, docId?: string, role?: DocumentRole } = $props();
+	let { title = 'Untitled Document', docId = undefined, role = 'viewer', language = 'typst' }: { title?: string, docId?: string, role?: DocumentRole, language?: DocumentLanguage } = $props();
 
+	let isLatex = $derived(language === 'latex');
+	let sourceFileExtension = $derived(sourceExtension(language));
 	let readOnly = $derived(role !== 'owner' && role !== 'editor');
 	let directEditing = $derived(!readOnly && !$suggestingModeStore);
 	let canComment = $derived(role === 'owner' || role === 'editor' || role === 'suggester');
 
-	function handleExport(format: 'pdf' | 'png' | 'svg' | 'typ') {
+	function handleExport(format: 'pdf' | 'png' | 'svg' | 'source') {
 		if (!text) return;
 		const content = text.toString();
 		const safeTitle = title.replace(/[^a-z0-9_-]/gi, '_');
-		
-		if (format === 'typ') {
+
+		if (format === 'source') {
 			const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
-			a.download = `${safeTitle}.typ`;
+			a.download = `${safeTitle}.${sourceFileExtension}`;
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
@@ -391,22 +395,26 @@
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<button onclick={() => { activeMenu = null; openRename(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Rename</button>
 								<button onclick={() => { activeMenu = null; isShareModalOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Share</button>
+								{#if !isLatex}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<button onclick={() => { activeMenu = null; isPageSettingsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Page Settings</button>
+								{/if}
 								{/if}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider opacity-60">Download</div>
 								<button onclick={() => { activeMenu = null; handlePrint(); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:printer" /> Print Document</button>
-								<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:code-braces" /> .typ source</button>
+								<button onclick={() => { activeMenu = null; handleExport('source'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:code-braces" /> .{sourceFileExtension} source</button>
 								<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:file-pdf-box" /> .pdf document</button>
 								<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:image" /> .png image</button>
 								<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:svg" /> .svg graphics</button>
+								{#if !isLatex}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider opacity-60">Export (Pandoc)</div>
 								<button onclick={() => { activeMenu = null; handlePandocExport('docx'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Word (.docx)</button>
 								<button onclick={() => { activeMenu = null; handlePandocExport('latex'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">LaTeX (.tex)</button>
 								<button onclick={() => { activeMenu = null; handlePandocExport('markdown'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Markdown (.md)</button>
 								<button onclick={() => { activeMenu = null; handlePandocExport('html'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">HTML (.html)</button>
+								{/if}
 								{#if !readOnly}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<button onclick={() => { activeMenu = null; deleteDoc(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10">Delete</button>
@@ -537,16 +545,11 @@
 
 			<div class="w-px h-5 bg-[var(--color-line)]"></div>
 
-			<button
-				onclick={() => ($previewOpenStore = !$previewOpenStore)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium transition-colors rounded-md {$previewOpenStore ? 'text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)]' : 'text-[var(--color-accent)] bg-[var(--color-accent-soft)] hover:opacity-90'}"
-				title={$previewOpenStore ? 'Hide preview' : 'Show preview'}
-			>
-				<Icon icon={$previewOpenStore ? 'mdi:eye-off-outline' : 'mdi:eye-outline'} class="text-[16px]" />
-				Preview
-			</button>
+			{#if canComment}
+				<PreviewModeMenu />
 
-			<div class="w-px h-5 bg-[var(--color-line)]"></div>
+				<div class="w-px h-5 bg-[var(--color-line)]"></div>
+			{/if}
 
 			<button onclick={handlePrint} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Print Document">
 				<Icon icon="mdi:printer" class="text-[16px]" />
@@ -567,8 +570,8 @@
 						<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
 							<Icon icon="mdi:file-pdf-box" class="text-base text-red-500" /> PDF document
 						</button>
-						<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
-							<Icon icon="mdi:code-braces" class="text-base text-purple-500" /> TYP source
+						<button onclick={() => { activeMenu = null; handleExport('source'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
+							<Icon icon="mdi:code-braces" class="text-base text-purple-500" /> {sourceFileExtension.toUpperCase()} source
 						</button>
 						<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
 							<Icon icon="mdi:svg" class="text-base text-orange-500" /> SVG graphics
@@ -582,14 +585,16 @@
 		</div>
 	</div>
 
-	<FormattingBar
-		{docId}
-		readOnly={!directEditing}
-		{canComment}
-		{unsharedFileCount}
-		onOpenAssets={() => (isAssetsModalOpen = true)}
-		onOpenPageSettings={() => (isPageSettingsOpen = true)}
-	/>
+	{#if !isLatex}
+		<FormattingBar
+			{docId}
+			readOnly={!directEditing}
+			{canComment}
+			{unsharedFileCount}
+			onOpenAssets={() => (isAssetsModalOpen = true)}
+			onOpenPageSettings={() => (isPageSettingsOpen = true)}
+		/>
+	{/if}
 </header>
 
 {#if docId && !readOnly}

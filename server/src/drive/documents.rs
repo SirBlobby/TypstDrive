@@ -7,14 +7,15 @@ use axum_extra::extract::cookie::SignedCookieJar;
 use uuid::Uuid;
 
 use crate::{
+    compile::latex,
     drive::projects::{decode_text_blob, encode_text_blob},
     models::{Document, CreateDocumentRequest},
     AppState,
 };
 use crate::db::sql;
 
-const DOCUMENT_BY_ID: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1";
-const OWNED_DOCUMENT: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2";
+const DOCUMENT_BY_ID: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language FROM documents WHERE id = $1";
+const OWNED_DOCUMENT: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language FROM documents WHERE id = $1 AND owner_id = $2";
 
 pub async fn stored_content(state: &AppState, document_id: &str) -> Option<Vec<u8>> {
     sqlx::query_as::<_, (Option<Vec<u8>>,)>(sql("SELECT content FROM documents WHERE id = $1"))
@@ -44,7 +45,7 @@ pub async fn list_shared_documents(
 
     let docs = sqlx::query_as::<_, Document>(
         sql("SELECT d.id, d.owner_id, d.folder_id, d.title, d.thumbnail_svg, \
-         d.public_role, d.created_at, d.updated_at, c.role as effective_role \
+         d.public_role, d.created_at, d.updated_at, d.language, c.role as effective_role \
          FROM documents d \
          INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = $1 \
          ORDER BY d.updated_at DESC")
@@ -68,7 +69,7 @@ pub async fn list_documents(
     let docs = if let Some(folder_id) = query.folder_id {
         crate::sharing::access::require_folder_access(&state, &folder_id, &user_id).await?;
         sqlx::query_as::<_, Document>(
-            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY updated_at DESC")
+            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY updated_at DESC")
         )
         .bind(&folder_id)
         .bind(&folder_id)
@@ -77,7 +78,7 @@ pub async fn list_documents(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Document>(
-            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC")
+            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -99,17 +100,19 @@ pub async fn create_document(
     crate::sharing::access::require_owned_folder(&state, &payload.folder_id, &user_id).await?;
 
     let doc_id = Uuid::new_v4().to_string();
+    let language = latex::parse_language(payload.language.as_deref())?;
 
-    let initial_text = payload.content.as_deref().unwrap_or("== New Document");
+    let initial_text = payload.content.as_deref().unwrap_or(latex::starter_text(language));
     let content = encode_text_blob(initial_text);
     crate::accounts::storage::ensure_room(&state, &user_id, content.len() as i64).await?;
 
-    sqlx::query(sql("INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5)"))
+    sqlx::query(sql("INSERT INTO documents (id, owner_id, folder_id, title, content, language) VALUES ($1, $2, $3, $4, $5, $6)"))
     .bind(&doc_id)
     .bind(&user_id)
     .bind(&payload.folder_id)
     .bind(&payload.title)
     .bind(&content)
+    .bind(language)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

@@ -187,7 +187,7 @@ pub async fn document_role(
     user_id: &Option<String>,
 ) -> Option<(Document, AccessRole)> {
     let document = sqlx::query_as::<_, Document>(
-        sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, link_password_hash, link_expires_at, created_at, updated_at FROM documents WHERE id = $1")
+        sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, link_password_hash, link_expires_at, created_at, updated_at, language FROM documents WHERE id = $1")
     )
     .bind(document_id)
     .fetch_optional(&state.db)

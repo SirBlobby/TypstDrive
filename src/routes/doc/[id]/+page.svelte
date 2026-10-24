@@ -14,11 +14,13 @@
 	import CommentHighlights from '$lib/components/comments/CommentHighlights.svelte';
 	import SuggestionHighlights from '$lib/components/suggestions/SuggestionHighlights.svelte';
 	import SuggestionComposer from '$lib/components/suggestions/SuggestionComposer.svelte';
-	import { editorErrors, documentStatsStore, previewOpenStore } from '$lib/ts/store';
+	import { editorErrors, documentStatsStore } from '$lib/ts/store';
+	import { previewModeStore, previewVisibleStore } from '$lib/ts/preview-mode';
 	import { reviewExtensions } from '$lib/ts/review-extensions';
 	import { suggestingModeStore, suggestionDraftStore } from '$lib/ts/suggestions';
 	import { activeThreadStore, pendingCommentStore } from '$lib/ts/comments';
 	import type { DocumentRole } from '$lib/ts/document-role';
+	import { documentLanguage, type DocumentLanguage } from '$lib/ts/document-language';
 
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -28,13 +30,18 @@
 	let documentTitle = $state('Untitled Document');
 	let role = $state<DocumentRole>('viewer');
 	let roleLoaded = $state(false);
+	let language = $state<DocumentLanguage>('typst');
 
 	let isViewer = $derived(roleLoaded && role === 'viewer');
 	let canComment = $derived(role !== 'viewer');
+	let showPreview = $derived($previewVisibleStore || isViewer);
+	let editorWidthClass = $derived(
+		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'w-full'
+	);
 	const editorExtensions = reviewExtensions();
 
 	function triggerCompile() {
-		if (!text || !$previewOpenStore) return;
+		if (!text || !showPreview) return;
 		const content = text.toString();
 		if (content === lastCompiledContent) return;
 		lastCompiledContent = content;
@@ -61,7 +68,7 @@
 	}
 
 	$effect(() => {
-		if ($previewOpenStore && initialized) {
+		if (showPreview && initialized) {
 			triggerCompile();
 		}
 	});
@@ -82,6 +89,7 @@
 					documentTitle = doc.title;
 				}
 				role = doc?.effective_role ?? 'viewer';
+				language = documentLanguage(doc?.language);
 				roleLoaded = true;
 				suggestingModeStore.set(role === 'suggester');
 			})
@@ -110,22 +118,22 @@
 </svelte:head>
 
 <div class="flex flex-col h-screen relative">
-	<Toolbar title={documentTitle} docId={page.params.id ?? ''} {role} />
+	<Toolbar title={documentTitle} docId={page.params.id ?? ''} {role} {language} />
 
 	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
 		{#if !isViewer}
-		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 {$previewOpenStore ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'w-full'}">
+		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 {editorWidthClass}">
 			{#if initialized && roleLoaded}
-				<Editor extensions={editorExtensions} />
+				<Editor extensions={editorExtensions} {language} />
 				<CommentHighlights />
 				<SuggestionHighlights />
 			{/if}
 		</div>
 		{/if}
 
-		{#if $previewOpenStore || isViewer}
-		<div class="{isViewer ? 'w-full' : 'w-full md:w-1/2'} relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
+		{#if showPreview}
+		<div class="{isViewer || $previewModeStore === 'preview' ? 'w-full' : 'w-full md:w-1/2'} relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
 			<Preview {svgs} />
 			<ErrorBanner {errors} />
 		</div>

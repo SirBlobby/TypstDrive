@@ -22,6 +22,8 @@
 	import { editorSettingsStore } from '../ts/editor-settings';
 	import { editorPreferenceExtensions } from '../ts/editor-preferences';
 	import { loadEditorFont } from '../ts/editor-fonts';
+	import { latexEditorExtensions } from '../ts/editor-latex';
+	import type { DocumentLanguage } from '../ts/document-language';
 
 	let {
 		ytext = undefined,
@@ -29,6 +31,7 @@
 		lspDocId = undefined,
 		enableLsp = true,
 		filePath = undefined,
+		language = 'typst',
 		extensions = []
 	}: {
 		ytext?: any;
@@ -36,6 +39,7 @@
 		lspDocId?: string;
 		enableLsp?: boolean;
 		filePath?: string;
+		language?: DocumentLanguage;
 		extensions?: Extension[];
 	} = $props();
 
@@ -180,8 +184,13 @@
 		);
 
 		const isToml = (filePath ?? '').toLowerCase().endsWith('.toml');
-		const languageExtension = isToml ? StreamLanguage.define(toml) : [typstLanguage, typstBracketSettings(typstLanguage)];
-		const completionExtensions = isToml ? [] : [autocompletion({ override: [typstCompletions] })];
+		const isLatex = language === 'latex';
+		const isTypst = !isToml && !isLatex;
+		const commentMarker = isToml ? '#' : isLatex ? '%' : '//';
+		let languageExtension: Extension = [typstLanguage, typstBracketSettings(typstLanguage)];
+		if (isToml) languageExtension = StreamLanguage.define(toml);
+		if (isLatex) languageExtension = latexEditorExtensions();
+		const completionExtensions = isTypst ? [autocompletion({ override: [typstCompletions] })] : [];
 
 		state = EditorState.create({
 			doc: activeText.toString(),
@@ -191,7 +200,7 @@
 				history(),
 				...bracketExtensions,
 				...searchExtensions(),
-				editorKeybindExtension(isToml ? '#' : '//', !isToml),
+				editorKeybindExtension(commentMarker, isTypst),
 				keymap.of([...searchKeymap.filter((binding) => binding.key !== 'Mod-f'), ...defaultKeymap, ...historyKeymap, indentWithTab] as any),
 				languageExtension,
 				yCollab(activeText, activeProvider.awareness),
@@ -331,7 +340,7 @@
 			lsSocket.onopen = () => {};
 		}
 		
-		if (enableLsp && docId) {
+		if (enableLsp && isTypst && docId) {
 			connectLsp();
 
 			unsubscribeLspReconnect = triggerLspReconnect.subscribe((val) => {

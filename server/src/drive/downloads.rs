@@ -147,16 +147,17 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
             pending.push((subfolder_id, format!("{prefix}{directory}/")));
         }
 
-        let documents = sqlx::query_as::<_, (String, Option<Vec<u8>>)>(
-            sql("SELECT title, content FROM documents WHERE folder_id = $1 AND owner_id = $2 ORDER BY title ASC")
+        let documents = sqlx::query_as::<_, (String, Option<Vec<u8>>, Option<String>)>(
+            sql("SELECT title, content, language FROM documents WHERE folder_id = $1 AND owner_id = $2 ORDER BY title ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
         .fetch_all(&state.db)
         .await
         .map_err(internal_error)?;
-        for (title, content) in documents {
-            let file_name = names.claim(&format!("{}.typ", safe_segment(&title, "document")));
+        for (title, content, language) in documents {
+            let extension = crate::compile::latex::file_extension(language.as_deref());
+            let file_name = names.claim(&format!("{}.{extension}", safe_segment(&title, "document")));
             let text = decode_text_blob(content.as_deref().unwrap_or_default());
             entries.push(ArchiveEntry::File(format!("{prefix}{file_name}"), text.into_bytes()));
         }

@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use crate::api::authentication::{authenticate, ApiScope};
 use crate::api::render::{invalid_format, render_to_response, RenderFormat};
-use crate::compile::compiler::ProjectInput;
+use crate::compile::latex;
 use crate::drive::versions::current_text;
 use crate::sharing::access::{self, AccessRole};
 use crate::AppState;
@@ -44,8 +44,9 @@ pub async fn render_document(
 
     let text = current_text(&state, &document.id).await.unwrap_or_default();
     let files = crate::drive::document_assets::compile_files(&state, &document, AccessRole::Owner, &account).await;
-    let input = ProjectInput::single(text.clone(), files);
-    render_to_response(input, format, Some(text.as_str())).await
+    let source = (!latex::is_latex(&document)).then_some(text.as_str());
+    let input = latex::document_input(&document, text.clone(), files);
+    render_to_response(input, format, source).await
 }
 
 pub async fn render_project(
