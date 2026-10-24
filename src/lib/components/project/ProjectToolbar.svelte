@@ -4,8 +4,7 @@
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
 	import {
-		editorViewStore,
-		documentZoomStore
+		editorViewStore
 	} from '../../ts/store';
 	import { previewModeOptions, previewModeStore } from '../../ts/preview-mode';
 	import PreviewModeMenu from '../editor/PreviewModeMenu.svelte';
@@ -18,6 +17,8 @@
 	import PromptModal from '../PromptModal.svelte';
 	import ConfirmModal from '../ConfirmModal.svelte';
 	import ShareModal from '../ShareModal.svelte';
+	import LatexFormattingBar from '../editor/LatexFormattingBar.svelte';
+	import ZoomControl from '../editor/ZoomControl.svelte';
 
 	let {
 		projectName = 'Project',
@@ -42,6 +43,16 @@
 	} = $props();
 
 	let isViewer = $derived(role === 'viewer');
+	let isLatexFile = $derived(activePath.toLowerCase().endsWith('.tex'));
+
+	async function uploadProjectImage(file: File) {
+		const form = new FormData();
+		form.append('file', file);
+		const response = await fetch(`/api/projects/${projectId}/files/upload`, { method: 'POST', body: form });
+		if (!response.ok) throw new Error(await response.text());
+		onFilesChanged();
+		return file.name;
+	}
 
 	let uploadedFonts = $state<string[]>([]);
 	$effect(() => {
@@ -74,7 +85,7 @@
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
-			a.download = `${(activePath || 'main').replace(/\.[^.]+$/, '')}.typ`;
+			a.download = `${(activePath || 'main').replace(/\.[^.]+$/, '')}.${isLatexFile ? 'tex' : 'typ'}`;
 			a.click();
 			URL.revokeObjectURL(url);
 			return;
@@ -312,7 +323,9 @@
 								{#if !isViewer}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
 									<button onclick={() => { activeMenu = null; renameName = projectName; showRenameModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Rename</button>
-									<button onclick={() => { activeMenu = null; isPageSettingsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Page Settings</button>
+									{#if !isLatexFile}
+										<button onclick={() => { activeMenu = null; isPageSettingsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Page Settings</button>
+									{/if}
 									{#if role === 'owner'}
 										<button onclick={() => { activeMenu = null; onPublish(); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Publish as Package</button>
 									{/if}
@@ -320,7 +333,7 @@
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider opacity-60">Download</div>
 								<button onclick={() => { activeMenu = null; handlePrint(); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:printer" /> Print</button>
-								<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:code-braces" /> active .typ</button>
+								<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:code-braces" /> active .{isLatexFile ? 'tex' : 'typ'}</button>
 								<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:file-pdf-box" /> .pdf document</button>
 								<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:image" /> .png image</button>
 								<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:svg" /> .svg graphics</button>
@@ -401,7 +414,7 @@
 				{#if activeMenu === 'export'}
 					<div class="absolute right-0 top-full mt-1 w-44 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
 						<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:file-pdf-box" class="text-base text-red-500" /> PDF document</button>
-						<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:code-braces" class="text-base text-purple-500" /> active .typ</button>
+						<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:code-braces" class="text-base text-purple-500" /> active .{isLatexFile ? 'tex' : 'typ'}</button>
 						<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:svg" class="text-base text-orange-500" /> SVG graphics</button>
 						<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:image" class="text-base text-blue-500" /> PNG image</button>
 					</div>
@@ -410,6 +423,9 @@
 		</div>
 	</div>
 
+	{#if isLatexFile}
+		<LatexFormattingBar readOnly={isViewer} uploadImage={uploadProjectImage} />
+	{:else}
 	<div class="flex items-center px-4 py-1.5 bg-[var(--color-surface-muted)] border-t border-[var(--color-line)] gap-4 overflow-x-auto no-scrollbar">
 		<div class="flex items-center gap-1">
 			<button onclick={() => applyFormat('*', '*', 'bold')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Bold"><Icon icon="mdi:format-bold" class="text-lg" /></button>
@@ -454,14 +470,11 @@
 			<div class="w-px h-4 bg-[var(--color-line)]"></div>
 		{/if}
 
-		<div class="flex items-center gap-1 bg-[var(--color-surface)] border border-[var(--color-line)] rounded shadow-sm overflow-hidden">
-			<button onclick={() => $documentZoomStore = Math.max(10, $documentZoomStore - 10)} class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors" title="Zoom Out"><Icon icon="mdi:minus" class="text-sm" /></button>
-			<span role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter') $documentZoomStore = 100; }} class="text-[11px] font-semibold text-[var(--color-ink-muted)] min-w-[3rem] text-center select-none" ondblclick={() => $documentZoomStore = 100}>{$documentZoomStore}%</span>
-			<button onclick={() => $documentZoomStore = Math.min(500, $documentZoomStore + 10)} class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors" title="Zoom In"><Icon icon="mdi:plus" class="text-sm" /></button>
-		</div>
+		<ZoomControl />
 
 		<div class="flex-grow"></div>
 	</div>
+	{/if}
 </header>
 
 {#if isPageSettingsOpen}

@@ -18,6 +18,7 @@
 	import PreviewModeMenu from './editor/PreviewModeMenu.svelte';
 	import FormattingBar from './editor/FormattingBar.svelte';
 	import LatexFormattingBar from './editor/LatexFormattingBar.svelte';
+	import { uploadDocumentFile } from '$lib/ts/document-uploads';
 	import InsertDialogs from './editor/insert/InsertDialogs.svelte';
 	import { insertDialogStore, insertOptions } from '../ts/insert-dialog';
 	import { openFind, openReplace } from '../ts/editor-insert';
@@ -58,6 +59,15 @@
 	let { title = 'Untitled Document', docId = undefined, role = 'viewer', language = 'typst' }: { title?: string, docId?: string, role?: DocumentRole, language?: DocumentLanguage } = $props();
 
 	let isLatex = $derived(language === 'latex');
+
+	async function uploadLatexImage(file: File) {
+		if (!docId) {
+			alert('Please save the document before uploading images.');
+			return null;
+		}
+		const uploaded = await uploadDocumentFile(docId, file);
+		return uploaded?.filename ?? null;
+	}
 	let sourceFileExtension = $derived(sourceExtension(language));
 	let readOnly = $derived(role !== 'owner' && role !== 'editor');
 	let directEditing = $derived(!readOnly && !$suggestingModeStore);
@@ -588,11 +598,11 @@
 
 	{#if isLatex}
 		<LatexFormattingBar
-			{docId}
 			readOnly={!directEditing}
+			uploadImage={uploadLatexImage}
 			{canComment}
 			{unsharedFileCount}
-			onOpenAssets={() => (isAssetsModalOpen = true)}
+			onOpenAssets={docId ? () => (isAssetsModalOpen = true) : undefined}
 		/>
 	{:else}
 		<FormattingBar

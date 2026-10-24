@@ -12,18 +12,18 @@
 		wrapEnvironment,
 		type LatexInsertOption
 	} from '$lib/ts/editor-latex-actions';
-	import { replaceSelection, uploadDocumentFile } from '$lib/ts/document-uploads';
+	import { replaceSelection } from '$lib/ts/document-uploads';
 	import { startCommentOnSelection } from '$lib/ts/comments';
 	import { withShortcut } from '$lib/ts/keybinds/keybinds-store';
 	import ToolbarButton from './ToolbarButton.svelte';
 	import ZoomControl from './ZoomControl.svelte';
 
-	let { docId, readOnly, canComment, unsharedFileCount, onOpenAssets }: {
-		docId?: string;
+	let { readOnly, uploadImage, canComment = false, unsharedFileCount = 0, onOpenAssets = undefined }: {
 		readOnly: boolean;
-		canComment: boolean;
-		unsharedFileCount: number;
-		onOpenAssets: () => void;
+		uploadImage: (file: File) => Promise<string | null>;
+		canComment?: boolean;
+		unsharedFileCount?: number;
+		onOpenAssets?: () => void;
 	} = $props();
 
 	let fileInput = $state<HTMLInputElement | null>(null);
@@ -56,11 +56,10 @@
 		const file = input.files?.[0];
 		input.value = '';
 		if (!file) return;
-		if (!docId) return alert('Please save the document before uploading images.');
 
-		uploadDocumentFile(docId, file)
-			.then((data) => {
-				if (data && $editorViewStore) replaceSelection($editorViewStore, figureSnippet(data.filename));
+		uploadImage(file)
+			.then((fileName) => {
+				if (fileName && $editorViewStore) replaceSelection($editorViewStore, figureSnippet(fileName));
 			})
 			.catch((err) => {
 				console.error(err);
@@ -126,7 +125,7 @@
 		</div>
 	{/if}
 
-	{#if docId}
+	{#if onOpenAssets}
 		<button onclick={onOpenAssets} class="relative p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title={unsharedFileCount > 0 ? `${unsharedFileCount} file(s) used in this document are not shared with collaborators` : 'Document files'}>
 			<Icon icon="mdi:paperclip" class="text-lg" />
 			{#if unsharedFileCount > 0}
