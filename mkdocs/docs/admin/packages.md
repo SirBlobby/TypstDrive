@@ -13,3 +13,5 @@
 | Maximum versions per package | No limit | Publishing stops at this many versions. `0` means no limit. |
 
 Administrators can always publish and delete packages and see private ones, but size and version limits apply to them too.
+
+Only Typst projects can be published. [LaTeX projects](../guide/latex.md), whose entry point is a `.tex` file, cannot be published by anyone.

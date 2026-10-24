@@ -11,6 +11,8 @@
 
 ## About
 
-**Site Settings → About** shows the TypstDrive and Typst versions, the database version, the author and the license, with links to the Typst documentation, Typst Universe, these docs, the source code and the issue tracker.
+**Site Settings → About** shows the TypstDrive and Typst versions, the LaTeX renderer, the database version, the author and the license, with links to the Typst documentation, Typst Universe, MiTeX, these docs, the source code and the issue tracker.
+
+[LaTeX documents](../guide/latex.md) are rendered with the MiTeX package. The server downloads it from Typst Universe the first time someone renders a LaTeX document, so LaTeX needs the server to reach the internet. The version in use is shown as **LaTeX renderer**.
 
 TypstDrive is a community project and is not affiliated with the official Typst project. See [About and disclaimer](../about.md).

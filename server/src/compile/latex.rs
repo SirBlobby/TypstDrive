@@ -11,7 +11,7 @@ pub const LATEX_LANGUAGE: &str = "latex";
 pub const TYPST_STARTER: &str = "== New Document";
 pub const LATEX_STARTER: &str = "\\documentclass{article}\n\\title{New Document}\n\\author{}\n\n\\begin{document}\n\\maketitle\n\n\\section{Introduction}\nStart writing here.\n\n\\end{document}\n";
 
-const MITEX_IMPORT: &str = "#import \"@preview/mitex:0.2.7\": *\n";
+pub const MITEX_PACKAGE: &str = "@preview/mitex:0.2.7";
 const ARTICLE_STYLE: &str = "#set page(paper: \"us-letter\", margin: 1in)\n\
 #set text(font: \"New Computer Modern\", size: 11pt)\n\
 #set par(justify: true, first-line-indent: 1.5em)\n\
@@ -81,7 +81,7 @@ fn generated_entrypoint_for(latex_path: &str) -> String {
 
 pub fn latex_to_typst(source: &str) -> String {
     let (preamble, body) = split_document(source);
-    let mut typst = format!("{MITEX_IMPORT}{ARTICLE_STYLE}\n");
+    let mut typst = format!("#import \"{MITEX_PACKAGE}\": *\n{ARTICLE_STYLE}\n");
 
     match body.split_once("\\maketitle") {
         Some((before_title, after_title)) => {
