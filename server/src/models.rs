@@ -211,7 +211,7 @@ pub struct ProjectFolderQuery {
     pub path: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectEntrypoint {
     pub entrypoint: String,
 }
