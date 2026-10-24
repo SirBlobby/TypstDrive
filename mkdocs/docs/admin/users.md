@@ -14,7 +14,7 @@
 
 ## Who can sign up
 
-**Site Settings → Registration & Accounts**:
+**Site Settings → People → Accounts**:
 
 | Setting | What it does |
 |---|---|
