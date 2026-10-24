@@ -20,19 +20,47 @@
     import AboutSettings from '$lib/components/site-settings/AboutSettings.svelte';
 
     const navItems = [
-        { id: 'users', label: 'Users', icon: 'mdi:account-group-outline' },
-        { id: 'accounts', label: 'Registration & Accounts', icon: 'mdi:account-cog-outline' },
-        { id: 'authentication', label: 'Authentication', icon: 'mdi:shield-key-outline' },
-        { id: 'email', label: 'Email', icon: 'mdi:email-outline' },
+        {
+            id: 'people',
+            label: 'People',
+            icon: 'mdi:account-group-outline',
+            children: [
+                { id: 'users', label: 'Users', icon: 'mdi:account-multiple-outline' },
+                { id: 'accounts', label: 'Registration & Accounts', icon: 'mdi:account-cog-outline' },
+                { id: 'teams', label: 'Team Spaces', icon: 'mdi:account-supervisor-outline' }
+            ]
+        },
+        {
+            id: 'security',
+            label: 'Security',
+            icon: 'mdi:shield-lock-outline',
+            children: [
+                { id: 'authentication', label: 'Authentication', icon: 'mdi:shield-key-outline' },
+                { id: 'email', label: 'Email', icon: 'mdi:email-outline' },
+                { id: 'audit-log', label: 'Audit Log', icon: 'mdi:clipboard-text-clock-outline' }
+            ]
+        },
+        {
+            id: 'content',
+            label: 'Content',
+            icon: 'mdi:folder-multiple-outline',
+            children: [
+                { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
+                { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
+                { id: 'pdf-links', label: 'PDF Links', icon: 'mdi:file-pdf-box' }
+            ]
+        },
         { id: 'branding', label: 'Branding', icon: 'mdi:palette-swatch-outline' },
-        { id: 'teams', label: 'Team Spaces', icon: 'mdi:account-multiple-outline' },
-        { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
-        { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
-        { id: 'pdf-links', label: 'PDF Links', icon: 'mdi:file-pdf-box' },
         { id: 'api-access', label: 'API Access', icon: 'mdi:api' },
-        { id: 'audit-log', label: 'Audit Log', icon: 'mdi:clipboard-text-clock-outline' },
-        { id: 'server', label: 'Server', icon: 'mdi:server-outline' },
-        { id: 'about', label: 'About', icon: 'mdi:information-outline' }
+        {
+            id: 'system',
+            label: 'System',
+            icon: 'mdi:server-outline',
+            children: [
+                { id: 'server', label: 'Server', icon: 'mdi:server-network' },
+                { id: 'about', label: 'About', icon: 'mdi:information-outline' }
+            ]
+        }
     ];
 
     let activeSection = $state('users');
