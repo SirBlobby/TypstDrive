@@ -200,7 +200,7 @@
 				history(),
 				...bracketExtensions,
 				...searchExtensions(),
-				editorKeybindExtension(commentMarker, isTypst),
+				editorKeybindExtension(commentMarker, isTypst, isLatex),
 				keymap.of([...searchKeymap.filter((binding) => binding.key !== 'Mod-f'), ...defaultKeymap, ...historyKeymap, indentWithTab] as any),
 				languageExtension,
 				yCollab(activeText, activeProvider.awareness),

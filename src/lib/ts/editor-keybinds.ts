@@ -16,7 +16,7 @@ function wrapping(prefix: string, suffix: string, placeholder: string): EditorCo
     };
 }
 
-export function editorKeybindExtension(commentMarker: string, isTypst: boolean): Extension {
+export function editorKeybindExtension(commentMarker: string, isTypst: boolean, isLatex = false): Extension {
     const keybinds = get(keybindsStore);
 
     const commands: Partial<Record<KeybindActionId, EditorCommand>> = {
@@ -36,6 +36,13 @@ export function editorKeybindExtension(commentMarker: string, isTypst: boolean):
         commands.italic = wrapping('_', '_', 'italic');
         commands.code = wrapping('`', '`', 'code');
         commands.inlineMath = wrapping('$ ', ' $', 'x = y');
+    }
+
+    if (isLatex) {
+        commands.bold = wrapping('\\textbf{', '}', 'bold');
+        commands.italic = wrapping('\\textit{', '}', 'italic');
+        commands.code = wrapping('\\texttt{', '}', 'code');
+        commands.inlineMath = wrapping('$', '$', 'x = y');
     }
 
     const bindings: KeyBinding[] = Object.entries(commands)
