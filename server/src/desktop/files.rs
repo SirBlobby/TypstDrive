@@ -16,7 +16,7 @@ pub async fn list_account_files(
     headers: HeaderMap,
     Query(query): Query<FolderQuery>,
 ) -> Result<Json<Vec<CloudFile>>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = readable_space(&state, &headers).await?;
 
     let rows = match &query.folder_id {
         Some(folder_id) => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
@@ -64,7 +64,7 @@ pub async fn upload_account_file(
     headers: HeaderMap,
     Json(payload): Json<UploadFileBody>,
 ) -> Result<Json<CloudFile>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     if payload.name.trim().is_empty() {
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
@@ -129,7 +129,7 @@ pub async fn rename_account_file(
     Path(id): Path<String>,
     Json(payload): Json<RenameFileBody>,
 ) -> Result<Json<CloudFile>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     if payload.name.trim().is_empty() {
         return Err((StatusCode::BAD_REQUEST, "Name cannot be empty".to_string()));
@@ -173,7 +173,7 @@ pub async fn move_account_file(
     Path(id): Path<String>,
     Json(payload): Json<MoveFileBody>,
 ) -> Result<Json<CloudFile>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     if let Some(folder_id) = &payload.folder_id {
         owned_folder(&state, folder_id, &user_id).await?;
@@ -219,7 +219,7 @@ pub async fn pull_account_file(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<CloudFileContent>, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = readable_space(&state, &headers).await?;
 
     let row = sqlx::query_as::<_, (String, String, Vec<u8>, Option<String>)>(
         sql("SELECT name, mime_type, data, storage_key FROM files WHERE id = $1 AND owner_id = $2"),
@@ -247,7 +247,7 @@ pub async fn delete_account_file(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let user_id = authenticate(&state, &headers).await?;
+    let user_id = writable_space(&state, &headers).await?;
 
     let result = sqlx::query(sql("DELETE FROM files WHERE id = $1 AND owner_id = $2"))
         .bind(&id)

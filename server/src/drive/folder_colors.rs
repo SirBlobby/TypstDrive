@@ -46,11 +46,20 @@ pub async fn set_folder_color(
     SignedInUser(user_id): SignedInUser,
     Json(payload): Json<FolderColorRequest>,
 ) -> Result<Json<FolderColorResponse>, ApiError> {
-    let color = normalized_color(payload.color)?;
+    apply_folder_color(&state, id, &user_id, payload.color).await
+}
+
+pub async fn apply_folder_color(
+    state: &AppState,
+    id: String,
+    owner_id: &str,
+    requested_color: Option<String>,
+) -> Result<Json<FolderColorResponse>, ApiError> {
+    let color = normalized_color(requested_color)?;
 
     let owned_folder = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM folders WHERE id = $1 AND owner_id = $2"))
         .bind(&id)
-        .bind(&user_id)
+        .bind(owner_id)
         .fetch_optional(&state.db)
         .await
         .map_err(internal_error)?;
@@ -61,12 +70,12 @@ pub async fn set_folder_color(
     sqlx::query(sql("UPDATE folders SET color = $1 WHERE id = $2 AND owner_id = $3"))
         .bind(&color)
         .bind(&id)
-        .bind(&user_id)
+        .bind(owner_id)
         .execute(&state.db)
         .await
         .map_err(internal_error)?;
 
-    notify_devices(&state, &user_id, DeviceEvent::structure()).await;
+    notify_devices(state, owner_id, DeviceEvent::structure()).await;
 
     Ok(Json(FolderColorResponse { id, color }))
 }
