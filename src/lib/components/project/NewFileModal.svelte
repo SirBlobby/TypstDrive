@@ -1,10 +1,13 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import { untrack } from 'svelte';
 	import Modal from '../Modal.svelte';
 	import { focusOnMount } from '$lib/ts/focus-on-mount';
 
-	let { existingPaths, defaultExtension, onsubmit, onclose }: {
+	let { existingPaths, folders, initialFolder = '', defaultExtension, onsubmit, onclose }: {
 		existingPaths: string[];
+		folders: string[];
+		initialFolder?: string;
 		defaultExtension: string;
 		onsubmit: (path: string) => void;
 		onclose: () => void;
@@ -18,20 +21,18 @@
 		{ extension: 'txt', label: 'Text', icon: 'mdi:file-document-outline' }
 	];
 
-	let folder = $state('');
+	let folder = $state(untrack(() => initialFolder));
 	let name = $state('');
 	let extension = $state(defaultExtension);
 
-	let cleanFolder = $derived(folder.trim().replace(/^\/+|\/+$/g, ''));
 	let typedExtension = $derived(name.trim().match(/\.([a-z0-9]+)$/i)?.[1].toLowerCase() ?? null);
 	let baseName = $derived(typedExtension ? name.trim().slice(0, -(typedExtension.length + 1)) : name.trim());
 	let fileName = $derived(`${baseName}.${typedExtension ?? extension}`);
-	let path = $derived(cleanFolder ? `${cleanFolder}/${fileName}` : fileName);
+	let path = $derived(folder ? `${folder}/${fileName}` : fileName);
 
 	let problem = $derived.by(() => {
 		if (!baseName) return 'Enter a file name.';
 		if (/[\\/:*?"<>|]/.test(baseName)) return 'File names cannot contain / \\ : * ? " < > or |.';
-		if (cleanFolder.split('/').some((part) => part === '..' || part === '.')) return 'Folders cannot contain . or .. parts.';
 		if (existingPaths.some((existing) => existing.toLowerCase() === path.toLowerCase())) return `${path} already exists.`;
 		return null;
 	});
@@ -75,20 +76,21 @@
 			</div>
 		</label>
 
-		<label class="flex flex-col gap-1.5 text-xs">
-			<span class="font-medium text-[var(--color-ink-muted)]">Folder <span class="font-normal">(optional)</span></span>
-			<input bind:value={folder} placeholder="chapters" class="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none" />
-		</label>
+		{#if folders.length > 0}
+			<label class="flex flex-col gap-1.5 text-xs">
+				<span class="font-medium text-[var(--color-ink-muted)]">Folder</span>
+				<select bind:value={folder} class="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none">
+					<option value="">Project root</option>
+					{#each folders as option (option)}
+						<option value={option}>{option}</option>
+					{/each}
+				</select>
+			</label>
+		{/if}
 
-		<p class="text-xs {problem && baseName ? 'text-[var(--color-danger)]' : 'text-[var(--color-ink-muted)]'}">
-			{#if problem && baseName}
-				{problem}
-			{:else if baseName}
-				Creates <code class="font-mono text-[var(--color-ink)]">{path}</code>
-			{:else}
-				Pick a type and enter a name. Use a folder to group files, such as chapters.
-			{/if}
-		</p>
+		{#if problem && baseName}
+			<p class="text-xs text-[var(--color-danger)]">{problem}</p>
+		{/if}
 	</form>
 
 	{#snippet footer()}
