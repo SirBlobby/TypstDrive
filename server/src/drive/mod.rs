@@ -12,6 +12,7 @@ pub mod folder_colors;
 pub mod folders;
 pub mod item_info;
 pub mod people;
+pub mod project_folders;
 pub mod project_paths;
 pub mod projects;
 pub mod stars;

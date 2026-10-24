@@ -143,6 +143,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/projects/{id}/invite", post(sharing::members::invite_project_collaborator))
         .route("/projects/{id}/files", get(drive::projects::list_project_files).post(drive::projects::create_project_file))
         .route("/projects/{id}/files/upload", post(drive::projects::upload_project_file))
+        .route("/projects/{id}/folders", patch(drive::project_folders::rename_project_folder).delete(drive::project_folders::delete_project_folder))
         .route("/projects/{id}/files/{fid}", get(drive::projects::get_project_file).patch(drive::projects::update_project_file).delete(drive::projects::delete_project_file))
         .route("/packages", get(packages::registry::list_packages))
         .route("/packages/publish", post(packages::registry::publish_package))

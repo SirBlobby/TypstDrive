@@ -17,8 +17,8 @@ use crate::{
     drive::project_paths::clean_project_path,
     desktop::devices::{notify_devices, DeviceEvent},
     models::{
-        CreateProjectFileRequest, CreateProjectRequest, Project, ProjectFile, UpdateProjectFileRequest,
-        UpdateProjectRequest,
+        CreateProjectFileRequest, CreateProjectRequest, Project, ProjectEntrypoint, ProjectFile,
+        UpdateProjectFileRequest, UpdateProjectRequest,
     },
     AppState,
 };
@@ -77,6 +77,34 @@ fn can_edit_role(role: &str) -> bool {
 
 fn read_only() -> (StatusCode, String) {
     (StatusCode::FORBIDDEN, "Read-only access".to_string())
+}
+
+pub async fn editable_project(
+    state: &AppState,
+    project_id: &str,
+    user_id_opt: &Option<String>,
+) -> Result<Project, (StatusCode, String)> {
+    let (project, role) = project_role(state, project_id, user_id_opt)
+        .await
+        .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
+    if !can_edit_role(&role) {
+        return Err(read_only());
+    }
+    Ok(project)
+}
+
+fn is_entrypoint_candidate(path: &str) -> bool {
+    let lower = path.to_lowercase();
+    lower.ends_with(".typ") || lower.ends_with(".tex")
+}
+
+pub fn project_entrypoint_after_removal(current: &str, remaining_paths: &[String]) -> String {
+    let mut candidates: Vec<&String> = remaining_paths.iter().filter(|path| is_entrypoint_candidate(path)).collect();
+    candidates.sort_by_key(|path| {
+        let is_main = path.eq_ignore_ascii_case("main.typ") || path.eq_ignore_ascii_case("main.tex");
+        (!is_main, path.matches('/').count(), path.to_lowercase())
+    });
+    candidates.first().map(|path| path.to_string()).unwrap_or_else(|| current.to_string())
 }
 
 pub async fn project_role(
@@ -530,60 +558,91 @@ pub async fn update_project_file(
     Path((id, file_id)): Path<(String, String)>,
     jar: SignedCookieJar,
     Json(payload): Json<UpdateProjectFileRequest>,
-) -> Result<StatusCode, (StatusCode, String)> {
+) -> Result<Json<ProjectEntrypoint>, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (project, role) = project_role(&state, &id, &user_id_opt)
-        .await
-        .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
-    if !can_edit_role(&role) {
-        return Err(read_only());
-    }
-
+    let project = editable_project(&state, &id, &user_id_opt).await?;
     let path = clean_project_path(&payload.path)?;
-    let result = sqlx::query(sql("UPDATE project_files SET path = $1 WHERE id = $2 AND project_id = $3"))
+    let old_path = project_file_path(&state, &id, &file_id).await?;
+
+    let mut transaction = state.db.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    sqlx::query(sql("UPDATE project_files SET path = $1 WHERE id = $2 AND project_id = $3"))
         .bind(&path)
         .bind(&file_id)
         .bind(&id)
-        .execute(&state.db)
+        .execute(&mut *transaction)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "File not found".to_string()));
+    let entrypoint = if old_path == project.entrypoint { path } else { project.entrypoint.clone() };
+    if entrypoint != project.entrypoint {
+        sqlx::query(sql("UPDATE projects SET entrypoint = $1 WHERE id = $2"))
+            .bind(&entrypoint)
+            .bind(&id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     }
+    transaction.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
     crate::drive::activity::mark_project_edited(&state, &id, user_id_opt.as_deref()).await;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(Json(ProjectEntrypoint { entrypoint }))
+}
+
+async fn project_file_path(state: &AppState, project_id: &str, file_id: &str) -> Result<String, (StatusCode, String)> {
+    sqlx::query_as::<_, (String,)>(sql("SELECT path FROM project_files WHERE id = $1 AND project_id = $2"))
+        .bind(file_id)
+        .bind(project_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map(|(path,)| path)
+        .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))
 }
 
 pub async fn delete_project_file(
     State(state): State<AppState>,
     Path((id, file_id)): Path<(String, String)>,
     jar: SignedCookieJar,
-) -> Result<StatusCode, (StatusCode, String)> {
+) -> Result<Json<ProjectEntrypoint>, (StatusCode, String)> {
     let user_id_opt = jar.get("session_user_id").map(|c| c.value().to_string());
-    let (project, role) = project_role(&state, &id, &user_id_opt)
-        .await
-        .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
-    if !can_edit_role(&role) {
-        return Err(read_only());
-    }
+    let project = editable_project(&state, &id, &user_id_opt).await?;
+    let old_path = project_file_path(&state, &id, &file_id).await?;
 
-    let result = sqlx::query(sql("DELETE FROM project_files WHERE id = $1 AND project_id = $2"))
+    let mut transaction = state.db.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    sqlx::query(sql("DELETE FROM project_files WHERE id = $1 AND project_id = $2"))
         .bind(&file_id)
         .bind(&id)
-        .execute(&state.db)
+        .execute(&mut *transaction)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "File not found".to_string()));
+    let entrypoint = if old_path == project.entrypoint {
+        let remaining_paths: Vec<String> = sqlx::query_as::<_, (String,)>(sql("SELECT path FROM project_files WHERE project_id = $1"))
+            .bind(&id)
+            .fetch_all(&mut *transaction)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+            .into_iter()
+            .map(|(path,)| path)
+            .collect();
+        project_entrypoint_after_removal(&project.entrypoint, &remaining_paths)
+    } else {
+        project.entrypoint.clone()
+    };
+    if entrypoint != project.entrypoint {
+        sqlx::query(sql("UPDATE projects SET entrypoint = $1 WHERE id = $2"))
+            .bind(&entrypoint)
+            .bind(&id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     }
+    transaction.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
     crate::drive::activity::mark_project_edited(&state, &id, user_id_opt.as_deref()).await;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(Json(ProjectEntrypoint { entrypoint }))
 }
