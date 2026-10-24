@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { brandingStore } from '$lib/ts/branding';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import Editor from '$lib/components/Editor.svelte';
 	import Preview from '$lib/components/Preview.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -15,6 +15,7 @@
 	import SuggestionHighlights from '$lib/components/suggestions/SuggestionHighlights.svelte';
 	import SuggestionComposer from '$lib/components/suggestions/SuggestionComposer.svelte';
 	import { editorErrors, documentStatsStore } from '$lib/ts/store';
+	import { bibliographyChangedStore } from '$lib/ts/citations';
 	import { previewModeStore, previewVisibleStore } from '$lib/ts/preview-mode';
 	import { reviewExtensions } from '$lib/ts/review-extensions';
 	import { suggestingModeStore, suggestionDraftStore } from '$lib/ts/suggestions';
@@ -66,6 +67,14 @@
 				errors = [{ message: 'Network or Server Error compiling document.', severity: 'error' }];
 			});
 	}
+
+	$effect(() => {
+		if ($bibliographyChangedStore === 0) return;
+		untrack(() => {
+			lastCompiledContent = null;
+			triggerCompile();
+		});
+	});
 
 	$effect(() => {
 		if (showPreview && initialized) {

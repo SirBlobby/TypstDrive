@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, AppState,
+    accounts, admin, api, citations, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -36,6 +36,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/api-access", get(api::limits::overview))
         .route("/admin/api-access/defaults", put(api::limits::update_defaults))
         .route("/admin/api-access/users/{id}", put(api::limits::update_user_limits))
+        .route("/admin/citation-policy", get(citations::policy::get_policy).put(citations::policy::update_policy))
         .route("/admin/pdf-links", get(sharing::pdf_links::admin::overview))
         .route("/admin/pdf-links/policy", get(sharing::pdf_links::policy::get_policy).put(sharing::pdf_links::policy::update_policy))
         .route("/admin/pdf-links/{id}", delete(sharing::pdf_links::admin::delete_link))
@@ -91,6 +92,16 @@ pub fn build_router(state: AppState) -> Router {
         .route("/teams/{id}/members/{user_id}/transfer", post(teams::members::transfer_ownership))
         .route("/share-links/{kind}/{id}", get(sharing::links::link_status).put(sharing::links::update_link))
         .route("/share-links/{kind}/{id}/unlock", post(sharing::links::unlock_link))
+        .route("/citations/policy", get(citations::policy::own_policy))
+        .route("/citations/lookup", post(citations::entries::lookup))
+        .route("/citations/zotero", get(citations::zotero_account::status).put(citations::zotero_account::connect).delete(citations::zotero_account::disconnect))
+        .route("/citations/zotero/libraries", get(citations::zotero_account::libraries))
+        .route("/citations/zotero/collections", get(citations::zotero_account::collections))
+        .route("/citations/syncs/{id}", delete(citations::sync::delete_sync))
+        .route("/citations/syncs/{id}/run", post(citations::sync::run_sync))
+        .route("/citations/{kind}/{id}/files", get(citations::entries::list_files))
+        .route("/citations/{kind}/{id}/entries", post(citations::entries::add_entry))
+        .route("/citations/{kind}/{id}/syncs", get(citations::sync::list_syncs).post(citations::sync::create_sync))
         .route("/pdf-links", get(sharing::pdf_links::manage::list_own_links))
         .route(
             "/pdf-links/{kind}/{id}",

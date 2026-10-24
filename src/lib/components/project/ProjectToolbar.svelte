@@ -17,6 +17,7 @@
 	import PromptModal from '../PromptModal.svelte';
 	import ConfirmModal from '../ConfirmModal.svelte';
 	import ShareModal from '../ShareModal.svelte';
+	import CitationsModal from '../citations/CitationsModal.svelte';
 	import LatexFormattingBar from '../editor/LatexFormattingBar.svelte';
 	import ZoomControl from '../editor/ZoomControl.svelte';
 
@@ -72,6 +73,7 @@
 	let showRenameModal = $state(false);
 	let showDeleteModal = $state(false);
 	let showShareModal = $state(false);
+	let showCitations = $state(false);
 	let renameName = $state('');
 
 	$effect(() => { renameName = projectName; });
@@ -360,6 +362,8 @@
 								<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
 									<button onclick={handleUndo} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Undo (Ctrl+Z)</button>
 									<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Redo (Ctrl+Y)</button>
+									<div class="h-px bg-[var(--theme-border)] my-1"></div>
+									<button onclick={() => { activeMenu = null; showCitations = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="ph:quotes" class="text-base" /> Citations</button>
 								</div>
 							{/if}
 						</div>
@@ -505,6 +509,10 @@
 
 {#if showShareModal}
 	<ShareModal itemId={projectId} kind="project" onClose={() => (showShareModal = false)} />
+{/if}
+
+{#if showCitations}
+	<CitationsModal kind="project" itemId={projectId} latex={isLatexFile} onchanged={onFilesChanged} onclose={() => (showCitations = false)} />
 {/if}
 
 {#if showDeleteModal}

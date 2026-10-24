@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
 	import DocumentAssetsModal from './DocumentAssetsModal.svelte';
+	import CitationsModal from './citations/CitationsModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
 	import { currentKeybind } from '$lib/ts/keybinds/keybinds-store';
@@ -32,6 +33,7 @@
 
 	let isShareModalOpen = $state(false);
 	let isAssetsModalOpen = $state(false);
+	let isCitationsOpen = $state(false);
 	let unsharedFileCount = $state(0);
 
 	async function checkUnsharedFiles() {
@@ -474,6 +476,13 @@
 										{option.label}
 									</button>
 								{/each}
+								{#if docId}
+									<div class="h-px bg-[var(--theme-border)] my-1"></div>
+									<button onclick={() => { activeMenu = null; isCitationsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
+										<Icon icon="ph:quotes" class="text-base" />
+										Citation
+									</button>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -622,6 +631,10 @@
 
 {#if isShareModalOpen}
 	<ShareModal itemId={docId} kind="document" onClose={() => { isShareModalOpen = false; checkUnsharedFiles(); }} />
+{/if}
+
+{#if isCitationsOpen && docId}
+	<CitationsModal kind="document" itemId={docId} latex={isLatex} onclose={() => (isCitationsOpen = false)} />
 {/if}
 
 {#if isAssetsModalOpen && docId}

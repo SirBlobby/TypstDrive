@@ -181,11 +181,13 @@ pub async fn compile_files(
     let Ok(files) = readable_files(state, document, role, user_id).await else {
         return HashMap::new();
     };
-    with_data(state, files)
-        .await
-        .into_iter()
-        .map(|(file, data)| (file.name, data))
-        .collect()
+    let linked_ids: std::collections::HashSet<String> = files
+        .iter()
+        .filter(|(entry, _)| entry.linked_to_document)
+        .map(|(entry, _)| entry.file.id.clone())
+        .collect();
+    let (linked, others): (Vec<_>, Vec<_>) = with_data(state, files).await.into_iter().partition(|(file, _)| linked_ids.contains(&file.id));
+    others.into_iter().chain(linked).map(|(file, data)| (file.name, data)).collect()
 }
 
 pub async fn list_assets(
