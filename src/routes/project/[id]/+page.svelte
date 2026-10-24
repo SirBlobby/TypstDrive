@@ -12,7 +12,8 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { compileProject } from '$lib/ts/typst-api';
 	import type { Diagnostic } from '$lib/ts/typst-api';
-	import { editorErrors, documentStatsStore, previewOpenStore, editorViewStore, fileTreeCollapsedStore } from '$lib/ts/store';
+	import { editorErrors, documentStatsStore, editorViewStore, fileTreeCollapsedStore } from '$lib/ts/store';
+	import { previewModeStore, previewVisibleStore } from '$lib/ts/preview-mode';
 	import Icon from '@iconify/svelte';
 	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject } from '$lib/ts/yjs-project';
 
@@ -39,6 +40,10 @@
 	let contextMenu = $state({ show: false, x: 0, y: 0, text: '' });
 
 	let readOnly = $derived(role === 'viewer');
+	let showPreview = $derived($previewVisibleStore || readOnly);
+	let editorWidthClass = $derived(
+		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'flex-1'
+	);
 	let activeEntry = $derived(activeFileId ? getOpenFile(activeFileId) : undefined);
 	let activePath = $derived(files.find((f) => f.id === activeFileId)?.path ?? '');
 
@@ -53,7 +58,7 @@
 	}
 
 	function triggerCompile() {
-		if (!$previewOpenStore) return;
+		if (!showPreview) return;
 		const sources = getAllText();
 		const fingerprint = JSON.stringify(sources);
 		if (fingerprint === lastCompiledSources) return;
@@ -75,6 +80,10 @@
 				errors = [{ message: 'Network or server error compiling project.', severity: 'error' }];
 			});
 	}
+
+	$effect(() => {
+		if (showPreview && ready) triggerCompile();
+	});
 
 	async function loadFiles() {
 		const res = await fetch(`/api/projects/${projectId}/files`);
@@ -255,7 +264,7 @@
 		{/if}
 
 		{#if !readOnly}
-			<div class="flex flex-col min-h-0 {$previewOpenStore ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'flex-1'}">
+			<div class="flex flex-col min-h-0 {editorWidthClass}">
 				{#if ready && activeEntry}
 					{#key activeFileId}
 						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} enableLsp={false} />
@@ -264,8 +273,8 @@
 			</div>
 		{/if}
 
-		{#if $previewOpenStore || readOnly}
-			<div class="{readOnly ? 'flex-1' : 'w-full md:w-1/2'} relative bg-[var(--color-surface)] flex flex-col">
+		{#if showPreview}
+			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-1/2'} relative bg-[var(--color-surface)] flex flex-col">
 				<Preview {svgs} />
 				<ErrorBanner {errors} />
 			</div>

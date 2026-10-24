@@ -5,9 +5,10 @@
 	import { undo, redo } from '@codemirror/commands';
 	import {
 		editorViewStore,
-		documentZoomStore,
-		previewOpenStore
+		documentZoomStore
 	} from '../../ts/store';
+	import { previewModeOptions, previewModeStore } from '../../ts/preview-mode';
+	import PreviewModeMenu from '../editor/PreviewModeMenu.svelte';
 	import { exportProject } from '../../ts/typst-api';
 	import PageSettingsModal from '../PageSettingsModal.svelte';
 	import PresentationMode from '../PresentationMode.svelte';
@@ -353,7 +354,9 @@
 						<button onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'view' ? null : 'view'; }} class="px-2 py-0.5 rounded transition-colors {activeMenu === 'view' ? 'bg-[var(--theme-border)]' : 'hover:bg-[var(--theme-border)]'}">View</button>
 						{#if activeMenu === 'view'}
 							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
-								<button onclick={() => { activeMenu = null; $previewOpenStore = !$previewOpenStore; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between">Preview<Icon icon={$previewOpenStore ? 'mdi:check' : ''} class="text-sm" /></button>
+								{#each previewModeOptions as option (option.value)}
+									<button onclick={() => { activeMenu = null; $previewModeStore = option.value; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between">{option.label}<Icon icon={$previewModeStore === option.value ? 'mdi:check' : ''} class="text-sm" /></button>
+								{/each}
 							</div>
 						{/if}
 					</div>
@@ -383,9 +386,9 @@
 
 			<div class="w-px h-5 bg-[var(--color-line)]"></div>
 
-			<button onclick={() => ($previewOpenStore = !$previewOpenStore)} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium transition-colors rounded-md {$previewOpenStore ? 'text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)]' : 'text-[var(--color-accent)] bg-[var(--color-accent-soft)] hover:opacity-90'}" title={$previewOpenStore ? 'Hide preview' : 'Show preview'}>
-				<Icon icon={$previewOpenStore ? 'mdi:eye-off-outline' : 'mdi:eye-outline'} class="text-[16px]" /> Preview
-			</button>
+			{#if !isViewer}
+				<PreviewModeMenu />
+			{/if}
 
 			<button onclick={handlePrint} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Print">
 				<Icon icon="mdi:printer" class="text-[16px]" /> Print
