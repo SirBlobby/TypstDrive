@@ -30,8 +30,7 @@
     </label>
 {/snippet}
 
-<div class="flex items-center justify-end gap-2 flex-wrap mb-6">
-    <div class="flex items-center gap-2">
+<div class="flex items-center gap-2">
         {@render filterSelect('Sort by', 'mdi:sort', filters.sortField, sortOptions, (value) => (filters = { ...filters, sortField: value as DriveFilters['sortField'] }))}
         <button
             onclick={toggleSortDirection}
@@ -58,5 +57,4 @@
                 </button>
             {/each}
         </div>
-    </div>
 </div>
