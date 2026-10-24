@@ -200,6 +200,22 @@ pub struct UpdateProjectFileRequest {
     pub path: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RenameProjectFolderRequest {
+    pub from: String,
+    pub to: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ProjectFolderQuery {
+    pub path: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ProjectEntrypoint {
+    pub entrypoint: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublishPackageRequest {
     pub project_id: String,

@@ -150,46 +150,47 @@
 		return files.filter((f) => f.path.startsWith(`${folder}/`));
 	}
 
-	async function moveFile(file: ProjectFile, path: string) {
+	function relocateFile(fileId: string, path: string) {
+		files = files.map((f) => (f.id === fileId ? { ...f, path } : f));
+		renameOpenFile(fileId, path);
+	}
+
+	function forgetFiles(removed: ProjectFile[]) {
+		const removedIds = new Set(removed.map((f) => f.id));
+		for (const fileId of removedIds) closeFile(fileId);
+		files = files.filter((f) => !removedIds.has(f.id));
+		if (!files.some((f) => f.id === activeFileId)) {
+			activeFileId = files.find((f) => f.kind === 'text' && !isPlaceholder(f.path))?.id ?? '';
+		}
+	}
+
+	async function applyEntrypoint(res: Response) {
+		const result: { entrypoint: string } = await res.json();
+		entrypoint = result.entrypoint;
+		recompileAfterFileChange();
+	}
+
+	async function renameFile(file: ProjectFile, path: string) {
 		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ path })
 		});
-		if (!res.ok) return false;
-		files = files.map((f) => (f.id === file.id ? { ...f, path } : f));
-		renameOpenFile(file.id, path);
-		return true;
-	}
-
-	async function removeFile(file: ProjectFile) {
-		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, { method: 'DELETE' });
-		if (!res.ok) return false;
-		closeFile(file.id);
-		files = files.filter((f) => f.id !== file.id);
-		return true;
-	}
-
-	function ensureActiveFileExists() {
-		if (files.some((f) => f.id === activeFileId)) return;
-		activeFileId = files.find((f) => f.kind === 'text' && !isPlaceholder(f.path))?.id ?? '';
-	}
-
-	async function renameFile(file: ProjectFile, path: string) {
-		const wasEntrypoint = file.path === entrypoint;
-		if (!(await moveFile(file, path))) return;
-		if (wasEntrypoint) await saveEntrypoint(path);
-		recompileAfterFileChange();
+		if (!res.ok) return;
+		relocateFile(file.id, path);
+		await applyEntrypoint(res);
 	}
 
 	async function renameFolder(oldFolder: string, newFolder: string) {
+		const res = await fetch(`/api/projects/${projectId}/folders`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ from: oldFolder, to: newFolder })
+		});
+		if (!res.ok) return;
 		const prefix = `${oldFolder}/`;
-		const movedEntrypoint = entrypoint.startsWith(prefix) ? `${newFolder}/${entrypoint.slice(prefix.length)}` : null;
-		for (const file of filesInFolder(oldFolder)) {
-			await moveFile(file, `${newFolder}/${file.path.slice(prefix.length)}`);
-		}
-		if (movedEntrypoint) await saveEntrypoint(movedEntrypoint);
-		recompileAfterFileChange();
+		for (const file of filesInFolder(oldFolder)) relocateFile(file.id, `${newFolder}/${file.path.slice(prefix.length)}`);
+		await applyEntrypoint(res);
 	}
 
 	let fileToDelete = $state<ProjectFile | null>(null);
@@ -206,32 +207,33 @@
 	async function confirmDeleteFile() {
 		const file = fileToDelete;
 		fileToDelete = null;
-		if (!file || !(await removeFile(file))) return;
-		ensureActiveFileExists();
-		recompileAfterFileChange();
+		if (!file) return;
+		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, { method: 'DELETE' });
+		if (!res.ok) return;
+		forgetFiles([file]);
+		await applyEntrypoint(res);
 	}
 
 	async function confirmDeleteFolder() {
 		const folder = folderToDelete;
 		folderToDelete = null;
 		if (!folder) return;
-		for (const file of filesInFolder(folder)) await removeFile(file);
-		ensureActiveFileExists();
-		recompileAfterFileChange();
-	}
-
-	async function saveEntrypoint(path: string) {
-		const res = await fetch(`/api/projects/${projectId}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ entrypoint: path })
-		});
-		if (res.ok) entrypoint = path;
-		return res.ok;
+		const res = await fetch(`/api/projects/${projectId}/folders?path=${encodeURIComponent(folder)}`, { method: 'DELETE' });
+		if (!res.ok) return;
+		forgetFiles(filesInFolder(folder));
+		await applyEntrypoint(res);
 	}
 
 	async function setEntry(file: ProjectFile) {
-		if (await saveEntrypoint(file.path)) recompileAfterFileChange();
+		const res = await fetch(`/api/projects/${projectId}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ entrypoint: file.path })
+		});
+		if (res.ok) {
+			entrypoint = file.path;
+			recompileAfterFileChange();
+		}
 	}
 
 	function handleContextMenu(e: MouseEvent) {
