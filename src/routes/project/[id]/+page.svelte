@@ -225,15 +225,12 @@
 	}
 
 	async function setEntry(file: ProjectFile) {
-		const res = await fetch(`/api/projects/${projectId}`, {
-			method: 'PATCH',
+		const res = await fetch(`/api/projects/${projectId}/entrypoint`, {
+			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ entrypoint: file.path })
 		});
-		if (res.ok) {
-			entrypoint = file.path;
-			recompileAfterFileChange();
-		}
+		if (res.ok) await applyEntrypoint(res);
 	}
 
 	function handleContextMenu(e: MouseEvent) {
