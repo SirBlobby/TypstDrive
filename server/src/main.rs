@@ -10,6 +10,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod accounts;
 mod admin;
 mod api;
+mod citations;
 mod cluster;
 mod compile;
 mod db;

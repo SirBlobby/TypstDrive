@@ -49,6 +49,7 @@ Password: password
 - **Projects**: Multi-file workspaces for books, theses and templates, downloadable as a ZIP.
 - **Packages**: Publish a project as a package everyone on your server can import, with private packages for people and teams.
 - **Fonts and Images**: Upload once and use everywhere, with an emoji font built in.
+- **Citations**: Paste a DOI or arXiv ID to get a BibTeX or Hayagriva entry, and sync Zotero libraries and collections into bibliography files.
 - **Sharing**: Share documents, projects and folders as editor, suggester or viewer, and hand over ownership.
 - **Share Links**: Let anyone with the link view, suggest or edit, with an optional password and expiry date.
 - **Public PDF Links**: A named URL such as `/pdf/my-cv` that always serves the latest compiled PDF, for CVs and living documents.
@@ -68,7 +69,7 @@ Password: password
 - **Account Security**: Email verification, password reset, active sessions, connected accounts and sign-in lockout.
 - **Themes**: Cerberus, Catppuccin and Arch Linux themes in light and dark mode, plus text size and high contrast options.
 - **Branding**: Your own site name, logo, accent color, tagline and sign-in message.
-- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, API limits and an audit log.
+- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, API limits and an audit log.
 - **Flexible Hosting**: SQLite, PostgreSQL or MySQL/MariaDB with automatic upgrades, plus Redis or Valkey and S3-compatible storage for larger installs.
 
 
