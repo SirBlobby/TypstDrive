@@ -81,7 +81,8 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
         let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
         let input = crate::drive::projects::assemble_project(state, &project, overrides).await;
         let thumbnail_target = role.can_edit().then(|| ThumbnailTarget::Project(project.id.clone()));
-        return Some(CompileSource { input, thumbnail_target, generated_source: false });
+        let generated_source = latex::is_latex_path(&input.entrypoint);
+        return Some(CompileSource { input, thumbnail_target, generated_source });
     }
 
     let submitted_text = payload.text.clone().unwrap_or_default();

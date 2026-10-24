@@ -176,6 +176,8 @@ pub struct CreateProjectRequest {
     pub name: String,
     pub folder_id: Option<String>,
     pub template: Option<String>,
+    #[serde(default)]
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

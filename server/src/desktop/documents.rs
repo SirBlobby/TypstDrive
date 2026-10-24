@@ -184,6 +184,18 @@ pub struct DocumentContent {
     pub role: String,
     pub hash: String,
     pub content: String,
+    pub language: String,
+}
+
+async fn document_language(state: &AppState, document_id: &str) -> String {
+    sqlx::query_as::<_, (Option<String>,)>(sql("SELECT language FROM documents WHERE id = $1"))
+        .bind(document_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .and_then(|(language,)| language)
+        .unwrap_or_else(|| crate::compile::latex::TYPST_LANGUAGE.to_string())
 }
 
 pub async fn pull_document(
@@ -196,6 +208,7 @@ pub async fn pull_document(
     let content = crate::realtime::live_documents::live_text(&state, &crate::realtime::live_documents::document_room(&id))
         .await
         .unwrap_or(stored_content);
+    let language = document_language(&state, &id).await;
 
     Ok(Json(DocumentContent {
         id,
@@ -203,6 +216,7 @@ pub async fn pull_document(
         role,
         hash: content_hash(content.as_bytes()),
         content,
+        language,
     }))
 }
 
@@ -281,6 +295,8 @@ pub struct CreateDocumentRequest {
     pub title: String,
     pub content: String,
     pub folder_id: Option<String>,
+    #[serde(default)]
+    pub language: Option<String>,
 }
 
 pub async fn create_document(
@@ -294,15 +310,17 @@ pub async fn create_document(
     }
     crate::accounts::storage::ensure_room(&state, &user_id, payload.content.len() as i64).await?;
     let document_id = Uuid::new_v4().to_string();
+    let language = crate::compile::latex::parse_language(payload.language.as_deref())?;
 
     sqlx::query(
-        sql("INSERT INTO documents (id, owner_id, folder_id, title, content) VALUES ($1, $2, $3, $4, $5)"),
+        sql("INSERT INTO documents (id, owner_id, folder_id, title, content, language) VALUES ($1, $2, $3, $4, $5, $6)"),
     )
     .bind(&document_id)
     .bind(&user_id)
     .bind(&payload.folder_id)
     .bind(&payload.title)
     .bind(encode_text_blob(&payload.content))
+    .bind(language)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -315,6 +333,7 @@ pub async fn create_document(
         role: "owner".to_string(),
         hash: content_hash(payload.content.as_bytes()),
         content: payload.content,
+        language: language.to_string(),
     }))
 }
 

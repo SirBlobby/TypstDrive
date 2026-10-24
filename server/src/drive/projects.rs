@@ -13,7 +13,7 @@ use yrs::Update;
 
 use crate::{
     sharing::access::{inherited_role, require_folder_access, require_owned_folder, strongest_role, AccessRole},
-    compile::compiler::ProjectInput,
+    compile::{compiler::ProjectInput, latex},
     drive::project_paths::clean_project_path,
     desktop::devices::{notify_devices, DeviceEvent},
     models::{
@@ -46,7 +46,7 @@ pub fn decode_text_blob(blob: &[u8]) -> String {
 
 fn is_text_path(path: &str) -> bool {
     let lower = path.to_lowercase();
-    [".typ", ".toml", ".bib", ".csl", ".yml", ".yaml", ".json", ".md", ".txt", ".csv"]
+    [".typ", ".tex", ".toml", ".bib", ".csl", ".yml", ".yaml", ".json", ".md", ".txt", ".csv"]
         .iter()
         .any(|ext| lower.ends_with(ext))
 }
@@ -233,12 +233,15 @@ pub async fn create_project(
     require_owned_folder(&state, &payload.folder_id, &user_id).await?;
 
     let project_id = Uuid::new_v4().to_string();
+    let language = latex::parse_language(payload.language.as_deref())?;
+    let entrypoint = latex::project_entrypoint(language);
 
-    sqlx::query(sql("INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES ($1, $2, $3, $4, 'main.typ')"))
+    sqlx::query(sql("INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES ($1, $2, $3, $4, $5)"))
     .bind(&project_id)
     .bind(&user_id)
     .bind(&payload.folder_id)
     .bind(&payload.name)
+    .bind(entrypoint)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -249,10 +252,14 @@ pub async fn create_project(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let seeds = [
-        ("typst.toml", default_manifest(&slugify(&payload.name))),
-        ("main.typ", "= New Project\n\nStart writing here.\n".to_string()),
-    ];
+    let seeds = if language == latex::LATEX_LANGUAGE {
+        vec![(latex::LATEX_PROJECT_ENTRYPOINT, latex::LATEX_STARTER.to_string())]
+    } else {
+        vec![
+            ("typst.toml", default_manifest(&slugify(&payload.name))),
+            (latex::TYPST_PROJECT_ENTRYPOINT, "= New Project\n\nStart writing here.\n".to_string()),
+        ]
+    };
     for (path, content) in seeds {
         let _ = sqlx::query(
             sql("INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES ($1, $2, $3, 'text', $4, 'text/plain')")

@@ -80,8 +80,19 @@ impl ProjectInput {
         }
     }
 
+    pub fn single_named(entrypoint: &str, text: String, files: HashMap<String, Vec<u8>>) -> Self {
+        let mut project_files = files;
+        project_files.insert(entrypoint.to_string(), text.into_bytes());
+        Self {
+            entrypoint: entrypoint.to_string(),
+            files: project_files,
+            packages: HashMap::new(),
+        }
+    }
+
     fn into_world(self, enable_html: bool) -> MemoryWorld {
-        MemoryWorld::new_project(self.entrypoint, self.files, self.packages, enable_html)
+        let input = crate::compile::latex::with_generated_entrypoint(self);
+        MemoryWorld::new_project(input.entrypoint, input.files, input.packages, enable_html)
     }
 }
 

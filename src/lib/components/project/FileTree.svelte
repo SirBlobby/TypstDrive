@@ -38,6 +38,7 @@
 	function iconFor(path: string): string {
 		const lower = path.toLowerCase();
 		if (lower.endsWith('.typ')) return 'mdi:language-markdown-outline';
+		if (lower.endsWith('.tex')) return 'mdi:sigma';
 		if (lower.endsWith('.toml')) return 'mdi:cog-outline';
 		if (lower.endsWith('.bib')) return 'mdi:book-open-variant';
 		if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.svg') || lower.endsWith('.gif')) return 'mdi:image-outline';
@@ -89,7 +90,7 @@
 				</button>
 				{#if !readOnly}
 					<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-						{#if file.kind === 'text' && file.path.toLowerCase().endsWith('.typ') && file.path !== entrypoint}
+						{#if file.kind === 'text' && /\.(typ|tex)$/i.test(file.path) && file.path !== entrypoint}
 							<button onclick={() => onSetEntry(file)} title="Set as entrypoint" class="p-0.5 rounded hover:bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]">
 								<Icon icon="mdi:star-outline" class="text-sm" />
 							</button>

@@ -28,6 +28,13 @@ pub fn parse_language(requested: Option<&str>) -> Result<&'static str, (StatusCo
     }
 }
 
+pub const LATEX_PROJECT_ENTRYPOINT: &str = "main.tex";
+pub const TYPST_PROJECT_ENTRYPOINT: &str = "main.typ";
+
+pub fn project_entrypoint(language: &str) -> &'static str {
+    if language == LATEX_LANGUAGE { LATEX_PROJECT_ENTRYPOINT } else { TYPST_PROJECT_ENTRYPOINT }
+}
+
 pub fn starter_text(language: &str) -> &'static str {
     if language == LATEX_LANGUAGE { LATEX_STARTER } else { TYPST_STARTER }
 }
@@ -36,13 +43,40 @@ pub fn is_latex(document: &Document) -> bool {
     document.language.as_deref() == Some(LATEX_LANGUAGE)
 }
 
+pub fn is_latex_path(path: &str) -> bool {
+    path.to_lowercase().ends_with(".tex")
+}
+
 pub fn file_extension(language: Option<&str>) -> &'static str {
     if language == Some(LATEX_LANGUAGE) { "tex" } else { "typ" }
 }
 
 pub fn document_input(document: &Document, text: String, files: HashMap<String, Vec<u8>>) -> ProjectInput {
-    let entry_text = if is_latex(document) { latex_to_typst(&text) } else { text };
-    ProjectInput::single(entry_text, files)
+    if is_latex(document) {
+        ProjectInput::single_named("main.tex", text, files)
+    } else {
+        ProjectInput::single(text, files)
+    }
+}
+
+pub fn with_generated_entrypoint(mut input: ProjectInput) -> ProjectInput {
+    if !is_latex_path(&input.entrypoint) {
+        return input;
+    }
+    let latex_source = input
+        .files
+        .get(&input.entrypoint)
+        .map(|bytes| String::from_utf8_lossy(bytes).to_string())
+        .unwrap_or_default();
+    let generated_path = generated_entrypoint_for(&input.entrypoint);
+    input.files.insert(generated_path.clone(), latex_to_typst(&latex_source).into_bytes());
+    input.entrypoint = generated_path;
+    input
+}
+
+fn generated_entrypoint_for(latex_path: &str) -> String {
+    let stem = &latex_path[..latex_path.len() - ".tex".len()];
+    format!("{stem}.latex-generated.typ")
 }
 
 pub fn latex_to_typst(source: &str) -> String {
