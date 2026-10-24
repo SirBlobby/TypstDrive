@@ -28,6 +28,7 @@ pub const TABLES: &[Table] = &[
             created_at("created_at"),
             created_at("updated_at"),
             optional_reference("last_edited_by", "users", "TEXT REFERENCES users(id) ON DELETE SET NULL"),
+            Column { name: "language", definition: "TEXT NOT NULL DEFAULT 'typst'", copy: CopyRule::DefaultWhenNull("'typst'") },
         ],
         constraints: &[],
     },

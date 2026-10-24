@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::compile::compiler::{run_blocking, CompileFailure, DocumentStats, ProjectInput};
+use crate::compile::latex;
 use crate::sharing::access;
 use crate::AppState;
 use crate::db::sql;
@@ -46,6 +47,7 @@ enum ThumbnailTarget {
 struct CompileSource {
     input: ProjectInput,
     thumbnail_target: Option<ThumbnailTarget>,
+    generated_source: bool,
 }
 
 fn map_diagnostics(diagnostics: CompileFailure) -> Vec<Diagnostic> {
@@ -79,24 +81,39 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
         let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
         let input = crate::drive::projects::assemble_project(state, &project, overrides).await;
         let thumbnail_target = role.can_edit().then(|| ThumbnailTarget::Project(project.id.clone()));
-        return Some(CompileSource { input, thumbnail_target });
+        return Some(CompileSource { input, thumbnail_target, generated_source: false });
     }
 
     let submitted_text = payload.text.clone().unwrap_or_default();
     let Some(document_id) = &payload.document_id else {
         user_id.as_ref()?;
-        return Some(CompileSource { input: ProjectInput::single(submitted_text, HashMap::new()), thumbnail_target: None });
+        return Some(CompileSource {
+            input: ProjectInput::single(submitted_text, HashMap::new()),
+            thumbnail_target: None,
+            generated_source: false,
+        });
     };
 
     let (document, role) = access::document_role(state, document_id, user_id).await?;
     let files = crate::drive::document_assets::compile_files(state, &document, role, user_id).await;
+    let generated_source = latex::is_latex(&document);
     if role.can_edit() {
         let thumbnail_target = Some(ThumbnailTarget::Document(document.id.clone()));
-        Some(CompileSource { input: ProjectInput::single(submitted_text, files), thumbnail_target })
+        let input = latex::document_input(&document, submitted_text, files);
+        Some(CompileSource { input, thumbnail_target, generated_source })
     } else {
         let saved_text = crate::drive::documents::saved_text(state, &document.id).await;
-        Some(CompileSource { input: ProjectInput::single(saved_text, files), thumbnail_target: None })
+        let input = latex::document_input(&document, saved_text, files);
+        Some(CompileSource { input, thumbnail_target: None, generated_source })
     }
+}
+
+fn without_ranges(mut diagnostics: Vec<Diagnostic>) -> Vec<Diagnostic> {
+    for diagnostic in &mut diagnostics {
+        diagnostic.from = None;
+        diagnostic.to = None;
+    }
+    diagnostics
 }
 
 async fn save_thumbnail(state: &AppState, target: ThumbnailTarget, thumbnail: &str) {
@@ -117,6 +134,7 @@ pub async fn compile_handler(
         return error_response("Unauthorized");
     };
 
+    let generated_source = source.generated_source;
     let Some(result) = run_blocking(move |compiler| compiler.compile_svg(source.input)).await else {
         return error_response("Compilation stopped unexpectedly");
     };
@@ -128,7 +146,11 @@ pub async fn compile_handler(
             }
             Json(CompileResponse { svgs: Some(svgs), errors: None, stats: Some(stats) })
         }
-        Err(diagnostics) => Json(CompileResponse { svgs: None, errors: Some(map_diagnostics(diagnostics)), stats: None }),
+        Err(diagnostics) => {
+            let mapped = map_diagnostics(diagnostics);
+            let errors = if generated_source { without_ranges(mapped) } else { mapped };
+            Json(CompileResponse { svgs: None, errors: Some(errors), stats: None })
+        }
     }
 }
 

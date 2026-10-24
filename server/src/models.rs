@@ -105,6 +105,9 @@ pub struct Document {
     #[serde(default)]
     #[sqlx(default)]
     pub size_bytes: Option<i64>,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -138,9 +141,6 @@ pub struct ProjectFile {
     pub project_id: String,
     pub path: String,
     pub kind: String,
-    #[serde(skip_serializing)]
-    #[sqlx(default)]
-    pub content: Option<Vec<u8>>,
     pub mime_type: String,
     pub created_at: String,
 }
@@ -241,6 +241,8 @@ pub struct CreateDocumentRequest {
     pub title: String,
     pub folder_id: Option<String>,
     pub content: Option<String>,
+    #[serde(default)]
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

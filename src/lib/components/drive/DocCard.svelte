@@ -44,6 +44,9 @@
 >
 
     <div class="h-40 w-full bg-[var(--color-surface-muted)] rounded-t-lg overflow-hidden flex items-center justify-center border-b border-[var(--color-line)] relative pointer-events-none">
+        {#if doc.language === 'latex'}
+            <span class="absolute top-2 left-2 z-10 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-teal-500 text-white shadow-sm">LaTeX</span>
+        {/if}
         {#if doc.thumbnail_svg}
             <div class="w-full h-full flex items-start justify-center bg-white transition-transform duration-300 group-hover:scale-110">
                 <img src={`data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(doc.thumbnail_svg)))}`} class="w-full h-auto shadow-sm border border-gray-200" alt="Thumbnail" draggable="false" />
