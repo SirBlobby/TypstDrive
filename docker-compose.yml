@@ -36,6 +36,12 @@ services:
       # - SMTP_PROVIDER=google
       # - SMTP_USERNAME=you@gmail.com
       # - SMTP_PASSWORD=your-app-password
+      # Mailgun, SendGrid, Amazon SES, Resend, Mailjet, Microsoft 365, Fastmail:
+      # - SMTP_PROVIDER=mailgun
+      # - SMTP_REGION=eu
+      # - SMTP_USERNAME=postmaster@mg.example.com
+      # - SMTP_PASSWORD=your-smtp-password
+      # - SMTP_FROM=TypstDrive <typst@mg.example.com>
       # Any other server:
       # - SMTP_HOST=smtp.example.com
       # - SMTP_PORT=587

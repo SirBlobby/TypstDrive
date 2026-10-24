@@ -11,6 +11,7 @@ export type AuthSettings = {
 
 export type EmailStatus = {
     configured: boolean;
+    provider: string | null;
     host: string | null;
     port: number | null;
     security: string | null;

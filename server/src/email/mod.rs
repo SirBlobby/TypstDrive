@@ -1,4 +1,5 @@
 pub mod messages;
+mod providers;
 mod templates;
 
 use lettre::message::header::ContentType;
@@ -35,6 +36,7 @@ impl Security {
 }
 
 struct EmailConfig {
+    provider: Option<&'static str>,
     host: String,
     port: u16,
     security: Security,
@@ -51,6 +53,7 @@ pub struct OutgoingMessage {
 #[derive(Serialize)]
 pub struct EmailStatus {
     pub configured: bool,
+    pub provider: Option<&'static str>,
     pub host: Option<String>,
     pub port: Option<u16>,
     pub security: Option<&'static str>,
@@ -69,11 +72,9 @@ fn env_value(name: &str) -> Option<String> {
     std::env::var(name).ok().map(|value| value.trim().to_string()).filter(|value| !value.is_empty())
 }
 
-fn preset_host() -> Option<(&'static str, u16)> {
-    match env_value("SMTP_PROVIDER")?.to_lowercase().as_str() {
-        "google" | "gmail" => Some(("smtp.gmail.com", 587)),
-        _ => None,
-    }
+fn disabled(problem: String) -> Mailer {
+    tracing::warn!("Email is disabled: {problem}");
+    Mailer { config: None, transport: None, problem: Some(problem) }
 }
 
 fn build_transport(config: &EmailConfig, username: Option<String>, password: Option<String>) -> Result<AsyncSmtpTransport<Tokio1Executor>, String> {
@@ -92,39 +93,52 @@ fn build_transport(config: &EmailConfig, username: Option<String>, password: Opt
 
 impl Mailer {
     pub fn from_environment() -> Self {
-        let preset = preset_host();
-        let Some(host) = env_value("SMTP_HOST").or_else(|| preset.map(|(host, _)| host.to_string())) else {
+        let preset = match env_value("SMTP_PROVIDER") {
+            Some(provider) => match providers::find_preset(&provider, env_value("SMTP_REGION").as_deref()) {
+                Ok(preset) => Some(preset),
+                Err(problem) => return disabled(problem),
+            },
+            None => None,
+        };
+
+        let Some(host) = env_value("SMTP_HOST").or_else(|| preset.as_ref().map(|preset| preset.host.clone())) else {
             return Self { config: None, transport: None, problem: None };
         };
 
         let port = env_value("SMTP_PORT")
             .and_then(|value| value.parse().ok())
-            .or(preset.map(|(_, port)| port))
+            .or(preset.as_ref().map(|preset| preset.port))
             .unwrap_or(587);
         let security = Security::parse(&env_value("SMTP_SECURITY").unwrap_or_default(), port);
-        let username = env_value("SMTP_USERNAME");
-        let password = env_value("SMTP_PASSWORD").map(|value| value.replace(' ', ""));
+        let username = env_value("SMTP_USERNAME")
+            .or_else(|| preset.as_ref().and_then(|preset| preset.default_username).map(str::to_string));
+        let strips_password_spaces = preset.as_ref().is_some_and(|preset| preset.strips_password_spaces);
+        let password = env_value("SMTP_PASSWORD")
+            .map(|value| if strips_password_spaces { value.replace(' ', "") } else { value });
 
-        let from_text = env_value("SMTP_FROM").or_else(|| username.clone()).unwrap_or_default();
+        let from_text = env_value("SMTP_FROM")
+            .or_else(|| username.clone().filter(|name| name.contains('@')))
+            .unwrap_or_default();
         let from = match from_text.parse::<Mailbox>() {
             Ok(mailbox) => mailbox,
-            Err(_) => {
-                let problem = format!("SMTP_FROM '{from_text}' is not a valid sender address");
-                tracing::warn!("Email is disabled: {problem}");
-                return Self { config: None, transport: None, problem: Some(problem) };
-            }
+            Err(_) if from_text.is_empty() => return disabled("SMTP_FROM is required when SMTP_USERNAME is not an email address".to_string()),
+            Err(_) => return disabled(format!("SMTP_FROM '{from_text}' is not a valid sender address")),
         };
 
-        let config = EmailConfig { host, port, security, from, has_credentials: username.is_some() && password.is_some() };
+        let config = EmailConfig {
+            provider: preset.as_ref().map(|preset| preset.label),
+            host,
+            port,
+            security,
+            from,
+            has_credentials: username.is_some() && password.is_some(),
+        };
         match build_transport(&config, username, password) {
             Ok(transport) => {
                 tracing::info!("Email enabled through {}:{}", config.host, config.port);
                 Self { config: Some(config), transport: Some(transport), problem: None }
             }
-            Err(problem) => {
-                tracing::warn!("Email is disabled: {problem}");
-                Self { config: None, transport: None, problem: Some(problem) }
-            }
+            Err(problem) => disabled(problem),
         }
     }
 
@@ -136,6 +150,7 @@ impl Mailer {
         let config = self.config.as_ref();
         EmailStatus {
             configured: self.is_configured(),
+            provider: config.and_then(|config| config.provider),
             host: config.map(|config| config.host.clone()),
             port: config.map(|config| config.port),
             security: config.map(|config| config.security.label()),
