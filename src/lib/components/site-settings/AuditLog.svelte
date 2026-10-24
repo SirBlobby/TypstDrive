@@ -13,6 +13,7 @@
         { value: 'team.', label: 'Teams' },
         { value: 'storage.', label: 'Storage' },
         { value: 'api.', label: 'API access' },
+        { value: 'pdf_links.', label: 'PDF links' },
         { value: 'email.', label: 'Email' }
     ];
 

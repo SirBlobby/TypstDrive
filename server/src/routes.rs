@@ -36,6 +36,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/api-access", get(api::limits::overview))
         .route("/admin/api-access/defaults", put(api::limits::update_defaults))
         .route("/admin/api-access/users/{id}", put(api::limits::update_user_limits))
+        .route("/admin/pdf-links", get(sharing::pdf_links::admin::overview))
+        .route("/admin/pdf-links/policy", get(sharing::pdf_links::policy::get_policy).put(sharing::pdf_links::policy::update_policy))
+        .route("/admin/pdf-links/{id}", delete(sharing::pdf_links::admin::delete_link))
         .route("/admin/package-policy", get(packages::policy::get_policy).put(packages::policy::update_policy))
         .route("/admin/server", get(admin::server_info::server_info))
         .route("/admin/storage", get(accounts::storage::overview))
@@ -88,6 +91,13 @@ pub fn build_router(state: AppState) -> Router {
         .route("/teams/{id}/members/{user_id}/transfer", post(teams::members::transfer_ownership))
         .route("/share-links/{kind}/{id}", get(sharing::links::link_status).put(sharing::links::update_link))
         .route("/share-links/{kind}/{id}/unlock", post(sharing::links::unlock_link))
+        .route("/pdf-links", get(sharing::pdf_links::manage::list_own_links))
+        .route(
+            "/pdf-links/{kind}/{id}",
+            get(sharing::pdf_links::manage::get_item_link)
+                .put(sharing::pdf_links::manage::save_item_link)
+                .delete(sharing::pdf_links::manage::delete_item_link),
+        )
         .route("/item-info/{kind}/{id}", get(drive::item_info::get_item_info))
         .route("/stars", get(drive::stars::list_starred))
         .route("/stars/{kind}/{id}", put(drive::stars::star_item).delete(drive::stars::unstar_item))
@@ -219,6 +229,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api", api_routes.nest("/desktop", desktop_routes).layer(TraceLayer::new_for_http()))
         .nest("/v1", v1_routes.layer(TraceLayer::new_for_http()))
         .nest("/yjs", yjs_routes.layer(TraceLayer::new_for_http()))
+        .route("/pdf/{slug}", get(sharing::pdf_links::serve::serve_pdf).layer(TraceLayer::new_for_http()))
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))
         .layer(axum::middleware::from_fn_with_state(state.clone(), request_context::attach_request_context))
         .layer(axum::middleware::from_fn(security_headers::add_security_headers))

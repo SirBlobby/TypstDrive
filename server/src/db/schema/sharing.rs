@@ -1,4 +1,4 @@
-use super::{Table, plain, created_at, required_reference};
+use super::{Column, CopyRule, Table, plain, created_at, optional_reference, required_reference};
 
 pub const TABLES: &[Table] = &[
     Table {
@@ -72,5 +72,18 @@ pub const TABLES: &[Table] = &[
             created_at("created_at"),
         ],
         constraints: &["PRIMARY KEY (user_id, project_id)"],
+    },
+    Table {
+        name: "pdf_links",
+        columns: &[
+            plain("id", "TEXT PRIMARY KEY"),
+            plain("slug", "TEXT NOT NULL UNIQUE"),
+            optional_reference("document_id", "documents", "TEXT REFERENCES documents(id) ON DELETE CASCADE"),
+            optional_reference("project_id", "projects", "TEXT REFERENCES projects(id) ON DELETE CASCADE"),
+            Column { name: "view_count", definition: "{integer} NOT NULL DEFAULT 0", copy: CopyRule::DefaultWhenNull("0") },
+            plain("last_viewed_at", "TEXT"),
+            created_at("created_at"),
+        ],
+        constraints: &["UNIQUE (document_id)", "UNIQUE (project_id)"],
     },
 ];

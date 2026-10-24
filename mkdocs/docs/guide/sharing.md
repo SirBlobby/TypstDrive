@@ -29,6 +29,23 @@ Under **General access**, choose **Viewer**, **Suggester** or **Editor** to let 
 
 Choose **Save link settings** to apply changes. Visitors need to sign in to comment or suggest.
 
+## Public PDF links
+
+A public PDF link is a short URL such as `https://your-server/pdf/my-cv` that always serves the latest compiled PDF. Use it for a CV, a reading list or any living document: share the URL once and it never goes out of date.
+
+1. Open **Share** on a document or project you own.
+2. Under **Public PDF link**, type a short link name, or keep the suggested one.
+3. Choose **Create link**, then copy or open the URL.
+
+Names use 3 to 64 lowercase letters, numbers and hyphens, and must not already be taken on the server. Change the name later with **Rename link**; the old URL stops working. **Remove link** turns it off.
+
+- Anyone with the URL can download the PDF without signing in, even if the document is not shared.
+- The PDF includes changes that have not been saved as a version yet.
+- If the document has errors, the link keeps serving the last PDF that compiled.
+- Your links and how often they were opened are listed in [Your settings](settings.md#pdf-links).
+
+An administrator can turn public PDF links off or limit how many each person can have. See [PDF links](../admin/pdf-links.md).
+
 ## Sharing folders
 
 Sharing a folder gives the person the same role on everything inside it, including things added later. If they also have a role on an item inside, the stronger of the two applies.

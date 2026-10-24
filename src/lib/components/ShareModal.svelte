@@ -4,6 +4,7 @@
     import Modal from './Modal.svelte';
     import UnsharedFilesWarning from './UnsharedFilesWarning.svelte';
     import LinkSharing from './sharing/LinkSharing.svelte';
+    import PdfLinkSharing from './sharing/PdfLinkSharing.svelte';
     import TeamMembersAccess from './sharing/TeamMembersAccess.svelte';
     import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind, type TeamAccess } from '$lib/ts/ownership';
 
@@ -279,6 +280,7 @@
         {#if itemPage && itemId && kind !== 'folder'}
             <div class="h-px bg-[var(--color-line)]"></div>
             <LinkSharing kind={kind === 'project' ? 'project' : 'document'} {itemId} canManage={isOwner} />
+            <PdfLinkSharing kind={kind === 'project' ? 'project' : 'document'} {itemId} />
         {/if}
     </div>
 
