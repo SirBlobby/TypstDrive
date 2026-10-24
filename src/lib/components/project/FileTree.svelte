@@ -15,6 +15,8 @@
 		onUpload,
 		onRename,
 		onDelete,
+		onRenameFolder,
+		onDeleteFolder,
 		onSetEntry,
 		onCollapse
 	}: {
@@ -28,6 +30,8 @@
 		onUpload: (fileList: FileList) => void;
 		onRename: (file: ProjectFile, path: string) => void;
 		onDelete: (file: ProjectFile) => void;
+		onRenameFolder: (oldPath: string, newPath: string) => void;
+		onDeleteFolder: (path: string) => void;
 		onSetEntry: (file: ProjectFile) => void;
 		onCollapse: () => void;
 	} = $props();
@@ -36,6 +40,7 @@
 	let newFileFolder = $state<string | null>(null);
 	let newFolderParent = $state<string | null>(null);
 	let fileToRename = $state<ProjectFile | null>(null);
+	let folderToRename = $state<string | null>(null);
 	let collapsedFolders = $state<Set<string>>(new Set());
 
 	let tree = $derived(buildProjectTree(files));
@@ -68,11 +73,24 @@
 	function createFolder(name: string) {
 		const parent = newFolderParent;
 		newFolderParent = null;
-		const cleanName = name.trim().replace(/^\/+|\/+$/g, '');
+		const cleanName = cleanPath(name);
 		if (!cleanName) return;
 		const path = parent ? `${parent}/${cleanName}` : cleanName;
 		if (folders.includes(path)) return;
 		onCreateFolder(path);
+	}
+
+	function cleanPath(path: string) {
+		return path.trim().replace(/^\/+|\/+$/g, '');
+	}
+
+	function renameFolder(path: string) {
+		const oldPath = folderToRename;
+		folderToRename = null;
+		const newPath = cleanPath(path);
+		if (!oldPath || !newPath || newPath === oldPath) return;
+		if (newPath.startsWith(`${oldPath}/`) || folders.includes(newPath)) return;
+		onRenameFolder(oldPath, newPath);
 	}
 
 	function renameFile(path: string) {
@@ -113,6 +131,8 @@
 					<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
 						{@render rowButton('mdi:file-plus-outline', `New file in ${node.name}`, () => (newFileFolder = node.path))}
 						{@render rowButton('mdi:folder-plus-outline', `New folder in ${node.name}`, () => (newFolderParent = node.path))}
+						{@render rowButton('mdi:pencil-outline', 'Rename folder', () => (folderToRename = node.path))}
+						{@render rowButton('mdi:trash-can-outline', 'Delete folder', () => onDeleteFolder(node.path), true)}
 					</div>
 				{/if}
 			</div>
@@ -187,6 +207,18 @@
 		confirmLabel="Create"
 		onsubmit={createFolder}
 		onclose={() => (newFolderParent = null)}
+	/>
+{/if}
+
+{#if folderToRename}
+	<PromptModal
+		title="Rename folder"
+		label="New path"
+		icon="ph:pencil-simple"
+		value={folderToRename}
+		confirmLabel="Rename"
+		onsubmit={renameFolder}
+		onclose={() => (folderToRename = null)}
 	/>
 {/if}
 
