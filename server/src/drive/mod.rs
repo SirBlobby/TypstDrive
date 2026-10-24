@@ -1,5 +1,6 @@
 pub mod activity;
 pub mod comments;
+pub mod content_search;
 pub mod document_assets;
 pub mod documents;
 pub mod downloads;

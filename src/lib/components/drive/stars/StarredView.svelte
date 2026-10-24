@@ -3,14 +3,15 @@
     import Icon from '@iconify/svelte';
     import { fetchStarred, starKey, starredStore, type StarKind } from '$lib/ts/stars';
     import { sortItems, type DriveEntry, type DriveFilters, type ViewMode } from '$lib/ts/drive-filters';
+    import { matchesItem, type DriveSearch } from '$lib/ts/drive-search';
     import DocCard from '$lib/components/drive/DocCard.svelte';
     import ProjectFolderRow from '$lib/components/drive/ProjectFolderRow.svelte';
     import DriveListView from '$lib/components/drive/DriveListView.svelte';
     import DriveEmptyState from '$lib/components/drive/DriveEmptyState.svelte';
     import DriveSectionTitle from '$lib/components/drive/DriveSectionTitle.svelte';
 
-    let { searchQuery, filters, viewMode, activeMenu, setActiveMenu, openInfo }: {
-        searchQuery: string;
+    let { search, filters, viewMode, activeMenu, setActiveMenu, openInfo }: {
+        search: DriveSearch;
         filters: DriveFilters;
         viewMode: ViewMode;
         activeMenu: string | null;
@@ -26,14 +27,8 @@
         return $starredStore.has(starKey(kind, item.id));
     }
 
-    function matchesSearch(item: { title?: string; name?: string }) {
-        const query = searchQuery.trim().toLowerCase();
-        if (!query) return true;
-        return (item.title ?? item.name ?? '').toLowerCase().includes(query);
-    }
-
     function visibleItems(kind: StarKind, items: any[]) {
-        return sortItems(items.filter((item) => isStarred(kind, item) && matchesSearch(item)), filters);
+        return sortItems(items.filter((item) => isStarred(kind, item) && matchesItem(search, item, kind, $starredStore)), filters);
     }
 
     let visibleProjects = $derived(visibleItems('project', projects));
@@ -80,7 +75,7 @@
     {#if visibleProjects.length > 0}
         <section class="mb-8">
             <DriveSectionTitle title="Projects" />
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
                 {#each visibleProjects as project (project.id)}
                     <ProjectFolderRow {project} {activeMenu} {setActiveMenu} {openInfo} openRename={ignore} deleteProject={ignore} readOnly />
                 {/each}

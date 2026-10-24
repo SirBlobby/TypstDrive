@@ -32,9 +32,12 @@
     import DriveEmptyState from '$lib/components/drive/DriveEmptyState.svelte';
     import DriveSectionTitle from '$lib/components/drive/DriveSectionTitle.svelte';
     import StarredView from '$lib/components/drive/stars/StarredView.svelte';
-    import { fetchStarred } from '$lib/ts/stars';
+    import { fetchStarred, starredStore } from '$lib/ts/stars';
     import { saveFolderColor } from '$lib/ts/folder-colors';
     import { activeTeamStore, refreshTeams } from '$lib/ts/workspace';
+    import { languageLabel, type DocumentLanguage } from '$lib/ts/document-language';
+    import { emptySearch, matchesItem, tokenValue, type DriveSearch } from '$lib/ts/drive-search';
+    import ContentSearchResults from '$lib/components/drive/ContentSearchResults.svelte';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);
@@ -48,6 +51,7 @@
     let showCreateModal = $state(false);
     let showCreateProjectModal = $state(false);
     let newDocTitle = $state('');
+    let newDocLanguage = $state<DocumentLanguage>('typst');
     let dragOverFolderId = $state<string | null>(null);
     let dragOverBreadcrumbIndex = $state<number | null>(null);
     let fileInput = $state<HTMLInputElement | null>(null);
@@ -90,19 +94,22 @@
         for (let i = 0; i < target.files.length; i++) {
             const file = target.files[i];
             
-            if (file.name.endsWith('.typ')) {
-                
+            const sourceMatch = file.name.match(/\.(typ|tex)$/i);
+            if (sourceMatch) {
+
                 const content = await file.text();
-                
-                const title = file.name.replace(/\.typ$/i, '');
-                
+
+                const title = file.name.slice(0, -sourceMatch[0].length);
+                const language: DocumentLanguage = sourceMatch[1].toLowerCase() === 'tex' ? 'latex' : 'typst';
+
                 await fetch('/api/docs', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        title: title, 
+                    body: JSON.stringify({
+                        title: title,
                         folder_id: currentFolderId || undefined,
-                        content: content
+                        content: content,
+                        language: language
                     })
                 });
             } else {
@@ -184,7 +191,7 @@
     }
 
     function navigateToFolder(folder: {id: string, name: string, effective_role?: string}) {
-        searchQuery = '';
+        search = emptySearch();
         inStarred = false;
         if (inSharedDrive) {
             inSharedDrive = false;
@@ -202,7 +209,7 @@
     }
 
     function navigateToBreadcrumb(index: number) {
-        searchQuery = '';
+        search = emptySearch();
         if (index === -1 && sharedFolderRole) {
             enterSharedDrive();
             return;
@@ -232,8 +239,9 @@
         }
     }
 
-    function openCreateModal() {
+    function openCreateModal(language: DocumentLanguage) {
         newDocTitle = 'Untitled Document';
+        newDocLanguage = language;
         showCreateModal = true;
     }
 
@@ -243,7 +251,7 @@
         const res = await fetch('/api/docs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title.trim(), folder_id: currentFolderId || undefined })
+            body: JSON.stringify({ title: title.trim(), folder_id: currentFolderId || undefined, language: newDocLanguage })
         });
 
         if (res.ok) {
@@ -410,14 +418,10 @@
     let sharedProjects = $state<any[]>([]);
     let sharedDocsLoading = $state(false);
 
-    let searchQuery = $state('');
+    let search = $state<DriveSearch>(emptySearch());
     let previewFileId = $state<string | null>(null);
 
-    function matchesSearch(item: { title?: string; name?: string }) {
-        const query = searchQuery.trim().toLowerCase();
-        if (!query) return true;
-        return (item.title ?? item.name ?? '').toLowerCase().includes(query);
-    }
+    let contentSearchText = $derived(tokenValue(search, 'doc'));
 
     let filters = $state<DriveFilterState>({ ...defaultFilters });
     let viewMode = $state<ViewMode>($driveViewModeStore);
@@ -426,8 +430,8 @@
         driveViewModeStore.set(viewMode);
     });
 
-    function visibleItems(items: any[]) {
-        return sortItems(items.filter(matchesSearch), filters);
+    function visibleItems(items: any[], category: DriveCategory) {
+        return sortItems(items.filter((item) => matchesItem(search, item, category, $starredStore)), filters);
     }
 
     function sortedEntries(groups: [any[], DriveCategory][]): DriveEntry[] {
@@ -435,17 +439,17 @@
         return sortItems(entries, filters, (entry) => entry.item);
     }
 
-    let visibleFolders = $derived(visibleItems(folders));
-    let visibleProjects = $derived(visibleItems(projects));
-    let visibleDocuments = $derived(visibleItems(documents));
-    let visibleFiles = $derived(visibleItems(files));
+    let visibleFolders = $derived(visibleItems(folders, 'folder'));
+    let visibleProjects = $derived(visibleItems(projects, 'project'));
+    let visibleDocuments = $derived(visibleItems(documents, 'document'));
+    let visibleFiles = $derived(visibleItems(files, 'file'));
 
     let previewableFiles = $derived(
         visibleFiles.filter((file) => !/\.(ttf|otf)$/i.test(file.name))
     );
-    let visibleSharedFolders = $derived(visibleItems(sharedFolders));
-    let visibleSharedDocs = $derived(visibleItems(sharedDocs));
-    let visibleSharedProjects = $derived(visibleItems(sharedProjects));
+    let visibleSharedFolders = $derived(visibleItems(sharedFolders, 'folder'));
+    let visibleSharedDocs = $derived(visibleItems(sharedDocs, 'document'));
+    let visibleSharedProjects = $derived(visibleItems(sharedProjects, 'project'));
 
     let listEntries = $derived(
         inSharedDrive
@@ -482,7 +486,7 @@
     }
 
     function enterSharedDrive() {
-        searchQuery = '';
+        search = emptySearch();
         inStarred = false;
         inSharedDrive = true;
         sharedFolderRole = null;
@@ -492,7 +496,7 @@
     }
 
     function enterStarred() {
-        searchQuery = '';
+        search = emptySearch();
         inStarred = true;
         inSharedDrive = false;
         sharedFolderRole = null;
@@ -563,7 +567,7 @@
 <svelte:window onclick={handleWindowClick} />
 
 <div class="h-screen flex flex-col">
-    <Navbar />
+    <Navbar bind:search showSearch />
 
     <div class="flex flex-1 min-h-0">
         <DriveSidebar
@@ -572,7 +576,7 @@
             onShared={enterSharedDrive}
             onStarred={enterStarred}
         />
-        <input type="file" bind:this={fileInput} accept="image/*,font/*,.typ,.ttf,.otf,.pdf,application/pdf" multiple onchange={handleFileUpload} class="hidden" />
+        <input type="file" bind:this={fileInput} accept="image/*,font/*,.typ,.tex,.ttf,.otf,.pdf,application/pdf" multiple onchange={handleFileUpload} class="hidden" />
         <input type="file" bind:this={importFileInput} accept=".docx,.tex,.md,.html" onchange={handleImportUpload} class="hidden" />
 
         <main class="flex-1 min-w-0 overflow-y-auto px-6 lg:px-10 py-6">
@@ -585,11 +589,11 @@
                 rootIcon={browsingSharedFolder ? 'mdi:account-multiple-outline' : $activeTeamStore ? 'mdi:account-group-outline' : 'mdi:home-outline'}
                 {isImporting}
                 {dragOverBreadcrumbIndex}
-                bind:searchQuery
                 onNavigate={navigateToBreadcrumb}
                 onDropOnCrumb={handleDrop}
                 onDragOverCrumb={(index) => dragOverBreadcrumbIndex = index}
-                onNewDocument={openCreateModal}
+                onNewDocument={() => openCreateModal('typst')}
+                onNewLatexDocument={() => openCreateModal('latex')}
                 onNewProject={openCreateProjectModal}
                 onNewFolder={openCreateFolderModal}
                 onUpload={() => fileInput?.click()}
@@ -598,11 +602,15 @@
 
             <IncomingTransfers onAccepted={() => (inSharedDrive ? loadSharedDocs() : loadDocs())} />
 
-            <DriveFilters bind:filters bind:viewMode />
+            {#if contentSearchText === null}
+                <DriveFilters bind:filters bind:viewMode />
+            {/if}
 
-            {#if inStarred}
+            {#if contentSearchText !== null}
+                <ContentSearchResults {search} text={contentSearchText} />
+            {:else if inStarred}
                 <StarredView
-                    {searchQuery}
+                    {search}
                     {filters}
                     {viewMode}
                     {activeMenu}
@@ -636,7 +644,7 @@
                         {#if visibleSharedFolders.length > 0 || visibleSharedProjects.length > 0}
                             <section class="mb-8">
                                 <DriveSectionTitle title="Folders & projects" />
-                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
                                     {#each visibleSharedFolders as folder (folder.id)}
                                         <FolderRow
                                             {folder}
@@ -645,6 +653,8 @@
                                             {handleDrop}
                                             {deleteFolder}
                                             setDragOverFolderId={(id) => dragOverFolderId = id}
+                                            {activeMenu}
+                                            setActiveMenu={(id) => activeMenu = id}
                                             {openInfo}
                                             readOnly
                                         />
@@ -717,7 +727,7 @@
                     {#if visibleFolders.length > 0 || visibleProjects.length > 0}
                         <section class="mb-8">
                             <DriveSectionTitle title="Folders & projects" />
-                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
                                 {#each visibleFolders as folder}
                                     <FolderRow
                                         {folder}
@@ -726,7 +736,10 @@
                                         {handleDrop}
                                         {deleteFolder}
                                         setDragOverFolderId={(id) => dragOverFolderId = id}
+                                        {activeMenu}
+                                        setActiveMenu={(id) => activeMenu = id}
                                         shareFolder={(target) => shareItem(target, 'folder')}
+                                        {openRename}
                                         changeColor={changeFolderColor}
                                         {openInfo}
                                         readOnly={browsingSharedFolder}
@@ -816,7 +829,7 @@
 
 {#if showCreateModal}
     <PromptModal
-        title="Create document"
+        title={`Create ${languageLabel(newDocLanguage)} document`}
         label="Document title"
         icon="ph:file-plus"
         value="Untitled Document"

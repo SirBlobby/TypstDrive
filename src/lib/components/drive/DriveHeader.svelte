@@ -12,11 +12,11 @@
         rootIcon = 'mdi:home-outline',
         isImporting,
         dragOverBreadcrumbIndex,
-        searchQuery = $bindable(''),
         onNavigate,
         onDropOnCrumb,
         onDragOverCrumb,
         onNewDocument,
+        onNewLatexDocument,
         onNewProject,
         onNewFolder,
         onUpload,
@@ -30,11 +30,11 @@
         rootIcon?: string;
         isImporting: boolean;
         dragOverBreadcrumbIndex: number | null;
-        searchQuery?: string;
         onNavigate: (index: number) => void;
         onDropOnCrumb: (e: DragEvent, folderId: string | null) => void;
         onDragOverCrumb: (index: number | null) => void;
         onNewDocument: () => void;
+        onNewLatexDocument: () => void;
         onNewProject: () => void;
         onNewFolder: () => void;
         onUpload: () => void;
@@ -44,6 +44,7 @@
     let showNewMenu = $state(false);
 
     const secondaryNewItems = [
+        { label: 'LaTeX document', description: 'Basic LaTeX rendered with MiTeX', icon: 'mdi:sigma', color: 'text-teal-500', action: () => onNewLatexDocument() },
         { label: 'Project', description: 'Multi-file workspace', icon: 'mdi:folder-star', color: 'text-indigo-500', action: () => onNewProject() },
         { label: 'Folder', description: 'Organize your files', icon: 'mdi:folder-plus', color: 'text-yellow-500', action: () => onNewFolder() },
         { label: 'Import', description: '.docx, .tex, .md, .html', icon: 'mdi:file-import', color: 'text-purple-500', action: () => onImport() }
@@ -95,17 +96,6 @@
         <h1 class="min-w-0 text-2xl font-bold text-[var(--color-ink)] truncate">{title}</h1>
 
         <div class="flex items-center gap-2 flex-wrap">
-            <div class="relative">
-                <Icon icon="mdi:magnify" class="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-[var(--color-ink-muted)]" />
-                <input
-                    type="search"
-                    bind:value={searchQuery}
-                    placeholder="Filter this view"
-                    aria-label="Filter items"
-                    class="w-56 bg-[var(--color-surface)] border border-[var(--color-line)] text-sm text-[var(--color-ink)] rounded-lg pl-9 pr-3 py-2 focus:border-[var(--color-accent)] focus:outline-none transition-colors"
-                />
-            </div>
-
             {#if showActions}
                 <button onclick={onUpload} class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors">
                     <Icon icon="mdi:tray-arrow-up" class="text-lg" />
