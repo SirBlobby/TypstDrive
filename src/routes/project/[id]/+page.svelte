@@ -15,6 +15,7 @@
 	import { editorErrors, documentStatsStore, editorViewStore, fileTreeCollapsedStore } from '$lib/ts/store';
 	import { previewModeStore, previewVisibleStore } from '$lib/ts/preview-mode';
 	import Icon from '@iconify/svelte';
+	import { isPlaceholder, placeholderPath } from '$lib/ts/project-tree';
 	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject } from '$lib/ts/yjs-project';
 
 	interface ProjectFile {
@@ -91,14 +92,14 @@
 		files = await res.json();
 
 		for (const f of files) {
-			if (f.kind === 'text') {
+			if (f.kind === 'text' && !isPlaceholder(f.path)) {
 				const entry = openFile(f.id, f.path);
 				entry.text.observe(scheduleCompile);
 			}
 		}
 
 		if (!activeFileId) {
-			const entry = files.find((f) => f.path === entrypoint) ?? files.find((f) => f.kind === 'text');
+			const entry = files.find((f) => f.path === entrypoint) ?? files.find((f) => f.kind === 'text' && !isPlaceholder(f.path));
 			if (entry) activeFileId = entry.id;
 		}
 	}
@@ -120,6 +121,18 @@
 			const entry = openFile(file.id, file.path);
 			entry.text.observe(scheduleCompile);
 			activeFileId = file.id;
+		}
+	}
+
+	async function createFolder(path: string) {
+		const res = await fetch(`/api/projects/${projectId}/files`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ path: placeholderPath(path), kind: 'text', content: '' })
+		});
+		if (res.ok) {
+			const file = await res.json();
+			files = [...files, file].sort((a, b) => a.path.localeCompare(b.path));
 		}
 	}
 
@@ -161,7 +174,7 @@
 			closeFile(file.id);
 			files = files.filter((f) => f.id !== file.id);
 			if (activeFileId === file.id) {
-				activeFileId = files.find((f) => f.kind === 'text')?.id ?? '';
+				activeFileId = files.find((f) => f.kind === 'text' && !isPlaceholder(f.path))?.id ?? '';
 			}
 			recompileAfterFileChange();
 		}
@@ -254,6 +267,7 @@
 					{readOnly}
 					onSelect={selectFile}
 					onCreate={createFile}
+					onCreateFolder={createFolder}
 					onUpload={uploadFiles}
 					onRename={renameFile}
 					onDelete={deleteFile}
