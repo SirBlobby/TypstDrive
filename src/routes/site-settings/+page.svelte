@@ -10,6 +10,7 @@
     import RegistrationSettings from '$lib/components/site-settings/RegistrationSettings.svelte';
     import StorageSettings from '$lib/components/site-settings/StorageSettings.svelte';
     import PackageSettings from '$lib/components/site-settings/PackageSettings.svelte';
+    import PdfLinkSettings from '$lib/components/site-settings/PdfLinkSettings.svelte';
     import ServerSettings from '$lib/components/site-settings/ServerSettings.svelte';
     import AuthenticationSettings from '$lib/components/site-settings/AuthenticationSettings.svelte';
     import EmailSettings from '$lib/components/site-settings/EmailSettings.svelte';
@@ -27,6 +28,7 @@
         { id: 'teams', label: 'Team Spaces', icon: 'mdi:account-multiple-outline' },
         { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
         { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
+        { id: 'pdf-links', label: 'PDF Links', icon: 'mdi:file-pdf-box' },
         { id: 'api-access', label: 'API Access', icon: 'mdi:api' },
         { id: 'audit-log', label: 'Audit Log', icon: 'mdi:clipboard-text-clock-outline' },
         { id: 'server', label: 'Server', icon: 'mdi:server-outline' },
@@ -88,6 +90,8 @@
                     <StorageSettings />
                 {:else if activeSection === 'packages'}
                     <PackageSettings />
+                {:else if activeSection === 'pdf-links'}
+                    <PdfLinkSettings />
                 {:else if activeSection === 'api-access'}
                     <ApiAccessSettings />
                 {:else if activeSection === 'audit-log'}

@@ -46,6 +46,10 @@ Two actions sharing the same shortcut are marked in red. The restore button next
 
 How much space your documents and files use, and your limit if there is one.
 
+## PDF links
+
+Every [public PDF link](sharing.md#public-pdf-links) you own, with the document or project it serves and how often it was opened. Copy, rename or remove links here. Create new ones from the **Share** dialog.
+
 ## API keys
 
 Keys let your own programs and scripts turn Typst into PDFs and images through TypstDrive. Create, renew and delete keys here, and watch how much they are used. A new key is only shown once, so copy it straight away. See the [API overview](../api/index.md).

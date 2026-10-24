@@ -96,6 +96,7 @@ nav:
       - Team spaces: admin/teams.md
       - Storage and history: admin/storage.md
       - Packages: admin/packages.md
+      - PDF links: admin/pdf-links.md
       - API access: admin/api.md
       - Server and about: admin/server.md
   - Developers:

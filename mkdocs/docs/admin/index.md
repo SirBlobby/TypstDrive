@@ -12,6 +12,7 @@ Administrators look after a TypstDrive server from the browser. Open **Site Sett
 | [Team spaces](teams.md) | Decide who can create teams and how big they can be. |
 | [Storage and history](storage.md) | Set storage limits and how many versions each document keeps. |
 | [Packages](packages.md) | Control who can publish packages and how big they can be. |
+| [PDF links](pdf-links.md) | Turn public PDF links on or off, limit them, and remove any link. |
 | [API access](api.md) | Turn the API on or off and set limits. |
 | [Server and about](server.md) | Check how the server is set up and which version it runs. |
 

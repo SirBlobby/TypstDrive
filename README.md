@@ -51,6 +51,7 @@ Password: password
 - **Fonts and Images**: Upload once and use everywhere, with an emoji font built in.
 - **Sharing**: Share documents, projects and folders as editor, suggester or viewer, and hand over ownership.
 - **Share Links**: Let anyone with the link view, suggest or edit, with an optional password and expiry date.
+- **Public PDF Links**: A named URL such as `/pdf/my-cv` that always serves the latest compiled PDF, for CVs and living documents.
 - **Team Spaces**: Shared drives owned by a team, with owner, admin, member and viewer roles.
 - **Import**: Turn Word, LaTeX, Markdown and HTML files into Typst documents.
 
@@ -67,7 +68,7 @@ Password: password
 - **Account Security**: Email verification, password reset, active sessions, connected accounts and sign-in lockout.
 - **Themes**: Cerberus, Catppuccin and Arch Linux themes in light and dark mode, plus text size and high contrast options.
 - **Branding**: Your own site name, logo, accent color, tagline and sign-in message.
-- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, API limits and an audit log.
+- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, API limits and an audit log.
 - **Flexible Hosting**: SQLite, PostgreSQL or MySQL/MariaDB with automatic upgrades, plus Redis or Valkey and S3-compatible storage for larger installs.
 
 
