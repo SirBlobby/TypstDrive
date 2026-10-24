@@ -3,6 +3,7 @@
     import Icon from '@iconify/svelte';
     import { inputClass, primaryButtonClass } from '$lib/ts/settings-ui';
     import { fetchAuthentication, sendTestEmail, type EmailStatus } from '$lib/ts/admin-auth';
+    import { emailProviderGuides } from '$lib/ts/email-providers';
     import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
@@ -52,6 +53,7 @@
                 <span class="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-muted)]"><Icon icon="mdi:email-off-outline" /> Not configured</span>
             {/if}
         </SettingsRow>
+        <SettingsRow label="Provider" description="SMTP_PROVIDER, or a custom server.">{@render value(status?.provider ?? (status?.host ? 'Custom server' : null))}</SettingsRow>
         <SettingsRow label="Server">{@render value(status?.host ? `${status.host}:${status.port}` : null)}</SettingsRow>
         <SettingsRow label="Encryption">{@render value(status?.security)}</SettingsRow>
         <SettingsRow label="Sender">{@render value(status?.from)}</SettingsRow>
@@ -75,11 +77,23 @@
         {/if}
     </SettingsCard>
 
-    <SettingsCard title="Google (Gmail or Workspace)" padded>
-        <p class="text-sm text-[var(--color-ink-muted)]">
-            Set <code class="font-mono text-xs">SMTP_PROVIDER=google</code>, <code class="font-mono text-xs">SMTP_USERNAME</code> to the Google address and
-            <code class="font-mono text-xs">SMTP_PASSWORD</code> to an app password made under Google Account, Security, App passwords.
-            The account needs 2-Step Verification turned on.
-        </p>
+    <SettingsCard
+        title="Email providers"
+        description="Set SMTP_PROVIDER to fill in the server for you, then add SMTP_USERNAME, SMTP_PASSWORD and SMTP_FROM. Providers with regions also read SMTP_REGION. For any other server, set SMTP_HOST instead."
+    >
+        <ul class="divide-y divide-[var(--color-line)]">
+            {#each emailProviderGuides as guide (guide.value)}
+                <li class="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-start sm:gap-4">
+                    <span class="w-36 shrink-0 text-sm font-medium text-[var(--color-ink)]">{guide.label}</span>
+                    <span class="flex-1 text-xs text-[var(--color-ink-muted)]">
+                        <code class="font-mono">SMTP_PROVIDER={guide.value}</code>
+                        {#if guide.region}
+                            <span class="ml-2"><code class="font-mono">SMTP_REGION</code> {guide.region}</span>
+                        {/if}
+                        <span class="block mt-1">{guide.credentials}</span>
+                    </span>
+                </li>
+            {/each}
+        </ul>
     </SettingsCard>
 </div>

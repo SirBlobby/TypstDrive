@@ -32,13 +32,14 @@ See [Email](email.md).
 
 | Setting | Default | What it does |
 |---|---|---|
-| `SMTP_PROVIDER` | not set | `google` fills in the Gmail server for you. |
+| `SMTP_PROVIDER` | not set | Fills in the server for a known provider, such as `google`, `mailgun`, `sendgrid` or `ses`. See [Email](email.md#email-providers). |
+| `SMTP_REGION` | depends on the provider | Region for Mailgun (`us`, `eu`) and Amazon SES (such as `eu-west-1`). |
 | `SMTP_HOST` | not set | Mail server address. |
 | `SMTP_PORT` | `587` | Mail server port. |
 | `SMTP_SECURITY` | `starttls`, or `tls` on port 465 | `starttls`, `tls` or `none`. |
 | `SMTP_USERNAME` | not set | Account to send from. |
 | `SMTP_PASSWORD` | not set | Password for that account. |
-| `SMTP_FROM` | the username | Sender name and address, such as `TypstDrive <typst@example.com>`. |
+| `SMTP_FROM` | the username, if it is an email address | Sender name and address, such as `TypstDrive <typst@example.com>`. Required when the username is not an email address. |
 
 ## Single sign-on
 
