@@ -62,6 +62,10 @@ pub async fn publish_package(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
 
+    if crate::compile::latex::is_latex_path(&project.entrypoint) {
+        return Err((StatusCode::BAD_REQUEST, "LaTeX projects cannot be published as packages".to_string()));
+    }
+
     let files = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
         sql("SELECT path, kind, content FROM project_files WHERE project_id = $1")
     )

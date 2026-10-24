@@ -44,6 +44,8 @@
 
 	let isViewer = $derived(role === 'viewer');
 	let isLatexFile = $derived(activePath.toLowerCase().endsWith('.tex'));
+	let isLatexProject = $derived(entrypoint.toLowerCase().endsWith('.tex'));
+	let canPublish = $derived(role === 'owner' && !isLatexProject);
 
 	async function uploadProjectImage(file: File) {
 		const form = new FormData();
@@ -326,7 +328,7 @@
 									{#if !isLatexFile}
 										<button onclick={() => { activeMenu = null; isPageSettingsOpen = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Page Settings</button>
 									{/if}
-									{#if role === 'owner'}
+									{#if canPublish}
 										<button onclick={() => { activeMenu = null; onPublish(); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Publish as Package</button>
 									{/if}
 								{/if}
@@ -390,7 +392,7 @@
 				<button onclick={() => (isPresentationOpen = true)} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors">
 					<Icon icon="mdi:presentation-play" class="text-[16px]" /> Present
 				</button>
-				{#if role === 'owner'}
+				{#if canPublish}
 					<button onclick={onPublish} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-white bg-[var(--color-accent)] hover:opacity-90 rounded-md transition-colors">
 						<Icon icon="mdi:package-variant-closed" class="text-[16px]" /> Publish
 					</button>
