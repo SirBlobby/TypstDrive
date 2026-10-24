@@ -1,7 +1,9 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { text } from '$lib/ts/yjs-setup';
-	import { editorViewStore, documentZoomStore, triggerLspReconnect } from '$lib/ts/store';
+	import { editorViewStore, triggerLspReconnect } from '$lib/ts/store';
+	import { replaceSelection, uploadDocumentFile } from '$lib/ts/document-uploads';
+	import ZoomControl from './ZoomControl.svelte';
 	import { currentHeadingLevel, insertQuote, openFind, openReplace, setHeadingLevel, wrapSelection } from '$lib/ts/editor-insert';
 	import { insertDialogStore, insertOptions } from '$lib/ts/insert-dialog';
 	import { insertTypstSetting } from '$lib/ts/typst-settings';
@@ -72,26 +74,15 @@
 		if (!file) return;
 		if (!docId) return alert('Please save the document before uploading images.');
 
-		const formData = new FormData();
-		formData.append('file', file);
-		fetch(`/api/docs/${docId}/files`, { method: 'POST', body: formData })
-			.then((res) => res.json())
+		uploadDocumentFile(docId, file)
 			.then((data) => {
-				if (!data.filename) return;
+				if (!data) return;
 				if (isFontName(data.filename)) {
 					triggerLspReconnect.update((count) => count + 1);
 					const fontName = data.font_family || data.filename.substring(0, data.filename.lastIndexOf('.'));
 					if (!uploadedFonts.includes(fontName)) uploadedFonts = [...uploadedFonts, fontName];
 				}
-				const view = $editorViewStore;
-				if (!view) return;
-				const selection = view.state.selection.main;
-				const insertion = uploadInsertion(data);
-				view.dispatch({
-					changes: { from: selection.from, to: selection.to, insert: insertion },
-					selection: { anchor: selection.from + insertion.length }
-				});
-				view.focus();
+				if ($editorViewStore) replaceSelection($editorViewStore, uploadInsertion(data));
 			})
 			.catch((err) => {
 				console.error(err);
@@ -211,17 +202,7 @@
 
 	<div class="w-px h-4 bg-[var(--color-line)]"></div>
 
-	<div class="flex items-center gap-1 bg-[var(--color-surface)] border border-[var(--color-line)] rounded shadow-sm overflow-hidden">
-		<button onclick={() => ($documentZoomStore = Math.max(10, $documentZoomStore - 10))} class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors" title="Zoom Out">
-			<Icon icon="mdi:minus" class="text-sm" />
-		</button>
-		<span role="button" tabindex="0" onkeydown={(event) => { if (event.key === 'Enter') $documentZoomStore = 100; }} class="text-[11px] font-semibold text-[var(--color-ink-muted)] min-w-[3rem] text-center select-none" ondblclick={() => ($documentZoomStore = 100)}>
-			{$documentZoomStore}%
-		</span>
-		<button onclick={() => ($documentZoomStore = Math.min(500, $documentZoomStore + 10))} class="px-2 py-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors" title="Zoom In">
-			<Icon icon="mdi:plus" class="text-sm" />
-		</button>
-	</div>
+	<ZoomControl />
 </div>
 
 {#if insertMenuPosition}
