@@ -17,6 +17,7 @@
 	import EditingModeSwitch from './editor/EditingModeSwitch.svelte';
 	import PreviewModeMenu from './editor/PreviewModeMenu.svelte';
 	import FormattingBar from './editor/FormattingBar.svelte';
+	import LatexFormattingBar from './editor/LatexFormattingBar.svelte';
 	import InsertDialogs from './editor/insert/InsertDialogs.svelte';
 	import { insertDialogStore, insertOptions } from '../ts/insert-dialog';
 	import { openFind, openReplace } from '../ts/editor-insert';
@@ -585,7 +586,15 @@
 		</div>
 	</div>
 
-	{#if !isLatex}
+	{#if isLatex}
+		<LatexFormattingBar
+			{docId}
+			readOnly={!directEditing}
+			{canComment}
+			{unsharedFileCount}
+			onOpenAssets={() => (isAssetsModalOpen = true)}
+		/>
+	{:else}
 		<FormattingBar
 			{docId}
 			readOnly={!directEditing}
