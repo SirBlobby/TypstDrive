@@ -1,5 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
+    import type { Snippet } from 'svelte';
 
     type FolderCrumb = { id: string; name: string };
 
@@ -20,7 +21,8 @@
         onNewProject,
         onNewFolder,
         onUpload,
-        onImport
+        onImport,
+        controls = undefined
     }: {
         title: string;
         folderPath: FolderCrumb[];
@@ -39,6 +41,7 @@
         onNewFolder: () => void;
         onUpload: () => void;
         onImport: () => void;
+        controls?: Snippet;
     } = $props();
 
     let showNewMenu = $state(false);
@@ -96,6 +99,14 @@
         <h1 class="min-w-0 text-2xl font-bold text-[var(--color-ink)] truncate">{title}</h1>
 
         <div class="flex items-center gap-2 flex-wrap">
+            {#if controls}
+                {@render controls()}
+            {/if}
+
+            {#if controls && showActions}
+                <div class="w-px h-6 bg-[var(--color-line)] mx-1"></div>
+            {/if}
+
             {#if showActions}
                 <button onclick={onUpload} class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] transition-colors">
                     <Icon icon="mdi:tray-arrow-up" class="text-lg" />

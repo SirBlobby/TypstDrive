@@ -598,13 +598,14 @@
                 onNewFolder={openCreateFolderModal}
                 onUpload={() => fileInput?.click()}
                 onImport={() => importFileInput?.click()}
+                controls={contentSearchText === null ? driveControls : undefined}
             />
 
-            <IncomingTransfers onAccepted={() => (inSharedDrive ? loadSharedDocs() : loadDocs())} />
-
-            {#if contentSearchText === null}
+            {#snippet driveControls()}
                 <DriveFilters bind:filters bind:viewMode />
-            {/if}
+            {/snippet}
+
+            <IncomingTransfers onAccepted={() => (inSharedDrive ? loadSharedDocs() : loadDocs())} />
 
             {#if contentSearchText !== null}
                 <ContentSearchResults {search} text={contentSearchText} />
