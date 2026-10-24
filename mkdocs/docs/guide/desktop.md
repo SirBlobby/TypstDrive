@@ -5,6 +5,8 @@
 ## What it does
 
 - Write Typst offline, with a live preview and the same kind of editor as the web app.
+- Write basic LaTeX in `.tex` files and projects too, with a LaTeX toolbar. See [LaTeX documents](latex.md).
+- Show the editor and preview side by side, the editor only, or the preview only.
 - Browse your TypstDrive folders, documents and projects, including things shared with you.
 - Download the ones you want onto your computer and keep them in sync.
 - Edit together with others live when you are online, with comments, suggestions and version history.

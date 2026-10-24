@@ -71,6 +71,7 @@ nav:
       - Working together: guide/collaboration.md
       - Presenting: guide/presenting.md
       - Projects: guide/projects.md
+      - LaTeX documents: guide/latex.md
       - Packages: guide/packages.md
       - Fonts and images: guide/fonts-and-images.md
       - Sharing: guide/sharing.md

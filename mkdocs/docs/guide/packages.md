@@ -18,7 +18,7 @@ Packages from the public [Typst Universe](https://typst.app/universe/) work too,
 
 ## Publishing a package
 
-Any [project](projects.md) can be published as a package.
+Any Typst [project](projects.md) can be published as a package. LaTeX projects, whose entry point is a `.tex` file, cannot.
 
 1. Fill in the project's `typst.toml` with a name, version and entry point.
 2. Choose **Publish as Package** from the project's **File** menu.
