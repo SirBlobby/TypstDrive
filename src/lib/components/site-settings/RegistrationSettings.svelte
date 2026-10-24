@@ -94,7 +94,7 @@
 {/snippet}
 
 <SettingsHeader
-    title="Registration & Accounts"
+    title="Accounts"
     description="Decide who can sign up and what members can change about their own accounts. Administrators are not limited by the account rules."
     icon="mdi:account-cog-outline"
 />

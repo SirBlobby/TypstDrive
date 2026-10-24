@@ -68,7 +68,7 @@ That's it. You can now create documents and invite people.
 
 - [Add HTTPS and a domain](reverse-proxy.md) before letting people in from the internet.
 - [Set up email](email.md) so people can reset forgotten passwords.
-- Decide who can sign up in **Site Settings → Registration & Accounts**. See [Users and accounts](../admin/users.md).
+- Decide who can sign up in **Site Settings → People → Accounts**. See [Users and accounts](../admin/users.md).
 
 !!! warning "Keep the secret the same"
     If `COOKIE_SECRET` is missing or changes, everyone is signed out every time the container restarts.

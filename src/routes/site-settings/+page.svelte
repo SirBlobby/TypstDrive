@@ -26,7 +26,7 @@
             icon: 'mdi:account-group-outline',
             children: [
                 { id: 'users', label: 'Users', icon: 'mdi:account-multiple-outline' },
-                { id: 'accounts', label: 'Registration & Accounts', icon: 'mdi:account-cog-outline' },
+                { id: 'accounts', label: 'Accounts', icon: 'mdi:account-cog-outline' },
                 { id: 'teams', label: 'Team Spaces', icon: 'mdi:account-supervisor-outline' }
             ]
         },
