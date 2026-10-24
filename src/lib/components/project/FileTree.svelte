@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import NewFileModal from './NewFileModal.svelte';
+	import PromptModal from '../PromptModal.svelte';
 
 	interface ProjectFile {
 		id: string;
@@ -46,14 +48,27 @@
 		return 'mdi:file-outline';
 	}
 
+	let showNewFileModal = $state(false);
+	let fileToRename = $state<ProjectFile | null>(null);
+	let defaultExtension = $derived(entrypoint.toLowerCase().endsWith('.tex') ? 'tex' : 'typ');
+
 	function handleCreate() {
-		const path = prompt('New file path (e.g. chapter.typ, refs.bib):');
-		if (path && path.trim()) onCreate(path.trim());
+		showNewFileModal = true;
+	}
+
+	function createFile(path: string) {
+		showNewFileModal = false;
+		onCreate(path);
 	}
 
 	function handleRename(file: ProjectFile) {
-		const path = prompt('Rename file to:', file.path);
-		if (path && path.trim() && path.trim() !== file.path) onRename(file, path.trim());
+		fileToRename = file;
+	}
+
+	function renameFile(path: string) {
+		const file = fileToRename;
+		fileToRename = null;
+		if (file && path !== file.path) onRename(file, path);
 	}
 </script>
 
@@ -107,3 +122,24 @@
 		{/each}
 	</div>
 </div>
+
+{#if showNewFileModal}
+	<NewFileModal
+		existingPaths={files.map((file) => file.path)}
+		{defaultExtension}
+		onsubmit={createFile}
+		onclose={() => (showNewFileModal = false)}
+	/>
+{/if}
+
+{#if fileToRename}
+	<PromptModal
+		title="Rename file"
+		label="New path"
+		icon="ph:pencil-simple"
+		value={fileToRename.path}
+		confirmLabel="Rename"
+		onsubmit={renameFile}
+		onclose={() => (fileToRename = null)}
+	/>
+{/if}
