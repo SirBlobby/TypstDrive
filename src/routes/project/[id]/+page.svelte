@@ -146,50 +146,92 @@
 		}
 	}
 
-	async function renameFile(file: ProjectFile, path: string) {
+	function filesInFolder(folder: string) {
+		return files.filter((f) => f.path.startsWith(`${folder}/`));
+	}
+
+	async function moveFile(file: ProjectFile, path: string) {
 		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ path })
 		});
-		if (res.ok) {
-			files = files.map((f) => (f.id === file.id ? { ...f, path } : f));
-			renameOpenFile(file.id, path);
-			recompileAfterFileChange();
+		if (!res.ok) return false;
+		files = files.map((f) => (f.id === file.id ? { ...f, path } : f));
+		renameOpenFile(file.id, path);
+		return true;
+	}
+
+	async function removeFile(file: ProjectFile) {
+		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, { method: 'DELETE' });
+		if (!res.ok) return false;
+		closeFile(file.id);
+		files = files.filter((f) => f.id !== file.id);
+		return true;
+	}
+
+	function ensureActiveFileExists() {
+		if (files.some((f) => f.id === activeFileId)) return;
+		activeFileId = files.find((f) => f.kind === 'text' && !isPlaceholder(f.path))?.id ?? '';
+	}
+
+	async function renameFile(file: ProjectFile, path: string) {
+		const wasEntrypoint = file.path === entrypoint;
+		if (!(await moveFile(file, path))) return;
+		if (wasEntrypoint) await saveEntrypoint(path);
+		recompileAfterFileChange();
+	}
+
+	async function renameFolder(oldFolder: string, newFolder: string) {
+		const prefix = `${oldFolder}/`;
+		const movedEntrypoint = entrypoint.startsWith(prefix) ? `${newFolder}/${entrypoint.slice(prefix.length)}` : null;
+		for (const file of filesInFolder(oldFolder)) {
+			await moveFile(file, `${newFolder}/${file.path.slice(prefix.length)}`);
 		}
+		if (movedEntrypoint) await saveEntrypoint(movedEntrypoint);
+		recompileAfterFileChange();
 	}
 
 	let fileToDelete = $state<ProjectFile | null>(null);
+	let folderToDelete = $state<string | null>(null);
 
 	function deleteFile(file: ProjectFile) {
 		fileToDelete = file;
 	}
 
+	function deleteFolder(folder: string) {
+		folderToDelete = folder;
+	}
+
 	async function confirmDeleteFile() {
 		const file = fileToDelete;
 		fileToDelete = null;
-		if (!file) return;
-		const res = await fetch(`/api/projects/${projectId}/files/${file.id}`, { method: 'DELETE' });
-		if (res.ok) {
-			closeFile(file.id);
-			files = files.filter((f) => f.id !== file.id);
-			if (activeFileId === file.id) {
-				activeFileId = files.find((f) => f.kind === 'text' && !isPlaceholder(f.path))?.id ?? '';
-			}
-			recompileAfterFileChange();
-		}
+		if (!file || !(await removeFile(file))) return;
+		ensureActiveFileExists();
+		recompileAfterFileChange();
 	}
 
-	async function setEntry(file: ProjectFile) {
+	async function confirmDeleteFolder() {
+		const folder = folderToDelete;
+		folderToDelete = null;
+		if (!folder) return;
+		for (const file of filesInFolder(folder)) await removeFile(file);
+		ensureActiveFileExists();
+		recompileAfterFileChange();
+	}
+
+	async function saveEntrypoint(path: string) {
 		const res = await fetch(`/api/projects/${projectId}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ entrypoint: file.path })
+			body: JSON.stringify({ entrypoint: path })
 		});
-		if (res.ok) {
-			entrypoint = file.path;
-			recompileAfterFileChange();
-		}
+		if (res.ok) entrypoint = path;
+		return res.ok;
+	}
+
+	async function setEntry(file: ProjectFile) {
+		if (await saveEntrypoint(file.path)) recompileAfterFileChange();
 	}
 
 	function handleContextMenu(e: MouseEvent) {
@@ -271,6 +313,8 @@
 					onUpload={uploadFiles}
 					onRename={renameFile}
 					onDelete={deleteFile}
+					onRenameFolder={renameFolder}
+					onDeleteFolder={deleteFolder}
 					onSetEntry={setEntry}
 					onCollapse={() => fileTreeCollapsedStore.set(true)}
 				/>
@@ -318,5 +362,15 @@
 		confirmLabel="Delete"
 		onconfirm={confirmDeleteFile}
 		onclose={() => (fileToDelete = null)}
+	/>
+{/if}
+
+{#if folderToDelete}
+	<ConfirmModal
+		title="Delete folder"
+		message={`'${folderToDelete}' and the ${filesInFolder(folderToDelete).filter((f) => !isPlaceholder(f.path)).length} file(s) inside it will be permanently deleted from this project. This cannot be undone.`}
+		confirmLabel="Delete"
+		onconfirm={confirmDeleteFolder}
+		onclose={() => (folderToDelete = null)}
 	/>
 {/if}
