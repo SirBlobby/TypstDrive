@@ -79,7 +79,8 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
     if let Some(project_id) = &payload.project_id {
         let (project, role) = access::project_access(state, project_id, user_id).await?;
         let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
-        let input = crate::drive::projects::assemble_project(state, &project, overrides).await;
+        let reader = crate::drive::projects::ProjectReader::for_role(role, user_id);
+        let input = crate::drive::projects::assemble_project(state, &project, overrides, reader).await;
         let thumbnail_target = role.can_edit().then(|| ThumbnailTarget::Project(project.id.clone()));
         let generated_source = latex::is_latex_path(&input.entrypoint);
         return Some(CompileSource { input, thumbnail_target, generated_source });

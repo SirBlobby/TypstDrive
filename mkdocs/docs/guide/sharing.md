@@ -42,6 +42,7 @@ Names use 3 to 64 lowercase letters, numbers and hyphens, and must not already b
 - Anyone with the URL can download the PDF without signing in, even if the document is not shared.
 - The PDF includes changes that have not been saved as a version yet.
 - If the document has errors, the link keeps serving the last PDF that compiled.
+- The PDF is built the way a visitor would see it: with files linked to the document, your fonts and the files inside a project. Images from your drive that are not linked to the document are left out, so use **Share these files** in the paperclip menu first.
 - Your links and how often they were opened are listed in [Your settings](settings.md#pdf-links).
 
 An administrator can turn public PDF links off or limit how many each person can have. See [PDF links](../admin/pdf-links.md).

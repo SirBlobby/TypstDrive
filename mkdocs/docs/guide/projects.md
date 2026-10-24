@@ -17,6 +17,7 @@ The project editor looks like the document editor, with a file list on the left.
 - Choose which file is the **entry point**, the file that is rendered. It is `main.typ`, or `main.tex` in a LaTeX project, unless you change it. Any `.typ` or `.tex` file can be the entry point.
 - Files can include each other, for example `#include "chapters/intro.typ"`.
 - Bibliographies (`.bib`), data files and images live right next to your text.
+- The owner can also use images and files from their drive. People the project is shared with only get the owner's fonts, so upload images into the project itself if others need to see them.
 - Everyone working on the project sees each other's changes live in every text file.
 - Collapse the file list when you want more room.
 
@@ -24,7 +25,7 @@ The project editor has the same formatting tools, page settings, preview, view m
 
 ## Downloading a project
 
-Choose **File → Download Project**, or the download button on the project in your drive. The ZIP file contains every project file, plus any of your uploaded images and fonts the project uses, so it works on its own anywhere Typst runs.
+Choose **File → Download Project**, or the download button on the project in your drive. The ZIP file contains every project file. When you own the project, it also includes any of your uploaded images and fonts the project uses, so it works on its own anywhere Typst runs.
 
 !!! tip
     If you compile the downloaded project with the Typst command-line tool, add `--font-path .` so it finds the included fonts.

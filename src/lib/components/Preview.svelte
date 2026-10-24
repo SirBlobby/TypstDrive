@@ -1,14 +1,16 @@
 <script lang="ts">
 	import type { Diagnostic } from '../ts/typst-api';
 	import { documentZoomStore } from '../ts/store';
+	import { safeSvg } from '../ts/safe-svg';
 
 	let { svgs = [] }: { svgs?: string[] } = $props();
+	let safeSvgs = $derived(svgs.map(safeSvg));
 </script>
 
 <div class="relative h-full w-full overflow-auto bg-transparent py-8 px-4 flex flex-col items-center gap-8">
 	<div class="flex flex-col items-center gap-8 transition-transform duration-200" style="transform: scale({$documentZoomStore / 100}); transform-origin: top center;">
-		{#if svgs.length > 0}
-			{#each svgs as svg, i}
+		{#if safeSvgs.length > 0}
+			{#each safeSvgs as svg, i}
 				<div class="preview-container shadow-xl bg-white max-w-full lg:max-w-[95%] w-auto inline-block flex-shrink-0 transition-transform duration-200">
 					{@html svg}
 				</div>

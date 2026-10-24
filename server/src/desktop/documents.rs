@@ -121,60 +121,11 @@ async fn document_role(
     document_id: &str,
     user_id: &str,
 ) -> Result<(String, String, String), (StatusCode, String)> {
-    let row = sqlx::query_as::<_, (String, String, Option<Vec<u8>>, Option<String>, Option<String>, Option<String>)>(
-        sql("SELECT owner_id, title, content, public_role, link_password_hash, link_expires_at FROM documents WHERE id = $1"),
-    )
-    .bind(document_id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
-
-    let (owner_id, title, content, public_role, link_password_hash, link_expires_at) = row;
-
-    let mut role = if owner_id == user_id {
-        "owner".to_string()
-    } else {
-        "none".to_string()
-    };
-
-    if role == "none" {
-        if let Ok(Some((collaborator_role,))) = sqlx::query_as::<_, (String,)>(
-            sql("SELECT role FROM collaborators WHERE document_id = $1 AND user_id = $2"),
-        )
-        .bind(document_id)
-        .bind(user_id)
-        .fetch_optional(&state.db)
+    let (document, role) = crate::sharing::access::document_role(state, document_id, &Some(user_id.to_string()))
         .await
-        {
-            role = collaborator_role;
-        }
-    }
-
-    if role == "none" {
-        if let Some(team_role) = crate::teams::content_role(state, &owner_id, user_id).await {
-            role = if team_role.can_edit() { "editor".to_string() } else { "viewer".to_string() };
-        }
-    }
-
-    if role == "none" {
-        let link_role = crate::sharing::links::public_access(
-            document_id,
-            public_role.as_deref(),
-            link_password_hash.as_deref(),
-            link_expires_at.as_deref(),
-        );
-        if let Some(link_role) = link_role {
-            role = link_role.as_str().to_string();
-        }
-    }
-
-    if role == "none" {
-        return Err((StatusCode::FORBIDDEN, "No access to this document".to_string()));
-    }
-
-    let text = decode_text_blob(&content.unwrap_or_default());
-    Ok((role, title, text))
+        .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
+    let content = crate::drive::documents::stored_content(state, document_id).await.unwrap_or_default();
+    Ok((role.as_str().to_string(), document.title, decode_text_blob(&content)))
 }
 
 #[derive(Serialize)]

@@ -94,7 +94,7 @@ async fn require_owner(state: &AppState, kind: ShareKind, item_id: &str, user_id
     }
 }
 
-async fn has_access(state: &AppState, kind: ShareKind, item_id: &str, user_id: &str) -> Result<bool, ApiError> {
+pub(crate) async fn has_access(state: &AppState, kind: ShareKind, item_id: &str, user_id: &str) -> Result<bool, ApiError> {
     let user = Some(user_id.to_string());
     if matches!(kind, ShareKind::Folder) {
         return Ok(access::folder_role(state, item_id, &user).await.is_some());

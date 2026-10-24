@@ -17,7 +17,7 @@ fn forwarded_address(headers: &HeaderMap) -> Option<String> {
     let forwarded_for = headers.get("x-forwarded-for").and_then(|value| value.to_str().ok());
     let real_ip = headers.get("x-real-ip").and_then(|value| value.to_str().ok());
     forwarded_for
-        .and_then(|value| value.split(',').next())
+        .and_then(|value| value.split(',').map(str::trim).filter(|part| !part.is_empty()).last())
         .or(real_ip)
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())

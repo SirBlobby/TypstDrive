@@ -171,11 +171,12 @@ pub async fn link_status(
 
     let password_hash = link.password_hash.clone().filter(|hash| !hash.is_empty());
     let unlocked = password_hash.as_deref().map(|hash| is_granted(&item_id, hash)).unwrap_or(true);
+    let expired = is_expired(link.expires_at.as_deref());
     Ok(Json(LinkStatus {
-        name: if unlocked { link.name } else { String::new() },
+        name: if unlocked && !expired { link.name } else { String::new() },
         public_role: link.public_role,
         requires_password: password_hash.is_some(),
-        expired: is_expired(link.expires_at.as_deref()),
+        expired,
         unlocked,
         expires_at: link.expires_at,
     }))
