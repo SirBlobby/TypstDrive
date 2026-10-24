@@ -150,7 +150,6 @@
                 {#if verificationMessage}
                     <p class="mt-2 text-xs font-medium {verificationMessage.kind === 'success' ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}">{verificationMessage.text}</p>
                 {/if}
-                <p class="mt-3 text-xs text-[var(--color-ink-muted)]">Hover over your picture to upload a new one. Images are stored losslessly.</p>
             </div>
         </div>
     </SettingsCard>
