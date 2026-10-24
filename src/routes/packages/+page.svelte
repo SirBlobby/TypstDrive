@@ -137,7 +137,7 @@
 				</div>
 			{:else}
 				<p class="text-xs text-[var(--color-ink-muted)] mb-3">{visiblePackages.length} {visiblePackages.length === 1 ? 'package' : 'packages'}</p>
-				<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+				<div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">
 					{#each visiblePackages as pkg (pkg.id)}
 						<PackageCard
 							{pkg}
