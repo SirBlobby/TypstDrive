@@ -184,7 +184,7 @@
 		);
 
 		const isToml = (filePath ?? '').toLowerCase().endsWith('.toml');
-		const isLatex = language === 'latex';
+		const isLatex = language === 'latex' || (filePath ?? '').toLowerCase().endsWith('.tex');
 		const isTypst = !isToml && !isLatex;
 		const commentMarker = isToml ? '#' : isLatex ? '%' : '//';
 		let languageExtension: Extension = [typstLanguage, typstBracketSettings(typstLanguage)];

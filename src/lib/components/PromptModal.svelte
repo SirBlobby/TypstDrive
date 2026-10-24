@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from "svelte";
+  import { untrack, type Snippet } from "svelte";
   import Modal from "./Modal.svelte";
 
   interface Props {
@@ -13,6 +13,7 @@
     suffix?: string;
     onsubmit: (value: string) => void;
     onclose: () => void;
+    children?: Snippet;
   }
 
   let {
@@ -26,6 +27,7 @@
     suffix = "",
     onsubmit,
     onclose,
+    children,
   }: Props = $props();
 
   let text = $state(
@@ -60,6 +62,11 @@
         {/if}
       </div>
     </label>
+    {#if children}
+      <div class="mt-3">
+        {@render children()}
+      </div>
+    {/if}
   </form>
 
   {#snippet footer()}

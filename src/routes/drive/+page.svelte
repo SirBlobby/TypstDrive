@@ -38,6 +38,7 @@
     import { languageLabel, type DocumentLanguage } from '$lib/ts/document-language';
     import { emptySearch, matchesItem, tokenValue, type DriveSearch } from '$lib/ts/drive-search';
     import ContentSearchResults from '$lib/components/drive/ContentSearchResults.svelte';
+    import LanguagePicker from '$lib/components/drive/LanguagePicker.svelte';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);
@@ -52,6 +53,7 @@
     let showCreateProjectModal = $state(false);
     let newDocTitle = $state('');
     let newDocLanguage = $state<DocumentLanguage>('typst');
+    let newProjectLanguage = $state<DocumentLanguage>('typst');
     let dragOverFolderId = $state<string | null>(null);
     let dragOverBreadcrumbIndex = $state<number | null>(null);
     let fileInput = $state<HTMLInputElement | null>(null);
@@ -262,6 +264,7 @@
     }
 
     function openCreateProjectModal() {
+        newProjectLanguage = 'typst';
         showCreateProjectModal = true;
     }
 
@@ -271,7 +274,7 @@
         const res = await fetch('/api/projects', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name.trim(), folder_id: currentFolderId || undefined })
+            body: JSON.stringify({ name: name.trim(), folder_id: currentFolderId || undefined, language: newProjectLanguage })
         });
 
         if (res.ok) {
@@ -837,19 +840,23 @@
         confirmLabel="Create"
         onsubmit={createDoc}
         onclose={() => showCreateModal = false}
-    />
+    >
+        <LanguagePicker bind:language={newDocLanguage} />
+    </PromptModal>
 {/if}
 
 {#if showCreateProjectModal}
     <PromptModal
-        title="Create project"
+        title={`Create ${languageLabel(newProjectLanguage)} project`}
         label="Project name"
         icon="ph:folder-star"
         value="Untitled Project"
         confirmLabel="Create"
         onsubmit={createProject}
         onclose={() => showCreateProjectModal = false}
-    />
+    >
+        <LanguagePicker bind:language={newProjectLanguage} />
+    </PromptModal>
 {/if}
 
 {#if showCreateFolderModal}

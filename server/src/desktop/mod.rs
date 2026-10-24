@@ -28,8 +28,8 @@ pub mod spaces;
 
 use spaces::{readable_space, writable_space};
 
-const TEXT_EXTENSIONS: [&str; 10] = [
-    ".typ", ".toml", ".bib", ".csl", ".yml", ".yaml", ".json", ".md", ".txt", ".csv",
+const TEXT_EXTENSIONS: [&str; 11] = [
+    ".typ", ".tex", ".toml", ".bib", ".csl", ".yml", ".yaml", ".json", ".md", ".txt", ".csv",
 ];
 
 pub const MIN_DESKTOP_VERSION: &str = "1.0.0";
