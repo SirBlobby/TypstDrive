@@ -10,6 +10,7 @@
     const links = [
         { label: 'Typst Documentation', url: 'https://typst.app/docs/', icon: 'mdi:book-open-page-variant-outline' },
         { label: 'Typst Universe', url: 'https://typst.app/universe/', icon: 'mdi:earth' },
+        { label: 'MiTeX, used for LaTeX documents', url: 'https://github.com/mitex-rs/mitex', icon: 'mdi:sigma' },
         { label: 'TypstDrive Documentation', url: 'https://sirblobby.github.io/TypstDrive/', icon: 'mdi:file-document-multiple-outline' },
         { label: 'GitHub Repository', url: PROJECT_URL, icon: 'mdi:github' },
         { label: 'Report an Issue', url: `${PROJECT_URL}/issues`, icon: 'mdi:bug-outline' }
@@ -23,6 +24,7 @@
             ? [
                   ['Version', info.server_version],
                   ['Typst', info.typst_version],
+                  ['LaTeX renderer', info.latex_package],
                   ['Database schema', String(info.database.schema_version)],
                   ['Author', 'SirBlobby'],
                   ['License', 'Apache-2.0']
@@ -49,7 +51,7 @@
             </span>
             <div class="min-w-0">
                 <p class="truncate text-base font-semibold text-[var(--color-ink)]">{$brandingStore.site_name}</p>
-                <p class="text-sm text-[var(--color-ink-muted)]">Powered by TypstDrive, a collaborative Typst editor and document manager.</p>
+                <p class="text-sm text-[var(--color-ink-muted)]">Powered by TypstDrive, a collaborative Typst editor and document manager with basic LaTeX support.</p>
             </div>
         </div>
         {#if loadError}
@@ -80,5 +82,6 @@
 
     <p class="text-xs leading-relaxed text-[var(--color-ink-muted)]">
         TypstDrive is a community application and is not affiliated with, endorsed by, or supported by the official Typst project. The Typst links above open the official Typst website in a new tab.
+        LaTeX documents are converted to Typst with the MiTeX package, which the server downloads from Typst Universe the first time a LaTeX document is rendered, so it needs internet access.
     </p>
 </div>

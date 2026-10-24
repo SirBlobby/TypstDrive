@@ -87,7 +87,7 @@
 
 <SettingsHeader
     title="Packages"
-    description="Control who can publish Typst packages to this instance and how large they can be. Administrators can always publish and delete packages."
+    description="Control who can publish Typst packages to this instance and how large they can be. Administrators can always publish and delete packages. Only Typst projects can be published; LaTeX projects cannot."
     icon="mdi:package-variant-closed"
 />
 
