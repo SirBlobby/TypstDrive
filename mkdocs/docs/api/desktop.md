@@ -46,7 +46,7 @@ Tokens are stored hashed. Signing out with `POST /api/desktop/auth/logout`, or r
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/desktop/projects` | Projects the account owns or collaborates on. |
-| `POST` | `/api/desktop/projects` | Create a project. |
+| `POST` | `/api/desktop/projects` | Create a project with a `name`, optional `folder_id` and optional `entrypoint`. An entry point ending in `.tex` makes a LaTeX project. |
 | `GET` | `/api/desktop/projects/{id}` | Full project contents in one response. |
 | `PATCH` | `/api/desktop/projects/{id}` | Move a project to another folder. |
 | `DELETE` | `/api/desktop/projects/{id}` | Delete a project. |
@@ -71,8 +71,8 @@ Tokens are stored hashed. Signing out with `POST /api/desktop/auth/logout`, or r
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/desktop/documents?folder_id=` | Documents in a folder, or at the root when `folder_id` is omitted. |
-| `POST` | `/api/desktop/documents` | Create a document with a `title`, `content` and optional `folder_id`. |
-| `GET` | `/api/desktop/documents/{id}` | Read a document, with the caller's role and content hash. |
+| `POST` | `/api/desktop/documents` | Create a document with a `title`, `content`, optional `folder_id` and optional `language` (`typst` or `latex`, default `typst`). |
+| `GET` | `/api/desktop/documents/{id}` | Read a document, with the caller's role, content hash and `language`. |
 | `PUT` | `/api/desktop/documents/{id}` | Write a document. |
 | `PATCH` | `/api/desktop/documents/{id}` | Move a document. |
 | `DELETE` | `/api/desktop/documents/{id}` | Delete a document. |

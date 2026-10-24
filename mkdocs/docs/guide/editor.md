@@ -2,6 +2,8 @@
 
 The editor has two halves: the text you write on the left and a live preview of the pages on the right.
 
+This page describes Typst documents. LaTeX documents have their own editor and toolbar, described in [LaTeX documents](latex.md).
+
 ![The editor with a live preview](../assets/previews/editor.png)
 
 ## Writing
@@ -10,6 +12,18 @@ The editor has two halves: the text you write on the left and a live preview of 
 - Typing an opening bracket or quote adds the closing one for you. With text selected, typing `*`, `_`, `` ` ``, `$`, `(` and similar wraps the selection instead of replacing it.
 - Mistakes are underlined, and the error bar under the toolbar tells you what went wrong and on which line.
 - Smart features such as jumping to where something is defined, renaming and formatting are available to owners and editors.
+
+## View modes
+
+The **View** button in the top bar chooses what the editor shows:
+
+| Mode | What you see |
+|---|---|
+| Editor and preview | The text and the preview side by side. |
+| Editor only | Just the text, with the full width to write in. |
+| Preview only | Just the pages, for reading or checking the layout. |
+
+Your choice is remembered in your browser. Viewers only ever see the preview.
 
 ## The toolbar
 

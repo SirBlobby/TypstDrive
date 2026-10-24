@@ -26,9 +26,10 @@ Password: password
 
 ### Writing
 
-- **Live Preview**: Pages update as you type, with zoom and a preview pane you can collapse.
+- **Live Preview**: Pages update as you type, with zoom and a view menu to show the editor and preview, the editor only, or the preview only.
 - **Editor**: Syntax highlighting, autocompletion, inline errors, auto-closing brackets and smart features from the tinymist language server.
 - **Formatting Toolbar**: Headings, bold, italic, code, quotes, math, lists, a font picker and page settings.
+- **LaTeX Documents**: Write basic LaTeX documents and projects with a LaTeX editor and toolbar, rendered through [MiTeX](https://github.com/mitex-rs/mitex).
 - **Quick Insert**: Images, tables, other documents, symbols and emoji.
 - **Find and Replace**, line comments and a spell checker that skips code and math.
 - **Customizable Keybinds**: Change the editor shortcuts and spot conflicts at a glance.
@@ -43,7 +44,8 @@ Password: password
 
 ### Organizing and Sharing
 
-- **Drive**: Folders with custom colors, search, sorting, grid and list views, stars and file previews.
+- **Drive**: Folders with custom colors, sorting, grid and list views, stars and file previews.
+- **Search**: A search bar with `type:`, `is:`, `before:` and `after:` filters, and `doc:` to search the text inside documents.
 - **Projects**: Multi-file workspaces for books, theses and templates, downloadable as a ZIP.
 - **Packages**: Publish a project as a package everyone on your server can import, with private packages for people and teams.
 - **Fonts and Images**: Upload once and use everywhere, with an emoji font built in.
@@ -54,7 +56,7 @@ Password: password
 
 ### Finishing
 
-- **Export**: PDF, PNG, SVG and Typst source, plus Word, Markdown, LaTeX and HTML through Pandoc.
+- **Export**: PDF, PNG, SVG and Typst or LaTeX source, plus Word, Markdown, LaTeX and HTML through Pandoc.
 - **Presentation Mode**: Full-screen slides with a slide overview, timer, progress bar, laser pointer, pen, highlighter and eraser.
 - **Render API**: Turn Typst into PNG, PDF or HTML from your own code, with scoped keys, rate limits and usage charts.
 - **Typst Desktop**: Keep documents on your computer and in sync with the [Typst Desktop](https://github.com/SirBlobby/typst-desktop) app.

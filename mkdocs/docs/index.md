@@ -12,10 +12,13 @@ You run TypstDrive on your own server, so your documents stay with you.
 ## What you can do
 
 **Write**
-:   A comfortable editor with syntax colors, suggestions as you type, a formatting toolbar, find and replace, spell checking and shortcuts you can change. The preview updates as you type.
+:   A comfortable editor with syntax colors, suggestions as you type, a formatting toolbar, find and replace, spell checking and shortcuts you can change. The preview updates as you type, and you can show the editor, the preview or both.
+
+**LaTeX too**
+:   Write basic [LaTeX documents and projects](guide/latex.md) with their own editor and toolbar, rendered with MiTeX.
 
 **Organize**
-:   Folders with colors, search, sorting, a grid or list view, and stars for the things you open most.
+:   Folders with colors, a search bar with filters that can also look inside your documents, sorting, a grid or list view, and stars for the things you open most.
 
 **Work together**
 :   Several people can type in the same document at once and see each other's cursors. Leave comments, suggest changes for someone else to accept, and look back through the version history.

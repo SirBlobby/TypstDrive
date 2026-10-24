@@ -8,6 +8,12 @@
 ??? question "Do I need to save?"
     No. Everything is saved automatically every few seconds. Pressing ++ctrl+s++ saves a named point in the [version history](guide/collaboration.md#version-history) that you can go back to.
 
+??? question "Can I write LaTeX?"
+    Yes, basic LaTeX. Pick **LaTeX** as the language when you create a document or project. It is converted to Typst behind the scenes, so packages, `\input` and bibliographies are not supported. See [LaTeX documents](guide/latex.md).
+
+??? question "How do I find text inside my documents?"
+    Type `doc:` followed by the phrase in the search bar and press ++enter++. See [Searching](guide/drive.md#searching).
+
 ??? question "Can I use templates from Typst Universe?"
     Yes. Import them as usual, for example `#import "@preview/charged-ieee:0.1.4": ieee`. You can also publish your own templates as [packages](guide/packages.md) for your server.
 
