@@ -14,7 +14,7 @@
 	import HeaderIconButton from '../editor/header/HeaderIconButton.svelte';
 	import HeaderTypstLinks from '../editor/header/HeaderTypstLinks.svelte';
 	import HeaderExportMenu from '../editor/header/HeaderExportMenu.svelte';
-	import { exportProject } from '../../ts/typst-api';
+	import { exportProject, type ExportFormat } from '../../ts/typst-api';
 	import PageSettingsModal from '../PageSettingsModal.svelte';
 	import PresentationMode from '../PresentationMode.svelte';
 	import Modal from '../Modal.svelte';
@@ -88,7 +88,7 @@
 		return projectName.replace(/[^a-z0-9_-]/gi, '_');
 	}
 
-	function handleExport(format: 'pdf' | 'png' | 'svg' | 'typ') {
+	function handleExport(format: ExportFormat | 'typ') {
 		if (format === 'typ') {
 			const content = activeText ? activeText.toString() : '';
 			const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -359,6 +359,7 @@
 								<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:file-pdf-box" /> .pdf document</button>
 								<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:image" /> .png image</button>
 								<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:svg" /> .svg graphics</button>
+								<button onclick={() => { activeMenu = null; handleExport('html'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:language-html5" /> .html page</button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider opacity-60">Export (Pandoc)</div>
 								<button onclick={() => { activeMenu = null; handlePandocExport('docx'); }} class="w-full text-left px-4 py-1 text-sm hover:bg-[var(--theme-border)]">Word (.docx)</button>

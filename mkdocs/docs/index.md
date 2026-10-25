@@ -36,7 +36,7 @@ You run TypstDrive on your own server, so your documents stay with you.
 :   Pick a color theme in light or dark mode, use [themes](admin/themes.md) your administrator added, or make your own with color pickers or a YAML file.
 
 **Finish**
-:   Export to PDF, PNG, SVG, HTML, Markdown, Word or LaTeX, or present your slides full screen and draw on them while you talk.
+:   Export to PDF, PNG, SVG, HTML, Markdown, Word or LaTeX, from the editor or straight from your drive, or present your slides full screen and draw on them while you talk.
 
 **Teams**
 :   Team spaces are shared drives that belong to a group instead of one person.

@@ -86,11 +86,10 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
         return Some(CompileSource { input, thumbnail_target, generated_source });
     }
 
-    let submitted_text = payload.text.clone().unwrap_or_default();
     let Some(document_id) = &payload.document_id else {
         user_id.as_ref()?;
         return Some(CompileSource {
-            input: ProjectInput::single(submitted_text, HashMap::new()),
+            input: ProjectInput::single(payload.text.clone().unwrap_or_default(), HashMap::new()),
             thumbnail_target: None,
             generated_source: false,
         });
@@ -99,14 +98,24 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
     let (document, role) = access::document_role(state, document_id, user_id).await?;
     let files = crate::drive::document_assets::compile_files(state, &document, role, user_id).await;
     let generated_source = latex::is_latex(&document);
-    if role.can_edit() {
-        let thumbnail_target = Some(ThumbnailTarget::Document(document.id.clone()));
-        let input = latex::document_input(&document, submitted_text, files);
-        Some(CompileSource { input, thumbnail_target, generated_source })
-    } else {
-        let saved_text = crate::drive::documents::saved_text(state, &document.id).await;
-        let input = latex::document_input(&document, saved_text, files);
-        Some(CompileSource { input, thumbnail_target: None, generated_source })
+    match (role.can_edit(), payload.text.clone()) {
+        (true, Some(submitted_text)) => {
+            let thumbnail_target = Some(ThumbnailTarget::Document(document.id.clone()));
+            let input = latex::document_input(&document, submitted_text, files);
+            Some(CompileSource { input, thumbnail_target, generated_source })
+        }
+        _ => {
+            let input = latex::document_input(&document, current_text(state, &document.id).await, files);
+            Some(CompileSource { input, thumbnail_target: None, generated_source })
+        }
+    }
+}
+
+async fn current_text(state: &AppState, document_id: &str) -> String {
+    let room_id = crate::realtime::live_documents::document_room(document_id);
+    match crate::realtime::live_documents::live_text(state, &room_id).await {
+        Some(text) => text,
+        None => crate::drive::documents::saved_text(state, document_id).await,
     }
 }
 
@@ -166,7 +175,7 @@ pub async fn export_handler(
     Path(format): Path<String>,
     Json(payload): Json<CompileRequest>,
 ) -> Response {
-    if !matches!(format.as_str(), "pdf" | "png" | "svg") {
+    if !matches!(format.as_str(), "pdf" | "png" | "svg" | "html") {
         return (StatusCode::NOT_FOUND, "Format not supported").into_response();
     }
 
@@ -179,6 +188,7 @@ pub async fn export_handler(
     let exported = run_blocking(move |compiler| match format.as_str() {
         "pdf" => compiler.export_pdf(input).map(|bytes| ("application/pdf", bytes)),
         "png" => compiler.export_png(input).map(|bytes| ("image/png", bytes)),
+        "html" => compiler.export_html(input).map(|html| ("text/html; charset=utf-8", html.into_bytes())),
         _ => compiler.compile_svg(input).map(|(svgs, _, _)| ("image/svg+xml", svgs.join("\n").into_bytes())),
     })
     .await;

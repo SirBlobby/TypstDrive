@@ -49,7 +49,7 @@ You can also turn on a link that anyone can open. See [Sharing](../guide/sharing
 
 ## 5. Export it
 
-Choose the **Print or export** button in the top right, or open the **File** menu, and pick the PDF. The file downloads straight away. The same places offer PNG and SVG images, printing, and Word, Markdown, LaTeX or HTML. See [Preview and export](../guide/preview-and-export.md).
+Choose the **Print or export** button in the top right, or open the **File** menu, and pick the PDF. The file downloads straight away. The same places offer an HTML page, PNG and SVG images, printing, and Word, Markdown, LaTeX or HTML through Pandoc. You can also export from the **⋮** menu on a document in your drive without opening it. See [Preview and export](../guide/preview-and-export.md).
 
 ## Where to go from here
 

@@ -4,9 +4,9 @@ This guide explains everything you can do in TypstDrive, one topic at a time. Yo
 
 | Page | What it covers |
 |---|---|
-| [Your drive](drive.md) | Folders, colors, search filters, stars, duplicating, selecting several items, the trash, uploads, downloads and importing files. |
+| [Your drive](drive.md) | Folders, colors, search filters, stars, duplicating, exporting, selecting several items, the trash, uploads, downloads and importing files. |
 | [Writing in the editor](editor.md) | The toolbar, view modes, inserting images and tables, find and replace, spell checking and keyboard shortcuts. |
-| [Preview and export](preview-and-export.md) | The live preview, downloading PDFs and images, printing and converting to other formats. |
+| [Preview and export](preview-and-export.md) | The live preview, downloading PDFs, HTML pages and images from the editor or the drive, printing and converting to other formats. |
 | [Working together](collaboration.md) | Editing at the same time, comments, suggestions and version history. |
 | [Presenting](presenting.md) | Showing your document as full-screen slides and drawing on them. |
 | [Projects](projects.md) | Documents made of many files, such as books, theses and templates. |

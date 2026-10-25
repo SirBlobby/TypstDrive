@@ -114,7 +114,7 @@ Team spaces have their own trash, shown while you are working in the team. Viewe
 
 ## Downloading
 
-Download a folder or project as a ZIP file from its download button.
+Download a folder or project as a ZIP file from its download button. To get a finished PDF, HTML page, SVG or PNG of a document or project instead, choose a format under **Export** in its **⋮** menu; see [Exporting from the drive](preview-and-export.md#exporting-from-the-drive).
 
 - Folders keep their structure. Documents become `.typ` files, or `.tex` files for LaTeX documents, named after their titles.
 - Projects inside a folder get their own folder in the ZIP.

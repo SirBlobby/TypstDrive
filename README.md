@@ -59,7 +59,7 @@ Password: password
 
 ### Finishing
 
-- **Export**: PDF, PNG, SVG and Typst or LaTeX source, plus Word, Markdown, LaTeX and HTML through Pandoc.
+- **Export**: PDF, HTML, PNG, SVG and Typst or LaTeX source from the editor or straight from the drive's action menu, plus Word, Markdown, LaTeX and HTML through Pandoc.
 - **Presentation Mode**: Full-screen slides with a slide overview, timer, progress bar, laser pointer, pen, highlighter and eraser.
 - **Render API**: Turn Typst into PNG, PDF or HTML from your own code, with scoped keys, rate limits and usage charts.
 - **Typst Desktop**: Keep documents on your computer and in sync with the [Typst Desktop](https://github.com/SirBlobby/typst-desktop) app.

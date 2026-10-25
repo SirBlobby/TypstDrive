@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { exportTypst } from '../ts/typst-api';
+	import { exportTypst, type ExportFormat } from '../ts/typst-api';
 	import { text } from '../ts/yjs-setup';
 	import { editorViewStore, commentsSidebarOpen } from '../ts/store';
 	import { saveVersion } from '../ts/versions';
@@ -81,7 +81,7 @@
 	let directEditing = $derived(!readOnly && !$suggestingModeStore);
 	let canComment = $derived(role === 'owner' || role === 'editor' || role === 'suggester');
 
-	function handleExport(format: 'pdf' | 'png' | 'svg' | 'source') {
+	function handleExport(format: ExportFormat | 'source') {
 		if (!text) return;
 		const content = text.toString();
 		const safeTitle = title.replace(/[^a-z0-9_-]/gi, '_');
@@ -439,6 +439,7 @@
 								<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:file-pdf-box" /> .pdf document</button>
 								<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:image" /> .png image</button>
 								<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:svg" /> .svg graphics</button>
+								<button onclick={() => { activeMenu = null; handleExport('html'); }} class="w-full text-left px-4 py-1 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-1.5"><Icon icon="mdi:language-html5" /> .html page</button>
 								{#if !isLatex}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider opacity-60">Export (Pandoc)</div>
