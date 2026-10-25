@@ -16,7 +16,9 @@
 	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
 	import Icon from '@iconify/svelte';
 	import { isPlaceholder, placeholderPath } from '#lib/ts/project-tree';
-	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject } from '#lib/ts/yjs-project';
+	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
+	import { createFollowController } from '#lib/ts/follow';
+	import { filePresenceStore } from '#lib/ts/presence';
 
 	interface ProjectFile {
 		id: string;
@@ -250,8 +252,15 @@
 		contextMenu.show = false;
 	}
 
+	$effect(() => setActiveFile(activeFileId || null));
+
+	function followIntoFile(fileId: string) {
+		if (files.some((file) => file.id === fileId && file.kind === 'text')) activeFileId = fileId;
+	}
+
 	onMount(() => {
 		setProject(projectId);
+		const stopFollowController = createFollowController({ sources: presenceSources, activeFileId: () => activeFileId, openFile: followIntoFile });
 		fetch(`/api/projects/${projectId}`)
 			.then((r) => r.json())
 			.then((p) => {
@@ -268,6 +277,7 @@
 
 		return () => {
 			if (timeoutId) clearTimeout(timeoutId);
+			stopFollowController();
 			cleanupProject();
 		};
 	});
@@ -306,6 +316,7 @@
 					{activeFileId}
 					{entrypoint}
 					{readOnly}
+					presence={$filePresenceStore}
 					onSelect={selectFile}
 					onCreate={createFile}
 					onCreateFolder={createFolder}

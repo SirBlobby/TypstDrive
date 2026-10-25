@@ -1,8 +1,8 @@
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { localAwarenessUser } from './awareness-user';
-import { connectionStatus, connectedUsers } from './store';
-import type { AwarenessUser } from './store';
+import { connectionStatus } from './store';
+import { clearPresence, publishPresence, type PresenceSource } from './presence';
 
 export interface OpenFile {
 	fileId: string;
@@ -14,6 +14,7 @@ export interface OpenFile {
 
 const open = new Map<string, OpenFile>();
 let projectId: string | null = null;
+let activeFileId: string | null = null;
 
 const TEXT_NAME = 'typst';
 
@@ -37,32 +38,26 @@ export function openFile(fileId: string, path: string): OpenFile {
 	const provider = new WebsocketProvider(`${protocol}//${host}/yjs`, `project:${projectId}:${fileId}`, doc);
 
 	provider.awareness.setLocalStateField('user', localAwarenessUser());
+	provider.awareness.setLocalStateField('activeFile', activeFileId);
 
 	provider.on('status', (event: { status: string }) => {
 		connectionStatus.set(event.status);
 	});
 
-	provider.awareness.on('change', () => {
-		const states = provider.awareness.getStates();
-		const localId = provider.awareness.clientID;
-		const uniqueUsers = new Map<string, AwarenessUser>();
-		states.forEach((state, clientId) => {
-			if (state.user) {
-				const isLocal = clientId === localId;
-				const userObj = { clientId, ...state.user, isLocal };
-				if (isLocal) {
-					uniqueUsers.set(state.user.name, userObj);
-				} else if (!uniqueUsers.has(state.user.name) || !uniqueUsers.get(state.user.name)!.isLocal) {
-					uniqueUsers.set(state.user.name, userObj);
-				}
-			}
-		});
-		connectedUsers.set(Array.from(uniqueUsers.values()));
-	});
+	provider.awareness.on('change', () => publishPresence(presenceSources()));
 
 	const entry: OpenFile = { fileId, path, doc, text, provider };
 	open.set(fileId, entry);
 	return entry;
+}
+
+export function presenceSources(): PresenceSource[] {
+	return [...open.values()].map((entry) => ({ fileId: entry.fileId, doc: entry.doc, awareness: entry.provider.awareness }));
+}
+
+export function setActiveFile(fileId: string | null) {
+	activeFileId = fileId;
+	for (const entry of open.values()) entry.provider.awareness.setLocalStateField('activeFile', fileId);
 }
 
 export function getOpenFile(fileId: string): OpenFile | undefined {
@@ -81,6 +76,7 @@ export function closeFile(fileId: string) {
 		entry.provider.destroy();
 		entry.doc.destroy();
 		open.delete(fileId);
+		publishPresence(presenceSources());
 	}
 }
 
@@ -97,6 +93,7 @@ export function cleanupProject() {
 		closeFile(fileId);
 	}
 	projectId = null;
+	activeFileId = null;
 	connectionStatus.set('disconnected');
-	connectedUsers.set([]);
+	clearPresence();
 }

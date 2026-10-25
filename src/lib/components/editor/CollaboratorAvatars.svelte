@@ -1,35 +1,54 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
 	import { connectedUsers, type AwarenessUser } from '#lib/ts/store';
+	import { followingStore, stopFollowing, toggleFollow } from '#lib/ts/follow';
+	import UserAvatar from './UserAvatar.svelte';
 
-	let failedImages = $state<Set<string>>(new Set());
+	let followedUser = $derived($connectedUsers.find((user) => !user.isLocal && user.session && user.session === $followingStore) ?? null);
 
-	function initials(name: string) {
-		return name.substring(0, 2).toUpperCase();
+	function canFollow(user: AwarenessUser) {
+		return !user.isLocal && !!user.session;
 	}
 
-	function showImage(user: AwarenessUser) {
-		return !!user.avatar && !failedImages.has(user.avatar);
-	}
-
-	function markFailed(source: string) {
-		failedImages = new Set([...failedImages, source]);
+	function label(user: AwarenessUser) {
+		if (user.isLocal) return `${user.name} (You)`;
+		if (!user.session) return user.name;
+		return user.session === $followingStore ? `Stop following ${user.name}` : `Follow ${user.name}`;
 	}
 </script>
 
 {#if $connectedUsers.length > 0}
-	<div class="flex items-center -space-x-2 mr-2">
-		{#each $connectedUsers as user (user.clientId)}
-			<div
-				class="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold text-white border-2 shadow-sm"
-				style="background-color: {user.color}; border-color: {user.color}; z-index: {user.isLocal ? 10 : 1};"
-				title={user.name + (user.isLocal ? ' (You)' : '')}
+	<div class="flex items-center gap-2 mr-2">
+		{#if followedUser}
+			<button
+				onclick={stopFollowing}
+				class="flex items-center gap-1 rounded-full py-0.5 pl-2 pr-1.5 text-xs font-medium text-white"
+				style="background-color: {followedUser.color};"
+				title="Stop following"
 			>
-				{#if showImage(user)}
-					<img src={user.avatar} alt={user.name} class="h-full w-full object-cover" onerror={() => user.avatar && markFailed(user.avatar)} />
+				Following {followedUser.name}
+				<Icon icon="mdi:close" class="text-sm" />
+			</button>
+		{/if}
+		<div class="flex items-center -space-x-2">
+			{#each $connectedUsers as user (user.clientId)}
+				{#if canFollow(user)}
+					<button
+						onclick={() => user.session && toggleFollow(user.session)}
+						title={label(user)}
+						aria-label={label(user)}
+						aria-pressed={user.session === $followingStore}
+						class="rounded-full transition-transform hover:z-20 hover:-translate-y-0.5 {user.session === $followingStore ? 'z-20 ring-2 ring-offset-2 ring-offset-[var(--color-surface)]' : 'z-[1]'}"
+						style="--tw-ring-color: {user.color};"
+					>
+						<UserAvatar {user} sizeClass="w-7 h-7 text-xs" />
+					</button>
 				{:else}
-					{initials(user.name)}
+					<span title={label(user)} class={user.isLocal ? 'z-10' : 'z-[1]'}>
+						<UserAvatar {user} sizeClass="w-7 h-7 text-xs" />
+					</span>
 				{/if}
-			</div>
-		{/each}
+			{/each}
+		</div>
 	</div>
 {/if}

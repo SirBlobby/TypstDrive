@@ -6,7 +6,8 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import DocFooter from '#lib/components/DocFooter.svelte';
 	import ErrorBanner from '#lib/components/ErrorBanner.svelte';
-	import { text, initYjs, cleanupYjs } from '#lib/ts/yjs-setup';
+	import { text, initYjs, cleanupYjs, presenceSources } from '#lib/ts/yjs-setup';
+	import { createFollowController } from '#lib/ts/follow';
 	import { compileTypst } from '#lib/ts/typst-api';
 	import type { Diagnostic } from '#lib/ts/typst-api';
 	import { page } from '$app/state';
@@ -106,6 +107,7 @@
 
 		initYjs(docId);
 		initialized = true;
+		const stopFollowController = createFollowController({ sources: presenceSources });
 
 		text?.observe(() => {
 			if (timeoutId) clearTimeout(timeoutId);
@@ -115,6 +117,7 @@
 		return () => {
 			if (timeoutId) clearTimeout(timeoutId);
 			suggestingModeStore.set(false);
+			stopFollowController();
 			cleanupYjs();
 		};
 	});

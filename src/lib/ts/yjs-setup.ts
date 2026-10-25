@@ -1,8 +1,8 @@
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { localAwarenessUser } from './awareness-user';
-import { connectionStatus, connectedUsers } from './store';
-import type { AwarenessUser } from './store';
+import { connectionStatus } from './store';
+import { clearPresence, publishPresence, type PresenceSource } from './presence';
 
 export let doc: Y.Doc | null = null;
 export let text: Y.Text | null = null;
@@ -40,37 +40,11 @@ export function initYjs(docId: string) {
 		console.log(`Yjs connection status for ${docId}:`, event.status);
 	});
 
-	provider.awareness.on('change', () => {
-		if (!provider) return;
-		const states = provider.awareness.getStates();
-		const localId = provider.awareness.clientID;
-		
-		
-		
-		const uniqueUsers = new Map<string, AwarenessUser>();
-		
-		states.forEach((state, clientId) => {
-			if (state.user) {
-				const isLocal = clientId === localId;
-				const userObj = {
-					clientId,
-					...state.user,
-					isLocal
-				};
-				
-				if (isLocal) {
-					
-					uniqueUsers.set(state.user.name, userObj);
-				} else if (!uniqueUsers.has(state.user.name) || !uniqueUsers.get(state.user.name)!.isLocal) {
-					
-					
-					uniqueUsers.set(state.user.name, userObj);
-				}
-			}
-		});
-		
-		connectedUsers.set(Array.from(uniqueUsers.values()));
-	});
+	provider.awareness.on('change', () => publishPresence(presenceSources()));
+}
+
+export function presenceSources(): PresenceSource[] {
+	return provider && doc ? [{ fileId: null, doc, awareness: provider.awareness }] : [];
 }
 
 export function cleanupYjs() {
@@ -85,6 +59,6 @@ export function cleanupYjs() {
 	doc = null;
 	text = null;
 	connectionStatus.set('disconnected');
-	connectedUsers.set([]);
+	clearPresence();
 }
 

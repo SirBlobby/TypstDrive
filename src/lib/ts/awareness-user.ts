@@ -6,6 +6,8 @@ const userColors = [
 	'#9ac2c9', '#8acb88', '#1be7ff', '#ff0054', '#9e0059'
 ];
 
+const sessionId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+
 function colorFor(seed: string) {
 	let hash = 0;
 	for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
@@ -23,6 +25,7 @@ export function localAwarenessUser() {
 		name: user?.username || 'Anonymous',
 		color,
 		colorLight: color + '33',
-		avatar
+		avatar,
+		session: sessionId
 	};
 }

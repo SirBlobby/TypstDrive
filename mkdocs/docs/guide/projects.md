@@ -21,7 +21,7 @@ The project editor looks like the document editor, with a file list on the left.
 - Files can include each other, for example `#include "chapters/intro.typ"`.
 - Bibliographies (`.bib`), data files and images live right next to your text. **Edit → Citations** adds references by DOI or arXiv ID and syncs Zotero into them; see [Citations](citations.md).
 - The owner can also use images and files from their drive. People the project is shared with only get the owner's fonts, so upload images into the project itself if others need to see them.
-- Everyone working on the project sees each other's changes live in every text file.
+- Everyone working on the project sees each other's changes live in every text file. Small profile pictures next to a file show who has it open, and a collapsed folder shows everyone inside it. Click a picture at the top of the editor to [follow](collaboration.md#following-someone) that person.
 - Collapse the file list when you want more room.
 
 The project editor has the same formatting tools, page settings, preview, view modes, presentation mode and export options as the document editor. The toolbar follows the open file: `.tex` files get the LaTeX toolbar, and **Page settings** is hidden for them.
