@@ -12,6 +12,7 @@
     import PackageSettings from '#lib/components/site-settings/PackageSettings.svelte';
     import PdfLinkSettings from '#lib/components/site-settings/PdfLinkSettings.svelte';
     import CitationSettings from '#lib/components/site-settings/CitationSettings.svelte';
+    import GitSettings from '#lib/components/site-settings/GitSettings.svelte';
     import ServerSettings from '#lib/components/site-settings/ServerSettings.svelte';
     import AuthenticationSettings from '#lib/components/site-settings/AuthenticationSettings.svelte';
     import EmailSettings from '#lib/components/site-settings/EmailSettings.svelte';
@@ -50,7 +51,8 @@
                 { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
                 { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
                 { id: 'pdf-links', label: 'PDF Links', icon: 'mdi:file-pdf-box' },
-                { id: 'citations', label: 'Citations', icon: 'ph:quotes' }
+                { id: 'citations', label: 'Citations', icon: 'ph:quotes' },
+                { id: 'git', label: 'Git', icon: 'mdi:git' }
             ]
         },
         {
@@ -135,6 +137,8 @@
                     <PdfLinkSettings />
                 {:else if activeSection === 'citations'}
                     <CitationSettings />
+                {:else if activeSection === 'git'}
+                    <GitSettings />
                 {:else if activeSection === 'api-access'}
                     <ApiAccessSettings />
                 {:else if activeSection === 'audit-log'}
