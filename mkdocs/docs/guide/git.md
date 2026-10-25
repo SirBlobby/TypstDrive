@@ -40,6 +40,17 @@ If the import would go over your storage space, the check lists the largest file
 
 The token is stored encrypted. Editors of the project pull and push with the owner's token, and their commits use their own name and email address.
 
+### Saved accounts
+
+Instead of pasting a token for every project, save your GitHub or GitLab account once in **Settings → Git**:
+
+1. Pick **GitHub** or **GitLab**, and fill in the server for GitHub Enterprise or a self-hosted GitLab.
+2. Paste an access token and choose **Check and save**. TypstDrive asks the host who the token belongs to, so a mistyped token is caught right away.
+
+When you link or import a repository on that server and leave the token field empty, the saved account is used. Projects linked this way follow the account: replacing its token updates all of them, and removing the account stops pushing until you add a token again. In a project's **Link settings** you can switch between a token for that project and your saved account.
+
+Saved tokens are never sent back to your browser; only the last four characters are shown so you can tell them apart.
+
 For GitHub Enterprise or a self-hosted GitLab, pick **GitHub** or **GitLab** as the host so TypstDrive uses their web API. Any other server is reached with Git itself.
 
 ## Pull and push

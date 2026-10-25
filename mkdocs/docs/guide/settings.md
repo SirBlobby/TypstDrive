@@ -62,6 +62,10 @@ Every [public PDF link](sharing.md#public-pdf-links) you own, with the document 
 
 Connect or disconnect your Zotero account with a Zotero API key. See [Citations](citations.md#sync-from-zotero).
 
+## Git
+
+Save access tokens for GitHub and GitLab, including GitHub Enterprise and self-hosted GitLab, so you do not have to paste one every time you link or import a project. TypstDrive checks each token with the host before saving it, shows only its last four characters afterwards, and keeps it encrypted. Saving a new token for the same server replaces the old one and updates every project that uses it. See [Git sync](git.md#saved-accounts).
+
 ## API keys
 
 Keys let your own programs and scripts turn Typst into PDFs and images through TypstDrive. Create, renew and delete keys here, and watch how much they are used. A new key is only shown once, so copy it straight away. See the [API overview](../api/index.md).
