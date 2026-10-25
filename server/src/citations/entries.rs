@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::csl::CslItem;
 use super::format::{render_entry, BibliographyFormat};
-use super::lookup::{fetch_csl, parse_identifier};
+use super::identifiers::parse_identifier;
+use super::sources::fetch_csl;
 use super::policy::load_policy;
 use super::targets::{bibliography_files, clean_file_name, editable_target, read_text, write_text};
 use super::ApiError;
@@ -47,7 +48,7 @@ pub struct AddedEntry {
     pub created_file: bool,
 }
 
-fn check_rate(user_id: &str) -> Result<(), ApiError> {
+pub(super) fn check_rate(user_id: &str) -> Result<(), ApiError> {
     static WINDOWS: OnceLock<Mutex<HashMap<String, (u32, Instant)>>> = OnceLock::new();
     let mut windows = WINDOWS.get_or_init(|| Mutex::new(HashMap::new())).lock().map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Lookup limiter failed".to_string()))?;
     let now = Instant::now();

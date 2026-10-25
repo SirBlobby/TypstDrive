@@ -3,6 +3,7 @@ use axum_extra::extract::cookie::SignedCookieJar;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::authors::{fill_authors, TemplateAuthor};
 use super::files::{template_files, TemplateFile};
 use super::index::{self, Template};
 use super::{internal_error, ApiError};
@@ -13,6 +14,7 @@ use crate::sharing::access::require_owned_folder;
 use crate::AppState;
 
 const MAX_TITLE_LENGTH: usize = 200;
+const MAX_AUTHORS: usize = 50;
 
 #[derive(Deserialize)]
 pub struct CreateFromTemplateRequest {
@@ -20,12 +22,16 @@ pub struct CreateFromTemplateRequest {
     pub version: String,
     pub title: String,
     pub folder_id: Option<String>,
+    #[serde(default)]
+    pub authors: Vec<TemplateAuthor>,
 }
 
 #[derive(Serialize)]
 pub struct CreatedItem {
     pub kind: &'static str,
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authors_filled: Option<bool>,
 }
 
 fn mime_type(path: &str) -> &'static str {
@@ -48,6 +54,22 @@ fn mime_type(path: &str) -> &'static str {
 
 fn clean_path(path: &str) -> &str {
     path.trim_start_matches("./")
+}
+
+fn fill_entrypoint_authors(files: &mut [TemplateFile], entrypoint: &str, authors: &[TemplateAuthor]) -> bool {
+    let Some(file) = files.iter_mut().find(|file| file.path == clean_path(entrypoint)) else {
+        return false;
+    };
+    let Ok(source) = std::str::from_utf8(&file.data) else {
+        return false;
+    };
+    match fill_authors(source, authors) {
+        Some(filled) => {
+            file.data = filled.into_bytes();
+            true
+        }
+        None => false,
+    }
 }
 
 async fn create_document(state: &AppState, user_id: &str, folder_id: &Option<String>, title: &str, file: &TemplateFile) -> Result<String, ApiError> {
@@ -126,17 +148,19 @@ pub async fn create_from_template(
     }
 
     let template = index::find(&payload.name, &payload.version).await?;
-    let files = template_files(&template).await?;
+    let mut files = template_files(&template).await?;
+    let authors: Vec<TemplateAuthor> = payload.authors.into_iter().take(MAX_AUTHORS).collect();
+    let authors_filled = (!authors.is_empty()).then(|| fill_entrypoint_authors(&mut files, &template.entrypoint, &authors));
     let total_bytes: i64 = files.iter().map(|file| file.data.len() as i64).sum();
     crate::accounts::storage::ensure_room(&state, &user_id, total_bytes).await?;
 
     let is_single_file = files.len() == 1 && files[0].path == clean_path(&template.entrypoint);
     let created = if is_single_file {
         let id = create_document(&state, &user_id, &payload.folder_id, &title, &files[0]).await?;
-        CreatedItem { kind: "document", id }
+        CreatedItem { kind: "document", id, authors_filled }
     } else {
         let id = create_project(&state, &user_id, &payload.folder_id, &title, &template, files).await?;
-        CreatedItem { kind: "project", id }
+        CreatedItem { kind: "project", id, authors_filled }
     };
     Ok(Json(created))
 }

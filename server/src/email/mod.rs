@@ -1,3 +1,4 @@
+pub mod brand;
 pub mod messages;
 mod providers;
 mod templates;

@@ -60,7 +60,7 @@ async fn send_invitation_email(state: &AppState, team_id: &str, inviter_id: &str
         .map(|user| user.username)
         .unwrap_or_default();
     let link = crate::site_url::link("/drive");
-    let message = crate::email::messages::team_invitation(&team_name, &inviter_name, role.as_str(), link.as_deref());
+    let message = crate::email::messages::team_invitation(&crate::email::brand::load(state).await, &team_name, &inviter_name, role.as_str(), link.as_deref());
     if let Err(error) = state.mailer.send(email, message).await {
         tracing::warn!("Team invitation email to {email} failed: {error}");
     }

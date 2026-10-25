@@ -45,7 +45,7 @@
 
 <SettingsHeader
     title="Citations"
-    description="Citation tools contact outside services: doi.org for DOI and arXiv lookups, and api.zotero.org for Zotero sync. Turn either off if your server should not reach them."
+    description="Citation tools contact outside services: doi.org, api.crossref.org, api.ncbi.nlm.nih.gov and api.semanticscholar.org for reference lookups, pub.orcid.org for ORCID, and api.zotero.org for Zotero sync. Turn any of them off if your server should not reach them."
     icon="ph:quotes"
 />
 
@@ -55,8 +55,11 @@
     <p class="flex items-center gap-2 text-sm text-[var(--color-ink-muted)]"><Icon icon="mdi:loading" class="animate-spin" /> Loading...</p>
 {:else}
     <SettingsCard title="Services" description="Bibliography files that were already added or synced keep working when these are off.">
-        <SettingsRow label="DOI and arXiv lookups" description="Let people turn a DOI or arXiv ID into a BibTeX or Hayagriva entry.">
-            <ToggleSwitch label="DOI and arXiv lookups" bind:checked={policy.lookup_enabled} />
+        <SettingsRow label="Reference lookups" description="Let people turn a DOI, arXiv, PubMed, PMC or Semantic Scholar ID into a BibTeX or Hayagriva entry.">
+            <ToggleSwitch label="Reference lookups" bind:checked={policy.lookup_enabled} />
+        </SettingsRow>
+        <SettingsRow label="ORCID lookups" description="Let people fill in author names and affiliations from an ORCID iD when creating from a template.">
+            <ToggleSwitch label="ORCID lookups" bind:checked={policy.orcid_enabled} />
         </SettingsRow>
         <SettingsRow label="Zotero sync" description="Let people connect Zotero and sync libraries and collections into bibliography files.">
             <ToggleSwitch label="Zotero sync" bind:checked={policy.zotero_enabled} />

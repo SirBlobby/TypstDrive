@@ -206,6 +206,7 @@ async fn invite(
         .map_err(internal_error)?;
 
     revalidate(state, kind, item_id, &inviter_id).await;
+    crate::sharing::notifications::item_shared(state, kind, item_id, &inviter_id, &invited_user_id, &payload.role);
 
     let lookup = format!(
         "SELECT c.id, c.user_id, u.username, u.email, c.role, c.created_at \

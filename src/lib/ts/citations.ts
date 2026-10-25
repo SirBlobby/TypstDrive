@@ -6,6 +6,7 @@ export type BibliographyFormat = 'bibtex' | 'hayagriva';
 export type CitationPolicy = {
     lookup_enabled: boolean;
     zotero_enabled: boolean;
+    orcid_enabled: boolean;
 };
 
 export type LookupResult = {

@@ -1,5 +1,6 @@
 pub const LAYOUT: &str = include_str!("templates/layout.html");
 pub const BUTTON: &str = include_str!("templates/button.html");
+pub const LOGO: &str = include_str!("templates/logo.html");
 
 pub struct Template {
     pub html: &'static str,
@@ -29,6 +30,16 @@ pub const SIGN_IN_CODE: Template = Template {
 pub const TEST_MESSAGE: Template = Template {
     html: include_str!("templates/test_message.html"),
     text: include_str!("templates/test_message.txt"),
+};
+
+pub const ITEM_SHARED: Template = Template {
+    html: include_str!("templates/item_shared.html"),
+    text: include_str!("templates/item_shared.txt"),
+};
+
+pub const OWNERSHIP_OFFERED: Template = Template {
+    html: include_str!("templates/ownership_offered.html"),
+    text: include_str!("templates/ownership_offered.txt"),
 };
 
 pub fn escape_html(text: &str) -> String {

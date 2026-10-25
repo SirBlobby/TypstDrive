@@ -9,6 +9,7 @@
     import DriveSidebar from '#lib/components/drive/DriveSidebar.svelte';
     import TemplateCard from '#lib/components/templates/TemplateCard.svelte';
     import TemplateDetailsModal from '#lib/components/templates/TemplateDetailsModal.svelte';
+    import type { TemplateAuthor } from '#lib/ts/orcid';
     import {
         fetchTemplates,
         createFromTemplate,
@@ -60,9 +61,10 @@
         loading = false;
     }
 
-    async function create(title: string) {
+    async function create(title: string, authors: TemplateAuthor[]) {
         if (!selected) return;
-        const created = await createFromTemplate(selected, title, folderId);
+        const created = await createFromTemplate(selected, title, folderId, authors);
+        if (created.authors_filled === false) alert('This template has no author field that could be filled in, so add the authors in the document yourself.');
         goto(createdItemUrl(created));
     }
 

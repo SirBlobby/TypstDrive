@@ -1,6 +1,6 @@
 Hi {{username}},
 
-Enter this code to confirm your email address and finish setting up your TypstDrive account. It expires in {{minutes}} minutes.
+Enter this code to confirm your email address and finish setting up your {{site_name}} account. It expires in {{minutes}} minutes.
 
 {{code}}
 

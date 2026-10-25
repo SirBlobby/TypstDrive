@@ -47,10 +47,10 @@ Password: password
 - **Drive**: Folders with custom colors, sorting, grid and list views, stars, file previews, duplicating documents and projects, selecting several items to move, star or delete them together, and a trash that keeps deleted items for 30 days.
 - **Search**: A search bar with `type:`, `is:`, `before:` and `after:` filters, and `doc:` to search the text inside documents.
 - **Projects**: Multi-file workspaces for books, theses and templates, downloadable as a ZIP.
-- **Templates**: Start a document or project from any Typst Universe template, with search, type filters and previews. Only the templates people use are downloaded.
+- **Templates**: Start a document or project from any Typst Universe template, with search, type filters and previews, and fill in author names and affiliations from ORCID. Only the templates people use are downloaded.
 - **Packages**: Publish a project as a package everyone on your server can import, with private packages for people and teams.
 - **Fonts and Images**: Upload once and use everywhere, with an emoji font built in.
-- **Citations**: Paste a DOI or arXiv ID to get a BibTeX or Hayagriva entry, and sync Zotero libraries and collections into bibliography files.
+- **Citations**: Paste a DOI, arXiv, PubMed, PMC or Semantic Scholar ID to get a BibTeX or Hayagriva entry, and sync Zotero libraries and collections into bibliography files.
 - **Sharing**: Share documents, projects and folders as editor, suggester or viewer, and hand over ownership.
 - **Share Links**: Let anyone with the link view, suggest or edit, with an optional password and expiry date.
 - **Public PDF Links**: A named URL such as `/pdf/my-cv` that always serves the latest compiled PDF, for CVs and living documents.
@@ -67,6 +67,7 @@ Password: password
 ### Accounts and Administration
 
 - **Sign-In Options**: Passwords, one-time email codes, Google, GitHub and any OpenID Connect provider such as Keycloak, Authentik or Authelia.
+- **Email**: Branded emails for sign-in codes, password resets, team invitations, sharing and ownership offers.
 - **Account Security**: Email verification, password reset, active sessions, connected accounts and sign-in lockout.
 - **Themes**: Cerberus, Catppuccin and Arch Linux themes in light and dark mode, site themes added by admins, and personal themes made with color pickers or uploaded as YAML, plus text size and high contrast options.
 - **Branding**: Your own site name, logo, accent color, tagline and sign-in message.

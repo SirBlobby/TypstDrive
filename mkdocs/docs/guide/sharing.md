@@ -17,7 +17,7 @@ Viewers and suggesters truly cannot change the document. The server ignores any 
 
 ## Sharing with people
 
-Type the email address of someone's TypstDrive account, choose a role, and add them. They find the item under **Shared** in their drive. Change or remove their role from the same dialog at any time.
+Type the email address of someone's TypstDrive account, choose a role, and add them. They find the item under **Shared** in their drive, and get an email with a link to it when the server has [email](../self-hosting/email.md) set up. Change or remove their role from the same dialog at any time.
 
 ## Share links
 
@@ -66,7 +66,7 @@ You can hand a document, project or folder to someone else.
 
 1. Share it with them first.
 2. In **Share**, click the crown next to their name and confirm.
-3. They accept or decline the request from the top of their drive. You can cancel it while it is waiting.
+3. They get an email about it, and accept or decline the request from the top of their drive. You can cancel it while it is waiting.
 
 After they accept, the item moves to their drive and counts toward their storage, and you stay on as an editor. Files linked to a document move with it.
 
