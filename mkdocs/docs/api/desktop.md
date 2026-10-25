@@ -49,7 +49,7 @@ Tokens are stored hashed. Signing out with `POST /api/desktop/auth/logout`, or r
 | `POST` | `/api/desktop/projects` | Create a project with a `name`, optional `folder_id` and optional `entrypoint`. An entry point ending in `.tex` makes a LaTeX project. |
 | `GET` | `/api/desktop/projects/{id}` | Full project contents in one response. |
 | `PATCH` | `/api/desktop/projects/{id}` | Move a project to another folder. |
-| `DELETE` | `/api/desktop/projects/{id}` | Delete a project. |
+| `DELETE` | `/api/desktop/projects/{id}` | Move a project to the trash. |
 | `GET` | `/api/desktop/projects/{id}/manifest` | Every file with its content hash, for change detection. |
 | `GET` | `/api/desktop/projects/{id}/file?path=` | Read one file. |
 | `PUT` | `/api/desktop/projects/{id}/file` | Write one file. |
@@ -64,7 +64,7 @@ Tokens are stored hashed. Signing out with `POST /api/desktop/auth/logout`, or r
 | `PATCH` | `/api/desktop/folders/{id}` | Rename a folder. |
 | `PATCH` | `/api/desktop/folders/{id}/move` | Move a folder. |
 | `PATCH` | `/api/desktop/folders/{id}/color` | Set a folder's color with `color` as `#rrggbb`, or `null` for the default. |
-| `DELETE` | `/api/desktop/folders/{id}` | Delete a folder. |
+| `DELETE` | `/api/desktop/folders/{id}` | Move a folder to the trash. |
 
 ### Documents
 
@@ -75,7 +75,7 @@ Tokens are stored hashed. Signing out with `POST /api/desktop/auth/logout`, or r
 | `GET` | `/api/desktop/documents/{id}` | Read a document, with the caller's role, content hash and `language`. |
 | `PUT` | `/api/desktop/documents/{id}` | Write a document. |
 | `PATCH` | `/api/desktop/documents/{id}` | Move a document. |
-| `DELETE` | `/api/desktop/documents/{id}` | Delete a document. |
+| `DELETE` | `/api/desktop/documents/{id}` | Move a document to the trash. |
 | `GET` | `/api/desktop/shared` | Documents and projects shared with the account. |
 
 ### Versions, comments and suggestions
@@ -106,7 +106,7 @@ These endpoints use the same rules as the web editor: anyone with access can rea
 | `GET` | `/api/desktop/files/{id}` | Read an uploaded file, base64-encoded. |
 | `PATCH` | `/api/desktop/files/{id}` | Rename a file. |
 | `PATCH` | `/api/desktop/files/{id}/move` | Move a file. |
-| `DELETE` | `/api/desktop/files/{id}` | Delete a file. |
+| `DELETE` | `/api/desktop/files/{id}` | Move a file to the trash. |
 
 ## Permissions
 

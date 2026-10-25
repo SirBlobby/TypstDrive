@@ -44,7 +44,7 @@ Password: password
 
 ### Organizing and Sharing
 
-- **Drive**: Folders with custom colors, sorting, grid and list views, stars, file previews, and selecting several items to move, star or delete them together.
+- **Drive**: Folders with custom colors, sorting, grid and list views, stars, file previews, selecting several items to move, star or delete them together, and a trash that keeps deleted items for 30 days.
 - **Search**: A search bar with `type:`, `is:`, `before:` and `after:` filters, and `doc:` to search the text inside documents.
 - **Projects**: Multi-file workspaces for books, theses and templates, downloadable as a ZIP.
 - **Templates**: Start a document or project from any Typst Universe template, with search, type filters and previews. Only the templates people use are downloaded.
@@ -70,7 +70,7 @@ Password: password
 - **Account Security**: Email verification, password reset, active sessions, connected accounts and sign-in lockout.
 - **Themes**: Cerberus, Catppuccin and Arch Linux themes in light and dark mode, site themes added by admins, and personal themes made with color pickers or uploaded as YAML, plus text size and high contrast options.
 - **Branding**: Your own site name, logo, accent color, tagline and sign-in message.
-- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, site themes, API limits and an audit log.
+- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, site themes, trash retention, API limits and an audit log.
 - **Flexible Hosting**: SQLite, PostgreSQL or MySQL/MariaDB with automatic upgrades, plus Redis or Valkey and S3-compatible storage for larger installs.
 
 

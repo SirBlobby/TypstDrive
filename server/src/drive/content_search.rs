@@ -61,8 +61,8 @@ pub async fn search_document_text(
 
     let rows = sqlx::query_as::<_, DocumentRow>(sql(
         "SELECT d.id, d.owner_id, d.title, d.folder_id, d.updated_at, d.language, d.content FROM documents d \
-         WHERE d.owner_id = $1 OR d.id IN (SELECT c.document_id FROM collaborators c WHERE c.user_id = $2) \
-         ORDER BY d.updated_at DESC",
+         WHERE (d.owner_id = $1 OR d.id IN (SELECT c.document_id FROM collaborators c WHERE c.user_id = $2)) \
+         AND d.deleted_at IS NULL ORDER BY d.updated_at DESC",
     ))
     .bind(&user_id)
     .bind(&user_id)

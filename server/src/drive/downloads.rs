@@ -107,7 +107,7 @@ async fn project_entries(state: &AppState, project: &Project, prefix: &str, read
         .await
         .unwrap_or_default();
 
-    let account_files = sqlx::query_as::<_, (String, String)>(sql("SELECT id, name FROM files WHERE owner_id = $1"))
+    let account_files = sqlx::query_as::<_, (String, String)>(sql("SELECT id, name FROM files WHERE owner_id = $1 AND deleted_at IS NULL"))
         .bind(&project.owner_id)
         .fetch_all(&state.db)
         .await
@@ -139,7 +139,7 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
         let mut names = NameAllocator::default();
 
         let subfolders = sqlx::query_as::<_, (String, String)>(
-            sql("SELECT id, name FROM folders WHERE parent_id = $1 AND owner_id = $2 ORDER BY name ASC")
+            sql("SELECT id, name FROM folders WHERE parent_id = $1 AND owner_id = $2 AND deleted_at IS NULL ORDER BY name ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
@@ -152,7 +152,7 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
         }
 
         let documents = sqlx::query_as::<_, (String, Option<Vec<u8>>, Option<String>)>(
-            sql("SELECT title, content, language FROM documents WHERE folder_id = $1 AND owner_id = $2 ORDER BY title ASC")
+            sql("SELECT title, content, language FROM documents WHERE folder_id = $1 AND owner_id = $2 AND deleted_at IS NULL ORDER BY title ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
@@ -167,7 +167,7 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
         }
 
         let files = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(
-            sql("SELECT name, data, storage_key FROM files WHERE folder_id = $1 AND owner_id = $2 ORDER BY name ASC")
+            sql("SELECT name, data, storage_key FROM files WHERE folder_id = $1 AND owner_id = $2 AND deleted_at IS NULL ORDER BY name ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
@@ -180,7 +180,7 @@ async fn folder_entries(state: &AppState, root_id: &str, root_name: &str, owner_
         }
 
         let projects = sqlx::query_as::<_, Project>(
-            sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE folder_id = $1 AND owner_id = $2 ORDER BY name ASC")
+            sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE folder_id = $1 AND owner_id = $2 AND deleted_at IS NULL ORDER BY name ASC")
         )
         .bind(&folder_id)
         .bind(owner_id)
@@ -255,7 +255,7 @@ pub async fn download_folder(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     crate::sharing::access::require_folder_access(&state, &id, &user_id).await?;
-    let (folder_name, owner_id) = sqlx::query_as::<_, (String, String)>(sql("SELECT name, owner_id FROM folders WHERE id = $1"))
+    let (folder_name, owner_id) = sqlx::query_as::<_, (String, String)>(sql("SELECT name, owner_id FROM folders WHERE id = $1 AND deleted_at IS NULL"))
         .bind(&id)
         .fetch_optional(&state.db)
         .await

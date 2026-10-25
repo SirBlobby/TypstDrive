@@ -32,6 +32,7 @@
 	import { undo, redo } from '@codemirror/commands';
 	import type { DocumentRole } from '#lib/ts/document-role';
 	import { suggestingModeStore } from '#lib/ts/suggestions';
+	import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
 	import { sourceExtension, type DocumentLanguage } from '#lib/ts/document-language';
 
 	let isShareModalOpen = $state(false);
@@ -600,7 +601,7 @@
 {#if showDeleteModal}
 	<ConfirmModal
 		title="Delete document"
-		message="Are you sure you want to delete this document? This action cannot be undone."
+		message={`Are you sure you want to delete this document? ${deletionNotice($trashRetentionStore)}`}
 		confirmLabel="Delete"
 		onconfirm={confirmDelete}
 		onclose={() => showDeleteModal = false}

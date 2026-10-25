@@ -48,7 +48,7 @@ fn matches_etag(headers: &HeaderMap, fingerprint: &str) -> bool {
 }
 
 async fn document_input(state: &AppState, document_id: &str) -> Option<ProjectInput> {
-    let (owner_id,) = sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM documents WHERE id = $1"))
+    let (owner_id,) = sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM documents WHERE id = $1 AND deleted_at IS NULL"))
         .bind(document_id)
         .fetch_optional(&state.db)
         .await
@@ -61,7 +61,7 @@ async fn document_input(state: &AppState, document_id: &str) -> Option<ProjectIn
 
 async fn project_input(state: &AppState, project_id: &str) -> Option<ProjectInput> {
     let project = sqlx::query_as::<_, Project>(
-        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1"),
+        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND deleted_at IS NULL"),
     )
     .bind(project_id)
     .fetch_optional(&state.db)

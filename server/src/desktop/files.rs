@@ -21,7 +21,7 @@ pub async fn list_account_files(
     let rows = match &query.folder_id {
         Some(folder_id) => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
             sql("SELECT id, name, mime_type, folder_id, created_at FROM files \
-             WHERE owner_id = $1 AND folder_id = $2 ORDER BY name ASC"),
+             WHERE owner_id = $1 AND folder_id = $2 AND deleted_at IS NULL ORDER BY name ASC"),
         )
         .bind(&user_id)
         .bind(folder_id)
@@ -29,7 +29,7 @@ pub async fn list_account_files(
         .await,
         None => sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
             sql("SELECT id, name, mime_type, folder_id, created_at FROM files \
-             WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC"),
+             WHERE owner_id = $1 AND folder_id IS NULL AND deleted_at IS NULL ORDER BY name ASC"),
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -143,7 +143,7 @@ pub async fn rename_account_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT name, mime_type, folder_id, created_at FROM files WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT name, mime_type, folder_id, created_at FROM files WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -187,7 +187,7 @@ pub async fn move_account_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT name, mime_type, folder_id, created_at FROM files WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT name, mime_type, folder_id, created_at FROM files WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -222,7 +222,7 @@ pub async fn pull_account_file(
     let user_id = readable_space(&state, &headers).await?;
 
     let row = sqlx::query_as::<_, (String, String, Vec<u8>, Option<String>)>(
-        sql("SELECT name, mime_type, data, storage_key FROM files WHERE id = $1 AND owner_id = $2"),
+        sql("SELECT name, mime_type, data, storage_key FROM files WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"),
     )
     .bind(&id)
     .bind(&user_id)
@@ -249,16 +249,7 @@ pub async fn delete_account_file(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = writable_space(&state, &headers).await?;
 
-    let result = sqlx::query(sql("DELETE FROM files WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "File not found or unauthorized".to_string()));
-    }
+    crate::trash::move_to_trash(&state, crate::trash::TrashKind::File, &id, &user_id, &user_id).await?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 

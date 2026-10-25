@@ -33,7 +33,7 @@ pub fn is_font_name(name: &str) -> bool {
 }
 
 pub async fn account_files(state: &AppState, owner_id: &str, sources: &[&str], skipped_names: &HashSet<String>) -> HashMap<String, Vec<u8>> {
-    let entries = sqlx::query_as::<_, (String, String)>(sql("SELECT id, name FROM files WHERE owner_id = $1"))
+    let entries = sqlx::query_as::<_, (String, String)>(sql("SELECT id, name FROM files WHERE owner_id = $1 AND deleted_at IS NULL"))
         .bind(owner_id)
         .fetch_all(&state.db)
         .await

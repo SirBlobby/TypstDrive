@@ -6,7 +6,7 @@ The drive is the first thing you see after signing in. It holds everything you o
 
 ## Finding your way around
 
-- **Sidebar** on the left: **Home** (your own files), **New** (start from a [template](templates.md)), **Shared** (things other people shared with you), **Starred**, your [team spaces](teams.md), **Packages**, and a link to Typst Universe. At the bottom you can see how much storage you use and which version of TypstDrive is running. Collapse the sidebar with the button at the bottom.
+- **Sidebar** on the left: **Home** (your own files), **New** (start from a [template](templates.md)), **Shared** (things other people shared with you), **Starred**, **Trash**, your [team spaces](teams.md), **Packages**, and a link to Typst Universe. At the bottom you can see how much storage you use and which version of TypstDrive is running. Collapse the sidebar with the button at the bottom.
 - **Search bar** in the top bar. See [Searching](#searching).
 - **Header** under it: where you are, then on the same row the sort controls, **Upload**, and **New document**. Sort by name, date or size, flip the order, and switch between a grid of cards and a compact list. The arrow next to **New document** also creates a LaTeX document, a project, something [from a template](templates.md), a folder, or imports a file.
 
@@ -86,6 +86,17 @@ Selecting works in your own drive and in team spaces where you can make changes.
 ## Stars
 
 Click the star on any document or project to add it to **Starred** in the sidebar. Stars are personal: nobody else sees them.
+
+## Trash
+
+Deleting a document, project, folder or file moves it to the **Trash** in the sidebar instead of removing it straight away. A deleted folder takes everything inside it along.
+
+- **Restore** puts an item back where it was. If its folder is gone or also in the trash, it goes back to the top of your drive.
+- **Delete forever** removes one item for good, and **Empty trash** removes everything.
+- Each item shows when it was deleted, by whom, and how many days are left. Items are deleted for good after 30 days, or whatever your administrator chose.
+- Items in the trash still count toward your storage until they are gone.
+
+Team spaces have their own trash, shown while you are working in the team. Viewers can look but not restore or delete. Items deleted from Typst Desktop go to the trash too.
 
 ## Details about an item
 

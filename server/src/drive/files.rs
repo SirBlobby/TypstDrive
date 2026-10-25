@@ -30,7 +30,7 @@ pub async fn list_files(
     let files = if let Some(folder_id) = query.folder_id {
         crate::sharing::access::require_folder_access(&state, &folder_id, &user_id).await?;
         sqlx::query_as::<_, File>(
-            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, updated_at FROM files WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY name ASC")
+            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, updated_at FROM files WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) AND deleted_at IS NULL ORDER BY name ASC")
         )
         .bind(&folder_id)
         .bind(&folder_id)
@@ -39,7 +39,7 @@ pub async fn list_files(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, File>(
-            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, updated_at FROM files WHERE owner_id = $1 AND folder_id IS NULL ORDER BY name ASC")
+            sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, updated_at FROM files WHERE owner_id = $1 AND folder_id IS NULL AND deleted_at IS NULL ORDER BY name ASC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -118,7 +118,7 @@ pub async fn get_file_data(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let (owner_id, document_id, folder_id, mime_type, data, storage_key) = sqlx::query_as::<_, (String, Option<String>, Option<String>, String, Vec<u8>, Option<String>)>(
-        sql("SELECT owner_id, document_id, folder_id, mime_type, data, storage_key FROM files WHERE id = $1")
+        sql("SELECT owner_id, document_id, folder_id, mime_type, data, storage_key FROM files WHERE id = $1 AND deleted_at IS NULL")
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -167,20 +167,12 @@ pub async fn delete_file(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
+    session: Option<axum::Extension<crate::accounts::sessions::ActiveSession>>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
-
-    let result = sqlx::query(sql("DELETE FROM files WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "File not found or unauthorized".to_string()));
-    }
+    let deleted_by = session.map(|axum::Extension(active)| active.user_id).unwrap_or_else(|| user_id.clone());
+    crate::trash::move_to_trash(&state, crate::trash::TrashKind::File, &id, &user_id, &deleted_by).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -193,7 +185,7 @@ pub async fn list_fonts(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let files = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(
-        sql("SELECT name, data, storage_key FROM files WHERE owner_id = $1 AND (LOWER(name) LIKE '%.ttf' OR LOWER(name) LIKE '%.otf')")
+        sql("SELECT name, data, storage_key FROM files WHERE owner_id = $1 AND deleted_at IS NULL AND (LOWER(name) LIKE '%.ttf' OR LOWER(name) LIKE '%.otf')")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -226,7 +218,7 @@ pub async fn update_file(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut file = sqlx::query_as::<_, File>(
-        sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE id = $1 AND owner_id = $2")
+        sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at FROM files WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL")
     )
     .bind(&id)
     .bind(&user_id)

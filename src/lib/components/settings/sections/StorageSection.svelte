@@ -4,6 +4,7 @@
     import { formatBytes } from '#lib/ts/settings-ui';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import TrashCard from './TrashCard.svelte';
 
     type StorageStats = {
         documents_size_bytes: number;
@@ -34,7 +35,7 @@
     });
 </script>
 
-<SettingsHeader title="Storage" description="How much space your documents, uploaded files and projects use." icon="mdi:harddisk" />
+<SettingsHeader title="Storage" description="How much space your documents, uploaded files and projects use, and what is in your trash." icon="mdi:harddisk" />
 
 <SettingsCard padded>
     {#if loadFailed}
@@ -83,3 +84,7 @@
         </dl>
     {/if}
 </SettingsCard>
+
+<div class="mt-6">
+    <TrashCard />
+</div>

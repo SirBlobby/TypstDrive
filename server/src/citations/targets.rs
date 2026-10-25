@@ -74,7 +74,7 @@ pub async fn editable_target(state: &AppState, kind: &str, item_id: &str, user_i
 
 pub async fn bibliography_files(state: &AppState, target: &Target) -> Result<Vec<String>, ApiError> {
     let names: Vec<String> = match target {
-        Target::Document(document) => sqlx::query_as::<_, (String,)>(sql("SELECT name FROM files WHERE document_id = $1 ORDER BY name ASC"))
+        Target::Document(document) => sqlx::query_as::<_, (String,)>(sql("SELECT name FROM files WHERE document_id = $1 AND deleted_at IS NULL ORDER BY name ASC"))
             .bind(&document.id)
             .fetch_all(&state.db)
             .await
@@ -98,7 +98,7 @@ pub async fn bibliography_files(state: &AppState, target: &Target) -> Result<Vec
 
 async fn document_file(state: &AppState, document: &Document, name: &str) -> Result<Option<(String, Vec<u8>, Option<String>, i64)>, ApiError> {
     sqlx::query_as::<_, (String, Vec<u8>, Option<String>, i64)>(sql(
-        "SELECT id, data, storage_key, size_bytes FROM files WHERE document_id = $1 AND name = $2 ORDER BY created_at ASC LIMIT 1",
+        "SELECT id, data, storage_key, size_bytes FROM files WHERE document_id = $1 AND name = $2 AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1",
     ))
     .bind(&document.id)
     .bind(name)

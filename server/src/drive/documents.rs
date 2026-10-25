@@ -15,7 +15,7 @@ use crate::{
 use crate::db::sql;
 
 const DOCUMENT_BY_ID: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language FROM documents WHERE id = $1";
-const OWNED_DOCUMENT: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language FROM documents WHERE id = $1 AND owner_id = $2";
+const OWNED_DOCUMENT: &str = "SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language FROM documents WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL";
 
 pub async fn stored_content(state: &AppState, document_id: &str) -> Option<Vec<u8>> {
     sqlx::query_as::<_, (Option<Vec<u8>>,)>(sql("SELECT content FROM documents WHERE id = $1"))
@@ -48,7 +48,7 @@ pub async fn list_shared_documents(
          d.public_role, d.created_at, d.updated_at, d.language, c.role as effective_role \
          FROM documents d \
          INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = $1 \
-         ORDER BY d.updated_at DESC")
+         WHERE d.deleted_at IS NULL ORDER BY d.updated_at DESC")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -69,7 +69,7 @@ pub async fn list_documents(
     let docs = if let Some(folder_id) = query.folder_id {
         crate::sharing::access::require_folder_access(&state, &folder_id, &user_id).await?;
         sqlx::query_as::<_, Document>(
-            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY updated_at DESC")
+            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) AND deleted_at IS NULL ORDER BY updated_at DESC")
         )
         .bind(&folder_id)
         .bind(&folder_id)
@@ -78,7 +78,7 @@ pub async fn list_documents(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Document>(
-            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC")
+            sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL AND deleted_at IS NULL ORDER BY updated_at DESC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -202,22 +202,12 @@ pub async fn delete_document(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
+    session: Option<axum::Extension<crate::accounts::sessions::ActiveSession>>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
-
-    let result = sqlx::query(sql("DELETE FROM documents WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "Document not found or unauthorized".to_string()));
-    }
-
-    crate::sharing::access::revalidate_resource(&state, crate::sharing::access::Resource::Document(id.clone())).await;
+    let deleted_by = session.map(|axum::Extension(active)| active.user_id).unwrap_or_else(|| user_id.clone());
+    crate::trash::move_to_trash(&state, crate::trash::TrashKind::Document, &id, &user_id, &deleted_by).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

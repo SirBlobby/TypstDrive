@@ -174,7 +174,7 @@ async fn writable_project(state: &AppState, project_id: &str, user_id: &str) -> 
 }
 
 async fn document_owner(state: &AppState, document_id: &str) -> Option<String> {
-    sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM documents WHERE id = $1"))
+    sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM documents WHERE id = $1 AND deleted_at IS NULL"))
         .bind(document_id)
         .fetch_optional(&state.db)
         .await
@@ -189,7 +189,7 @@ async fn owned_folder(
     user_id: &str,
 ) -> Result<(), (StatusCode, String)> {
     let row = sqlx::query_as::<_, (i64,)>(
-        sql("SELECT COUNT(*) FROM folders WHERE id = $1 AND owner_id = $2"),
+        sql("SELECT COUNT(*) FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"),
     )
     .bind(folder_id)
     .bind(user_id)

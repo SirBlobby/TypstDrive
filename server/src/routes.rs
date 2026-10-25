@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, citations, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, AppState,
+    accounts, admin, api, citations, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -40,6 +40,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/themes", post(themes::admin::create_site_theme))
         .route("/admin/themes/{id}", put(themes::admin::update_site_theme).delete(themes::admin::delete_site_theme))
         .route("/admin/theme-policy", get(themes::policy::get_policy).put(themes::policy::update_policy))
+        .route("/admin/trash-policy", get(trash::policy::get_policy).put(trash::policy::update_policy))
         .route("/admin/pdf-links", get(sharing::pdf_links::admin::overview))
         .route("/admin/pdf-links/policy", get(sharing::pdf_links::policy::get_policy).put(sharing::pdf_links::policy::update_policy))
         .route("/admin/pdf-links/{id}", delete(sharing::pdf_links::admin::delete_link))
@@ -95,6 +96,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/teams/{id}/members/{user_id}/transfer", post(teams::members::transfer_ownership))
         .route("/share-links/{kind}/{id}", get(sharing::links::link_status).put(sharing::links::update_link))
         .route("/share-links/{kind}/{id}/unlock", post(sharing::links::unlock_link))
+        .route("/trash", get(trash::handlers::list_trash).delete(trash::handlers::empty_trash))
+        .route("/trash/policy", get(trash::policy::own_policy))
+        .route("/trash/{id}", delete(trash::handlers::delete_entry))
+        .route("/trash/{id}/restore", post(trash::handlers::restore_entry))
         .route("/themes", get(themes::personal::list_themes).post(themes::personal::create_theme))
         .route("/themes/{id}", put(themes::personal::update_theme).delete(themes::personal::delete_theme))
         .route("/citations/policy", get(citations::policy::own_policy))

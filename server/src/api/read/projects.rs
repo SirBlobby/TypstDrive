@@ -38,7 +38,7 @@ pub struct ProjectDetail {
 
 pub async fn owned_project(state: &AppState, account_id: &str, project_id: &str) -> Result<ProjectSummary, Response> {
     sqlx::query_as::<_, ProjectSummary>(sql(
-        "SELECT id, name, entrypoint, folder_id, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2",
+        "SELECT id, name, entrypoint, folder_id, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
     ))
     .bind(project_id)
     .bind(account_id)
@@ -51,7 +51,7 @@ pub async fn owned_project(state: &AppState, account_id: &str, project_id: &str)
 pub async fn list_projects(State(state): State<AppState>, headers: HeaderMap) -> Result<Json<Vec<ProjectSummary>>, Response> {
     let caller = authenticate(&state, &headers, ApiScope::Read).await?;
     sqlx::query_as::<_, ProjectSummary>(sql(
-        "SELECT id, name, entrypoint, folder_id, created_at, updated_at FROM projects WHERE owner_id = $1 ORDER BY updated_at DESC",
+        "SELECT id, name, entrypoint, folder_id, created_at, updated_at FROM projects WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY updated_at DESC",
     ))
     .bind(&caller.account_id)
     .fetch_all(&state.db)
@@ -87,7 +87,7 @@ pub async fn get_project_file(
     let caller = authenticate(&state, &headers, ApiScope::Read).await?;
     let row = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(sql(
         "SELECT pf.kind, pf.mime_type, pf.content FROM project_files pf INNER JOIN projects p ON p.id = pf.project_id \
-         WHERE pf.id = $1 AND pf.project_id = $2 AND p.owner_id = $3",
+         WHERE pf.id = $1 AND pf.project_id = $2 AND p.owner_id = $3 AND p.deleted_at IS NULL",
     ))
     .bind(&file_id)
     .bind(&project_id)

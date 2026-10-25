@@ -105,7 +105,7 @@ pub async fn folder_role(state: &AppState, folder_id: &str, user_id: &Option<Str
     let uid = user_id.as_ref()?;
     let ancestors = sqlx::query_as::<_, (String, Option<String>)>(
         sql("WITH RECURSIVE ancestors(id, parent_id, owner_id) AS ( \
-             SELECT id, parent_id, owner_id FROM folders WHERE id = $1 \
+             SELECT id, parent_id, owner_id FROM folders WHERE id = $1 AND deleted_at IS NULL \
              UNION ALL SELECT f.id, f.parent_id, f.owner_id FROM folders f \
              INNER JOIN ancestors a ON f.id = a.parent_id AND f.owner_id = a.owner_id \
          ) SELECT a.owner_id, c.role FROM ancestors a \
@@ -131,7 +131,7 @@ pub async fn folder_role(state: &AppState, folder_id: &str, user_id: &Option<Str
 }
 
 pub async fn folder_owner(state: &AppState, folder_id: &str) -> Option<String> {
-    sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM folders WHERE id = $1"))
+    sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM folders WHERE id = $1 AND deleted_at IS NULL"))
         .bind(folder_id)
         .fetch_optional(&state.db)
         .await
@@ -187,7 +187,7 @@ pub async fn document_role(
     user_id: &Option<String>,
 ) -> Option<(Document, AccessRole)> {
     let document = sqlx::query_as::<_, Document>(
-        sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, link_password_hash, link_expires_at, created_at, updated_at, language FROM documents WHERE id = $1")
+        sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, link_password_hash, link_expires_at, created_at, updated_at, language FROM documents WHERE id = $1 AND deleted_at IS NULL")
     )
     .bind(document_id)
     .fetch_optional(&state.db)

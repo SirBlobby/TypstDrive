@@ -3,6 +3,7 @@
     import DriveSelectionBar from './DriveSelectionBar.svelte';
     import MoveToFolderModal from './MoveToFolderModal.svelte';
     import { starredStore } from '#lib/ts/stars';
+    import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
     import type { DriveEntry } from '#lib/ts/drive-filters';
     import type { DriveSelection } from '#lib/ts/drive-selection.svelte';
     import { allStarred, deleteEntries, describeEntries, isMovable, isStarrable, moveEntries, starEntries } from '#lib/ts/drive-bulk';
@@ -66,7 +67,7 @@
 {#if showDelete}
     <ConfirmModal
         title="Delete items"
-        message={`Are you sure you want to delete ${describeEntries(entries)}? ${hasFolders ? 'Everything inside the selected folders will also be deleted. ' : ''}This action cannot be undone.`}
+        message={`Are you sure you want to delete ${describeEntries(entries)}? ${hasFolders ? 'Everything inside the selected folders will also be deleted. ' : ''}${deletionNotice($trashRetentionStore)}`}
         confirmLabel="Delete"
         onconfirm={confirmDelete}
         onclose={() => (showDelete = false)}

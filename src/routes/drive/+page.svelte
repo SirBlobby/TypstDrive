@@ -42,6 +42,7 @@
     import DriveSelectionActions from '#lib/components/drive/DriveSelectionActions.svelte';
     import { DriveSelection, entryKey, selectionKey } from '#lib/ts/drive-selection.svelte';
     import { moveEntries } from '#lib/ts/drive-bulk';
+    import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);
@@ -878,7 +879,7 @@
 {#if showDeleteModal && deleteTarget}
     <ConfirmModal
         title={`Delete ${deleteTarget.type}`}
-        message={`Are you sure you want to delete '${deleteTarget.name}'? ${deleteTarget.type === 'folder' ? 'Every subfolder, document, project and file inside it will also be deleted. ' : ''}${deleteTarget.type === 'project' ? 'All of its files will also be deleted. ' : ''}This action cannot be undone.`}
+        message={`Are you sure you want to delete '${deleteTarget.name}'? ${deleteTarget.type === 'folder' ? 'Every subfolder, document, project and file inside it will also be deleted. ' : ''}${deleteTarget.type === 'project' ? 'All of its files will also be deleted. ' : ''}${deletionNotice($trashRetentionStore)}`}
         confirmLabel="Delete"
         onconfirm={confirmDelete}
         onclose={() => showDeleteModal = false}

@@ -4,6 +4,7 @@ mod appearance;
 mod citations;
 mod content;
 mod sharing;
+mod trash;
 
 pub struct Column {
     pub name: &'static str,
@@ -46,7 +47,7 @@ pub(super) const fn optional_reference(name: &'static str, parent: &'static str,
     Column { name, definition, copy: CopyRule::OptionalReference(parent) }
 }
 
-const TABLE_GROUPS: &[&[Table]] = &[accounts::TABLES, content::TABLES, sharing::TABLES, api::TABLES, citations::TABLES, appearance::TABLES];
+const TABLE_GROUPS: &[&[Table]] = &[accounts::TABLES, content::TABLES, sharing::TABLES, api::TABLES, citations::TABLES, appearance::TABLES, trash::TABLES];
 
 pub fn tables() -> impl Iterator<Item = &'static Table> {
     TABLE_GROUPS.iter().flat_map(|group| group.iter())
@@ -54,6 +55,11 @@ pub fn tables() -> impl Iterator<Item = &'static Table> {
 
 pub const INDEXES: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_themes_owner ON themes (owner_id)",
+    "CREATE INDEX IF NOT EXISTS idx_trash_items_owner ON trash_items (owner_id)",
+    "CREATE INDEX IF NOT EXISTS idx_documents_trash ON documents (trash_id)",
+    "CREATE INDEX IF NOT EXISTS idx_folders_trash ON folders (trash_id)",
+    "CREATE INDEX IF NOT EXISTS idx_files_trash ON files (trash_id)",
+    "CREATE INDEX IF NOT EXISTS idx_projects_trash ON projects (trash_id)",
     "CREATE INDEX IF NOT EXISTS idx_folders_owner_parent ON folders (owner_id, parent_id)",
     "CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders (parent_id)",
     "CREATE INDEX IF NOT EXISTS idx_documents_owner_folder ON documents (owner_id, folder_id)",
