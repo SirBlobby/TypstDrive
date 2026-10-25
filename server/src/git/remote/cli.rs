@@ -1,4 +1,5 @@
 use std::io::{ErrorKind, Read, Write};
+use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -14,6 +15,7 @@ const INDEX_FILE_NAME: &str = "typstdrive-index";
 const FILE_MODE: &str = "100644";
 const SYMLINK_MODE: &str = "120000";
 const REMOVED_ENTRY: &str = "0 0000000000000000000000000000000000000000";
+const PREFETCH_BATCH: usize = 500;
 
 fn cache_root() -> PathBuf {
     std::env::var("GIT_CACHE_DIR")
@@ -25,15 +27,43 @@ fn repo_dir(repo: &RemoteRepo) -> PathBuf {
     cache_root().join(&repo.cache_name)
 }
 
+fn create_cache_root() -> Result<(), ApiError> {
+    let root = cache_root();
+    std::fs::create_dir_all(&root).map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+    }
+    Ok(())
+}
+
 pub fn remove_cache(cache_name: &str) {
     let _ = std::fs::remove_dir_all(cache_root().join(cache_name));
 }
 
-fn check_host(repo: &RemoteRepo) -> Result<(), ApiError> {
-    resolve_remote_host(&repo.url.host_and_port()).map(|_| ()).map_err(|error| match error.kind() {
+fn checked_addresses(repo: &RemoteRepo) -> Result<Vec<SocketAddr>, ApiError> {
+    resolve_remote_host(&repo.url.host_and_port()).map_err(|error| match error.kind() {
         ErrorKind::PermissionDenied => (StatusCode::BAD_REQUEST, "The repository must be on a public address".to_string()),
         _ => (StatusCode::BAD_GATEWAY, format!("Could not find the Git server {}", repo.url.host_name())),
     })
+}
+
+fn pinned_resolve(repo: &RemoteRepo) -> Result<Option<String>, ApiError> {
+    let addresses = checked_addresses(repo)?;
+    let host = repo.url.host_name();
+    if host.starts_with('[') || host.parse::<std::net::IpAddr>().is_ok() {
+        return Ok(None);
+    }
+    let port = addresses.first().map(SocketAddr::port).unwrap_or(443);
+    let listed: Vec<String> = addresses
+        .iter()
+        .map(|address| match address {
+            SocketAddr::V4(address) => address.ip().to_string(),
+            SocketAddr::V6(address) => format!("[{}]", address.ip()),
+        })
+        .collect();
+    Ok(Some(format!("{host}:{port}:{}", listed.join(","))))
 }
 
 fn null_device() -> &'static str {
@@ -57,24 +87,45 @@ fn config_entries(repo: &RemoteRepo) -> Vec<(String, String)> {
     entries
 }
 
-fn git(repo: &RemoteRepo, git_dir: Option<&Path>) -> Command {
+enum Access {
+    Local,
+    Network { pinned: Option<String> },
+}
+
+fn command(repo: &RemoteRepo, git_dir: Option<&Path>, access: Access) -> Command {
     let mut command = Command::new("git");
     if let Some(git_dir) = git_dir {
         command.arg("--git-dir").arg(git_dir);
     }
-    let entries = config_entries(repo);
+    let mut entries = config_entries(repo);
+    let is_local = matches!(access, Access::Local);
+    if let Access::Network { pinned: Some(pinned) } = access {
+        entries.push(("http.curloptResolve".to_string(), pinned));
+    }
     command
         .env_remove("GIT_DIR")
         .env_remove("GIT_INDEX_FILE")
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_LITERAL_PATHSPECS", "1")
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_CONFIG_GLOBAL", null_device())
         .env("GIT_CONFIG_COUNT", entries.len().to_string());
+    if is_local {
+        command.env("GIT_NO_LAZY_FETCH", "1");
+    }
     for (index, (key, value)) in entries.into_iter().enumerate() {
         command.env(format!("GIT_CONFIG_KEY_{index}"), key).env(format!("GIT_CONFIG_VALUE_{index}"), value);
     }
     command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
     command
+}
+
+fn git(repo: &RemoteRepo, git_dir: Option<&Path>) -> Command {
+    command(repo, git_dir, Access::Local)
+}
+
+fn network_git(repo: &RemoteRepo, git_dir: Option<&Path>) -> Result<Command, ApiError> {
+    Ok(command(repo, git_dir, Access::Network { pinned: pinned_resolve(repo)? }))
 }
 
 fn failure(stderr: &[u8]) -> ApiError {
@@ -128,13 +179,12 @@ fn branch_ref(repo: &RemoteRepo) -> String {
 }
 
 fn fetch(repo: &RemoteRepo) -> Result<PathBuf, ApiError> {
-    check_host(repo)?;
     let dir = repo_dir(repo);
     if dir.join("HEAD").exists() {
         let mut set_url = git(repo, Some(&dir));
         set_url.args(["remote", "set-url", "origin", repo.url.text.as_str()]);
         run(set_url)?;
-        let mut fetch = git(repo, Some(&dir));
+        let mut fetch = network_git(repo, Some(&dir))?;
         fetch.args(["fetch", "--depth=1", "--filter=blob:none", "--no-tags", "--update-head-ok", "origin"]);
         fetch.arg(format!("+{0}:{0}", branch_ref(repo)));
         run(fetch)?;
@@ -142,8 +192,8 @@ fn fetch(repo: &RemoteRepo) -> Result<PathBuf, ApiError> {
     }
 
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(cache_root()).map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
-    let mut clone = git(repo, None);
+    create_cache_root()?;
+    let mut clone = network_git(repo, None)?;
     clone.args(["clone", "--bare", "--depth=1", "--filter=blob:none", "--single-branch", "--no-tags", "--branch", repo.branch.as_str(), "--", repo.url.text.as_str()]);
     clone.arg(&dir);
     if let Err(error) = run(clone) {
@@ -199,9 +249,21 @@ pub fn list_files(repo: &RemoteRepo, commit: &str) -> Result<Vec<RemoteEntry>, A
         .collect())
 }
 
+pub fn prefetch(repo: &RemoteRepo, shas: &[String]) -> Result<(), ApiError> {
+    let dir = repo_dir(repo);
+    if !dir.join("HEAD").exists() {
+        return Ok(());
+    }
+    for batch in shas.chunks(PREFETCH_BATCH) {
+        let mut fetch = network_git(repo, Some(&dir))?;
+        fetch.args(["-c", "fetch.negotiationAlgorithm=noop", "fetch", "origin", "--no-tags", "--no-write-fetch-head", "--recurse-submodules=no", "--filter=blob:none", "--stdin"]);
+        run_with_input(fetch, batch.join("\n").as_bytes())?;
+    }
+    Ok(())
+}
+
 pub fn read_blob(repo: &RemoteRepo, sha: &str) -> Result<Option<Vec<u8>>, ApiError> {
-    check_host(repo)?;
-    let mut read = git(repo, Some(&repo_dir(repo)));
+    let mut read = network_git(repo, Some(&repo_dir(repo)))?;
     read.args(["cat-file", "blob", sha]);
     let mut child = read.spawn().map_err(spawn_error)?;
     let mut bytes = Vec::new();
@@ -272,8 +334,7 @@ pub fn commit(repo: &RemoteRepo, base_commit: &str, changes: &[FileChange], mess
     commit_tree.args(["commit-tree", tree.as_str(), "-p", base_commit, "-F", "-"]);
     let commit = run_with_input(commit_tree, message.as_bytes())?;
 
-    check_host(repo)?;
-    let mut push = git(repo, Some(&dir));
+    let mut push = network_git(repo, Some(&dir))?;
     push.args(["push", "origin", format!("{commit}:{}", branch_ref(repo)).as_str()]);
     run(push)?;
 

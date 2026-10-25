@@ -8,6 +8,7 @@ use serde::Serialize;
 
 use super::repo_settings::RepoUrl;
 use super::ApiError;
+use crate::drive::project_paths::clean_project_path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Provider {
@@ -154,7 +155,27 @@ pub async fn list_files(repo: &RemoteRepo, commit: &str) -> Result<Vec<RemoteEnt
         Provider::Generic => cli::list_files(&repo, &commit),
     })
     .await?;
-    Ok(entries.into_iter().filter(|entry| is_object_id(&entry.sha)).collect())
+    Ok(entries.into_iter().filter(is_safe_entry).collect())
+}
+
+fn is_safe_entry(entry: &RemoteEntry) -> bool {
+    is_object_id(&entry.sha) && clean_project_path(&entry.path).is_ok_and(|cleaned| cleaned == entry.path)
+}
+
+pub fn download_concurrency(provider: Provider) -> usize {
+    match provider {
+        Provider::Generic => 1,
+        Provider::Github | Provider::Gitlab => 6,
+    }
+}
+
+pub async fn prefetch(repo: &RemoteRepo, entries: &[RemoteEntry]) {
+    if repo.provider != Provider::Generic || entries.is_empty() {
+        return;
+    }
+    let repo = repo.clone();
+    let shas: Vec<String> = entries.iter().map(|entry| entry.sha.clone()).collect();
+    let _ = blocking(move || cli::prefetch(&repo, &shas)).await;
 }
 
 pub async fn fill_sizes(repo: &RemoteRepo, commit: &str, entries: Vec<RemoteEntry>) -> Result<Vec<RemoteEntry>, ApiError> {
@@ -230,6 +251,18 @@ mod tests {
         assert_eq!(paper.relative_path("paper/figures/a.png").as_deref(), Some("figures/a.png"));
         assert_eq!(paper.relative_path("papers/main.typ"), None);
         assert_eq!(repo("").relative_path("main.typ").as_deref(), Some("main.typ"));
+    }
+
+    #[test]
+    fn rejects_unsafe_remote_entries() {
+        let sha = "a".repeat(40);
+        let entry = |path: &str, sha: &str| RemoteEntry { path: path.to_string(), sha: sha.to_string(), size: None };
+        assert!(is_safe_entry(&entry("chapters/intro.typ", &sha)));
+        assert!(!is_safe_entry(&entry("../escape.typ", &sha)));
+        assert!(!is_safe_entry(&entry("/absolute.typ", &sha)));
+        assert!(!is_safe_entry(&entry("a//b.typ", &sha)));
+        assert!(!is_safe_entry(&entry("dir\\file.typ", &sha)));
+        assert!(!is_safe_entry(&entry("main.typ", "not-a-sha")));
     }
 
     #[test]
