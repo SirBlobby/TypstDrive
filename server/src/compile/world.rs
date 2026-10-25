@@ -2,7 +2,7 @@ use chrono::Datelike;
 use std::collections::{HashMap, HashSet};
 use std::io::Read;
 use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use typst::diag::{FileError, FileResult};
 use typst::format::Format;
@@ -14,14 +14,38 @@ use typst::{Library, LibraryExt};
 use typst_kit::downloader::SystemDownloader;
 use typst_kit::packages::SystemPackages;
 
-use crate::compile::fonts::shared_fonts;
+use crate::compile::fonts::{shared_book, shared_fonts};
+
+fn shared_library(enable_html: bool) -> &'static typst::utils::LazyHash<Library> {
+    static PLAIN: OnceLock<typst::utils::LazyHash<Library>> = OnceLock::new();
+    static WITH_HTML: OnceLock<typst::utils::LazyHash<Library>> = OnceLock::new();
+    let cell = if enable_html { &WITH_HTML } else { &PLAIN };
+    cell.get_or_init(|| {
+        let mut builder = Library::builder(export_formats());
+        if enable_html {
+            builder = builder.with_features([typst::Feature::Html].into_iter().collect());
+        }
+        typst::utils::LazyHash::new(builder.build())
+    })
+}
+
+fn custom_book(custom_fonts: Vec<typst::text::FontInfo>) -> Option<typst::utils::LazyHash<FontBook>> {
+    if custom_fonts.is_empty() {
+        return None;
+    }
+    let mut book = shared_fonts().book();
+    for info in custom_fonts {
+        book.push(info);
+    }
+    Some(typst::utils::LazyHash::new(book))
+}
 
 pub struct MemoryWorld {
-    library: typst::utils::LazyHash<Library>,
+    library: &'static typst::utils::LazyHash<Library>,
     main: FileId,
     files: HashMap<String, Vec<u8>>,
     local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
-    book: typst::utils::LazyHash<FontBook>,
+    custom_book: Option<typst::utils::LazyHash<FontBook>>,
     fonts: Vec<Font>,
     font_file_names: Vec<String>,
     packages: SystemPackages,
@@ -148,7 +172,7 @@ impl MemoryWorld {
         let downloader = SystemDownloader::new("TypstDrive (typst-kit)");
         let packages = SystemPackages::new(downloader);
 
-        let mut book = shared_fonts().book();
+        let mut custom_fonts = Vec::new();
         let mut fonts = Vec::new();
         let mut font_file_names = Vec::new();
 
@@ -157,26 +181,19 @@ impl MemoryWorld {
         for (name, data) in &files {
             if name.to_lowercase().ends_with(".ttf") || name.to_lowercase().ends_with(".otf") {
                 for font in Font::iter(Bytes::new(data.clone())) {
-                    book.push(font.info().clone());
+                    custom_fonts.push(font.info().clone());
                     fonts.push(font);
                     font_file_names.push(name.clone());
                 }
             }
         }
 
-        let mut library_builder = Library::builder(export_formats());
-        if enable_html {
-            library_builder =
-                library_builder.with_features([typst::Feature::Html].into_iter().collect());
-        }
-        let library = library_builder.build();
-
         Self {
-            library: typst::utils::LazyHash::new(library),
+            library: shared_library(enable_html),
             main,
             files,
             local_packages,
-            book: typst::utils::LazyHash::new(book),
+            custom_book: custom_book(custom_fonts),
             fonts,
             font_file_names,
             packages,
@@ -229,11 +246,11 @@ impl MemoryWorld {
 
 impl World for MemoryWorld {
     fn library(&self) -> &typst::utils::LazyHash<Library> {
-        &self.library
+        self.library
     }
 
     fn book(&self) -> &typst::utils::LazyHash<FontBook> {
-        &self.book
+        self.custom_book.as_ref().unwrap_or_else(|| shared_book())
     }
 
     fn main(&self) -> FileId {

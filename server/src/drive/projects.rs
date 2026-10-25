@@ -164,14 +164,10 @@ impl<'a> ProjectReader<'a> {
     }
 }
 
-fn is_font_data(data: &[u8]) -> bool {
-    typst::text::Font::iter(typst::foundations::Bytes::new(data.to_vec())).next().is_some()
-}
-
 pub async fn assemble_project(
     state: &AppState,
     project: &Project,
-    overrides: HashMap<String, String>,
+    mut overrides: HashMap<String, String>,
     reader: ProjectReader<'_>,
 ) -> ProjectInput {
     let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
@@ -182,34 +178,35 @@ pub async fn assemble_project(
     .await
     .unwrap_or_default();
 
-    let mut files: HashMap<String, Vec<u8>> = HashMap::new();
-    let mut sources: Vec<String> = Vec::new();
+    let mut files: HashMap<String, Vec<u8>> = HashMap::with_capacity(rows.len() + overrides.len());
+    let mut text_paths: Vec<String> = Vec::new();
     for (path, kind, content) in rows {
-        if let Some(live) = overrides.get(&path) {
-            sources.push(live.clone());
-            files.insert(path, live.clone().into_bytes());
-        } else if kind == "binary" {
-            files.insert(path, content.unwrap_or_default());
-        } else {
-            let text = decode_text_blob(&content.unwrap_or_default());
-            sources.push(text.clone());
-            files.insert(path, text.into_bytes());
+        let (data, is_text) = match overrides.remove(&path) {
+            Some(live) => (live.into_bytes(), true),
+            None if kind == "binary" => (content.unwrap_or_default(), false),
+            None => (decode_text_blob(&content.unwrap_or_default()).into_bytes(), true),
+        };
+        if is_text {
+            text_paths.push(path.clone());
         }
+        files.insert(path, data);
     }
     for (path, content) in overrides {
-        if !files.contains_key(&path) {
-            sources.push(content.clone());
-            files.insert(path, content.into_bytes());
-        }
+        text_paths.push(path.clone());
+        files.insert(path, content.into_bytes());
     }
 
     let project_paths: HashSet<String> = files.keys().cloned().collect();
     let source_texts: Vec<&str> = match reader {
-        ProjectReader::Owner => sources.iter().map(String::as_str).collect(),
+        ProjectReader::Owner => text_paths
+            .iter()
+            .filter_map(|path| files.get(path))
+            .filter_map(|data| std::str::from_utf8(data).ok())
+            .collect(),
         ProjectReader::Collaborator(_) => Vec::new(),
     };
     let uploaded = crate::drive::file_data::account_files(state, &project.owner_id, &source_texts, &project_paths).await;
-    files.extend(uploaded.into_iter().filter(|(_, data)| matches!(reader, ProjectReader::Owner) || is_font_data(data)));
+    files.extend(uploaded.into_iter().filter(|(_, data)| matches!(reader, ProjectReader::Owner) || crate::compile::fonts::is_font_data(data)));
 
     let package_account = match reader {
         ProjectReader::Owner => project.owner_id.as_str(),

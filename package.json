@@ -4,6 +4,8 @@
 	"version": "2.1.0",
 	"type": "module",
 	"imports": {
+		"#lib/ts/*": "./src/lib/ts/*.ts",
+		"#lib/components/*": "./src/lib/components/*",
 		"#lib/*": "./src/lib/*"
 	},
 	"scripts": {

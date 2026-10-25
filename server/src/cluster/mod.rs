@@ -20,6 +20,7 @@ pub enum ClusterEvent {
     RevokeDevice { device_token_id: String },
     DeviceNotification { user_id: String, event: DeviceEvent },
     ReloadThemes { owner_id: Option<String> },
+    ReloadSettings,
 }
 
 type OutgoingMessage = (String, Vec<u8>);

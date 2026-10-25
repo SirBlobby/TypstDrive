@@ -131,15 +131,15 @@ pub fn public_access(item_id: &str, public_role: Option<&str>, password_hash: Op
     }
 }
 
-fn grants_from_headers(key: &Key, headers: &HeaderMap) -> Vec<String> {
+pub fn grants_from_headers(key: &Key, headers: &HeaderMap) -> Vec<String> {
     SignedCookieJar::from_headers(headers, key.clone())
         .get(GRANTS_COOKIE)
         .map(|cookie| cookie.value().split(',').filter(|grant| !grant.is_empty()).map(str::to_string).collect())
         .unwrap_or_default()
 }
 
-pub async fn with_grants<F: std::future::Future>(key: &Key, headers: &HeaderMap, work: F) -> F::Output {
-    LINK_GRANTS.scope(grants_from_headers(key, headers), work).await
+pub async fn with_grants<F: std::future::Future>(grants: Vec<String>, work: F) -> F::Output {
+    LINK_GRANTS.scope(grants, work).await
 }
 
 async fn load_link(state: &AppState, kind: LinkKind, item_id: &str) -> Result<LinkRow, ApiError> {
