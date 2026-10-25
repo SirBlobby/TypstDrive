@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
-    import StarButton from '$lib/components/drive/stars/StarButton.svelte';
+    import StarButton from '#lib/components/drive/stars/StarButton.svelte';
 
     let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, readOnly = false }: {
         doc: any;

@@ -1,10 +1,10 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { doc } from '$lib/ts/yjs-setup';
-    import { editorViewStore } from '$lib/ts/store';
-    import { activeThreadStore, buildThreads, commentsStore } from '$lib/ts/comments';
-    import { resolveRange } from '$lib/ts/document-anchors';
-    import { setCommentMarks, type CommentMark } from '$lib/ts/editor-comment-marks';
+    import { doc } from '#lib/ts/yjs-setup';
+    import { editorViewStore } from '#lib/ts/store';
+    import { activeThreadStore, buildThreads, commentsStore } from '#lib/ts/comments';
+    import { resolveRange } from '#lib/ts/document-anchors';
+    import { setCommentMarks, type CommentMark } from '#lib/ts/editor-comment-marks';
 
     let documentRevision = $state(0);
 

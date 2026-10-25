@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { brandingStore } from '$lib/ts/branding';
+	import { brandingStore } from '#lib/ts/branding';
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
-	import { userStore } from '$lib/ts/auth';
-	import { fetchUserPackagePolicy, type Package, type UserPackagePolicy } from '$lib/ts/packages';
-	import Navbar from '$lib/components/drive/Navbar.svelte';
-	import DriveSidebar from '$lib/components/drive/DriveSidebar.svelte';
-	import PackageCard from '$lib/components/packages/PackageCard.svelte';
-	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
-	import PackageAccessModal from '$lib/components/packages/PackageAccessModal.svelte';
-	import { activeTeamStore } from '$lib/ts/workspace';
+	import { userStore } from '#lib/ts/auth';
+	import { fetchUserPackagePolicy, type Package, type UserPackagePolicy } from '#lib/ts/packages';
+	import Navbar from '#lib/components/drive/Navbar.svelte';
+	import DriveSidebar from '#lib/components/drive/DriveSidebar.svelte';
+	import PackageCard from '#lib/components/packages/PackageCard.svelte';
+	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
+	import PackageAccessModal from '#lib/components/packages/PackageAccessModal.svelte';
+	import { activeTeamStore } from '#lib/ts/workspace';
 
 	let packages = $state<Package[]>([]);
 	let loading = $state(true);

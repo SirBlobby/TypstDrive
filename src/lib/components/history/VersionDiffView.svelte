@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { DiffLine } from '$lib/ts/line-diff';
+    import type { DiffLine } from '#lib/ts/line-diff';
 
     let { lines, showUnchanged }: { lines: DiffLine[]; showUnchanged: boolean } = $props();
 

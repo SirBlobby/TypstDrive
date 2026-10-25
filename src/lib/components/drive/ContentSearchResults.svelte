@@ -2,7 +2,7 @@
     import Icon from '@iconify/svelte';
     import DriveEmptyState from './DriveEmptyState.svelte';
     import DriveSectionTitle from './DriveSectionTitle.svelte';
-    import { starKey, starredStore } from '$lib/ts/stars';
+    import { starKey, starredStore } from '#lib/ts/stars';
     import {
         MINIMUM_CONTENT_QUERY_LENGTH,
         contentSearchParams,
@@ -13,7 +13,7 @@
         tokenValue,
         type ContentSearchResult,
         type DriveSearch
-    } from '$lib/ts/drive-search';
+    } from '#lib/ts/drive-search';
 
     let { search, text }: { search: DriveSearch; text: string } = $props();
 

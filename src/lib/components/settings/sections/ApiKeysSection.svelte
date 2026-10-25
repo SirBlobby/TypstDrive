@@ -1,13 +1,13 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { dangerButtonClass, formatDate, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import ApiUsageChart from '$lib/components/settings/ApiUsageChart.svelte';
-    import { API_DOCS_URL } from '$lib/ts/links';
-    import { isExpired, keyFromCreated, scopeLabels, type ApiKey, type CreatedApiKey } from '$lib/ts/api-keys';
-    import CreateKeyForm from '$lib/components/settings/api-keys/CreateKeyForm.svelte';
+    import { dangerButtonClass, formatDate, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import ApiUsageChart from '#lib/components/settings/ApiUsageChart.svelte';
+    import { API_DOCS_URL } from '#lib/ts/links';
+    import { isExpired, keyFromCreated, scopeLabels, type ApiKey, type CreatedApiKey } from '#lib/ts/api-keys';
+    import CreateKeyForm from '#lib/components/settings/api-keys/CreateKeyForm.svelte';
 
     type OwnLimits = {
         api_enabled: boolean;

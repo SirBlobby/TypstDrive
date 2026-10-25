@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { dangerButtonClass, formatDate, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
+    import { dangerButtonClass, formatDate, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
 
     type Device = {
         id: string;

@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
-    import ToggleSwitch from '$lib/components/settings/ToggleSwitch.svelte';
-    import { fetchCitationAdminPolicy, saveCitationAdminPolicy, type CitationPolicy } from '$lib/ts/citations';
+    import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
+    import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
+    import { fetchCitationAdminPolicy, saveCitationAdminPolicy, type CitationPolicy } from '#lib/ts/citations';
 
     let policy = $state<CitationPolicy | null>(null);
     let saved = $state<CitationPolicy | null>(null);

@@ -1,11 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { brandingStore, logoUrl, PROJECT_URL } from '$lib/ts/branding';
-    import { fetchServerInfo, type ServerInfo } from '$lib/ts/server-info';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import { brandingStore, logoUrl, PROJECT_URL } from '#lib/ts/branding';
+    import { fetchServerInfo, type ServerInfo } from '#lib/ts/server-info';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
 
     const links = [
         { label: 'Typst Documentation', url: 'https://typst.app/docs/', icon: 'mdi:book-open-page-variant-outline' },

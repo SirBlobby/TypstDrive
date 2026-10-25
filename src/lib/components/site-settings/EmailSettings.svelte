@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { inputClass, primaryButtonClass } from '$lib/ts/settings-ui';
-    import { fetchAuthentication, sendTestEmail, type EmailStatus } from '$lib/ts/admin-auth';
-    import { emailProviderGuides } from '$lib/ts/email-providers';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import { inputClass, primaryButtonClass } from '#lib/ts/settings-ui';
+    import { fetchAuthentication, sendTestEmail, type EmailStatus } from '#lib/ts/admin-auth';
+    import { emailProviderGuides } from '#lib/ts/email-providers';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
 
     let status = $state<EmailStatus | null>(null);
     let publicUrl = $state<string | null>(null);

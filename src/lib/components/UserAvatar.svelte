@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { userStore, avatarUrl } from '$lib/ts/auth';
+    import { userStore, avatarUrl } from '#lib/ts/auth';
 
     let { sizeClass = 'h-9 w-9', textClass = 'text-base' }: { sizeClass?: string; textClass?: string } = $props();
 

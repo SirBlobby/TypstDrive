@@ -1,9 +1,9 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import Icon from '@iconify/svelte';
-    import Modal from '$lib/components/Modal.svelte';
-    import { focusOnMount } from '$lib/ts/focus-on-mount';
-    import type { PickerCategory, PickerCharacter } from '$lib/ts/editor-symbols';
+    import Modal from '#lib/components/Modal.svelte';
+    import { focusOnMount } from '#lib/ts/focus-on-mount';
+    import type { PickerCategory, PickerCharacter } from '#lib/ts/editor-symbols';
 
     let { title, icon, categories, onPick, onClose }: {
         title: string;

@@ -1,8 +1,8 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import ToggleSwitch from '$lib/components/settings/ToggleSwitch.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import type { ProviderStatus } from '$lib/ts/admin-auth';
+    import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import type { ProviderStatus } from '#lib/ts/admin-auth';
 
     let { providers, problems, disabledProviders = $bindable() }: {
         providers: ProviderStatus[];

@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { replaceFileData } from '$lib/ts/item-info';
+    import { replaceFileData } from '#lib/ts/item-info';
 
     let { file, onReplaced, buttonClass, iconClass = 'text-base' }: {
         file: { id: string; name: string };

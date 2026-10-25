@@ -3,14 +3,14 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import Icon from '@iconify/svelte';
-    import { brandingStore } from '$lib/ts/branding';
-    import { diffLines, summarize } from '$lib/ts/line-diff';
-    import { fetchVersions, renameVersion, restoreVersion, versionDay, versionKindLabels, versionTime, type DocumentVersion } from '$lib/ts/versions';
-    import VersionTimeline from '$lib/components/history/VersionTimeline.svelte';
-    import VersionDiffView from '$lib/components/history/VersionDiffView.svelte';
-    import PersonAvatar from '$lib/components/people/PersonAvatar.svelte';
-    import ConfirmModal from '$lib/components/ConfirmModal.svelte';
-    import PromptModal from '$lib/components/PromptModal.svelte';
+    import { brandingStore } from '#lib/ts/branding';
+    import { diffLines, summarize } from '#lib/ts/line-diff';
+    import { fetchVersions, renameVersion, restoreVersion, versionDay, versionKindLabels, versionTime, type DocumentVersion } from '#lib/ts/versions';
+    import VersionTimeline from '#lib/components/history/VersionTimeline.svelte';
+    import VersionDiffView from '#lib/components/history/VersionDiffView.svelte';
+    import PersonAvatar from '#lib/components/people/PersonAvatar.svelte';
+    import ConfirmModal from '#lib/components/ConfirmModal.svelte';
+    import PromptModal from '#lib/components/PromptModal.svelte';
 
     type CompareTarget = 'previous' | 'current';
 

@@ -1,10 +1,10 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
 
     type ApiLimits = { api_enabled: boolean; rate_limit: number; max_keys: number; daily_quota: number };
     type ApiOverrides = { api_enabled: boolean | null; rate_limit: number | null; max_keys: number | null; daily_quota: number | null };

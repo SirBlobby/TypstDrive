@@ -1,8 +1,8 @@
 <script lang="ts">
     import Cropper from 'svelte-easy-crop';
     import Icon from '@iconify/svelte';
-    import { cropImage, type CropArea } from '$lib/ts/image-crop';
-    import { primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
+    import { cropImage, type CropArea } from '#lib/ts/image-crop';
+    import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
 
     const MAX_ZOOM = 4;
 

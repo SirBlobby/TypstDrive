@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import { inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import AvatarUploader from '$lib/components/settings/AvatarUploader.svelte';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import { userStore } from '#lib/ts/auth';
+    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import AvatarUploader from '#lib/components/settings/AvatarUploader.svelte';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
 
     let username = $state($userStore?.username ?? '');
     let email = $state($userStore?.email ?? '');

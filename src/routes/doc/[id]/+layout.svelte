@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import LinkGate from '$lib/components/sharing/LinkGate.svelte';
+    import LinkGate from '#lib/components/sharing/LinkGate.svelte';
 
     let { children } = $props();
 </script>

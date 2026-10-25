@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { inputClass } from '$lib/ts/settings-ui';
-    import { QUOTA_UNITS, type QuotaDraft } from '$lib/ts/storage-quota';
+    import { inputClass } from '#lib/ts/settings-ui';
+    import { QUOTA_UNITS, type QuotaDraft } from '#lib/ts/storage-quota';
 
     let { id, draft = $bindable(), placeholder }: { id: string; draft: QuotaDraft; placeholder: string } = $props();
 </script>

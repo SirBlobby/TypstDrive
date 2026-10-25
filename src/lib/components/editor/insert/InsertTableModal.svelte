@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Modal from '$lib/components/Modal.svelte';
-    import { buildTable } from '$lib/ts/editor-insert';
+    import Modal from '#lib/components/Modal.svelte';
+    import { buildTable } from '#lib/ts/editor-insert';
 
     let { onInsert, onClose }: { onInsert: (code: string) => void; onClose: () => void } = $props();
 

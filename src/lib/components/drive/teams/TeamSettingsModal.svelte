@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import Modal from '$lib/components/Modal.svelte';
-    import { userStore } from '$lib/ts/auth';
+    import Modal from '#lib/components/Modal.svelte';
+    import { userStore } from '#lib/ts/auth';
     import TeamMembersList from './TeamMembersList.svelte';
     import {
         addTeamMember,
@@ -14,7 +14,7 @@
         type TeamDetail,
         type TeamMember,
         type TeamRole
-    } from '$lib/ts/workspace';
+    } from '#lib/ts/workspace';
 
     let { teamId, onClose, onChanged, onLeft }: {
         teamId: string;

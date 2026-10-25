@@ -6,7 +6,7 @@
     import LinkSharing from './sharing/LinkSharing.svelte';
     import PdfLinkSharing from './sharing/PdfLinkSharing.svelte';
     import TeamMembersAccess from './sharing/TeamMembersAccess.svelte';
-    import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind, type TeamAccess } from '$lib/ts/ownership';
+    import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind, type TeamAccess } from '#lib/ts/ownership';
 
     let { onClose, itemId = undefined, kind = 'document' }: { onClose: () => void, itemId?: string, kind?: ShareKind } = $props();
 

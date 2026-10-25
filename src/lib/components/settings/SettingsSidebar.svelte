@@ -1,8 +1,8 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import { settingsSidebarCollapsedStore } from '$lib/ts/store';
-    import UserAvatar from '$lib/components/UserAvatar.svelte';
+    import { userStore } from '#lib/ts/auth';
+    import { settingsSidebarCollapsedStore } from '#lib/ts/store';
+    import UserAvatar from '#lib/components/UserAvatar.svelte';
 
     type NavItem = { id: string; label: string; icon: string };
     type NavGroup = { id: string; label: string; icon: string; children: NavItem[] };

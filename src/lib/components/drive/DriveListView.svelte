@@ -1,10 +1,10 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
-    import { fileType, formatSize, itemModified, itemName, type DriveEntry } from '$lib/ts/drive-filters';
-    import { folderIconStyle } from '$lib/ts/folder-colors';
-    import { downloadFolder, downloadProject } from '$lib/ts/downloads';
-    import StarButton from '$lib/components/drive/stars/StarButton.svelte';
+    import { fileType, formatSize, itemModified, itemName, type DriveEntry } from '#lib/ts/drive-filters';
+    import { folderIconStyle } from '#lib/ts/folder-colors';
+    import { downloadFolder, downloadProject } from '#lib/ts/downloads';
+    import StarButton from '#lib/components/drive/stars/StarButton.svelte';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
 
     type RenameType = 'document' | 'folder' | 'file' | 'project';

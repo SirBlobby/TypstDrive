@@ -1,6 +1,6 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { fileDataUrl } from '$lib/ts/item-info';
+    import { fileDataUrl } from '#lib/ts/item-info';
     import Icon from '@iconify/svelte';
 
     let { files, startFileId, onClose }: {

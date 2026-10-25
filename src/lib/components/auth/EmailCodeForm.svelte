@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { postJson, readError } from '$lib/ts/auth-options';
-    import type { User } from '$lib/ts/auth';
+    import { postJson, readError } from '#lib/ts/auth-options';
+    import type { User } from '#lib/ts/auth';
     import AuthField from './AuthField.svelte';
     import FormNotice from './FormNotice.svelte';
 

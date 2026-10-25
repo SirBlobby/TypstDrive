@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
+    import { userStore } from '#lib/ts/auth';
     import {
         changeTeamRole,
         removeTeamMember,
@@ -10,7 +10,7 @@
         type TeamDetail,
         type TeamMember,
         type TeamRole
-    } from '$lib/ts/workspace';
+    } from '#lib/ts/workspace';
 
     let { team, onMembersChanged, onError }: {
         team: TeamDetail;

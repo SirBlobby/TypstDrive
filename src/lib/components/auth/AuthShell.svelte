@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
     import Icon from '@iconify/svelte';
-    import Footer from '$lib/components/Footer.svelte';
-    import { brandingStore, logoUrl } from '$lib/ts/branding';
+    import Footer from '#lib/components/Footer.svelte';
+    import { brandingStore, logoUrl } from '#lib/ts/branding';
 
     let { title, subtitle, icon, children, footer }: {
         title: string;

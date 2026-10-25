@@ -2,7 +2,7 @@
 	import Icon from '@iconify/svelte';
 	import NewFileModal from './NewFileModal.svelte';
 	import PromptModal from '../PromptModal.svelte';
-	import { buildProjectTree, projectFolders, type ProjectFile, type TreeNode } from '$lib/ts/project-tree';
+	import { buildProjectTree, projectFolders, type ProjectFile, type TreeNode } from '#lib/ts/project-tree';
 
 	let {
 		files = [],

@@ -1,14 +1,14 @@
 <script lang="ts">
 	import '../app.css';
-	import { fetchUser } from '$lib/ts/auth';
-	import { installWorkspaceHeader } from '$lib/ts/workspace';
+	import { fetchUser } from '#lib/ts/auth';
+	import { installWorkspaceHeader } from '#lib/ts/workspace';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { themeStore, darkModeStore } from '$lib/ts/store';
-	import { themes } from '$lib/ts/themes';
-	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '$lib/ts/branding';
-	import BrandingCredit from '$lib/components/BrandingCredit.svelte';
+	import { themeStore, darkModeStore } from '#lib/ts/store';
+	import { themes } from '#lib/ts/themes';
+	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '#lib/ts/branding';
+	import BrandingCredit from '#lib/components/BrandingCredit.svelte';
 
 	let { children } = $props();
 	let loaded = $state(false);

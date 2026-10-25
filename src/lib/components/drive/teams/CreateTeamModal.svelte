@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Modal from '$lib/components/Modal.svelte';
-    import { createTeam, type TeamSummary } from '$lib/ts/workspace';
+    import Modal from '#lib/components/Modal.svelte';
+    import { createTeam, type TeamSummary } from '#lib/ts/workspace';
 
     let { onClose, onCreated }: { onClose: () => void; onCreated: (team: TeamSummary) => void } = $props();
 

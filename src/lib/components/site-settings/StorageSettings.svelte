@@ -1,11 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { formatBytes, inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import { draftToQuota, quotaToDraft, usageShare, type QuotaDraft } from '$lib/ts/storage-quota';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import { formatBytes, inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { draftToQuota, quotaToDraft, usageShare, type QuotaDraft } from '#lib/ts/storage-quota';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import QuotaInput from './QuotaInput.svelte';
     import VersionHistorySettings from './VersionHistorySettings.svelte';
 

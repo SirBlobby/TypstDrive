@@ -1,24 +1,24 @@
 <script lang="ts">
-    import { brandingStore } from '$lib/ts/branding';
+    import { brandingStore } from '#lib/ts/branding';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import SettingsSidebar from '$lib/components/settings/SettingsSidebar.svelte';
-    import UserManagement from '$lib/components/site-settings/UserManagement.svelte';
-    import ApiAccessSettings from '$lib/components/site-settings/ApiAccessSettings.svelte';
-    import RegistrationSettings from '$lib/components/site-settings/RegistrationSettings.svelte';
-    import StorageSettings from '$lib/components/site-settings/StorageSettings.svelte';
-    import PackageSettings from '$lib/components/site-settings/PackageSettings.svelte';
-    import PdfLinkSettings from '$lib/components/site-settings/PdfLinkSettings.svelte';
-    import CitationSettings from '$lib/components/site-settings/CitationSettings.svelte';
-    import ServerSettings from '$lib/components/site-settings/ServerSettings.svelte';
-    import AuthenticationSettings from '$lib/components/site-settings/AuthenticationSettings.svelte';
-    import EmailSettings from '$lib/components/site-settings/EmailSettings.svelte';
-    import TeamSettings from '$lib/components/site-settings/TeamSettings.svelte';
-    import BrandingSettings from '$lib/components/site-settings/BrandingSettings.svelte';
-    import AuditLog from '$lib/components/site-settings/AuditLog.svelte';
-    import AboutSettings from '$lib/components/site-settings/AboutSettings.svelte';
+    import { userStore } from '#lib/ts/auth';
+    import SettingsSidebar from '#lib/components/settings/SettingsSidebar.svelte';
+    import UserManagement from '#lib/components/site-settings/UserManagement.svelte';
+    import ApiAccessSettings from '#lib/components/site-settings/ApiAccessSettings.svelte';
+    import RegistrationSettings from '#lib/components/site-settings/RegistrationSettings.svelte';
+    import StorageSettings from '#lib/components/site-settings/StorageSettings.svelte';
+    import PackageSettings from '#lib/components/site-settings/PackageSettings.svelte';
+    import PdfLinkSettings from '#lib/components/site-settings/PdfLinkSettings.svelte';
+    import CitationSettings from '#lib/components/site-settings/CitationSettings.svelte';
+    import ServerSettings from '#lib/components/site-settings/ServerSettings.svelte';
+    import AuthenticationSettings from '#lib/components/site-settings/AuthenticationSettings.svelte';
+    import EmailSettings from '#lib/components/site-settings/EmailSettings.svelte';
+    import TeamSettings from '#lib/components/site-settings/TeamSettings.svelte';
+    import BrandingSettings from '#lib/components/site-settings/BrandingSettings.svelte';
+    import AuditLog from '#lib/components/site-settings/AuditLog.svelte';
+    import AboutSettings from '#lib/components/site-settings/AboutSettings.svelte';
 
     const navItems = [
         {

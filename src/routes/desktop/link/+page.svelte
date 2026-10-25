@@ -2,11 +2,11 @@
     import { onDestroy, onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte';
-    import { brandingStore } from '$lib/ts/branding';
-    import { fetchUser, userStore } from '$lib/ts/auth';
-    import { readError } from '$lib/ts/auth-options';
-    import AuthShell from '$lib/components/auth/AuthShell.svelte';
-    import FormNotice from '$lib/components/auth/FormNotice.svelte';
+    import { brandingStore } from '#lib/ts/branding';
+    import { fetchUser, userStore } from '#lib/ts/auth';
+    import { readError } from '#lib/ts/auth-options';
+    import AuthShell from '#lib/components/auth/AuthShell.svelte';
+    import FormNotice from '#lib/components/auth/FormNotice.svelte';
 
     type LinkCode = { code: string; expires_in_seconds: number };
 

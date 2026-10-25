@@ -4,7 +4,7 @@
     import Modal from './Modal.svelte';
     import UnsharedFilesWarning from './UnsharedFilesWarning.svelte';
     import ReplaceFileButton from './drive/ReplaceFileButton.svelte';
-    import { formatSize } from '$lib/ts/drive-filters';
+    import { formatSize } from '#lib/ts/drive-filters';
 
     type LinkedFile = { id: string; name: string; mime_type: string; size_bytes?: number; shared_with_collaborators: boolean };
 

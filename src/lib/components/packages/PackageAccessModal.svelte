@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import Modal from '$lib/components/Modal.svelte';
-    import { inputClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import { refreshTeams, type TeamSummary } from '$lib/ts/workspace';
+    import Modal from '#lib/components/Modal.svelte';
+    import { inputClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { refreshTeams, type TeamSummary } from '#lib/ts/workspace';
     import {
         addPackageTeam,
         addPackageUser,
@@ -14,7 +14,7 @@
         type Package,
         type PackageAccess,
         type PackageVisibility
-    } from '$lib/ts/packages';
+    } from '#lib/ts/packages';
 
     let { pkg, canMakePrivate, onClose, onChanged }: {
         pkg: Package;

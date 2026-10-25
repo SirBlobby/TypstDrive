@@ -10,7 +10,7 @@
         teamsStore,
         type TeamPolicy,
         type TeamSummary
-    } from '$lib/ts/workspace';
+    } from '#lib/ts/workspace';
 
     let { collapsed, highlightActive, onSelectTeam, onTeamClosed }: {
         collapsed: boolean;

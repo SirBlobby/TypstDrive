@@ -1,9 +1,9 @@
 <script lang="ts">
     import { page } from '$app/state';
     import Icon from '@iconify/svelte';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import ActiveSessions from '$lib/components/settings/security/ActiveSessions.svelte';
-    import ConnectedAccounts from '$lib/components/settings/security/ConnectedAccounts.svelte';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import ActiveSessions from '#lib/components/settings/security/ActiveSessions.svelte';
+    import ConnectedAccounts from '#lib/components/settings/security/ConnectedAccounts.svelte';
 
     const signInError = page.url.searchParams.get('sso_error');
 </script>

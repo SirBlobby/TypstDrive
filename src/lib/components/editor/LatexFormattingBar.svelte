@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { editorViewStore } from '$lib/ts/store';
-	import { openFind, openReplace, wrapSelection } from '$lib/ts/editor-insert';
+	import { editorViewStore } from '#lib/ts/store';
+	import { openFind, openReplace, wrapSelection } from '#lib/ts/editor-insert';
 	import {
 		currentSectionLevel,
 		figureSnippet,
@@ -11,10 +11,10 @@
 		setSectionLevel,
 		wrapEnvironment,
 		type LatexInsertOption
-	} from '$lib/ts/editor-latex-actions';
-	import { replaceSelection } from '$lib/ts/document-uploads';
-	import { startCommentOnSelection } from '$lib/ts/comments';
-	import { withShortcut } from '$lib/ts/keybinds/keybinds-store';
+	} from '#lib/ts/editor-latex-actions';
+	import { replaceSelection } from '#lib/ts/document-uploads';
+	import { startCommentOnSelection } from '#lib/ts/comments';
+	import { withShortcut } from '#lib/ts/keybinds/keybinds-store';
 	import ToolbarButton from './ToolbarButton.svelte';
 	import ZoomControl from './ZoomControl.svelte';
 

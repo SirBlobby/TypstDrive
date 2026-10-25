@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import BibliographyFilePicker from './BibliographyFilePicker.svelte';
-    import { editorViewStore } from '$lib/ts/store';
+    import { editorViewStore } from '#lib/ts/store';
     import {
         addCitation,
         citationMarkup,
@@ -13,7 +13,7 @@
         type AddedEntry,
         type CitationTargetKind,
         type LookupResult
-    } from '$lib/ts/citations';
+    } from '#lib/ts/citations';
 
     let { kind, itemId, latex, onchanged }: {
         kind: CitationTargetKind;

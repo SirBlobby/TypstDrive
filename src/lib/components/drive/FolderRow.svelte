@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { downloadFolder } from '$lib/ts/downloads';
-    import { folderIconStyle, folderTileStyle } from '$lib/ts/folder-colors';
+    import { downloadFolder } from '#lib/ts/downloads';
+    import { folderIconStyle, folderTileStyle } from '#lib/ts/folder-colors';
     import FolderColorPicker from './FolderColorPicker.svelte';
 
     let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId, activeMenu, setActiveMenu, shareFolder = undefined, openInfo = undefined, openRename = undefined, changeColor = undefined, readOnly = false }: {

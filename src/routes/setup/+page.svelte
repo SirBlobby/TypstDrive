@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { userStore } from '$lib/ts/auth';
+    import { userStore } from '#lib/ts/auth';
     import Icon from '@iconify/svelte';
 
     let username = $state('');

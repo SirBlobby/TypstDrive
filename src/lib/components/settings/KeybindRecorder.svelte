@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { keyFromEvent, keyLabels } from '$lib/ts/keybinds/key-format';
+    import { keyFromEvent, keyLabels } from '#lib/ts/keybinds/key-format';
 
     let { label, value, conflict, onchange }: {
         label: string;

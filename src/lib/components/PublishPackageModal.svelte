@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import Modal from './Modal.svelte';
-	import { fetchUserPackagePolicy, type PackageVisibility, type UserPackagePolicy } from '$lib/ts/packages';
-	import { formatBytes } from '$lib/ts/settings-ui';
+	import { fetchUserPackagePolicy, type PackageVisibility, type UserPackagePolicy } from '#lib/ts/packages';
+	import { formatBytes } from '#lib/ts/settings-ui';
 
 	let {
 		projectId,

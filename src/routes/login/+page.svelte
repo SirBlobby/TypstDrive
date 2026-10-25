@@ -1,17 +1,17 @@
 <script lang="ts">
-    import { brandingStore } from '$lib/ts/branding';
+    import { brandingStore } from '#lib/ts/branding';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import { fetchAuthOptions, postJson, readError, type AuthOptions } from '$lib/ts/auth-options';
-    import AuthShell from '$lib/components/auth/AuthShell.svelte';
-    import AuthField from '$lib/components/auth/AuthField.svelte';
-    import FormNotice from '$lib/components/auth/FormNotice.svelte';
-    import SsoButtons from '$lib/components/auth/SsoButtons.svelte';
-    import EmailCodeForm from '$lib/components/auth/EmailCodeForm.svelte';
-    import type { User } from '$lib/ts/auth';
+    import { userStore } from '#lib/ts/auth';
+    import { fetchAuthOptions, postJson, readError, type AuthOptions } from '#lib/ts/auth-options';
+    import AuthShell from '#lib/components/auth/AuthShell.svelte';
+    import AuthField from '#lib/components/auth/AuthField.svelte';
+    import FormNotice from '#lib/components/auth/FormNotice.svelte';
+    import SsoButtons from '#lib/components/auth/SsoButtons.svelte';
+    import EmailCodeForm from '#lib/components/auth/EmailCodeForm.svelte';
+    import type { User } from '#lib/ts/auth';
 
     const EMAIL_NOT_VERIFIED = 428;
 
