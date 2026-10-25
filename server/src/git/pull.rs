@@ -2,14 +2,16 @@ use std::collections::{HashMap, HashSet};
 
 use axum::extract::{Path, State};
 use axum::Json;
+use futures_util::stream::{self, StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 
 use super::access::editable_project;
-use super::file_rules::MAX_FILE_BYTES;
+use super::file_rules::{check_file_count, MAX_FILE_BYTES};
 use super::links::{require_link, GitLink, LinkView};
 use super::local_files::{self, content_hash, normalize_content, LocalFile};
 use super::locks::lock_project;
 use super::policy::load_policy;
+use super::rate_limit::check_rate;
 use super::remote::{self, ChangeKind, RemoteEntry, RemoteRepo};
 use super::snapshot::{self, Snapshot, SnapshotEntry, SnapshotUpdate};
 use super::sync_plan::remote_changes;
@@ -84,14 +86,23 @@ fn is_locally_changed(path: &str, local: &HashMap<String, LocalFile>, snapshot: 
 
 async fn download(repo: &RemoteRepo, head: &str, entries: Vec<RemoteEntry>) -> Result<(Vec<Download>, Vec<String>), ApiError> {
     let entries = remote::fill_sizes(repo, head, entries).await?;
-    let mut downloads = Vec::new();
-    let mut too_large = Vec::new();
-    for entry in entries {
-        if entry.size.is_some_and(|size| size > MAX_FILE_BYTES) {
-            too_large.push(entry.path);
-            continue;
-        }
-        match remote::read_blob(repo, &entry).await? {
+    let (oversized, wanted): (Vec<RemoteEntry>, Vec<RemoteEntry>) =
+        entries.into_iter().partition(|entry| entry.size.is_some_and(|size| size > MAX_FILE_BYTES));
+    let mut too_large: Vec<String> = oversized.into_iter().map(|entry| entry.path).collect();
+
+    remote::prefetch(repo, &wanted).await;
+    let fetched: Vec<(RemoteEntry, Option<Vec<u8>>)> = stream::iter(wanted)
+        .map(|entry| async move {
+            let content = remote::read_blob(repo, &entry).await?;
+            Ok::<_, ApiError>((entry, content))
+        })
+        .buffer_unordered(remote::download_concurrency(repo.provider))
+        .try_collect()
+        .await?;
+
+    let mut downloads = Vec::with_capacity(fetched.len());
+    for (entry, content) in fetched {
+        match content {
             Some(content) => {
                 let content = normalize_content(&entry.path, content);
                 let hash = content_hash(&content);
@@ -100,6 +111,7 @@ async fn download(repo: &RemoteRepo, head: &str, entries: Vec<RemoteEntry>) -> R
             None => too_large.push(entry.path),
         }
     }
+    too_large.sort();
     Ok((downloads, too_large))
 }
 
@@ -127,6 +139,7 @@ async fn apply_actions(state: &AppState, project_id: &str, actions: Vec<Action>)
 pub async fn pull_into_project(state: &AppState, input: PullInput<'_>) -> Result<PullOutcome, ApiError> {
     let PullInput { project, link, head, entries, local, snapshot, resolution, remove_local_only, user_id } = input;
     let rules = link.rules();
+    check_file_count(entries.iter().filter(|entry| rules.is_managed(&entry.path)).count())?;
     let changes = remote_changes(&entries, &snapshot, &rules);
     let remote_paths: HashSet<String> = entries.iter().map(|entry| entry.path.clone()).collect();
     let wanted: Vec<RemoteEntry> = entries
@@ -204,6 +217,7 @@ pub async fn pull(
     let access = editable_project(&state, &project_id, &user_id).await?;
     let link = require_link(&state, &project_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
+    check_rate(&user_id)?;
     let _guard = lock_project(&project_id)?;
 
     let repo = link.remote();
