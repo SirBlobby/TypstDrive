@@ -28,7 +28,7 @@ pub async fn list_documents(
     let rows = match &query.folder_id {
         Some(folder_id) => sqlx::query_as::<_, (String, String, Option<String>, String, Option<String>)>(
             sql("SELECT id, title, folder_id, updated_at, thumbnail_svg FROM documents \
-             WHERE owner_id = $1 AND folder_id = $2 ORDER BY updated_at DESC"),
+             WHERE owner_id = $1 AND folder_id = $2 AND deleted_at IS NULL ORDER BY updated_at DESC"),
         )
         .bind(&user_id)
         .bind(folder_id)
@@ -36,7 +36,7 @@ pub async fn list_documents(
         .await,
         None => sqlx::query_as::<_, (String, String, Option<String>, String, Option<String>)>(
             sql("SELECT id, title, folder_id, updated_at, thumbnail_svg FROM documents \
-             WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC"),
+             WHERE owner_id = $1 AND folder_id IS NULL AND deleted_at IS NULL ORDER BY updated_at DESC"),
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -73,7 +73,7 @@ pub async fn list_shared(
     let documents = sqlx::query_as::<_, (String, String, Option<String>, String, String, Option<String>)>(
         sql("SELECT d.id, d.title, d.folder_id, d.updated_at, c.role, d.thumbnail_svg FROM documents d \
          INNER JOIN collaborators c ON c.document_id = d.id AND c.user_id = $1 \
-         ORDER BY d.updated_at DESC"),
+         WHERE d.deleted_at IS NULL ORDER BY d.updated_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -83,7 +83,7 @@ pub async fn list_shared(
     let projects = sqlx::query_as::<_, (String, String, String, String, String)>(
         sql("SELECT p.id, p.name, p.entrypoint, p.updated_at, c.role FROM projects p \
          INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = $1 \
-         ORDER BY p.updated_at DESC"),
+         WHERE p.deleted_at IS NULL ORDER BY p.updated_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -313,7 +313,7 @@ pub async fn move_document(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, String, Option<String>, String, Option<String>)>(sql("SELECT id, title, folder_id, updated_at, thumbnail_svg FROM documents WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, String, Option<String>, String, Option<String>)>(sql("SELECT id, title, folder_id, updated_at, thumbnail_svg FROM documents WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -340,18 +340,7 @@ pub async fn delete_document(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = writable_space(&state, &headers).await?;
 
-    let result = sqlx::query(sql("DELETE FROM documents WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "Document not found or unauthorized".to_string()));
-    }
-
-    crate::sharing::access::revalidate_resource(&state, crate::sharing::access::Resource::Document(id.clone())).await;
+    crate::trash::move_to_trash(&state, crate::trash::TrashKind::Document, &id, &user_id, &user_id).await?;
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)

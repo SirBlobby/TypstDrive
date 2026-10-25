@@ -52,6 +52,8 @@ Two actions sharing the same shortcut are marked in red. The restore button next
 
 How much space your documents and files use, and your limit if there is one.
 
+The **Trash** card shows how many items are in your trash and how long they are kept. **Open trash** goes to the [trash](drive.md#trash), and **Empty trash** deletes everything in it for good.
+
 ## PDF links
 
 Every [public PDF link](sharing.md#public-pdf-links) you own, with the document or project it serves and how often it was opened. Copy, rename or remove links here. Create new ones from the **Share** dialog.

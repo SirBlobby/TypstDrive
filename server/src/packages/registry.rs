@@ -53,7 +53,7 @@ pub async fn publish_package(
     policy.check_can_publish(user_is_admin)?;
 
     let project = sqlx::query_as::<_, Project>(
-        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2")
+        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL")
     )
     .bind(&payload.project_id)
     .bind(&user_id)

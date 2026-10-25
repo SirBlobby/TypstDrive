@@ -18,7 +18,7 @@ pub async fn list_projects(
     let user_id = readable_space(&state, &headers).await?;
 
     let owned = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(
-        sql("SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE owner_id = $1 ORDER BY updated_at DESC"),
+        sql("SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY updated_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -28,7 +28,7 @@ pub async fn list_projects(
     let shared = sqlx::query_as::<_, (String, String, String, Option<String>, String, String)>(
         sql("SELECT p.id, p.name, p.entrypoint, p.folder_id, p.updated_at, c.role FROM projects p \
          INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = $1 \
-         ORDER BY p.updated_at DESC"),
+         WHERE p.deleted_at IS NULL ORDER BY p.updated_at DESC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -131,14 +131,7 @@ pub async fn delete_project(
         return Err((StatusCode::FORBIDDEN, "Only the owner can delete this project".to_string()));
     }
 
-    sqlx::query(sql("DELETE FROM projects WHERE id = $1 AND owner_id = $2"))
-        .bind(&project_id)
-        .bind(&user_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    crate::sharing::access::revalidate_resource(&state, crate::sharing::access::Resource::Project(project_id.clone())).await;
+    crate::trash::move_to_trash(&state, crate::trash::TrashKind::Project, &project_id, &user_id, &user_id).await?;
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)
@@ -169,7 +162,7 @@ pub async fn move_project(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(sql("SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(sql("SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&project_id)
     .bind(&user_id)
     .fetch_optional(&state.db)

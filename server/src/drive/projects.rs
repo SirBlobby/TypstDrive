@@ -113,7 +113,7 @@ pub async fn project_role(
     user_id_opt: &Option<String>,
 ) -> Option<(Project, String)> {
     let project = sqlx::query_as::<_, Project>(
-        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, link_password_hash, link_expires_at, created_at, updated_at FROM projects WHERE id = $1")
+        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, link_password_hash, link_expires_at, created_at, updated_at FROM projects WHERE id = $1 AND deleted_at IS NULL")
     )
     .bind(project_id)
     .fetch_optional(&state.db)
@@ -238,7 +238,7 @@ pub async fn list_projects(
     let projects = if let Some(folder_id) = query.folder_id {
         require_folder_access(&state, &folder_id, &user_id).await?;
         sqlx::query_as::<_, Project>(
-            sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at, CAST((SELECT COALESCE(SUM(LENGTH(f.content)), 0) FROM project_files f WHERE f.project_id = projects.id) AS BIGINT) AS size_bytes FROM projects WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) ORDER BY updated_at DESC")
+            sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at, CAST((SELECT COALESCE(SUM(LENGTH(f.content)), 0) FROM project_files f WHERE f.project_id = projects.id) AS BIGINT) AS size_bytes FROM projects WHERE folder_id = $1 AND owner_id = (SELECT f.owner_id FROM folders f WHERE f.id = $2) AND deleted_at IS NULL ORDER BY updated_at DESC")
         )
         .bind(&folder_id)
         .bind(&folder_id)
@@ -246,7 +246,7 @@ pub async fn list_projects(
         .await
     } else {
         sqlx::query_as::<_, Project>(
-            sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at, CAST((SELECT COALESCE(SUM(LENGTH(f.content)), 0) FROM project_files f WHERE f.project_id = projects.id) AS BIGINT) AS size_bytes FROM projects WHERE owner_id = $1 AND folder_id IS NULL ORDER BY updated_at DESC")
+            sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at, CAST((SELECT COALESCE(SUM(LENGTH(f.content)), 0) FROM project_files f WHERE f.project_id = projects.id) AS BIGINT) AS size_bytes FROM projects WHERE owner_id = $1 AND folder_id IS NULL AND deleted_at IS NULL ORDER BY updated_at DESC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -269,7 +269,7 @@ pub async fn list_shared_projects(
          p.public_role, p.created_at, p.updated_at, c.role as effective_role \
          FROM projects p \
          INNER JOIN project_collaborators c ON c.project_id = p.id AND c.user_id = $1 \
-         ORDER BY p.updated_at DESC")
+         WHERE p.deleted_at IS NULL ORDER BY p.updated_at DESC")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -356,7 +356,7 @@ pub async fn update_project(
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
 
     let mut project = sqlx::query_as::<_, Project>(
-        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2")
+        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL")
     )
     .bind(&id)
     .bind(&user_id)
@@ -391,7 +391,7 @@ pub async fn update_project(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let project = sqlx::query_as::<_, Project>(sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2"))
+    let project = sqlx::query_as::<_, Project>(sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
@@ -408,29 +408,12 @@ pub async fn delete_project(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
+    session: Option<axum::Extension<crate::accounts::sessions::ActiveSession>>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
-
-    let owned_project = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM projects WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if owned_project.is_none() {
-        return Err((StatusCode::NOT_FOUND, "Project not found or unauthorized".to_string()));
-    }
-
-    sqlx::query(sql("DELETE FROM projects WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    crate::sharing::access::revalidate_resource(&state, crate::sharing::access::Resource::Project(id.clone())).await;
+    let deleted_by = session.map(|axum::Extension(active)| active.user_id).unwrap_or_else(|| user_id.clone());
+    crate::trash::move_to_trash(&state, crate::trash::TrashKind::Project, &id, &user_id, &deleted_by).await?;
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
     Ok(StatusCode::NO_CONTENT)

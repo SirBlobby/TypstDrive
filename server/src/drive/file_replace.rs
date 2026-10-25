@@ -27,7 +27,7 @@ fn not_found() -> ApiError {
 
 async fn existing_file(state: &AppState, file_id: &str) -> Result<ExistingFile, ApiError> {
     let (owner_id, document_id, folder_id, size_bytes) = sqlx::query_as::<_, (String, Option<String>, Option<String>, i64)>(sql(
-        "SELECT owner_id, document_id, folder_id, size_bytes FROM files WHERE id = $1",
+        "SELECT owner_id, document_id, folder_id, size_bytes FROM files WHERE id = $1 AND deleted_at IS NULL",
     ))
     .bind(file_id)
     .fetch_optional(&state.db)

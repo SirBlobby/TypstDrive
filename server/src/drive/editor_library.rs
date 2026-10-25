@@ -47,7 +47,7 @@ pub async fn list_images(
     let rows: Vec<ImageRow> = sqlx::query_as(sql(
         "SELECT id, name, mime_type, size_bytes, owner_id, folder_id, \
          CAST(CASE WHEN document_id = $1 OR id IN (SELECT file_id FROM document_shared_files WHERE document_id = $2) THEN 1 ELSE 0 END AS BIGINT) \
-         FROM files WHERE (document_id = $3 OR owner_id = $4) AND mime_type LIKE 'image/%' ORDER BY name ASC",
+         FROM files WHERE (document_id = $3 OR owner_id = $4) AND deleted_at IS NULL AND mime_type LIKE 'image/%' ORDER BY name ASC",
     ))
     .bind(&document.id)
     .bind(&document.id)
@@ -74,9 +74,9 @@ pub async fn list_documents(
     SignedInUser(user_id): SignedInUser,
 ) -> Result<Json<Vec<LibraryDocument>>, ApiError> {
     let documents = sqlx::query_as::<_, (String, String, String)>(sql(
-        "SELECT d.id, d.title, d.updated_at FROM documents d WHERE d.owner_id = $1 \
-         OR d.id IN (SELECT c.document_id FROM collaborators c WHERE c.user_id = $2) \
-         ORDER BY d.updated_at DESC",
+        "SELECT d.id, d.title, d.updated_at FROM documents d WHERE (d.owner_id = $1 \
+         OR d.id IN (SELECT c.document_id FROM collaborators c WHERE c.user_id = $2)) \
+         AND d.deleted_at IS NULL ORDER BY d.updated_at DESC",
     ))
     .bind(&user_id)
     .bind(&user_id)

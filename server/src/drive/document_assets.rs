@@ -69,7 +69,7 @@ async fn file_entries(state: &AppState, document: &Document) -> Result<Vec<FileE
     let rows = sqlx::query_as::<_, FileEntryRow>(
         sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, \
          CAST(CASE WHEN document_id = $1 OR id IN (SELECT file_id FROM document_shared_files WHERE document_id = $2) THEN 1 ELSE 0 END AS BIGINT) \
-         FROM files WHERE document_id = $3 OR owner_id = $4 ORDER BY name ASC")
+         FROM files WHERE (document_id = $3 OR owner_id = $4) AND deleted_at IS NULL ORDER BY name ASC")
     )
     .bind(&document.id)
     .bind(&document.id)
@@ -261,7 +261,7 @@ pub async fn attach_asset(
 ) -> Result<StatusCode, ApiError> {
     let document = require_document_owner(&state, &document_id, &jar).await?;
 
-    let owned_file = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM files WHERE id = $1 AND owner_id = $2"))
+    let owned_file = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM files WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
         .bind(&file_id)
         .bind(&document.owner_id)
         .fetch_optional(&state.db)

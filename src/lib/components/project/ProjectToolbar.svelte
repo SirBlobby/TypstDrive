@@ -8,6 +8,7 @@
 	} from '../../ts/store';
 	import { previewModeOptions, previewModeStore } from '../../ts/preview-mode';
 	import PreviewModeMenu from '../editor/PreviewModeMenu.svelte';
+	import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
 	import HeaderIconButton from '../editor/header/HeaderIconButton.svelte';
 	import HeaderTypstLinks from '../editor/header/HeaderTypstLinks.svelte';
 	import HeaderExportMenu from '../editor/header/HeaderExportMenu.svelte';
@@ -499,7 +500,7 @@
 {#if showDeleteModal}
 	<ConfirmModal
 		title="Delete project"
-		message="Delete this project and all its files? This cannot be undone."
+		message={`Delete this project and all its files? ${deletionNotice($trashRetentionStore)}`}
 		confirmLabel="Delete"
 		onconfirm={confirmDelete}
 		onclose={() => showDeleteModal = false}

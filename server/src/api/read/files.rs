@@ -26,7 +26,7 @@ pub async fn list_files(State(state): State<AppState>, headers: HeaderMap) -> Re
     let caller = authenticate(&state, &headers, ApiScope::Read).await?;
     sqlx::query_as::<_, FileSummary>(sql(
         "SELECT id, name, mime_type, folder_id, document_id, size_bytes, created_at, updated_at \
-         FROM files WHERE owner_id = $1 ORDER BY name ASC",
+         FROM files WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY name ASC",
     ))
     .bind(&caller.account_id)
     .fetch_all(&state.db)
@@ -42,7 +42,7 @@ pub async fn get_file(
 ) -> Result<Response, Response> {
     let caller = authenticate(&state, &headers, ApiScope::Read).await?;
     let (mime_type, data, storage_key) = sqlx::query_as::<_, (String, Vec<u8>, Option<String>)>(sql(
-        "SELECT mime_type, data, storage_key FROM files WHERE id = $1 AND owner_id = $2",
+        "SELECT mime_type, data, storage_key FROM files WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
     ))
     .bind(&file_id)
     .bind(&caller.account_id)

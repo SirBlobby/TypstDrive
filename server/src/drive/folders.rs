@@ -29,7 +29,7 @@ pub async fn list_folders(
     let folders = if let Some(parent_id) = query.parent_id {
         crate::sharing::access::require_folder_access(&state, &parent_id, &user_id).await?;
         sqlx::query_as::<_, Folder>(
-            sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE parent_id = $1 AND owner_id = (SELECT p.owner_id FROM folders p WHERE p.id = $2) ORDER BY name ASC")
+            sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE parent_id = $1 AND owner_id = (SELECT p.owner_id FROM folders p WHERE p.id = $2) AND deleted_at IS NULL ORDER BY name ASC")
         )
         .bind(&parent_id)
         .bind(&parent_id)
@@ -38,7 +38,7 @@ pub async fn list_folders(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     } else {
         sqlx::query_as::<_, Folder>(
-            sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE owner_id = $1 AND parent_id IS NULL ORDER BY name ASC")
+            sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE owner_id = $1 AND parent_id IS NULL AND deleted_at IS NULL ORDER BY name ASC")
         )
         .bind(&user_id)
         .fetch_all(&state.db)
@@ -59,7 +59,7 @@ pub async fn list_shared_folders(
     let folders = sqlx::query_as::<_, Folder>(
         sql("SELECT f.id, f.owner_id, f.parent_id, f.name, f.created_at, f.color, c.role AS effective_role \
          FROM folders f INNER JOIN folder_collaborators c ON c.folder_id = f.id AND c.user_id = $1 \
-         ORDER BY f.name ASC")
+         WHERE f.deleted_at IS NULL ORDER BY f.name ASC")
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -102,37 +102,12 @@ pub async fn delete_folder(
     State(state): State<AppState>,
     Path(id): Path<String>,
     jar: SignedCookieJar,
+    session: Option<axum::Extension<crate::accounts::sessions::ActiveSession>>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let user_id = jar.get("session_user_id").map(|c| c.value().to_string())
         .ok_or((StatusCode::UNAUTHORIZED, "Not logged in".to_string()))?;
-
-    let owned_folder = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM folders WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(internal_error)?;
-
-    if owned_folder.is_none() {
-        return Err((StatusCode::NOT_FOUND, "Folder not found or unauthorized".to_string()));
-    }
-
-    let affected_documents = items_in_folder_tree(&state, "documents", &id, &user_id).await?;
-    let affected_projects = items_in_folder_tree(&state, "projects", &id, &user_id).await?;
-
-    sqlx::query(sql("DELETE FROM folders WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .execute(&state.db)
-        .await
-        .map_err(internal_error)?;
-
-    for document_id in affected_documents {
-        crate::sharing::access::revalidate_resource(&state, crate::sharing::access::Resource::Document(document_id)).await;
-    }
-    for project_id in affected_projects {
-        crate::sharing::access::revalidate_resource(&state, crate::sharing::access::Resource::Project(project_id)).await;
-    }
+    let deleted_by = session.map(|axum::Extension(active)| active.user_id).unwrap_or_else(|| user_id.clone());
+    crate::trash::move_to_trash(&state, crate::trash::TrashKind::Folder, &id, &user_id, &deleted_by).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -190,7 +165,7 @@ pub async fn update_folder(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE id = $1 AND owner_id = $2"))
+    let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)

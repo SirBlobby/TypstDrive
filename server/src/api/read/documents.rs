@@ -62,7 +62,7 @@ impl From<VersionView> for VersionSummary {
 
 pub async fn owned_document(state: &AppState, account_id: &str, document_id: &str) -> Result<DocumentSummary, Response> {
     sqlx::query_as::<_, DocumentSummary>(sql(
-        "SELECT id, title, folder_id, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2",
+        "SELECT id, title, folder_id, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
     ))
     .bind(document_id)
     .bind(account_id)
@@ -81,14 +81,14 @@ pub async fn list_documents(
     let documents = match query.folder_id.filter(|id| !id.is_empty()) {
         Some(folder_id) => sqlx::query_as::<_, DocumentSummary>(sql(
             "SELECT id, title, folder_id, created_at, updated_at FROM documents \
-             WHERE owner_id = $1 AND folder_id = $2 ORDER BY updated_at DESC",
+             WHERE owner_id = $1 AND folder_id = $2 AND deleted_at IS NULL ORDER BY updated_at DESC",
         ))
         .bind(&caller.account_id)
         .bind(folder_id)
         .fetch_all(&state.db)
         .await,
         None => sqlx::query_as::<_, DocumentSummary>(sql(
-            "SELECT id, title, folder_id, created_at, updated_at FROM documents WHERE owner_id = $1 ORDER BY updated_at DESC",
+            "SELECT id, title, folder_id, created_at, updated_at FROM documents WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY updated_at DESC",
         ))
         .bind(&caller.account_id)
         .fetch_all(&state.db)

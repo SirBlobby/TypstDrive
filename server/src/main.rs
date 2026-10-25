@@ -30,6 +30,7 @@ mod site_url;
 mod teams;
 mod templates;
 mod themes;
+mod trash;
 mod user_content;
 
 pub type RateLimiterMap = Arc<Mutex<HashMap<String, (u32, std::time::Instant)>>>;
@@ -109,6 +110,7 @@ async fn main() {
     themes::cache::load(&state).await;
     cluster::start(state.clone());
     file_storage::maintenance::spawn(state.clone());
+    trash::purge::spawn(state.clone());
 
     let app = routes::build_router(state);
 

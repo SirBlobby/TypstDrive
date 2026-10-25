@@ -57,7 +57,7 @@ pub async fn apply_folder_color(
 ) -> Result<Json<FolderColorResponse>, ApiError> {
     let color = normalized_color(requested_color)?;
 
-    let owned_folder = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM folders WHERE id = $1 AND owner_id = $2"))
+    let owned_folder = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
         .bind(&id)
         .bind(owner_id)
         .fetch_optional(&state.db)

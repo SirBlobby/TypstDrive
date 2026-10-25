@@ -22,7 +22,7 @@ pub struct FolderSummary {
 pub async fn list_folders(State(state): State<AppState>, headers: HeaderMap) -> Result<Json<Vec<FolderSummary>>, Response> {
     let caller = authenticate(&state, &headers, ApiScope::Read).await?;
     sqlx::query_as::<_, FolderSummary>(sql(
-        "SELECT id, parent_id, name, color, created_at FROM folders WHERE owner_id = $1 ORDER BY name ASC",
+        "SELECT id, parent_id, name, color, created_at FROM folders WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY name ASC",
     ))
     .bind(&caller.account_id)
     .fetch_all(&state.db)

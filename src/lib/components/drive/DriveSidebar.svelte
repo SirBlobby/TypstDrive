@@ -8,7 +8,7 @@
     import TeamSwitcher from '#lib/components/drive/teams/TeamSwitcher.svelte';
     import { activeTeamStore, type TeamSummary } from '#lib/ts/workspace';
 
-    type DriveView = 'drive' | 'new' | 'shared' | 'starred' | 'packages';
+    type DriveView = 'drive' | 'new' | 'shared' | 'starred' | 'trash' | 'packages';
 
     let {
         activeView,
@@ -89,6 +89,7 @@
             {@render navItem('New', 'mdi:plus-box-outline', activeView === 'new', () => goto('/drive/new'))}
             {@render navItem('Shared', 'mdi:account-multiple-outline', activeView === 'shared', openShared)}
             {@render navItem('Starred', 'mdi:star-outline', activeView === 'starred', openStarred)}
+            {@render navItem('Trash', 'mdi:trash-can-outline', activeView === 'trash', () => goto('/trash'))}
         </div>
         <TeamSwitcher {collapsed} highlightActive={activeView === 'drive'} onSelectTeam={openTeam} onTeamClosed={openPersonal} />
         <div class="space-y-0.5">

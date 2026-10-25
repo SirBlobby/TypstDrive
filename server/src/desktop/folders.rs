@@ -16,7 +16,7 @@ pub async fn list_folders(
     let user_id = readable_space(&state, &headers).await?;
 
     let rows = sqlx::query_as::<_, (String, String, Option<String>, Option<String>)>(
-        sql("SELECT id, name, parent_id, color FROM folders WHERE owner_id = $1 ORDER BY name ASC"),
+        sql("SELECT id, name, parent_id, color FROM folders WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY name ASC"),
     )
     .bind(&user_id)
     .fetch_all(&state.db)
@@ -103,7 +103,7 @@ pub async fn rename_folder(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(sql("SELECT name, parent_id, color FROM folders WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(sql("SELECT name, parent_id, color FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -135,7 +135,7 @@ async fn creates_cycle(
         }
 
         let parent = sqlx::query_as::<_, (Option<String>,)>(
-            sql("SELECT parent_id FROM folders WHERE id = $1 AND owner_id = $2"),
+            sql("SELECT parent_id FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"),
         )
         .bind(&current)
         .bind(user_id)
@@ -193,7 +193,7 @@ pub async fn move_folder(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let row = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(sql("SELECT name, parent_id, color FROM folders WHERE id = $1 AND owner_id = $2"))
+    let row = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(sql("SELECT name, parent_id, color FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
@@ -218,9 +218,9 @@ async fn folder_is_empty(
 ) -> Result<bool, (StatusCode, String)> {
     let row = sqlx::query_as::<_, (i64, i64, i64)>(
         sql("SELECT \
-           (SELECT COUNT(*) FROM folders WHERE parent_id = $1 AND owner_id = $2), \
-           (SELECT COUNT(*) FROM projects WHERE folder_id = $3 AND owner_id = $4), \
-           (SELECT COUNT(*) FROM documents WHERE folder_id = $5 AND owner_id = $6)"),
+           (SELECT COUNT(*) FROM folders WHERE parent_id = $1 AND owner_id = $2 AND deleted_at IS NULL), \
+           (SELECT COUNT(*) FROM projects WHERE folder_id = $3 AND owner_id = $4 AND deleted_at IS NULL), \
+           (SELECT COUNT(*) FROM documents WHERE folder_id = $5 AND owner_id = $6 AND deleted_at IS NULL)"),
     )
     .bind(folder_id)
     .bind(user_id)
@@ -250,16 +250,7 @@ pub async fn delete_folder(
         ));
     }
 
-    let result = sqlx::query(sql("DELETE FROM folders WHERE id = $1 AND owner_id = $2"))
-        .bind(&id)
-        .bind(&user_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if result.rows_affected() == 0 {
-        return Err((StatusCode::NOT_FOUND, "Folder not found or unauthorized".to_string()));
-    }
+    crate::trash::move_to_trash(&state, crate::trash::TrashKind::Folder, &id, &user_id, &user_id).await?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
