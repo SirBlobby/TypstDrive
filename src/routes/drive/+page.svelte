@@ -598,6 +598,7 @@
                 onNewDocument={() => openCreateModal('typst')}
                 onNewLatexDocument={() => openCreateModal('latex')}
                 onNewProject={openCreateProjectModal}
+                onNewFromTemplate={() => goto(currentFolderId ? `/drive/new?folder=${encodeURIComponent(currentFolderId)}` : '/drive/new')}
                 onNewFolder={openCreateFolderModal}
                 onUpload={() => fileInput?.click()}
                 onImport={() => importFileInput?.click()}

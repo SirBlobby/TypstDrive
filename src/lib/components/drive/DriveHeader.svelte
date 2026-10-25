@@ -19,6 +19,7 @@
         onNewDocument,
         onNewLatexDocument,
         onNewProject,
+        onNewFromTemplate,
         onNewFolder,
         onUpload,
         onImport,
@@ -38,6 +39,7 @@
         onNewDocument: () => void;
         onNewLatexDocument: () => void;
         onNewProject: () => void;
+        onNewFromTemplate: () => void;
         onNewFolder: () => void;
         onUpload: () => void;
         onImport: () => void;
@@ -49,6 +51,7 @@
     const secondaryNewItems = [
         { label: 'LaTeX document', description: 'Basic LaTeX rendered with MiTeX', icon: 'mdi:sigma', color: 'text-teal-500', action: () => onNewLatexDocument() },
         { label: 'Project', description: 'Multi-file workspace', icon: 'mdi:folder-star', color: 'text-indigo-500', action: () => onNewProject() },
+        { label: 'From template', description: 'Start from a Typst Universe template', icon: 'mdi:view-grid-plus-outline', color: 'text-sky-500', action: () => onNewFromTemplate() },
         { label: 'Folder', description: 'Organize your files', icon: 'mdi:folder-plus', color: 'text-yellow-500', action: () => onNewFolder() },
         { label: 'Import', description: '.docx, .tex, .md, .html', icon: 'mdi:file-import', color: 'text-purple-500', action: () => onImport() }
     ];

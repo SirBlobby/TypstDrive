@@ -26,8 +26,14 @@ You run TypstDrive on your own server, so your documents stay with you.
 **Share**
 :   Share with people by email as editors, suggesters or viewers, or send a link that anyone can open, with an optional password and expiry date.
 
+**Start quickly**
+:   Begin a paper, thesis, CV or slides from any [Typst Universe template](guide/templates.md), with search, filters and previews.
+
 **Go bigger**
 :   Projects hold many files for books, theses and templates. Turn a project into a package that everyone on your server can use.
+
+**Make it yours**
+:   Pick a color theme in light or dark mode, use [themes](admin/themes.md) your administrator added, or make your own with color pickers or a YAML file.
 
 **Finish**
 :   Export to PDF, PNG, SVG, HTML, Markdown, Word or LaTeX, or present your slides full screen and draw on them while you talk.

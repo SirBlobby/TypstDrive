@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, citations, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, themes, AppState,
+    accounts, admin, api, citations, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -162,6 +162,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/keys/{id}/regenerate", post(api::keys::regenerate_key))
         .route("/projects/shared", get(drive::projects::list_shared_projects))
         .route("/projects", get(drive::projects::list_projects).post(drive::projects::create_project))
+        .route("/projects/from-template", post(templates::create::create_from_template))
+        .route("/templates", get(templates::index::list_templates))
+        .route("/templates/{name}/{version}/thumbnail", get(templates::thumbnails::thumbnail))
         .route("/projects/{id}", get(drive::projects::get_project).delete(drive::projects::delete_project).patch(drive::projects::update_project))
         .route("/projects/{id}/download", get(drive::downloads::download_project))
         .route("/projects/{id}/collaborators", get(sharing::members::list_project_collaborators))

@@ -15,7 +15,7 @@
     Type `doc:` followed by the phrase in the search bar and press ++enter++. See [Searching](guide/drive.md#searching).
 
 ??? question "Can I use templates from Typst Universe?"
-    Yes. Import them as usual, for example `#import "@preview/charged-ieee:0.1.4": ieee`. You can also publish your own templates as [packages](guide/packages.md) for your server.
+    Yes. Choose **New → From template** in your drive to browse them and start a new document or project from one. See [Templates](guide/templates.md). You can also import them as usual, for example `#import "@preview/charged-ieee:0.1.4": ieee`, and publish your own templates as [packages](guide/packages.md) for your server.
 
 ??? question "My font is not working."
     Use the family name shown in the editor's font picker, not the file name. Upload every style you use, such as bold and italic. See [Fonts and images](guide/fonts-and-images.md).
