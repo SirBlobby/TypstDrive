@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, citations, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, AppState,
+    accounts, admin, api, citations, compile, desktop, drive, git, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -37,6 +37,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/api-access/defaults", put(api::limits::update_defaults))
         .route("/admin/api-access/users/{id}", put(api::limits::update_user_limits))
         .route("/admin/citation-policy", get(citations::policy::get_policy).put(citations::policy::update_policy))
+        .route("/admin/git-policy", get(git::policy::get_policy).put(git::policy::update_policy))
         .route("/admin/themes", post(themes::admin::create_site_theme))
         .route("/admin/themes/{id}", put(themes::admin::update_site_theme).delete(themes::admin::delete_site_theme))
         .route("/admin/theme-policy", get(themes::policy::get_policy).put(themes::policy::update_policy))
@@ -183,6 +184,20 @@ pub fn build_router(state: AppState) -> Router {
         .route("/projects/{id}/entrypoint", put(drive::project_entrypoints::set_project_entrypoint))
         .route("/projects/{id}/folders", patch(drive::project_folders::rename_project_folder).delete(drive::project_folders::delete_project_folder))
         .route("/projects/{id}/files/{fid}", get(drive::projects::get_project_file).patch(drive::projects::update_project_file).delete(drive::projects::delete_project_file))
+        .route(
+            "/projects/{id}/git",
+            get(git::links::link_status)
+                .post(git::links::create_link)
+                .patch(git::links::update_link)
+                .delete(git::links::delete_link),
+        )
+        .route("/projects/{id}/git/preview", post(git::links::preview_link))
+        .route("/git/policy", get(git::policy::own_policy))
+        .route("/git/preview", post(git::new_project::preview_new_project))
+        .route("/git/import", post(git::new_project::import_new_project))
+        .route("/projects/{id}/git/changes", get(git::status::list_changes))
+        .route("/projects/{id}/git/pull", post(git::pull::pull))
+        .route("/projects/{id}/git/push", post(git::push::push))
         .route("/packages", get(packages::registry::list_packages))
         .route("/packages/publish", post(packages::registry::publish_package))
         .route("/packages/policy", get(packages::policy::own_policy))

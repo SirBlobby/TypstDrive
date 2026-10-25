@@ -3,6 +3,7 @@ mod api;
 mod appearance;
 mod citations;
 mod content;
+mod git;
 mod sharing;
 mod trash;
 
@@ -47,7 +48,7 @@ pub(super) const fn optional_reference(name: &'static str, parent: &'static str,
     Column { name, definition, copy: CopyRule::OptionalReference(parent) }
 }
 
-const TABLE_GROUPS: &[&[Table]] = &[accounts::TABLES, content::TABLES, sharing::TABLES, api::TABLES, citations::TABLES, appearance::TABLES, trash::TABLES];
+const TABLE_GROUPS: &[&[Table]] = &[accounts::TABLES, content::TABLES, sharing::TABLES, api::TABLES, citations::TABLES, appearance::TABLES, trash::TABLES, git::TABLES];
 
 pub fn tables() -> impl Iterator<Item = &'static Table> {
     TABLE_GROUPS.iter().flat_map(|group| group.iter())

@@ -18,6 +18,7 @@ mod desktop;
 mod drive;
 mod email;
 mod file_storage;
+mod git;
 mod hashing;
 mod models;
 mod packages;
