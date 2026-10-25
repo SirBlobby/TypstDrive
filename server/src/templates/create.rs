@@ -34,7 +34,7 @@ pub struct CreatedItem {
     pub authors_filled: Option<bool>,
 }
 
-fn mime_type(path: &str) -> &'static str {
+pub(crate) fn mime_type(path: &str) -> &'static str {
     let extension = path.rsplit('.').next().unwrap_or_default().to_ascii_lowercase();
     match extension.as_str() {
         "png" => "image/png",

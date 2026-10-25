@@ -23,6 +23,7 @@ const KNOWN_VARIABLES: &[KnownVariable] = &[
     variable("STATIC_DIR", "Server", "Folder with the built web app."),
     variable("RUST_LOG", "Server", "Log filter."),
     variable("REMOTE_URLS_ALLOW_PRIVATE", "Server", "Let documents load images and files from private network addresses. Off by default."),
+    variable("GIT_CACHE_DIR", "Server", "Folder for the disposable partial clones used to sync with Git servers other than GitHub and GitLab."),
     variable("COOKIE_SECRET", "Security", "Secret used to sign session cookies."),
     variable("PUBLIC_URL", "Security", "Address people use to open TypstDrive. Needed for sign-on and email links."),
     variable("TRUST_PROXY_HEADERS", "Security", "Read client addresses from X-Forwarded-For behind a reverse proxy."),
