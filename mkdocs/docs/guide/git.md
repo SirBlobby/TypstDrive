@@ -12,7 +12,7 @@ Only these files inside the linked folder are copied into the project:
 - Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`, `.pdf`
 - Fonts: `.ttf`, `.otf`, `.woff`, `.woff2`
 
-Everything else, and everything outside the folder, stays in the repository untouched. Files larger than 50 MB are skipped. You can also exclude paths yourself, one per line: a folder such as `data/`, a file such as `notes.md`, or a pattern such as `*.csv`.
+Everything else, and everything outside the folder, stays in the repository untouched. Files larger than 50 MB are skipped, and a linked folder can hold up to 5,000 synced files. You can also exclude paths yourself, one per line: a folder such as `data/`, a file such as `notes.md`, or a pattern such as `*.csv`.
 
 ## Import a repository as a new project
 
