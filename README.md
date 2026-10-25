@@ -170,42 +170,32 @@ TypstDrive is a community application and is not affiliated with, endorsed by, o
 
 ## Previews
 
-<p align="center">
-  <img src="preview/drive.png" alt="Drive view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/editor.png" alt="Editor view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/latex.png" alt="LaTeX editor view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/templates.png" alt="Templates view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/packages.png" alt="Packages view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/teams.png" alt="Team spaces view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/git.png" alt="Git settings view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/citations.png" alt="Citation settings view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/settings.png" alt="Settings view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/site-settings.png" alt="Site settings view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/themes.png" alt="Theme editor view" width="100%">
-</p>
-<p align="center">
-  <img src="preview/login.png" alt="Sign-in view" width="100%">
-</p>
+<table>
+  <tr>
+    <td width="50%"><img src="preview/drive.png" alt="Drive view" width="100%"></td>
+    <td width="50%"><img src="preview/editor.png" alt="Editor view" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="preview/latex.png" alt="LaTeX editor view" width="100%"></td>
+    <td width="50%"><img src="preview/templates.png" alt="Templates view" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="preview/packages.png" alt="Packages view" width="100%"></td>
+    <td width="50%"><img src="preview/teams.png" alt="Team spaces view" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="preview/git.png" alt="Git settings view" width="100%"></td>
+    <td width="50%"><img src="preview/citations.png" alt="Citation settings view" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="preview/settings.png" alt="Settings view" width="100%"></td>
+    <td width="50%"><img src="preview/site-settings.png" alt="Site settings view" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="preview/themes.png" alt="Theme editor view" width="100%"></td>
+    <td width="50%"><img src="preview/login.png" alt="Sign-in view" width="100%"></td>
+  </tr>
+</table>
 
 ## Donate
 If you like this project, consider donating to me. It will help me to maintain this project and make more projects like this.
