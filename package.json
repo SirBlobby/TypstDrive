@@ -49,6 +49,7 @@
 		"svelte-easy-crop": "^5.0.1",
 		"y-codemirror.next": "^0.3.6",
 		"y-websocket": "^3.1.0",
+		"yaml": "^2.8.1",
 		"yjs": "^13.6.33"
 	}
 }

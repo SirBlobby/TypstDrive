@@ -1,6 +1,8 @@
 import { EditorView } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
+import { get } from 'svelte/store';
+import { customThemesStore, editorColorsFrom, findCustomTheme } from './custom-themes';
 
 export interface ThemeColors {
     background: string;
@@ -58,9 +60,15 @@ export const themes: Record<string, ThemeConfig> = {
     }
 };
 
-export function getThemeExtension(themeName: keyof typeof themes, isDark: boolean) {
-    const themeConfig = themes[themeName] || themes['Catppuccin'];
-    const colors = themeConfig[isDark ? 'dark' : 'light'];
+export function resolveEditorColors(themeName: string, isDark: boolean): ThemeColors {
+    const mode = isDark ? 'dark' : 'light';
+    if (themes[themeName]) return themes[themeName][mode];
+    const custom = findCustomTheme(get(customThemesStore), themeName);
+    return custom ? editorColorsFrom(custom[mode]) : themes['Cerberus'][mode];
+}
+
+export function getThemeExtension(themeName: string, isDark: boolean) {
+    const colors = resolveEditorColors(themeName, isDark);
     
     const theme = EditorView.theme({
         "&": {

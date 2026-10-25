@@ -94,6 +94,7 @@ nav:
       - Users and accounts: admin/users.md
       - Sign-in and security: admin/security.md
       - Look and feel: admin/branding.md
+      - Themes: admin/themes.md
       - Team spaces: admin/teams.md
       - Storage and history: admin/storage.md
       - Packages: admin/packages.md

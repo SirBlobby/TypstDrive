@@ -2,7 +2,7 @@ use axum_extra::extract::cookie::Key;
 use sqlx::AnyPool;
 use std::sync::Arc;
 use std::collections::HashMap;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{broadcast, Mutex, RwLock};
 
 use desktop::devices::{DeviceEvent, DevicePresence};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -28,6 +28,7 @@ mod security_headers;
 mod sharing;
 mod site_url;
 mod teams;
+mod themes;
 mod user_content;
 
 pub type RateLimiterMap = Arc<Mutex<HashMap<String, (u32, std::time::Instant)>>>;
@@ -47,6 +48,7 @@ pub struct AppState {
     pub login_guard: Arc<accounts::login_guard::LoginGuard>,
     pub mailer: Arc<email::Mailer>,
     pub sso: Arc<accounts::sso::SsoRegistry>,
+    pub themes: Arc<RwLock<themes::cache::ThemeCache>>,
 }
 
 impl axum::extract::FromRef<AppState> for Key {
@@ -100,8 +102,10 @@ async fn main() {
         login_guard: Arc::new(accounts::login_guard::LoginGuard::default()),
         mailer: Arc::new(email::Mailer::from_environment()),
         sso: Arc::new(accounts::sso::SsoRegistry::from_environment()),
+        themes: Arc::new(RwLock::new(themes::cache::ThemeCache::default())),
     };
 
+    themes::cache::load(&state).await;
     cluster::start(state.clone());
     file_storage::maintenance::spawn(state.clone());
 

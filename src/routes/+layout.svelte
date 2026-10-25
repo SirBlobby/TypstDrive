@@ -1,12 +1,14 @@
 <script lang="ts">
 	import '../app.css';
-	import { fetchUser } from '#lib/ts/auth';
+	import { fetchUser, userStore } from '#lib/ts/auth';
 	import { installWorkspaceHeader } from '#lib/ts/workspace';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { themeStore, darkModeStore } from '#lib/ts/store';
-	import { themes } from '#lib/ts/themes';
+	import { resolveEditorColors } from '#lib/ts/themes';
+	import { customThemesStore, loadCustomThemes, findCustomTheme, isCustomThemeKey } from '#lib/ts/custom-themes';
+	import { applyCustomThemeStyles } from '#lib/ts/theme-styles';
 	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '#lib/ts/branding';
 	import BrandingCredit from '#lib/components/BrandingCredit.svelte';
 
@@ -31,8 +33,30 @@
 		loaded = true;
 	});
 
-	let currentTheme = $derived(themes[$themeStore as keyof typeof themes] || themes['Cerberus']);
-	let currentColors = $derived($darkModeStore ? currentTheme.dark : currentTheme.light);
+	let currentColors = $derived.by(() => {
+		$customThemesStore;
+		return resolveEditorColors($themeStore, $darkModeStore);
+	});
+
+	let themesReady = $state(false);
+	let themesLoadedFor: string | null | undefined = undefined;
+
+	$effect(() => {
+		const viewerId = $userStore?.id ?? null;
+		if (!loaded || viewerId === themesLoadedFor) return;
+		themesLoadedFor = viewerId;
+		loadCustomThemes().then((succeeded) => {
+			if (succeeded) themesReady = true;
+		});
+	});
+
+	$effect(() => applyCustomThemeStyles($customThemesStore));
+
+	$effect(() => {
+		if (themesReady && isCustomThemeKey($themeStore) && !findCustomTheme($customThemesStore, $themeStore)) {
+			$themeStore = 'Cerberus';
+		}
+	});
 
 	$effect(() => applyAccentColor($brandingStore.accent_color));
 </script>

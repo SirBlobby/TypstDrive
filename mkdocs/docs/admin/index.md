@@ -9,6 +9,7 @@ Administrators look after a TypstDrive server from the browser. Open **Site Sett
 | [Users and accounts](users.md) | Create, remove and help users, and decide who can sign up. |
 | [Sign-in and security](security.md) | Choose sign-in methods, lockout rules and session length, check email, and read the audit log. |
 | [Look and feel](branding.md) | Set your own name, logo, colors and sign-in message. |
+| [Themes](themes.md) | Add color themes for everyone and decide whether people can make their own. |
 | [Team spaces](teams.md) | Decide who can create teams and how big they can be. |
 | [Storage and history](storage.md) | Set storage limits and how many versions each document keeps. |
 | [Packages](packages.md) | Control who can publish packages and how big they can be. |
@@ -24,8 +25,9 @@ The site settings sidebar groups pages into dropdowns:
 | People | Users, Accounts, Team Spaces |
 | Security | Authentication, Email, Audit Log |
 | Content | Storage, Packages, PDF Links, Citations |
+| Appearance | Branding, Themes |
 | System | Server, About |
 
-**Branding** and **API Access** sit on their own between the groups.
+**API Access** sits on its own between the groups.
 
 Settings that need a restart, such as the database or email server, are set when [self-hosting](../self-hosting/index.md) instead.

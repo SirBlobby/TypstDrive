@@ -62,5 +62,6 @@ async fn apply_event(state: &AppState, event: ClusterEvent) {
             access::revoke_device_sessions_local(state, &device_token_id).await
         }
         ClusterEvent::DeviceNotification { user_id, event } => devices::deliver_local(state, &user_id, event).await,
+        ClusterEvent::ReloadThemes { owner_id } => crate::themes::cache::reload(state, owner_id.as_deref()).await,
     }
 }
