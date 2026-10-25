@@ -32,6 +32,9 @@ You run TypstDrive on your own server, so your documents stay with you.
 **Go bigger**
 :   Projects hold many files for books, theses and templates. Turn a project into a package that everyone on your server can use.
 
+**Git sync**
+:   Import a project from GitHub, GitLab or any Git server, pull changes and push your own as commits. Only the document files are copied, so large repositories are fine. See [Git sync](guide/git.md).
+
 **Make it yours**
 :   Pick a color theme in light or dark mode, use [themes](admin/themes.md) your administrator added, or make your own with color pickers or a YAML file.
 

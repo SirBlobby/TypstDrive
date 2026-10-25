@@ -26,6 +26,9 @@
 ??? question "Can I work offline?"
     Yes, with the [Typst Desktop](guide/desktop.md) app for Linux. It keeps documents on your computer and syncs them when you are back online.
 
+??? question "Can I keep my documents in Git?"
+    Yes. Import a repository with **New → From Git**, or link an existing project with **File → Git Sync**. You can pull changes and push your own as commits. See [Git sync](guide/git.md).
+
 ??? question "I deleted something by mistake."
     Open **Trash** in the drive sidebar and choose **Restore**. Deleted items stay there for 30 days, or however long your administrator chose. See [Trash](guide/drive.md#trash).
 
