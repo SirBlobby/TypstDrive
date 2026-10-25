@@ -24,6 +24,7 @@
 	import ConfirmModal from '../ConfirmModal.svelte';
 	import ShareModal from '../ShareModal.svelte';
 	import CitationsModal from '../citations/CitationsModal.svelte';
+	import GitModal from '../git/GitModal.svelte';
 	import LatexFormattingBar from '../editor/LatexFormattingBar.svelte';
 	import ZoomControl from '../editor/ZoomControl.svelte';
 
@@ -80,6 +81,7 @@
 	let showDeleteModal = $state(false);
 	let showShareModal = $state(false);
 	let showCitations = $state(false);
+	let showGit = $state(false);
 	let renameName = $state('');
 
 	$effect(() => { renameName = projectName; });
@@ -342,6 +344,9 @@
 									<button onclick={() => { activeMenu = null; makeCopy(); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Make a Copy</button>
 								{/if}
 								<button onclick={() => { activeMenu = null; showShareModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Share</button>
+								{#if !isViewer && $userStore}
+									<button onclick={() => { activeMenu = null; showGit = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:git" class="text-base" /> Git Sync</button>
+								{/if}
 								{#if !isViewer}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
 									<button onclick={() => { activeMenu = null; renameName = projectName; showRenameModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Rename</button>
@@ -506,6 +511,10 @@
 
 {#if showShareModal}
 	<ShareModal itemId={projectId} kind="project" onClose={() => (showShareModal = false)} />
+{/if}
+
+{#if showGit}
+	<GitModal {projectId} isOwner={role === 'owner'} onchanged={onFilesChanged} onclose={() => (showGit = false)} />
 {/if}
 
 {#if showCitations}
