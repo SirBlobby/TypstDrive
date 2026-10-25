@@ -9,6 +9,7 @@ This page describes Typst documents. LaTeX documents have their own editor and t
 ## Writing
 
 - Typst code is colored so it is easy to read, and suggestions pop up as you type.
+- In projects, bibliography (`.bib`), YAML (`.yml`, `.yaml`) and TOML (`.toml`) files get their own colors, and the comment shortcut uses the right comment mark for each. Other files, such as `.md` or `.txt`, open as plain text.
 - Typing an opening bracket or quote adds the closing one for you. With text selected, typing `*`, `_`, `` ` ``, `$`, `(` and similar wraps the selection instead of replacing it.
 - Mistakes are underlined, and the error bar under the toolbar tells you what went wrong and on which line.
 - Smart features such as jumping to where something is defined, renaming and formatting are available to owners and editors.

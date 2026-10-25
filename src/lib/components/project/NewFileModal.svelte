@@ -14,7 +14,7 @@
 	} = $props();
 
 	const fileTypes = [
-		{ extension: 'typ', label: 'Typst', icon: 'mdi:language-markdown-outline' },
+		{ extension: 'typ', label: 'Typst', icon: 'mdi:alpha-t-box-outline' },
 		{ extension: 'tex', label: 'LaTeX', icon: 'mdi:sigma' },
 		{ extension: 'bib', label: 'Bibliography', icon: 'mdi:book-open-variant' },
 		{ extension: 'md', label: 'Markdown', icon: 'mdi:language-markdown' },

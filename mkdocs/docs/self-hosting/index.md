@@ -24,4 +24,16 @@ TypstDrive runs on your own computer or server. Everything comes in a single Doc
 | See every setting in one place | [Settings reference](configuration.md) |
 | Run several copies for many users, or keep files in object storage | [Bigger installs](scaling.md) |
 
+## Outside services
+
+TypstDrive works without an internet connection, but some features reach outside services from the server:
+
+| Service | Used for |
+|---|---|
+| `packages.typst.org` | `@preview` packages, the [template](../guide/templates.md) list, template previews and the MiTeX package for LaTeX |
+| `doi.org` | DOI and arXiv lookups in the [citation tools](../guide/citations.md) |
+| `api.zotero.org` | Zotero sync |
+
+If your server cannot reach the internet, these features show an error and everything else keeps working. Citation services can be turned off in [Site Settings](../admin/citations.md).
+
 Once it is running, everything else, such as who can register, branding and storage limits, is set in the browser. See [Administration](../admin/index.md).

@@ -28,6 +28,7 @@ mod security_headers;
 mod sharing;
 mod site_url;
 mod teams;
+mod templates;
 mod themes;
 mod user_content;
 

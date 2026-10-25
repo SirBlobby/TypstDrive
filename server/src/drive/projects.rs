@@ -44,7 +44,7 @@ pub fn decode_text_blob(blob: &[u8]) -> String {
     text
 }
 
-fn is_text_path(path: &str) -> bool {
+pub(crate) fn is_text_path(path: &str) -> bool {
     let lower = path.to_lowercase();
     [".typ", ".tex", ".toml", ".bib", ".csl", ".yml", ".yaml", ".json", ".md", ".txt", ".csv"]
         .iter()

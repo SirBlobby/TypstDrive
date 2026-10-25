@@ -6,9 +6,9 @@ The drive is the first thing you see after signing in. It holds everything you o
 
 ## Finding your way around
 
-- **Sidebar** on the left: **Home** (your own files), **Shared** (things other people shared with you), **Starred**, your [team spaces](teams.md), **Packages**, and a link to Typst Universe. At the bottom you can see how much storage you use and which version of TypstDrive is running. Collapse the sidebar with the button at the bottom.
+- **Sidebar** on the left: **Home** (your own files), **New** (start from a [template](templates.md)), **Shared** (things other people shared with you), **Starred**, your [team spaces](teams.md), **Packages**, and a link to Typst Universe. At the bottom you can see how much storage you use and which version of TypstDrive is running. Collapse the sidebar with the button at the bottom.
 - **Search bar** in the top bar. See [Searching](#searching).
-- **Header** under it: where you are, then on the same row the sort controls, **Upload**, and **New document**. Sort by name, date or size, flip the order, and switch between a grid of cards and a compact list. The arrow next to **New document** also creates a LaTeX document, a project, a folder, or imports a file.
+- **Header** under it: where you are, then on the same row the sort controls, **Upload**, and **New document**. Sort by name, date or size, flip the order, and switch between a grid of cards and a compact list. The arrow next to **New document** also creates a LaTeX document, a project, something [from a template](templates.md), a folder, or imports a file.
 
 TypstDrive remembers your view, sort order and sidebar choice in your browser.
 

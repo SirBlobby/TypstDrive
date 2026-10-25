@@ -16,6 +16,7 @@ Contributions are welcome, whether that is a bug fix, a new feature or an improv
 
 - Use clear, descriptive names for variables and functions. Avoid abbreviations.
 - Keep files short and grouped by feature. Split a file when it grows past a few hundred lines.
+- In the web app, import shared code with `#lib/...`, which `package.json` maps to `src/lib` through `imports`.
 - On the server, return errors instead of panicking. Do not use `unwrap` or `expect` on values that come from requests, the database or the network.
 
 ### Checks
@@ -52,7 +53,7 @@ bun install
 bun run dev
 ```
 
-The development server proxies `/api` and `/yjs` to the Rust server on `localhost:3000`.
+The development server proxies `/api`, `/pdf` and `/yjs` to the Rust server on `localhost:3000`.
 
 ### Server
 

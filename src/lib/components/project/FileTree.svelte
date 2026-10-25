@@ -49,10 +49,13 @@
 
 	function iconFor(path: string): string {
 		const lower = path.toLowerCase();
-		if (lower.endsWith('.typ')) return 'mdi:language-markdown-outline';
+		if (lower.endsWith('.typ')) return 'mdi:alpha-t-box-outline';
 		if (lower.endsWith('.tex')) return 'mdi:sigma';
 		if (lower.endsWith('.toml')) return 'mdi:cog-outline';
 		if (lower.endsWith('.bib')) return 'mdi:book-open-variant';
+		if (lower.endsWith('.yml') || lower.endsWith('.yaml')) return 'mdi:code-braces';
+		if (lower.endsWith('.md')) return 'mdi:language-markdown-outline';
+		if (lower.endsWith('.txt')) return 'mdi:file-document-outline';
 		if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.svg') || lower.endsWith('.gif')) return 'mdi:image-outline';
 		if (lower.endsWith('.ttf') || lower.endsWith('.otf')) return 'mdi:format-font';
 		return 'mdi:file-outline';
