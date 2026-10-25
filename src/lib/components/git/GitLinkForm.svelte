@@ -1,10 +1,14 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import type { Snippet } from 'svelte';
     import GitImportPreview from './GitImportPreview.svelte';
     import {
+        fetchGitAccounts,
+        matchingAccount,
         parseExcludedPaths,
         providerLabels,
+        type GitAccount,
         type GitImportPreview as ImportPreview,
         type GitLinkRequest,
         type GitProvider
@@ -43,10 +47,12 @@
     let replaceProjectFiles = $state(true);
     let showAdvanced = $state(false);
     let preview = $state<ImportPreview | null>(null);
+    let accounts = $state<GitAccount[]>([]);
     let busy = $state<'preview' | 'link' | null>(null);
     let error = $state('');
 
     let providers = $derived((['auto', 'github', 'gitlab', 'generic'] as GitProvider[]).filter((option) => option !== 'generic' || genericHostsEnabled));
+    let savedAccount = $derived(token.trim() ? null : matchingAccount(accounts, provider, repoUrl));
     let canSubmit = $derived(ready && repoUrl.trim().length > 0 && branch.trim().length > 0 && busy === null);
 
     function linkRequest(): GitLinkRequest {
@@ -77,6 +83,12 @@
         }
         busy = null;
     }
+
+    onMount(() => {
+        fetchGitAccounts()
+            .then((list) => (accounts = list))
+            .catch(() => {});
+    });
 
     async function submit() {
         busy = 'link';
@@ -123,8 +135,12 @@
 
     <label class="flex flex-col gap-1.5 text-xs">
         <span class="font-medium text-[var(--color-ink-muted)]">Access token</span>
-        <input bind:value={token} type="password" autocomplete="off" placeholder="Needed for private repositories and for pushing" class={fieldClass} />
-        <span class="text-[var(--color-ink-muted)]">Use a token with read and write access to repository contents. It is stored encrypted.</span>
+        <input bind:value={token} type="password" autocomplete="off" placeholder={savedAccount ? 'Leave empty to use your saved account' : 'Needed for private repositories and for pushing'} class={fieldClass} />
+        {#if savedAccount}
+            <span class="flex items-center gap-1 text-[var(--color-success)]"><Icon icon="mdi:account-check-outline" class="text-sm" /> Uses your saved account {savedAccount.username} on {savedAccount.base_url}.</span>
+        {:else}
+            <span class="text-[var(--color-ink-muted)]">Use a token with read and write access to repository contents, or save one in <a href="/settings?section=git" class="font-semibold text-[var(--color-accent)] hover:underline">Settings, Git</a>. It is stored encrypted.</span>
+        {/if}
     </label>
 
     <button onclick={() => (showAdvanced = !showAdvanced)} class="flex items-center gap-1 self-start text-xs font-medium text-[var(--color-accent)] hover:underline">

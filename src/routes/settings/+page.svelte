@@ -14,6 +14,7 @@
     import DevicesSection from '#lib/components/settings/sections/DevicesSection.svelte';
     import PdfLinksSection from '#lib/components/settings/sections/PdfLinksSection.svelte';
     import CitationsSection from '#lib/components/settings/sections/CitationsSection.svelte';
+    import GitSection from '#lib/components/settings/sections/GitSection.svelte';
     import SecuritySection from '#lib/components/settings/sections/SecuritySection.svelte';
 
     const navItems = [
@@ -24,6 +25,7 @@
         { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
         { id: 'pdf-links', label: 'PDF Links', icon: 'mdi:file-pdf-box' },
         { id: 'citations', label: 'Citations', icon: 'ph:quotes' },
+        { id: 'git', label: 'Git', icon: 'mdi:git' },
         { id: 'api-keys', label: 'API Keys', icon: 'mdi:key-outline' },
         { id: 'devices', label: 'Devices', icon: 'mdi:devices' }
     ];
@@ -78,6 +80,8 @@
                     <PdfLinksSection />
                 {:else if activeSection === 'citations'}
                     <CitationsSection />
+                {:else if activeSection === 'git'}
+                    <GitSection />
                 {:else if activeSection === 'api-keys'}
                     <ApiKeysSection />
                 {:else if activeSection === 'devices'}
