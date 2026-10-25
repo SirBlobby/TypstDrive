@@ -4,6 +4,7 @@
     import { downloadProject } from '#lib/ts/downloads';
     import StarButton from '#lib/components/drive/stars/StarButton.svelte';
     import SelectCheckbox from './SelectCheckbox.svelte';
+    import ExportMenuItems from './ExportMenuItems.svelte';
     import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
     let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, duplicateProject = undefined, shareItem = undefined, readOnly = false, selection = undefined }: {
@@ -31,7 +32,7 @@
             setActiveMenu(null);
         } else {
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            dropUp = window.innerHeight - rect.bottom < 200;
+            dropUp = window.innerHeight - rect.bottom < 420;
             setActiveMenu(project.id);
         }
     }
@@ -70,7 +71,7 @@
         </button>
 
         {#if activeMenu === project.id}
-            <div class="absolute right-0 {dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-44 bg-[var(--color-surface)] rounded-md shadow-xl border border-[var(--color-line)] py-1 z-[100]">
+            <div class="absolute right-0 {dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-44 bg-[var(--color-surface)] rounded-md shadow-xl border border-[var(--color-line)] py-1 z-[100] max-h-[70vh] overflow-y-auto">
                 <button onclick={(e) => { e.stopPropagation(); setActiveMenu(null); openProject(); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                     <Icon icon="mdi:open-in-new" class="text-lg text-green-500" />
                     Open
@@ -83,7 +84,9 @@
                     <Icon icon="mdi:download" class="text-lg text-teal-500" />
                     Download ZIP
                 </button>
+                <ExportMenuItems kind="project" id={project.id} name={project.name} onstart={() => setActiveMenu(null)} />
                 {#if !readOnly}
+                    <div class="h-px bg-[var(--color-line)] my-1"></div>
                     {#if shareItem}
                         <button onclick={(e) => { e.stopPropagation(); shareItem(project, 'project'); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                             <Icon icon="mdi:share-variant-outline" class="text-lg text-[var(--color-accent)]" />

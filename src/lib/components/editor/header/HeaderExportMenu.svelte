@@ -1,8 +1,9 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import HeaderIconButton from './HeaderIconButton.svelte';
+	import { exportFormats, type ExportFormat as RenderedFormat } from '#lib/ts/typst-api';
 
-	type ExportFormat = 'pdf' | 'png' | 'svg' | 'source';
+	type ExportFormat = RenderedFormat | 'source';
 
 	let { sourceLabel, onexport, onprint }: {
 		sourceLabel: string;
@@ -14,10 +15,9 @@
 	let container = $state<HTMLDivElement | null>(null);
 
 	const formats: { format: ExportFormat; label: string; icon: string; color: string }[] = [
-		{ format: 'pdf', label: 'PDF document', icon: 'mdi:file-pdf-box', color: 'text-red-500' },
+		exportFormats[0],
 		{ format: 'source', label: '', icon: 'mdi:code-braces', color: 'text-purple-500' },
-		{ format: 'svg', label: 'SVG graphics', icon: 'mdi:svg', color: 'text-orange-500' },
-		{ format: 'png', label: 'PNG image', icon: 'mdi:image', color: 'text-blue-500' }
+		...exportFormats.slice(1)
 	];
 
 	const itemClass = 'w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2';
