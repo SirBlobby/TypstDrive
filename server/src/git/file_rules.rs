@@ -1,6 +1,10 @@
+use axum::http::StatusCode;
+
+use super::ApiError;
 use crate::drive::projects::is_text_path;
 
 pub const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
+pub const MAX_SYNCED_FILES: usize = 5000;
 
 const ASSET_EXTENSIONS: &[&str] = &[".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".pdf", ".ttf", ".otf", ".woff", ".woff2"];
 
@@ -30,6 +34,16 @@ impl FileRules {
         let is_document_file = is_text_path(path) || ASSET_EXTENSIONS.iter().any(|extension| lower.ends_with(extension));
         is_document_file && !self.is_excluded(path)
     }
+}
+
+pub fn check_file_count(count: usize) -> Result<(), ApiError> {
+    if count > MAX_SYNCED_FILES {
+        return Err((
+            StatusCode::PAYLOAD_TOO_LARGE,
+            format!("The folder has {count} document files, more than the {MAX_SYNCED_FILES} that can be synced. Link a smaller folder or exclude paths."),
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(test)]

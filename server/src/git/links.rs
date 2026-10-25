@@ -10,6 +10,7 @@ use super::import::{import_repository, preview_import, ImportPreview};
 use super::local_files;
 use super::locks::lock_project;
 use super::policy::load_policy;
+use super::rate_limit::check_rate;
 use super::remote::{self, Provider, RemoteRepo};
 use super::repo_settings::{clean_branch, clean_excluded_paths, clean_folder, clean_token, clean_username, RepoUrl};
 use super::{internal_error, snapshot, ApiError};
@@ -289,6 +290,7 @@ pub async fn preview_link(
     access.require_owner()?;
     let link = link_for_user(&state, &project_id, &payload, &user_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
+    check_rate(&user_id)?;
     let _guard = lock_project(&project_id)?;
     let local = local_files::load(&state, &project_id, &link.rules()).await?;
     let (preview, _) = preview_import(&state, &access.project.owner_id, &local, &link, payload.replace_project_files.unwrap_or(true)).await?;
@@ -306,6 +308,7 @@ pub async fn create_link(
     let link = link_for_user(&state, &project_id, &payload, &user_id).await?;
     let policy = load_policy(&state).await;
     policy.check_provider(link.provider)?;
+    check_rate(&user_id)?;
     let _guard = lock_project(&project_id)?;
     if load_link(&state, &project_id).await?.is_some() {
         return Err((StatusCode::CONFLICT, "This project is already linked to a Git repository".to_string()));
