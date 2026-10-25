@@ -2,8 +2,10 @@
     import Icon from '@iconify/svelte';
     import { fileDataUrl } from '#lib/ts/item-info';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
+    import SelectCheckbox from './SelectCheckbox.svelte';
+    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
-    let { file, deleteFile, openRename, openPreview, openInfo = undefined, onReplaced = undefined, readOnly = false }: {
+    let { file, deleteFile, openRename, openPreview, openInfo = undefined, onReplaced = undefined, readOnly = false, selection = undefined }: {
         file: any;
         readOnly?: boolean;
         deleteFile: (id: string, name: string) => void;
@@ -11,6 +13,7 @@
         openPreview: (file: any) => void;
         openInfo?: (file: any, type: string) => void;
         onReplaced?: (file: any) => void;
+        selection?: ItemSelection;
     } = $props();
 
     const actionButtonClass = 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] p-1 rounded-md hover:bg-[var(--color-surface-sunken)]';
@@ -36,14 +39,18 @@
 </script>
 
 <div
-    class="bg-[var(--color-surface)] rounded-lg shadow-sm border border-[var(--color-line)] flex flex-col transition relative group {isFont ? 'cursor-default' : 'hover:border-[var(--color-accent)] cursor-pointer'}"
+    class="bg-[var(--color-surface)] rounded-lg shadow-sm border border-[var(--color-line)] flex flex-col transition relative group {isFont ? 'cursor-default' : 'hover:border-[var(--color-accent)] cursor-pointer'} {selection?.selected ? 'ring-2 ring-[var(--color-accent)] border-[var(--color-accent)]' : ''}"
     role="button"
     tabindex="0"
-    onclick={handleOpen}
+    data-drive-item
+    onclick={(event) => { if (selection?.click(event)) return; handleOpen(); }}
     onkeydown={(e) => e.key === 'Enter' && handleOpen()}
     draggable="true"
     ondragstart={(e) => e.dataTransfer?.setData('text/plain', JSON.stringify({ type: 'file', id: file.id }))}
 >
+    {#if selection}
+        <SelectCheckbox {selection} label={file.name} class="absolute top-2 right-2 z-10 bg-[var(--color-surface)] p-0.5 shadow-sm" />
+    {/if}
     <div class="h-40 w-full bg-[var(--color-surface-muted)] rounded-t-lg overflow-hidden flex items-center justify-center border-b border-[var(--color-line)] pointer-events-none">
         {#if isImage && !previewFailed}
             <img

@@ -6,6 +6,8 @@
     import { downloadFolder, downloadProject } from '#lib/ts/downloads';
     import StarButton from '#lib/components/drive/stars/StarButton.svelte';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
+    import SelectCheckbox from './SelectCheckbox.svelte';
+    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
     type RenameType = 'document' | 'folder' | 'file' | 'project';
 
@@ -21,7 +23,8 @@
         onDelete,
         onShare = undefined,
         onInfo = undefined,
-        onReplaced = undefined
+        onReplaced = undefined,
+        selectionFor = undefined
     }: {
         entries: DriveEntry[];
         readOnly?: boolean;
@@ -35,6 +38,7 @@
         onShare?: (item: any, kind: ShareKind) => void;
         onInfo?: (item: any, type: string) => void;
         onReplaced?: (file: any) => void;
+        selectionFor?: (entry: DriveEntry) => ItemSelection | undefined;
     } = $props();
 
     const iconButtonClass = 'p-1 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)]';
@@ -109,21 +113,27 @@
     {#each entries as entry (entry.category + entry.item.id)}
         {@const type = entryType(entry)}
         {@const isFolder = entry.category === 'folder'}
+        {@const selection = selectionFor?.(entry)}
         <div
             role="row"
             tabindex="0"
+            data-drive-item
+            aria-selected={selection?.selected}
             draggable={!readOnly && !isFolder}
             ondragstart={(e) => startDrag(e, entry)}
             ondragover={(e) => { if (isFolder && !readOnly) { e.preventDefault(); setDragOverFolderId(entry.item.id); } }}
             ondragleave={() => isFolder && setDragOverFolderId(null)}
             ondrop={(e) => isFolder && !readOnly && handleDrop(e, entry.item.id)}
-            onclick={() => openEntry(entry)}
+            onclick={(event) => { if (selection?.click(event)) return; openEntry(entry); }}
             onkeydown={(e) => e.key === 'Enter' && openEntry(entry)}
-            class="group grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_10rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_10rem] gap-3 items-center px-4 py-2 text-sm border-b border-[var(--color-line)] last:border-b-0 cursor-pointer transition-colors {dragOverFolderId === entry.item.id && isFolder
+            class="group grid grid-cols-[minmax(0,1fr)_6rem_8rem_5rem_10rem] sm:grid-cols-[minmax(0,1fr)_7rem_9rem_6rem_10rem] gap-3 items-center px-4 py-2 text-sm border-b border-[var(--color-line)] last:border-b-0 cursor-pointer transition-colors {(dragOverFolderId === entry.item.id && isFolder) || selection?.selected
                 ? 'bg-[var(--color-accent-soft)]'
                 : 'hover:bg-[var(--color-surface-muted)]'}"
         >
             <span role="cell" class="flex items-center gap-3 min-w-0">
+                {#if selection}
+                    <SelectCheckbox {selection} label={itemName(entry.item)} class="-mr-1 flex-shrink-0" />
+                {/if}
                 {#if isFolder}
                     <Icon icon={typeIcons.folder.icon} class="text-xl flex-shrink-0" style={folderIconStyle(entry.item.color)} />
                 {:else}

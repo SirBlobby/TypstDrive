@@ -3,8 +3,10 @@
     import { downloadFolder } from '#lib/ts/downloads';
     import { folderIconStyle, folderTileStyle } from '#lib/ts/folder-colors';
     import FolderColorPicker from './FolderColorPicker.svelte';
+    import SelectCheckbox from './SelectCheckbox.svelte';
+    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
-    let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId, activeMenu, setActiveMenu, shareFolder = undefined, openInfo = undefined, openRename = undefined, changeColor = undefined, readOnly = false }: {
+    let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId, activeMenu, setActiveMenu, shareFolder = undefined, openInfo = undefined, openRename = undefined, changeColor = undefined, readOnly = false, selection = undefined }: {
         folder: any;
         dragOverFolderId: string | null;
         navigateToFolder: (folder: any) => void;
@@ -18,6 +20,7 @@
         openRename?: (id: string, name: string, type: 'folder') => void;
         changeColor?: (folder: any, color: string | null) => void;
         readOnly?: boolean;
+        selection?: ItemSelection;
     } = $props();
 
     let dropUp = $state(false);
@@ -48,16 +51,20 @@
 </script>
 
 <div
-    class="flex flex-row items-center p-3 bg-[var(--color-surface)] border border-[var(--color-line)] rounded-lg shadow-sm cursor-pointer group transition relative {dragOverFolderId === folder.id ? 'ring-2 ring-[var(--color-accent)] bg-[var(--color-accent-soft)]' : 'hover:border-[var(--color-accent)]'} {menuOpen ? 'z-30' : ''}"
+    class="flex flex-row items-center p-3 bg-[var(--color-surface)] border border-[var(--color-line)] rounded-lg shadow-sm cursor-pointer group transition relative {dragOverFolderId === folder.id ? 'ring-2 ring-[var(--color-accent)] bg-[var(--color-accent-soft)]' : 'hover:border-[var(--color-accent)]'} {menuOpen ? 'z-30' : ''} {selection?.selected ? 'ring-2 ring-[var(--color-accent)] border-[var(--color-accent)]' : ''}"
     role="button"
     tabindex="0"
-    onclick={() => navigateToFolder(folder)}
+    data-drive-item
+    onclick={(event) => { if (selection?.click(event)) return; navigateToFolder(folder); }}
     onkeydown={(e) => e.key === 'Enter' && navigateToFolder(folder)}
     ondragover={allowDrop}
     ondragleave={() => setDragOverFolderId(null)}
     ondrop={(e) => !readOnly && handleDrop(e, folder.id)}
     title={folder.name}
 >
+    {#if selection}
+        <SelectCheckbox {selection} label={folder.name} class="absolute -top-2 -left-2 z-10 bg-[var(--color-surface)] shadow-sm" />
+    {/if}
     <div class="flex items-center justify-center w-10 h-10 rounded-md group-hover:scale-105 transition-transform pointer-events-none shrink-0 mr-3" style={folderTileStyle(folder.color)}>
         <Icon icon="mdi:folder" class="text-2xl" style={folderIconStyle(folder.color)} />
     </div>
