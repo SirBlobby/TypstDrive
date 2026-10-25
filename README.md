@@ -114,6 +114,8 @@ TypstDrive runs as a single Docker container.
 
 4. Open `http://localhost:3000` and create the administrator account on the setup page.
 
+Keep passwords and keys, such as email or sign-in provider secrets, in a `.env` file next to the compose file: copy [`example.env`](example.env) to `.env`, fill in what you need, and add `env_file: .env` to the service. `.env` is ignored by git.
+
 Everything is stored in `./data`, so that is the folder to back up. To update, run `docker compose pull` and `docker compose up -d`; the database is upgraded automatically.
 
 Before opening TypstDrive to the internet, put it behind a reverse proxy with HTTPS and set `PUBLIC_URL` to your domain. The documentation covers each step:

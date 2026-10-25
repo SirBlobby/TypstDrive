@@ -15,6 +15,8 @@ Without email everything else works, and these options simply stay hidden.
 
 Links in emails point to `PUBLIC_URL`, so set it first.
 
+The examples below use the `environment:` section of `docker-compose.yml`. The same lines, without the leading `- `, can go in a `.env` file instead, which keeps the password out of the compose file. See [Using a .env file](configuration.md#using-a-env-file).
+
 ## Gmail or Google Workspace
 
 1. Turn on **2-Step Verification** for the Google account.

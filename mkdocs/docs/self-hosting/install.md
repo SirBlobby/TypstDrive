@@ -83,4 +83,4 @@ cd TypstDrive
 docker compose up -d --build
 ```
 
-The repository's `docker-compose.yml` has commented examples for every optional feature.
+The repository's `docker-compose.yml` has commented examples for every optional feature. Put passwords and keys in a `.env` file instead, starting from `example.env`; see [Using a .env file](configuration.md#using-a-env-file).
