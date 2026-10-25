@@ -2,6 +2,8 @@
 
 **Site Settings → Appearance → Themes** adds color themes for everyone on the server. A theme only changes the app's colors. The site name, logo, tagline and accent color set in [Branding](branding.md) stay the same, and a branding accent color still wins over a theme's accent.
 
+![Making a site theme with color pickers and a live preview](../assets/previews/themes.png)
+
 ## Site themes
 
 Site themes appear under **Site themes** in everyone's theme picker, next to the built-in Cerberus, Catppuccin and Arch Linux themes.

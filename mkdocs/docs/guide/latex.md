@@ -2,6 +2,8 @@
 
 TypstDrive is built for Typst, but it can also write and preview simple LaTeX. Use it for short articles, notes and math-heavy writing when you already know LaTeX, or when someone sends you a `.tex` file.
 
+![A LaTeX document with its live preview](../assets/previews/latex.png)
+
 !!! warning "Basic support only"
     LaTeX is not compiled by a real TeX engine. TypstDrive converts it to Typst with [MiTeX](https://github.com/mitex-rs/mitex) and renders the result. Most text, sections, lists, tables, figures and math work. Packages, custom classes, `\input`, `\include`, bibliographies and complex macros do not. For full LaTeX, use a TeX distribution.
 

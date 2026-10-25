@@ -38,6 +38,8 @@ In a document, bibliography files are kept with the document's files under the p
 
 Keep a bibliography file in step with a Zotero library or collection.
 
+![A connected Zotero account in Settings](../assets/previews/citations.png)
+
 1. Connect Zotero once in **Settings → Citations**. Create a key on zotero.org with read access to your library, and to any groups you want to use, and paste it in.
 2. Open the **Zotero** tab in the citations dialog.
 3. Pick a library and, if you like, one collection.

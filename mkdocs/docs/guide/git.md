@@ -44,6 +44,8 @@ The token is stored encrypted. Editors of the project pull and push with the own
 
 Instead of pasting a token for every project, save your GitHub or GitLab account once in **Settings → Git**:
 
+![Saved Git accounts in Settings](../assets/previews/git.png)
+
 1. Pick **GitHub** or **GitLab**, and fill in the server for GitHub Enterprise or a self-hosted GitLab.
 2. Paste an access token and choose **Check and save**. TypstDrive asks the host who the token belongs to, so a mistyped token is caught right away.
 

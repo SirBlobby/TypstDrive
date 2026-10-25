@@ -2,6 +2,8 @@
 
 Start a new document from one of the community templates on [Typst Universe](https://typst.app/universe), such as papers, theses, CVs, letters and presentations.
 
+![Browsing Typst Universe templates](../assets/previews/templates.png)
+
 ## Starting from a template
 
 1. Choose **New** under **Workspace** in the drive sidebar, or open the arrow next to **New document** and choose **From template**.
