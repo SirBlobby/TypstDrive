@@ -3,8 +3,10 @@
     import { goto } from '$app/navigation';
     import { downloadProject } from '#lib/ts/downloads';
     import StarButton from '#lib/components/drive/stars/StarButton.svelte';
+    import SelectCheckbox from './SelectCheckbox.svelte';
+    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
-    let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, shareItem = undefined, readOnly = false }: {
+    let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, shareItem = undefined, readOnly = false, selection = undefined }: {
         project: any;
         activeMenu: string | null;
         setActiveMenu: (id: string | null) => void;
@@ -13,6 +15,7 @@
         deleteProject: (id: string, name: string) => void;
         shareItem?: (item: any, kind: 'project') => void;
         readOnly?: boolean;
+        selection?: ItemSelection;
     } = $props();
 
     let dropUp = $state(false);
@@ -38,15 +41,19 @@
 </script>
 
 <div
-    class="flex flex-row items-center p-3 bg-[var(--color-surface)] border border-[var(--color-line)] rounded-lg shadow-sm cursor-pointer group transition relative hover:border-[var(--color-accent)] {activeMenu === project.id ? 'z-30' : ''}"
+    class="flex flex-row items-center p-3 bg-[var(--color-surface)] border border-[var(--color-line)] rounded-lg shadow-sm cursor-pointer group transition relative hover:border-[var(--color-accent)] {activeMenu === project.id ? 'z-30' : ''} {selection?.selected ? 'ring-2 ring-[var(--color-accent)] border-[var(--color-accent)]' : ''}"
     role="button"
     tabindex="0"
+    data-drive-item
     draggable={!readOnly}
     ondragstart={handleDragStart}
-    onclick={openProject}
+    onclick={(event) => { if (selection?.click(event)) return; openProject(); }}
     onkeydown={(e) => e.key === 'Enter' && openProject()}
     title={project.name}
 >
+    {#if selection}
+        <SelectCheckbox {selection} label={project.name} class="absolute -top-2 -left-2 z-10 bg-[var(--color-surface)] shadow-sm" />
+    {/if}
     <div class="flex items-center justify-center w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-md group-hover:scale-105 transition-transform pointer-events-none shrink-0 mr-3">
         <Icon icon="mdi:folder-star" class="text-2xl text-indigo-500" />
     </div>

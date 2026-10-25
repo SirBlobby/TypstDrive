@@ -64,6 +64,25 @@ Images, fonts, PDFs and other files you upload appear alongside your documents. 
 - **Rename** and **Delete** are on each file. Documents refer to files by name, so renaming a file means updating the documents that use it.
 - **Replace** uploads a new version of a file but keeps its name, so every document that uses it picks up the change.
 
+## Selecting several items
+
+Select items to delete, move or star them together.
+
+- Hover over an item and tick its checkbox, or hold ++ctrl++ (++cmd++ on a Mac) and click it.
+- Hold ++shift++ and click to select everything between the last item you picked and this one.
+- While anything is selected, clicking an item adds it to the selection or removes it instead of opening it.
+- ++ctrl+a++ selects everything in the folder. ++esc++ or clicking an empty spot clears the selection.
+
+A bar at the bottom of the page shows how many items are selected:
+
+- **Move** opens a folder picker. Documents, projects and files move; folders stay where they are.
+- **Star** or **Unstar** stars every selected document and project.
+- **Delete** asks once, then deletes everything selected, including whatever is inside selected folders.
+
+You can also drag any selected item onto a folder or a part of the folder path to move the whole selection there.
+
+Selecting works in your own drive and in team spaces where you can make changes. It is not available in **Shared with me**, **Starred** or search results inside documents.
+
 ## Stars
 
 Click the star on any document or project to add it to **Starred** in the sidebar. Stars are personal: nobody else sees them.

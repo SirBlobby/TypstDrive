@@ -1,7 +1,7 @@
 <script lang="ts">
     import { brandingStore } from '#lib/ts/branding';
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { page } from '$app/state';
     import { userStore } from '#lib/ts/auth';
     import Icon from '@iconify/svelte';
@@ -39,6 +39,9 @@
     import { emptySearch, matchesItem, tokenValue, type DriveSearch } from '#lib/ts/drive-search';
     import ContentSearchResults from '#lib/components/drive/ContentSearchResults.svelte';
     import LanguagePicker from '#lib/components/drive/LanguagePicker.svelte';
+    import DriveSelectionActions from '#lib/components/drive/DriveSelectionActions.svelte';
+    import { DriveSelection, entryKey, selectionKey } from '#lib/ts/drive-selection.svelte';
+    import { moveEntries } from '#lib/ts/drive-bulk';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);
@@ -507,6 +510,55 @@
         currentFolderId = null;
     }
 
+    const selection = new DriveSelection();
+
+    let selectionEnabled = $derived(!inStarred && !inSharedDrive && !browsingSharedFolder && canChangeWorkspace && contentSearchText === null);
+    let orderedEntries = $derived<DriveEntry[]>(
+        viewMode === 'list'
+            ? listEntries
+            : [
+                  ...visibleFolders.map((item) => ({ category: 'folder' as const, item })),
+                  ...visibleProjects.map((item) => ({ category: 'project' as const, item })),
+                  ...visibleDocuments.map((item) => ({ category: 'document' as const, item })),
+                  ...visibleFiles.map((item) => ({ category: 'file' as const, item }))
+              ]
+    );
+    let selectedEntries = $derived(orderedEntries.filter((entry) => selection.has(entryKey(entry))));
+
+    $effect(() => {
+        currentFolderId;
+        inSharedDrive;
+        inStarred;
+        $activeTeamStore;
+        untrack(() => selection.clear());
+    });
+
+    $effect(() => {
+        const available = new Set(selectionEnabled ? orderedEntries.map(entryKey) : []);
+        untrack(() => selection.retain(available));
+    });
+
+    function selectionFor(category: DriveCategory, item: any) {
+        if (!selectionEnabled) return undefined;
+        return selection.itemSelection(selectionKey(category, item.id), () => orderedEntries.map(entryKey));
+    }
+
+    function handleSelectionKeys(e: KeyboardEvent) {
+        if (!selectionEnabled || document.querySelector('[role="dialog"]')) return;
+        if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
+        if (e.key === 'Escape') selection.clear();
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            selection.selectAll(orderedEntries.map(entryKey));
+        }
+    }
+
+    function clearSelectionOnBackground(e: MouseEvent) {
+        if (selection.active && !(e.target as HTMLElement).closest('[data-drive-item], [data-keep-selection], button, a, input, select')) {
+            selection.clear();
+        }
+    }
+
     type ShareKind = 'document' | 'project' | 'folder';
 
     let showShareModal = $state(false);
@@ -535,6 +587,14 @@
             }
 
             const { type, id } = data;
+
+            if (selection.count > 1 && selection.has(`${type}:${id}`)) {
+                const failed = await moveEntries(selectedEntries, targetFolderId);
+                selection.clear();
+                loadDocs();
+                if (failed > 0) alert(`${failed} ${failed === 1 ? 'item' : 'items'} could not be moved.`);
+                return;
+            }
             
             let endpoint = '';
             if (type === 'document') {
@@ -567,7 +627,7 @@
 	<meta name="description" content="Manage your Typst documents, projects and folders." />
 </svelte:head>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={handleWindowClick} onkeydown={handleSelectionKeys} />
 
 <div class="h-screen flex flex-col">
     <Navbar bind:search showSearch />
@@ -582,7 +642,7 @@
         <input type="file" bind:this={fileInput} accept="image/*,font/*,.typ,.tex,.ttf,.otf,.pdf,application/pdf" multiple onchange={handleFileUpload} class="hidden" />
         <input type="file" bind:this={importFileInput} accept=".docx,.tex,.md,.html" onchange={handleImportUpload} class="hidden" />
 
-        <main class="flex-1 min-w-0 overflow-y-auto px-6 lg:px-10 py-6">
+        <main class="flex-1 min-w-0 overflow-y-auto px-6 lg:px-10 py-6 {selection.active ? 'pb-24' : ''}" onclick={clearSelectionOnBackground} role="presentation">
             <DriveHeader
                 title={headerTitle}
                 {folderPath}
@@ -727,6 +787,7 @@
                         onShare={shareItem}
                         onInfo={openInfo}
                         onReplaced={replaceFileInList}
+                        selectionFor={(entry) => selectionFor(entry.category, entry.item)}
                     />
                 {:else}
                     {#if visibleFolders.length > 0 || visibleProjects.length > 0}
@@ -748,6 +809,7 @@
                                         changeColor={changeFolderColor}
                                         {openInfo}
                                         readOnly={browsingSharedFolder}
+                                        selection={selectionFor('folder', folder)}
                                     />
                                 {/each}
                                 {#each visibleProjects as project (project.id)}
@@ -760,6 +822,7 @@
                                         {deleteProject}
                                         {shareItem}
                                         readOnly={browsingSharedFolder}
+                                        selection={selectionFor('project', project)}
                                     />
                                 {/each}
                             </div>
@@ -780,6 +843,7 @@
                                         {shareItem}
                                         {deleteDoc}
                                         readOnly={browsingSharedFolder}
+                                        selection={selectionFor('document', doc)}
                                     />
                                 {/each}
                                 {#each visibleFiles as file}
@@ -791,6 +855,7 @@
                                         onReplaced={replaceFileInList}
                                         openPreview={(target) => previewFileId = target.id}
                                         readOnly={browsingSharedFolder}
+                                        selection={selectionFor('file', file)}
                                     />
                                 {/each}
                             </div>
@@ -801,6 +866,10 @@
         </main>
     </div>
 </div>
+
+{#if selectionEnabled}
+    <DriveSelectionActions {selection} entries={selectedEntries} rootLabel={workspaceName} {currentFolderId} onchanged={loadDocs} />
+{/if}
 
 {#if showShareModal && shareTarget}
     <ShareModal itemId={shareTarget.id} kind={shareTarget.kind} onClose={() => showShareModal = false} />

@@ -2,8 +2,10 @@
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
     import StarButton from '#lib/components/drive/stars/StarButton.svelte';
+    import SelectCheckbox from './SelectCheckbox.svelte';
+    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
-    let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, readOnly = false }: {
+    let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, readOnly = false, selection = undefined }: {
         doc: any;
         activeMenu: string | null;
         setActiveMenu: (id: string | null) => void;
@@ -12,6 +14,7 @@
         shareItem: (item: any) => void;
         deleteDoc: (id: string, name: string) => void;
         readOnly?: boolean;
+        selection?: ItemSelection;
     } = $props();
 
     let dropUp = $state(false);
@@ -34,14 +37,18 @@
 </script>
 
 <div
-    class="bg-[var(--color-surface)] rounded-lg shadow-sm border border-[var(--color-line)] flex flex-col hover:border-[var(--color-accent)] transition relative group cursor-pointer overflow-visible {activeMenu === doc.id ? 'z-30' : ''}"
+    class="bg-[var(--color-surface)] rounded-lg shadow-sm border border-[var(--color-line)] flex flex-col hover:border-[var(--color-accent)] transition relative group cursor-pointer overflow-visible {activeMenu === doc.id ? 'z-30' : ''} {selection?.selected ? 'ring-2 ring-[var(--color-accent)] border-[var(--color-accent)]' : ''}"
     role="button"
     tabindex="0"
-    onclick={() => goto(`/doc/${doc.id}`)}
+    data-drive-item
+    onclick={(event) => { if (selection?.click(event)) return; goto(`/doc/${doc.id}`); }}
     onkeydown={(e) => e.key === 'Enter' && goto(`/doc/${doc.id}`)}
     draggable="true"
     ondragstart={(e) => e.dataTransfer?.setData('text/plain', JSON.stringify({ type: 'document', id: doc.id }))}
 >
+    {#if selection}
+        <SelectCheckbox {selection} label={doc.title} class="absolute top-2 right-2 z-10 bg-[var(--color-surface)] p-0.5 shadow-sm" />
+    {/if}
 
     <div class="h-40 w-full bg-[var(--color-surface-muted)] rounded-t-lg overflow-hidden flex items-center justify-center border-b border-[var(--color-line)] relative pointer-events-none">
         {#if doc.language === 'latex'}
