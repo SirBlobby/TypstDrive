@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use axum::http::StatusCode;
@@ -9,8 +10,8 @@ use crate::git::ApiError;
 use crate::remote_hosts::resolve_remote_host;
 
 const REQUEST_TIMEOUT_SECONDS: u64 = 120;
-const MAX_REDIRECTS: u32 = 3;
 const MAX_ERROR_BODY_BYTES: u64 = 64 * 1024;
+const MAX_MESSAGE_CHARACTERS: usize = 300;
 const USER_AGENT: &str = "TypstDrive (Git sync)";
 
 pub struct Client {
@@ -25,11 +26,26 @@ fn remote_message(response: ureq::Response) -> String {
     let _ = response.into_reader().take(MAX_ERROR_BODY_BYTES).read_to_string(&mut body);
     let parsed: Option<Value> = serde_json::from_str(&body).ok();
     let message = parsed.as_ref().and_then(|value| value.get("message").or_else(|| value.get("error")));
-    match message {
+    let text = match message {
         Some(Value::String(text)) => text.clone(),
         Some(other) => other.to_string(),
         None => String::new(),
-    }
+    };
+    text.chars().filter(|character| !character.is_control()).take(MAX_MESSAGE_CHARACTERS).collect()
+}
+
+fn shared_agent() -> ureq::Agent {
+    static AGENT: OnceLock<ureq::Agent> = OnceLock::new();
+    AGENT
+        .get_or_init(|| {
+            ureq::AgentBuilder::new()
+                .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS))
+                .user_agent(USER_AGENT)
+                .redirects(0)
+                .resolver(resolve_remote_host)
+                .build()
+        })
+        .clone()
 }
 
 fn status_error(service: &str, code: u16, message: String) -> ApiError {
@@ -46,13 +62,7 @@ fn status_error(service: &str, code: u16, message: String) -> ApiError {
 
 impl Client {
     pub fn new(service: &'static str, base: String, headers: Vec<(&'static str, String)>) -> Self {
-        let agent = ureq::AgentBuilder::new()
-            .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS))
-            .user_agent(USER_AGENT)
-            .redirects(MAX_REDIRECTS)
-            .resolver(resolve_remote_host)
-            .build();
-        Self { agent, base, headers, service }
+        Self { agent: shared_agent(), base, headers, service }
     }
 
     fn request(&self, method: &str, path: &str) -> ureq::Request {
@@ -63,6 +73,10 @@ impl Client {
 
     fn finish(&self, result: Result<ureq::Response, ureq::Error>) -> Result<ureq::Response, ApiError> {
         match result {
+            Ok(response) if (300..400).contains(&response.status()) => Err((
+                StatusCode::BAD_GATEWAY,
+                format!("{} redirected the request. Use the current address of the repository or server.", self.service),
+            )),
             Ok(response) => Ok(response),
             Err(ureq::Error::Status(code, response)) => Err(status_error(self.service, code, remote_message(response))),
             Err(ureq::Error::Transport(error)) => Err((StatusCode::BAD_GATEWAY, format!("Could not reach {}: {error}", self.service))),
