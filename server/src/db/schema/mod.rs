@@ -56,6 +56,7 @@ pub fn tables() -> impl Iterator<Item = &'static Table> {
 pub const INDEXES: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_themes_owner ON themes (owner_id)",
     "CREATE INDEX IF NOT EXISTS idx_trash_items_owner ON trash_items (owner_id)",
+    "CREATE INDEX IF NOT EXISTS idx_trash_items_deleted ON trash_items (deleted_at)",
     "CREATE INDEX IF NOT EXISTS idx_documents_trash ON documents (trash_id)",
     "CREATE INDEX IF NOT EXISTS idx_folders_trash ON folders (trash_id)",
     "CREATE INDEX IF NOT EXISTS idx_files_trash ON files (trash_id)",

@@ -49,10 +49,6 @@ fn is_font_name(name: &str) -> bool {
     lower.ends_with(".ttf") || lower.ends_with(".otf")
 }
 
-fn is_font_data(data: &[u8]) -> bool {
-    typst::text::Font::iter(typst::foundations::Bytes::new(data.to_vec())).next().is_some()
-}
-
 fn is_referenced(source: &str, file_name: &str) -> bool {
     source.contains(&format!("\"{file_name}\"")) || source.contains(&format!("\"/{file_name}\""))
 }
@@ -113,8 +109,8 @@ async fn is_real_font(state: &AppState, entry: &FileEntry, loaded_data: &Option<
         return false;
     }
     match loaded_data {
-        Some(data) => is_font_data(data),
-        None => file_data(state, &entry.file.id).await.is_ok_and(|data| is_font_data(&data)),
+        Some(data) => crate::compile::fonts::is_font_data(data),
+        None => file_data(state, &entry.file.id).await.is_ok_and(|data| crate::compile::fonts::is_font_data(&data)),
     }
 }
 
@@ -146,7 +142,7 @@ async fn readable_files(
             readable.push((entry, None));
         } else if is_font_name(&entry.file.name) {
             if let Ok(data) = file_data(state, &entry.file.id).await {
-                if is_font_data(&data) {
+                if crate::compile::fonts::is_font_data(&data) {
                     readable.push((entry, Some(data)));
                 }
             }

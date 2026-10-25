@@ -18,6 +18,8 @@ environment:
 
 Every copy must also share the same database and the same `COOKIE_SECRET`.
 
+Changes to Site Settings and themes reach every copy through Redis straight away. Without Redis, other copies pick up a settings change within a minute.
+
 Redis only passes messages along, so it needs no backups. If it goes down, each copy keeps working on its own and reconnects when it returns. **Site Settings → System → Server** shows whether the connection is up.
 
 !!! note

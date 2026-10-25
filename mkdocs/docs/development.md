@@ -16,7 +16,10 @@ Contributions are welcome, whether that is a bug fix, a new feature or an improv
 
 - Use clear, descriptive names for variables and functions. Avoid abbreviations.
 - Keep files short and grouped by feature. Split a file when it grows past a few hundred lines.
-- In the web app, import shared code with `#lib/...`, which `package.json` maps to `src/lib` through `imports`.
+- In the web app, import shared code with `#lib/...`, which `package.json` maps to `src/lib` through `imports`:
+    - `#lib/ts/name` points to `src/lib/ts/name.ts`, so leave off the `.ts`. For a `.svelte.ts` file write `#lib/ts/name.svelte`.
+    - `#lib/components/Name.svelte` points to the component file, so keep the `.svelte`.
+    - TypeScript does not add file extensions to `imports` targets on its own, which is why the `ts` folder has its own entry with `.ts` at the end. A new folder under `src/lib` needs its own entry in the same way.
 - On the server, return errors instead of panicking. Do not use `unwrap` or `expect` on values that come from requests, the database or the network.
 
 ### Checks
@@ -94,3 +97,14 @@ Write SQL with numbered placeholders (`$1`, `$2`, ...) and wrap every query stri
 - Do not use `RETURNING`. Run the write, then select the row.
 - Add indexes to `INDEXES` in `db/schema/mod.rs`. On MySQL, only index columns that are keys, references, unique or have a default, because other `TEXT` columns become `LONGTEXT`, which cannot be indexed.
 - Select only the columns you need. Avoid loading document content or file data in list queries.
+
+## Caches
+
+The server keeps a few things in memory so common requests do not reach the database:
+
+| What | Where | How it is refreshed |
+|---|---|---|
+| Site settings | `admin/site_settings.rs` | Cleared by `save_settings`, on other copies through Redis, and reloaded at least once a minute. Always write settings through `save_settings`. |
+| Site and personal themes | `themes/cache.rs` | Reloaded when a theme changes, on other copies through Redis. |
+| Template list | `templates/index.rs` | Refreshed from Typst Universe every six hours. |
+| Typst standard library and system font list | `compile/world.rs`, `compile/fonts.rs` | Built once at the first compile and shared by every compile after it. Documents with their own fonts get their own font list. |

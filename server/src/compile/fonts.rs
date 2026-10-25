@@ -1,6 +1,7 @@
 use std::sync::OnceLock;
 
 use typst::text::{Font, FontBook};
+use typst::utils::LazyHash;
 use typst_kit::fonts::FontStore;
 
 pub struct SharedFonts {
@@ -36,4 +37,14 @@ pub fn shared_fonts() -> &'static SharedFonts {
         tracing::info!("Loaded {count} shared fonts (embedded and system)");
         SharedFonts { store, count }
     })
+}
+
+pub fn shared_book() -> &'static LazyHash<FontBook> {
+    static BOOK: OnceLock<LazyHash<FontBook>> = OnceLock::new();
+    BOOK.get_or_init(|| LazyHash::new(shared_fonts().book()))
+}
+
+pub fn is_font_data(data: &[u8]) -> bool {
+    let has_font_signature = matches!(data.get(..4), Some(b"\x00\x01\x00\x00" | b"OTTO" | b"true" | b"ttcf"));
+    has_font_signature && Font::iter(typst::foundations::Bytes::new(data.to_vec())).next().is_some()
 }

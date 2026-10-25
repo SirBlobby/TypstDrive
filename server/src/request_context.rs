@@ -8,7 +8,7 @@ use crate::AppState;
 const SESSION_AWARE_PREFIXES: &[&str] = &["/api/", "/yjs/", "/v1/"];
 
 pub async fn attach_request_context(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
-    let path = request.uri().path().to_string();
+    let path = request.uri().path();
     if !SESSION_AWARE_PREFIXES.iter().any(|prefix| path.starts_with(prefix)) {
         return next.run(request).await;
     }
@@ -37,6 +37,6 @@ pub async fn attach_request_context(State(state): State<AppState>, mut request: 
         request.extensions_mut().insert(session);
     }
 
-    let headers = request.headers().clone();
-    crate::sharing::links::with_grants(&state.key, &headers, next.run(request)).await
+    let grants = crate::sharing::links::grants_from_headers(&state.key, request.headers());
+    crate::sharing::links::with_grants(grants, next.run(request)).await
 }
