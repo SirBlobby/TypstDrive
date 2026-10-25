@@ -192,6 +192,17 @@ pub async fn commit(repo: &RemoteRepo, base_commit: &str, changes: Vec<FileChang
     checked_object_id(provider, commit)
 }
 
+pub async fn token_owner(provider: Provider, server: &RepoUrl, token: &str) -> Result<String, ApiError> {
+    let server = server.clone();
+    let token = token.to_string();
+    blocking(move || match provider {
+        Provider::Github => github::token_owner(&server, &token),
+        Provider::Gitlab => gitlab::token_owner(&server, &token),
+        Provider::Generic => Err((StatusCode::BAD_REQUEST, "Saved accounts are only for GitHub and GitLab".to_string())),
+    })
+    .await
+}
+
 pub fn forget_cache(cache_name: &str) {
     cli::remove_cache(cache_name);
 }

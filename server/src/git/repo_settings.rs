@@ -66,6 +66,21 @@ impl RepoUrl {
         })
     }
 
+    pub fn parse_server(input: &str) -> Result<Self, ApiError> {
+        let trimmed = input.trim().trim_end_matches('/');
+        let with_scheme = if trimmed.starts_with("https://") || trimmed.starts_with("http://") {
+            trimmed.to_string()
+        } else {
+            format!("https://{trimmed}")
+        };
+        let (scheme, authority) = with_scheme.split_once("://").unwrap_or(("https", ""));
+        if authority.contains('/') || authority.contains('@') || !is_safe_authority(authority) {
+            return Err(invalid("Enter only the server address, like gitlab.example.com"));
+        }
+        let authority = authority.to_ascii_lowercase();
+        Ok(Self { scheme: scheme.to_string(), text: format!("{scheme}://{authority}"), authority, path: String::new() })
+    }
+
     pub fn host_name(&self) -> &str {
         match self.authority.rsplit_once(':') {
             Some((host, port)) if !host.is_empty() && port.chars().all(|character| character.is_ascii_digit()) && !self.authority.ends_with(']') => host,
@@ -162,6 +177,14 @@ mod tests {
         assert!(RepoUrl::parse("https://github.com/owner").is_err());
         assert!(RepoUrl::parse("https://github.com/owner/../repo").is_err());
         assert!(RepoUrl::parse("https://github.com/owner/repo?x=1").is_err());
+    }
+
+    #[test]
+    fn parses_server_addresses() {
+        assert_eq!(RepoUrl::parse_server("GitLab.example.com/").unwrap().web_base(), "https://gitlab.example.com");
+        assert_eq!(RepoUrl::parse_server("http://git.local:3000").unwrap().web_base(), "http://git.local:3000");
+        assert!(RepoUrl::parse_server("https://gitlab.com/group").is_err());
+        assert!(RepoUrl::parse_server("https://user@gitlab.com").is_err());
     }
 
     #[test]
