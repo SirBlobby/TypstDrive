@@ -47,6 +47,7 @@ Password: password
 - **Drive**: Folders with custom colors, sorting, grid and list views, stars, file previews, duplicating documents and projects, selecting several items to move, star or delete them together, and a trash that keeps deleted items for 30 days.
 - **Search**: A search bar with `type:`, `is:`, `before:` and `after:` filters, and `doc:` to search the text inside documents.
 - **Projects**: Multi-file workspaces for books, theses and templates, downloadable as a ZIP.
+- **Git Sync**: Link a project to a folder in a GitHub, GitLab, Gitea, Forgejo or Codeberg repository, pull changes and push your own as commits. Only the document files are copied, so large repositories are fine.
 - **Templates**: Start a document or project from any Typst Universe template, with search, type filters and previews, and fill in author names and affiliations from ORCID. Only the templates people use are downloaded.
 - **Packages**: Publish a project as a package everyone on your server can import, with private packages for people and teams.
 - **Fonts and Images**: Upload once and use everywhere, with an emoji font built in.
@@ -71,7 +72,7 @@ Password: password
 - **Account Security**: Email verification, password reset, active sessions, connected accounts and sign-in lockout.
 - **Themes**: Cerberus, Catppuccin and Arch Linux themes in light and dark mode, site themes added by admins, and personal themes made with color pickers or uploaded as YAML, plus text size and high contrast options.
 - **Branding**: Your own site name, logo, accent color, tagline and sign-in message.
-- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, site themes, trash retention, API limits and an audit log.
+- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, Git sync, site themes, trash retention, API limits and an audit log.
 - **Flexible Hosting**: SQLite, PostgreSQL or MySQL/MariaDB with automatic upgrades, plus Redis or Valkey and S3-compatible storage for larger installs.
 
 
@@ -153,6 +154,7 @@ TypstDrive is built on the work of many open-source projects and services:
 - [Rust](https://www.rust-lang.org/), [Tokio](https://tokio.rs/), [Axum](https://github.com/tokio-rs/axum) and [SQLx](https://github.com/launchbadge/sqlx) for the server, with [lettre](https://github.com/lettre/lettre) for email, [redis-rs](https://github.com/redis-rs/redis-rs) for running several copies and [object_store](https://github.com/apache/arrow-rs-object-store) for S3 storage.
 - [Catppuccin](https://catppuccin.com/) and the other color palettes that inspired the built-in themes.
 - The services behind the citation tools: [doi.org](https://www.doi.org/), [Crossref](https://www.crossref.org/), [DataCite](https://datacite.org/), [arXiv](https://arxiv.org/), the [National Library of Medicine](https://www.ncbi.nlm.nih.gov/) for PubMed and PMC, [Semantic Scholar](https://www.semanticscholar.org/), [ORCID](https://orcid.org/) and [Zotero](https://www.zotero.org/).
+- [Git](https://git-scm.com/), and the GitHub and GitLab APIs used by Git sync.
 
 Each project keeps its own license. TypstDrive is not affiliated with any of them.
 

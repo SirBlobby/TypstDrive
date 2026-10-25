@@ -41,6 +41,7 @@ TypstDrive is built on the work of many open-source projects and services:
 - [Rust](https://www.rust-lang.org/), [Tokio](https://tokio.rs/), [Axum](https://github.com/tokio-rs/axum) and [SQLx](https://github.com/launchbadge/sqlx) for the server, with [lettre](https://github.com/lettre/lettre) for email, [redis-rs](https://github.com/redis-rs/redis-rs) for running several copies and [object_store](https://github.com/apache/arrow-rs-object-store) for S3 storage.
 - [Catppuccin](https://catppuccin.com/) and the other color palettes that inspired the built-in themes.
 - The services behind the citation tools: [doi.org](https://www.doi.org/), [Crossref](https://www.crossref.org/), [DataCite](https://datacite.org/), [arXiv](https://arxiv.org/), the [National Library of Medicine](https://www.ncbi.nlm.nih.gov/) for PubMed and PMC, [Semantic Scholar](https://www.semanticscholar.org/), [ORCID](https://orcid.org/) and [Zotero](https://www.zotero.org/).
+- [Git](https://git-scm.com/), and the GitHub and GitLab APIs used by Git sync.
 
 Each project keeps its own license. TypstDrive is not affiliated with any of them.
 

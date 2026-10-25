@@ -76,6 +76,7 @@ nav:
       - Packages: guide/packages.md
       - Fonts and images: guide/fonts-and-images.md
       - Citations: guide/citations.md
+      - Git sync: guide/git.md
       - Sharing: guide/sharing.md
       - Team spaces: guide/teams.md
       - Your settings: guide/settings.md
@@ -101,6 +102,7 @@ nav:
       - Packages: admin/packages.md
       - PDF links: admin/pdf-links.md
       - Citations: admin/citations.md
+      - Git: admin/git.md
       - API access: admin/api.md
       - Server and about: admin/server.md
   - Developers:

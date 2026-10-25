@@ -62,8 +62,9 @@ The development server proxies `/api`, `/pdf` and `/yjs` to the Rust server on `
 
 1. Install system dependencies, for example `sudo apt-get install pkg-config libssl-dev lld` on Ubuntu. The server links with `lld` on Linux, set in `server/.cargo/config.toml`.
 2. Install [tinymist](https://github.com/Myriad-Dreamin/tinymist) and make sure it is on your `PATH`. The server uses it for language server features.
-3. Export the environment variables from [Settings reference](self-hosting/configuration.md).
-4. Run the server:
+3. Install `git` and make sure it is on your `PATH`. The server uses it for [Git sync](guide/git.md) with servers other than GitHub and GitLab.
+4. Export the environment variables from [Settings reference](self-hosting/configuration.md).
+5. Run the server:
 
     ```bash
     cd server
@@ -76,8 +77,10 @@ The documentation is built with [Material for MkDocs](https://squidfunk.github.i
 
 ```bash
 pip install -r mkdocs/requirements.txt
-mkdocs serve -f mkdocs/mkdocs.yml
+bun run docs
 ```
+
+`bun run docs` serves the site with live reload. `bun run docs:build` builds it into `mkdocs/site` and fails on broken links.
 
 ## Continuous integration
 

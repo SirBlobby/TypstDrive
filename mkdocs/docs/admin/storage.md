@@ -20,6 +20,7 @@ Automatic versions saved within 15 minutes of each other are already merged into
 **Trash** sets how many days deleted items are kept before they are removed for good. The default is 30 days, and the most is 365.
 
 - Deleted documents, projects, folders and files wait in their owner's [trash](../guide/drive.md#trash), where they can be restored. They still count toward storage.
+- Files imported with [Git sync](git.md) are ordinary project files and count toward storage. The rest of the repository does not.
 - The server checks every hour and removes anything older than the limit. Lowering the limit applies to items already in the trash.
 - Use `0` to turn the trash off. Deleting then removes items straight away, and anything already in the trash is removed within the hour.
 
