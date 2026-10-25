@@ -23,6 +23,7 @@
         onNewFolder,
         onUpload,
         onImport,
+        onImportGit,
         controls = undefined
     }: {
         title: string;
@@ -43,6 +44,7 @@
         onNewFolder: () => void;
         onUpload: () => void;
         onImport: () => void;
+        onImportGit: () => void;
         controls?: Snippet;
     } = $props();
 
@@ -53,7 +55,8 @@
         { label: 'Project', description: 'Multi-file workspace', icon: 'mdi:folder-star', color: 'text-indigo-500', action: () => onNewProject() },
         { label: 'From template', description: 'Start from a Typst Universe template', icon: 'mdi:view-grid-plus-outline', color: 'text-sky-500', action: () => onNewFromTemplate() },
         { label: 'Folder', description: 'Organize your files', icon: 'mdi:folder-plus', color: 'text-yellow-500', action: () => onNewFolder() },
-        { label: 'Import', description: '.docx, .tex, .md, .html', icon: 'mdi:file-import', color: 'text-purple-500', action: () => onImport() }
+        { label: 'Import', description: '.docx, .tex, .md, .html', icon: 'mdi:file-import', color: 'text-purple-500', action: () => onImport() },
+        { label: 'From Git', description: 'Project from a GitHub, GitLab or Git repository', icon: 'mdi:git', color: 'text-orange-500', action: () => onImportGit() }
     ];
 
     function runNewItem(action: () => void) {
