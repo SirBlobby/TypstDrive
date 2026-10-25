@@ -9,6 +9,7 @@
 	import { yCollab } from 'y-codemirror.next';
 	import { text, provider } from '../ts/yjs-setup';
 	import { getThemeExtension } from '../ts/themes';
+	import { customThemesStore } from '../ts/custom-themes';
 	import { themeStore, darkModeStore, editorViewStore, editorErrors, triggerLspReconnect } from '../ts/store';
 	import { page } from '$app/state';
 	import { LSPClient } from "@codemirror/lsp-client";
@@ -50,6 +51,7 @@
 	let preferencesCompartment = new Compartment();
 	let unsubscribeTheme: () => void;
 	let unsubscribeDark: () => void;
+	let unsubscribeCustomThemes: () => void;
 	let unsubscribeErrors: () => void;
 	let unsubscribeLspReconnect: () => void;
 	let unsubscribePreferences: () => void;
@@ -263,6 +265,14 @@
 			}
 		});
 
+		unsubscribeCustomThemes = customThemesStore.subscribe(() => {
+			if (view) {
+				view.dispatch({
+					effects: themeCompartment.reconfigure(getThemeExtension(currentTheme, isDark))
+				});
+			}
+		});
+
 		unsubscribeDark = darkModeStore.subscribe((dark) => {
 			if (view) {
 				view.dispatch({
@@ -355,6 +365,7 @@
 		if (lsSocket) lsSocket.close();
 		if (unsubscribeTheme) unsubscribeTheme();
 		if (unsubscribeDark) unsubscribeDark();
+		if (unsubscribeCustomThemes) unsubscribeCustomThemes();
 		if (unsubscribeErrors) unsubscribeErrors();
 		if (unsubscribeLspReconnect) unsubscribeLspReconnect();
 		if (unsubscribePreferences) unsubscribePreferences();

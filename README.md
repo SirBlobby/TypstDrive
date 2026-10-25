@@ -67,15 +67,14 @@ Password: password
 
 - **Sign-In Options**: Passwords, one-time email codes, Google, GitHub and any OpenID Connect provider such as Keycloak, Authentik or Authelia.
 - **Account Security**: Email verification, password reset, active sessions, connected accounts and sign-in lockout.
-- **Themes**: Cerberus, Catppuccin and Arch Linux themes in light and dark mode, plus text size and high contrast options.
+- **Themes**: Cerberus, Catppuccin and Arch Linux themes in light and dark mode, site themes added by admins, and personal themes made with color pickers or uploaded as YAML, plus text size and high contrast options.
 - **Branding**: Your own site name, logo, accent color, tagline and sign-in message.
-- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, API limits and an audit log.
+- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, site themes, API limits and an audit log.
 - **Flexible Hosting**: SQLite, PostgreSQL or MySQL/MariaDB with automatic upgrades, plus Redis or Valkey and S3-compatible storage for larger installs.
 
 
 ### Future Features
 - [] Add language support for more languages.
-- [] Add more themes or maybe allow users or site admins to upload new themes.
 
 ## Self-Hosting
 

@@ -1,5 +1,6 @@
 mod accounts;
 mod api;
+mod appearance;
 mod citations;
 mod content;
 mod sharing;
@@ -45,13 +46,14 @@ pub(super) const fn optional_reference(name: &'static str, parent: &'static str,
     Column { name, definition, copy: CopyRule::OptionalReference(parent) }
 }
 
-const TABLE_GROUPS: &[&[Table]] = &[accounts::TABLES, content::TABLES, sharing::TABLES, api::TABLES, citations::TABLES];
+const TABLE_GROUPS: &[&[Table]] = &[accounts::TABLES, content::TABLES, sharing::TABLES, api::TABLES, citations::TABLES, appearance::TABLES];
 
 pub fn tables() -> impl Iterator<Item = &'static Table> {
     TABLE_GROUPS.iter().flat_map(|group| group.iter())
 }
 
 pub const INDEXES: &[&str] = &[
+    "CREATE INDEX IF NOT EXISTS idx_themes_owner ON themes (owner_id)",
     "CREATE INDEX IF NOT EXISTS idx_folders_owner_parent ON folders (owner_id, parent_id)",
     "CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders (parent_id)",
     "CREATE INDEX IF NOT EXISTS idx_documents_owner_folder ON documents (owner_id, folder_id)",

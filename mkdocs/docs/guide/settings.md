@@ -20,9 +20,15 @@ Changing your password signs you out of your other browsers.
 
 ## Appearance
 
-Choose a color theme (Cerberus, Catppuccin or Arch Linux) and switch between light and dark. New browsers start with Cerberus in dark mode. For easier reading, change the text size or turn on high contrast.
+Choose a color theme and switch between light and dark. The picker lists the built-in themes (Cerberus, Catppuccin and Arch Linux), any **Site themes** your administrator added, and **Your themes**. New browsers start with Cerberus in dark mode. For easier reading, change the text size or turn on high contrast.
 
 These choices are saved in your browser, so each computer can look different.
+
+### Your own themes
+
+Under **Your themes**, choose **New theme** to make a theme with color pickers, or **Upload YAML** to use a theme file. Each theme has a light and a dark version and a live preview. You can edit, download or delete your themes at any time, and keep up to 20. Your themes are saved to your account, so they are available on every browser you sign in to. See [Themes](../admin/themes.md#yaml-format) for the file format.
+
+A theme changes colors only. Your server's name, logo and accent color stay as your administrator set them. **Your themes** is hidden if your administrator turned personal themes off.
 
 ## Editor
 

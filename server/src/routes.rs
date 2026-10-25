@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, citations, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, AppState,
+    accounts, admin, api, citations, compile, desktop, drive, packages, realtime, request_context, security_headers, sharing, teams, themes, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -37,6 +37,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/api-access/defaults", put(api::limits::update_defaults))
         .route("/admin/api-access/users/{id}", put(api::limits::update_user_limits))
         .route("/admin/citation-policy", get(citations::policy::get_policy).put(citations::policy::update_policy))
+        .route("/admin/themes", post(themes::admin::create_site_theme))
+        .route("/admin/themes/{id}", put(themes::admin::update_site_theme).delete(themes::admin::delete_site_theme))
+        .route("/admin/theme-policy", get(themes::policy::get_policy).put(themes::policy::update_policy))
         .route("/admin/pdf-links", get(sharing::pdf_links::admin::overview))
         .route("/admin/pdf-links/policy", get(sharing::pdf_links::policy::get_policy).put(sharing::pdf_links::policy::update_policy))
         .route("/admin/pdf-links/{id}", delete(sharing::pdf_links::admin::delete_link))
@@ -92,6 +95,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/teams/{id}/members/{user_id}/transfer", post(teams::members::transfer_ownership))
         .route("/share-links/{kind}/{id}", get(sharing::links::link_status).put(sharing::links::update_link))
         .route("/share-links/{kind}/{id}/unlock", post(sharing::links::unlock_link))
+        .route("/themes", get(themes::personal::list_themes).post(themes::personal::create_theme))
+        .route("/themes/{id}", put(themes::personal::update_theme).delete(themes::personal::delete_theme))
         .route("/citations/policy", get(citations::policy::own_policy))
         .route("/citations/lookup", post(citations::entries::lookup))
         .route("/citations/zotero", get(citations::zotero_account::status).put(citations::zotero_account::connect).delete(citations::zotero_account::disconnect))

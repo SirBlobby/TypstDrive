@@ -17,6 +17,7 @@
     import EmailSettings from '#lib/components/site-settings/EmailSettings.svelte';
     import TeamSettings from '#lib/components/site-settings/TeamSettings.svelte';
     import BrandingSettings from '#lib/components/site-settings/BrandingSettings.svelte';
+    import ThemeSettings from '#lib/components/site-settings/ThemeSettings.svelte';
     import AuditLog from '#lib/components/site-settings/AuditLog.svelte';
     import AboutSettings from '#lib/components/site-settings/AboutSettings.svelte';
 
@@ -52,7 +53,15 @@
                 { id: 'citations', label: 'Citations', icon: 'ph:quotes' }
             ]
         },
-        { id: 'branding', label: 'Branding', icon: 'mdi:palette-swatch-outline' },
+        {
+            id: 'appearance',
+            label: 'Appearance',
+            icon: 'mdi:palette-outline',
+            children: [
+                { id: 'branding', label: 'Branding', icon: 'mdi:palette-swatch-outline' },
+                { id: 'themes', label: 'Themes', icon: 'mdi:format-paint' }
+            ]
+        },
         { id: 'api-access', label: 'API Access', icon: 'mdi:api' },
         {
             id: 'system',
@@ -114,6 +123,8 @@
                     <EmailSettings />
                 {:else if activeSection === 'branding'}
                     <BrandingSettings />
+                {:else if activeSection === 'themes'}
+                    <ThemeSettings />
                 {:else if activeSection === 'teams'}
                     <TeamSettings />
                 {:else if activeSection === 'storage'}

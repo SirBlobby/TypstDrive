@@ -1,28 +1,38 @@
 <script lang="ts">
     import { themeStore, darkModeStore } from '../ts/store';
-    import { themes } from '../ts/themes';
+    import { builtinThemeNames } from '../ts/builtin-palettes';
+    import { customThemesStore, themeKey } from '../ts/custom-themes';
     import Icon from '@iconify/svelte';
 
     let { class: className = '' } = $props();
-
-    const themeNames = Object.keys(themes);
 </script>
 
 <div class="flex items-center gap-2 {className}">
-    <div class="flex rounded-lg bg-[var(--color-surface-sunken)] p-0.5 text-xs font-medium">
-        {#each themeNames as name}
-            <button
-                class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition
-                    {$themeStore === name
-                    ? 'bg-[var(--color-surface)] text-[var(--color-accent)] shadow-sm'
-                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'}"
-                onclick={() => ($themeStore = name)}
-            >
-                <Icon icon={themes[name].icon} class="text-sm" />
-                {name}
-            </button>
-        {/each}
-    </div>
+    <select
+        bind:value={$themeStore}
+        aria-label="Color theme"
+        class="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+    >
+        <optgroup label="Built-in">
+            {#each builtinThemeNames as name (name)}
+                <option value={name}>{name}</option>
+            {/each}
+        </optgroup>
+        {#if $customThemesStore.site.length > 0}
+            <optgroup label="Site themes">
+                {#each $customThemesStore.site as theme (theme.id)}
+                    <option value={themeKey('site', theme.id)}>{theme.name}</option>
+                {/each}
+            </optgroup>
+        {/if}
+        {#if $customThemesStore.personal.length > 0}
+            <optgroup label="Your themes">
+                {#each $customThemesStore.personal as theme (theme.id)}
+                    <option value={themeKey('personal', theme.id)}>{theme.name}</option>
+                {/each}
+            </optgroup>
+        {/if}
+    </select>
 
     <div class="flex rounded-lg bg-[var(--color-surface-sunken)] p-0.5 text-xs font-medium">
         <button

@@ -1,6 +1,6 @@
 # Look and feel
 
-Make TypstDrive look like your own in **Site Settings → Branding**.
+Make TypstDrive look like your own in **Site Settings → Appearance → Branding**.
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -14,4 +14,4 @@ Make TypstDrive look like your own in **Site Settings → Branding**.
 
 While any of these differ from the defaults, a small "Powered by TypstDrive" link is shown in the corner of each page to credit the project.
 
-People still choose their own color theme and dark or light mode in [their settings](../guide/settings.md#appearance). New browsers start with the Cerberus theme in dark mode.
+People still choose their own color theme and dark or light mode in [their settings](../guide/settings.md#appearance). New browsers start with the Cerberus theme in dark mode. To add more color themes for everyone, see [Themes](themes.md).

@@ -124,7 +124,7 @@ html.dark {
   font-size: 112.5%;
 }
 
-:root[data-contrast='high']:not([data-theme='dark']) {
+html:root[data-contrast='high']:not([data-theme='dark']) {
   --color-surface: #ffffff;
   --color-surface-muted: #ffffff;
   --color-surface-sunken: #e5e5e5;
@@ -133,7 +133,7 @@ html.dark {
   --color-ink-muted: #1f1f1f;
 }
 
-:root[data-contrast='high'][data-theme='dark'] {
+html:root[data-contrast='high'][data-theme='dark'] {
   --color-surface: #000000;
   --color-surface-muted: #000000;
   --color-surface-sunken: #1f1f1f;
