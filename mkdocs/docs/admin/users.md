@@ -2,7 +2,7 @@
 
 ## Users
 
-**Site Settings → Users** lists every account with when it was created. For each user you can:
+**Site Settings → People → Users** lists every account with when it was created. For each user you can:
 
 - **Grant or revoke** administrator rights.
 - **Mark the email** as confirmed or not.

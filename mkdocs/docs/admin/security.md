@@ -2,7 +2,7 @@
 
 ## Authentication
 
-**Site Settings → Authentication** controls how people sign in. Sign-in providers and the mail server are added when [self-hosting](../self-hosting/sign-in.md); this page turns them on and off.
+**Site Settings → Security → Authentication** controls how people sign in. Sign-in providers and the mail server are added when [self-hosting](../self-hosting/sign-in.md); this page turns them on and off.
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -23,8 +23,8 @@ With **Require verified email** on, sharing by email only finds people who confi
 
 ## Email
 
-**Site Settings → Email** shows the mail server in use and any problem with its settings. **Send test** sends a message to check it works. See [Email](../self-hosting/email.md).
+**Site Settings → Security → Email** shows the mail server in use and any problem with its settings. **Send test** sends a message to check it works. See [Email](../self-hosting/email.md).
 
 ## Audit log
 
-**Site Settings → Audit Log** records changes made by administrators, newest first: accounts created, changed or deleted, settings saved, limits changed, teams deleted and test emails. Each entry shows who did it, when and from where. Filter by area, and load older entries at the bottom.
+**Site Settings → Security → Audit Log** records changes made by administrators, newest first: accounts created, changed or deleted, settings saved, limits changed, teams deleted and test emails. Each entry shows who did it, when and from where. Filter by area, and load older entries at the bottom.

@@ -54,7 +54,7 @@ environment:
 
 - `SMTP_FROM` is required when the username is not an email address, as with SendGrid, Resend and Mailjet.
 - `SMTP_HOST`, `SMTP_PORT` and `SMTP_SECURITY` still work alongside a provider, to change any of the filled-in values.
-- An unknown `SMTP_PROVIDER` turns email off and shows the problem in **Site Settings → Email**.
+- An unknown `SMTP_PROVIDER` turns email off and shows the problem in **Site Settings → Security → Email**.
 
 ## Any other mail server
 
@@ -78,4 +78,4 @@ environment:
 
 ## Testing
 
-Open **Site Settings → Email**. It shows the server TypstDrive will use and any problems with the settings. **Send test** sends a message to check everything works.
+Open **Site Settings → Security → Email**. It shows the server TypstDrive will use and any problems with the settings. **Send test** sends a message to check everything works.

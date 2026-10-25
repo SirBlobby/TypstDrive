@@ -59,6 +59,6 @@ Keep the same `COOKIE_SECRET`, or everyone simply has to sign in again.
     docker compose up -d
     ```
 
-TypstDrive upgrades its database automatically when it starts. **Site Settings → About** shows the version you are running, and the drive sidebar tells you when a newer release is available.
+TypstDrive upgrades its database automatically when it starts. **Site Settings → System → About** shows the version you are running, and the drive sidebar tells you when a newer release is available.
 
 To stay on a specific version instead of always the newest, replace `latest` in the image name with a version tag from the [releases page](https://github.com/SirBlobby/TypstDrive/releases).
