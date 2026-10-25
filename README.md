@@ -47,7 +47,7 @@ Password: password
 - **Drive**: Folders with custom colors, sorting, grid and list views, stars, file previews, duplicating documents and projects, selecting several items to move, star or delete them together, and a trash that keeps deleted items for 30 days.
 - **Search**: A search bar with `type:`, `is:`, `before:` and `after:` filters, and `doc:` to search the text inside documents.
 - **Projects**: Multi-file workspaces for books, theses and templates, downloadable as a ZIP.
-- **Git Sync**: Link a project to a folder in a GitHub, GitLab, Gitea, Forgejo or Codeberg repository, pull changes and push your own as commits. Only the document files are copied, so large repositories are fine.
+- **Git Sync**: Link a project to a folder in a GitHub, GitLab, Gitea, Forgejo or Codeberg repository, pull changes and push your own as commits, with GitHub and GitLab tokens saved once in your settings and stored encrypted. Only the document files are copied, so large repositories are fine.
 - **Templates**: Start a document or project from any Typst Universe template, with search, type filters and previews, and fill in author names and affiliations from ORCID. Only the templates people use are downloaded.
 - **Packages**: Publish a project as a package everyone on your server can import, with private packages for people and teams.
 - **Fonts and Images**: Upload once and use everywhere, with an emoji font built in.

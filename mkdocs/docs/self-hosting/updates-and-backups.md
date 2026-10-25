@@ -48,7 +48,7 @@ docker compose exec mysql mysqldump -u typstdrive -p typstdrive > typstdrive-bac
 2. Put the backup back: copy the folder or `typstdrive.db` back into `data`, or load the SQL file into an empty database.
 3. Start TypstDrive with `docker compose up -d`.
 
-Keep the same `COOKIE_SECRET`, or everyone simply has to sign in again.
+Keep the same `COOKIE_SECRET`, or everyone has to sign in again and enter their Zotero keys and Git tokens again, because those are encrypted with it.
 
 ## Updating
 

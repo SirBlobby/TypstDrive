@@ -71,7 +71,7 @@ That's it. You can now create documents and invite people.
 - Decide who can sign up in **Site Settings → People → Accounts**. See [Users and accounts](../admin/users.md).
 
 !!! warning "Keep the secret the same"
-    If `COOKIE_SECRET` is missing or changes, everyone is signed out every time the container restarts.
+    If `COOKIE_SECRET` is missing or changes, everyone is signed out every time the container restarts, and saved Zotero keys and Git tokens can no longer be read.
 
 ## Building the image yourself
 
