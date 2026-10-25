@@ -29,7 +29,7 @@ FROM alpine:3.19
 # Provided automatically by buildx (e.g. "amd64", "arm64").
 ARG TARGETARCH
 WORKDIR /app
-RUN apk add --no-cache libgcc openssl pandoc curl sqlite font-noto-emoji
+RUN apk add --no-cache libgcc openssl pandoc curl sqlite font-noto-emoji git
 RUN mkdir -p /data
 # Install tinymist for the target architecture.
 RUN case "$TARGETARCH" in \
@@ -69,6 +69,7 @@ COPY --from=backend-builder /app/server-binary /app/server
 # OBJECT_CACHE_MB      Memory cache for files read from object storage (default: 256)
 # PUBLIC_URL           Address people use to open TypstDrive. Needed for single sign-on and email links.
 # TRUST_PROXY_HEADERS  Set to "true" behind a reverse proxy to read X-Forwarded-For
+# GIT_CACHE_DIR        Disposable partial clones for Git servers other than GitHub and GitLab
 # SMTP_PROVIDER        "google" fills in the Gmail server and port
 # SMTP_HOST, SMTP_PORT, SMTP_SECURITY, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM
 #                      Outgoing mail for sign-in codes, verification, password reset and invitations
@@ -79,5 +80,6 @@ COPY --from=backend-builder /app/server-binary /app/server
 ENV PORT=3000
 ENV STATIC_DIR=/app/build
 ENV DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
+ENV GIT_CACHE_DIR=/data/git-cache
 EXPOSE 3000
 CMD ["/app/server"]
