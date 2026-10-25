@@ -15,6 +15,7 @@ Administrators look after a TypstDrive server from the browser. Open **Site Sett
 | [Packages](packages.md) | Control who can publish packages and how big they can be. |
 | [PDF links](pdf-links.md) | Turn public PDF links on or off, limit them, and remove any link. |
 | [Citations](citations.md) | Turn reference lookups, ORCID lookups and Zotero sync on or off. |
+| [Git](git.md) | Turn Git sync on or off, and decide whether repositories outside GitHub and GitLab are allowed. |
 | [API access](api.md) | Turn the API on or off and set limits. |
 | [Server and about](server.md) | Check how the server is set up and which version it runs. |
 
@@ -24,7 +25,7 @@ The site settings sidebar groups pages into dropdowns:
 |---|---|
 | People | Users, Accounts, Team Spaces |
 | Security | Authentication, Email, Audit Log |
-| Content | Storage, Packages, PDF Links, Citations |
+| Content | Storage, Packages, PDF Links, Citations, Git |
 | Appearance | Branding, Themes |
 | System | Server, About |
 

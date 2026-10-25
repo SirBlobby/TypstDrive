@@ -15,6 +15,7 @@ This guide explains everything you can do in TypstDrive, one topic at a time. Yo
 | [Packages](packages.md) | Sharing reusable templates and code with everyone on your server. |
 | [Fonts and images](fonts-and-images.md) | Uploading your own fonts and pictures and using them in documents. |
 | [Citations](citations.md) | Adding references by DOI, arXiv, PubMed or Semantic Scholar ID and syncing Zotero into bibliography files. |
+| [Git sync](git.md) | Linking a project to a Git repository, pulling changes and pushing your own as commits. |
 | [Sharing](sharing.md) | Who can see and change your work, share links and handing over ownership. |
 | [Team spaces](teams.md) | Shared drives that belong to a group. |
 | [Your settings](settings.md) | Your profile, sign-in, appearance and your own color themes, editor preferences, API keys and devices. |

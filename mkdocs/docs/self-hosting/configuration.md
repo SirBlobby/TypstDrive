@@ -100,6 +100,12 @@ See [Bigger installs](scaling.md).
 |---|---|---|
 | `REMOTE_URLS_ALLOW_PRIVATE` | `false` | Documents can load images and data from web addresses. By default addresses on private networks, such as `localhost`, `192.168.x.x` or cloud metadata services, are blocked. Set to `true` only if documents need to reach servers on your own network. |
 
+## Git
+
+| Setting | Default | What it does |
+|---|---|---|
+| `GIT_CACHE_DIR` | system temp folder | Where partial clones of repositories on servers other than GitHub and GitLab are kept. It is a disposable cache of a few MB per linked project. The Docker image uses `/data/git-cache`. |
+
 ## Citations
 
 | Setting | Default | What it does |

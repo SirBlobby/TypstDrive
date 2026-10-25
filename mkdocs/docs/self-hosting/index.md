@@ -36,7 +36,8 @@ TypstDrive works without an internet connection, but some features reach outside
 | `api.semanticscholar.org` | Semantic Scholar lookups |
 | `pub.orcid.org` | Filling in [template](../guide/templates.md) authors from ORCID |
 | `api.zotero.org` | Zotero sync |
+| `api.github.com`, `gitlab.com` and other Git servers | [Git sync](../guide/git.md), only for repositories people link |
 
-If your server cannot reach the internet, these features show an error and everything else keeps working. Citation services can be turned off in [Site Settings](../admin/citations.md).
+If your server cannot reach the internet, these features show an error and everything else keeps working. Citation services can be turned off in [Site Settings](../admin/citations.md), and Git sync in [Git](../admin/git.md).
 
 Once it is running, everything else, such as who can register, branding and storage limits, is set in the browser. See [Administration](../admin/index.md).
