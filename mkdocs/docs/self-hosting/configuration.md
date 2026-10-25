@@ -1,6 +1,24 @@
 # Settings reference
 
-TypstDrive is configured with environment variables in the `environment:` section of `docker-compose.yml`. Restart the container after changing them with `docker compose up -d`.
+TypstDrive is configured with environment variables, either in a `.env` file next to `docker-compose.yml` or in the `environment:` section of `docker-compose.yml`. Restart the container after changing them with `docker compose up -d`.
+
+## Using a .env file
+
+Keep passwords and keys in `.env` so they stay out of `docker-compose.yml`:
+
+1. Copy `example.env` from the repository to `.env`.
+2. Remove the `#` in front of each setting you want and fill in its value.
+3. Make sure `docker-compose.yml` loads it:
+
+    ```yaml
+    services:
+      app:
+        env_file:
+          - path: .env
+            required: false
+    ```
+
+The repository's `docker-compose.yml` already does this, and `.env` is ignored by git, so it is never committed. When a setting appears in both places, the value in `environment:` wins. `required: false` needs Docker Compose 2.24 or newer; on older versions write `env_file: .env` and make sure the file exists.
 
 Only `COOKIE_SECRET` and `PUBLIC_URL` matter for most installs. Everything else is optional, and features that need a setting stay hidden until it is set.
 
