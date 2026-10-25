@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 
-use super::file_rules::MAX_FILE_BYTES;
+use super::file_rules::{check_file_count, MAX_FILE_BYTES};
 use super::links::GitLink;
 use super::local_files::{self, LocalFile};
 use super::pull::{pull_into_project, PullInput, Resolution};
@@ -54,6 +54,7 @@ pub async fn preview_import(
     let listed_count = listed.len();
     let managed: Vec<RemoteEntry> = listed.into_iter().filter(|entry| rules.is_managed(&entry.path)).collect();
     let ignored_count = listed_count - managed.len();
+    check_file_count(managed.len())?;
     let mut managed = remote::fill_sizes(&repo, &commit, managed).await?;
     managed.sort_by(|first, second| first.path.cmp(&second.path));
 

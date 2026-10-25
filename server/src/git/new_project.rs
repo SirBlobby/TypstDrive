@@ -10,6 +10,7 @@ use super::import::{import_repository, preview_import, ImportPreview};
 use super::links::{delete_link_rows, link_for_user, save_new_link, GitLink, LinkRequest};
 use super::locks::lock_project;
 use super::policy::load_policy;
+use super::rate_limit::check_rate;
 use super::{internal_error, remote, ApiError};
 use crate::accounts::signed_in::SignedInUser;
 use crate::db::sql;
@@ -74,6 +75,7 @@ pub async fn preview_new_project(
     SignedInUser(user_id): SignedInUser,
     Json(payload): Json<LinkRequest>,
 ) -> Result<Json<ImportPreview>, ApiError> {
+    check_rate(&user_id)?;
     let cache_name = format!("preview-{}", Uuid::new_v4());
     let link = link_for_user(&state, &cache_name, &payload, &user_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
@@ -94,6 +96,7 @@ pub async fn import_new_project(
     let project_id = Uuid::new_v4().to_string();
     let link = link_for_user(&state, &project_id, &payload.link, &user_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
+    check_rate(&user_id)?;
     let _guard = lock_project(&project_id)?;
 
     let project = insert_project(&state, &project_id, &user_id, &folder_id, &name).await?;

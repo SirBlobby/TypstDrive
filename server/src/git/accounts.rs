@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use super::links::GitLink;
 use super::policy::load_policy;
+use super::rate_limit::check_rate;
 use super::remote::{self, Provider};
 use super::repo_settings::{clean_token, RepoUrl};
 use super::{internal_error, ApiError};
@@ -129,6 +130,7 @@ pub async fn connect_account(
     if token.len() > MAX_TOKEN_LENGTH || token.chars().any(|character| character.is_control() || character.is_whitespace()) {
         return Err((StatusCode::BAD_REQUEST, "That does not look like an access token".to_string()));
     }
+    check_rate(&user_id)?;
     let username = remote::token_owner(provider, &server, &token).await?;
 
     let existing = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM git_accounts WHERE user_id = $1 AND provider = $2 AND base_url = $3"))

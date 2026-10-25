@@ -11,6 +11,7 @@ use super::links::{require_link, LinkView};
 use super::local_files;
 use super::locks::lock_project;
 use super::policy::load_policy;
+use super::rate_limit::check_rate;
 use super::remote::{self, Author, ChangeKind, FileChange};
 use super::snapshot::{self, SnapshotEntry, SnapshotUpdate};
 use super::sync_plan::local_changes;
@@ -63,6 +64,7 @@ pub async fn push(
     let link = require_link(&state, &project_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
     let message = clean_message(&payload.message)?;
+    check_rate(&user_id)?;
     let _guard = lock_project(&project_id)?;
 
     let repo = link.remote();

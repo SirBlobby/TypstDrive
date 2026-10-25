@@ -9,6 +9,7 @@ pub mod new_project;
 pub mod policy;
 pub mod pull;
 pub mod push;
+mod rate_limit;
 mod remote;
 mod repo_settings;
 mod snapshot;

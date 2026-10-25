@@ -9,6 +9,7 @@ use super::links::{require_link, LinkView};
 use super::local_files;
 use super::locks::lock_project;
 use super::policy::load_policy;
+use super::rate_limit::check_rate;
 use super::remote;
 use super::snapshot;
 use super::sync_plan::{as_list, local_changes, remote_changes, Change};
@@ -34,6 +35,7 @@ pub async fn list_changes(
     let access = editable_project(&state, &project_id, &user_id).await?;
     let link = require_link(&state, &project_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
+    check_rate(&user_id)?;
     let _guard = lock_project(&project_id)?;
 
     let repo = link.remote();
