@@ -7,7 +7,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use super::import::{import_repository, preview_import, ImportPreview};
-use super::links::{delete_link_rows, link_from_request, save_new_link, GitLink, LinkRequest};
+use super::links::{delete_link_rows, link_for_user, save_new_link, GitLink, LinkRequest};
 use super::locks::lock_project;
 use super::policy::load_policy;
 use super::{internal_error, remote, ApiError};
@@ -75,7 +75,7 @@ pub async fn preview_new_project(
     Json(payload): Json<LinkRequest>,
 ) -> Result<Json<ImportPreview>, ApiError> {
     let cache_name = format!("preview-{}", Uuid::new_v4());
-    let link = link_from_request(&cache_name, &payload)?;
+    let link = link_for_user(&state, &cache_name, &payload, &user_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
     let result = preview_import(&state, &user_id, &HashMap::new(), &link, true).await;
     remote::forget_cache(&cache_name);
@@ -92,7 +92,7 @@ pub async fn import_new_project(
     require_owned_folder(&state, &folder_id, &user_id).await?;
 
     let project_id = Uuid::new_v4().to_string();
-    let link = link_from_request(&project_id, &payload.link)?;
+    let link = link_for_user(&state, &project_id, &payload.link, &user_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
     let _guard = lock_project(&project_id)?;
 

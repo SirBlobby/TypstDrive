@@ -4,6 +4,7 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 
 use super::access::editable_project;
+use super::accounts::{self, attach_saved_account};
 use super::file_rules::FileRules;
 use super::import::{import_repository, preview_import, ImportPreview};
 use super::local_files;
@@ -17,9 +18,27 @@ use crate::db::sql;
 use crate::sealed_secrets;
 use crate::AppState;
 
-const TOKEN_NAME: &str = "git_token";
+type LinkRow = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
 
-type LinkRow = (String, String, String, String, String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>);
+fn link_token_name(project_id: &str) -> String {
+    format!("git_link:{project_id}")
+}
 
 pub struct GitLink {
     pub project_id: String,
@@ -29,6 +48,8 @@ pub struct GitLink {
     pub folder: String,
     pub username: Option<String>,
     pub token: Option<String>,
+    pub account_id: Option<String>,
+    pub account_username: Option<String>,
     pub excluded_paths: Vec<String>,
     pub base_commit: Option<String>,
     pub last_synced_at: Option<String>,
@@ -43,6 +64,7 @@ pub struct LinkView {
     pub folder: String,
     pub username: Option<String>,
     pub has_token: bool,
+    pub account_username: Option<String>,
     pub excluded_paths: Vec<String>,
     pub base_commit: Option<String>,
     pub last_synced_at: Option<String>,
@@ -72,6 +94,7 @@ pub struct LinkRequest {
 #[derive(Deserialize)]
 pub struct UpdateLinkRequest {
     pub token: Option<String>,
+    pub use_account: Option<bool>,
     pub username: Option<String>,
     pub excluded_paths: Option<Vec<String>>,
 }
@@ -101,6 +124,7 @@ impl GitLink {
             folder: self.folder.clone(),
             username: self.username.clone(),
             has_token: self.token.is_some(),
+            account_username: self.account_username.clone(),
             excluded_paths: self.excluded_paths.clone(),
             base_commit: self.base_commit.clone(),
             last_synced_at: self.last_synced_at.clone(),
@@ -115,12 +139,34 @@ fn split_paths(stored: Option<String>) -> Vec<String> {
 }
 
 fn link_from_row(state: &AppState, row: LinkRow) -> Result<GitLink, ApiError> {
-    let (project_id, provider, repo_url, branch, folder, username, token_sealed, excluded_paths, base_commit, last_synced_at, created_by_name) = row;
+    let (
+        project_id,
+        provider,
+        repo_url,
+        branch,
+        folder,
+        username,
+        token_sealed,
+        excluded_paths,
+        base_commit,
+        last_synced_at,
+        created_by_name,
+        account_id,
+        account_owner,
+        account_username,
+        account_token_sealed,
+    ) = row;
     let broken = || (StatusCode::INTERNAL_SERVER_ERROR, "The saved Git link is damaged. Unlink and link the repository again.".to_string());
+    let token = match (&account_id, account_owner, account_token_sealed) {
+        (Some(account_id), Some(owner), Some(sealed)) => sealed_secrets::open(&state.key, &accounts::token_name(&owner, account_id), &sealed),
+        _ => token_sealed.and_then(|sealed| sealed_secrets::open(&state.key, &link_token_name(&project_id), &sealed)),
+    };
     Ok(GitLink {
         provider: Provider::parse(&provider).ok_or_else(broken)?,
         url: RepoUrl::parse(&repo_url).map_err(|_| broken())?,
-        token: token_sealed.and_then(|sealed| sealed_secrets::open(&state.key, TOKEN_NAME, &sealed)),
+        token,
+        account_username: account_id.as_ref().and(account_username),
+        account_id,
         excluded_paths: split_paths(excluded_paths),
         project_id,
         branch,
@@ -134,8 +180,9 @@ fn link_from_row(state: &AppState, row: LinkRow) -> Result<GitLink, ApiError> {
 
 pub async fn load_link(state: &AppState, project_id: &str) -> Result<Option<GitLink>, ApiError> {
     let row = sqlx::query_as::<_, LinkRow>(sql(
-        "SELECT l.project_id, l.provider, l.repo_url, l.branch, l.folder, l.username, l.token_sealed, l.excluded_paths, l.base_commit, l.last_synced_at, u.username \
-         FROM git_links l LEFT JOIN users u ON u.id = l.created_by WHERE l.project_id = $1",
+        "SELECT l.project_id, l.provider, l.repo_url, l.branch, l.folder, l.username, l.token_sealed, l.excluded_paths, l.base_commit, l.last_synced_at, u.username, \
+         a.id, a.user_id, a.username, a.token_sealed \
+         FROM git_links l LEFT JOIN users u ON u.id = l.created_by LEFT JOIN git_accounts a ON a.id = l.account_id WHERE l.project_id = $1",
     ))
     .bind(project_id)
     .fetch_optional(&state.db)
@@ -150,7 +197,7 @@ pub async fn require_link(state: &AppState, project_id: &str) -> Result<GitLink,
         .ok_or((StatusCode::NOT_FOUND, "This project is not linked to a Git repository".to_string()))
 }
 
-pub(super) fn link_from_request(project_id: &str, payload: &LinkRequest) -> Result<GitLink, ApiError> {
+fn link_from_request(project_id: &str, payload: &LinkRequest) -> Result<GitLink, ApiError> {
     let url = RepoUrl::parse(&payload.repo_url)?;
     let provider = match payload.provider.as_deref().filter(|provider| !provider.is_empty() && *provider != "auto") {
         Some(provider) => Provider::parse(provider).ok_or((StatusCode::BAD_REQUEST, "Unknown Git host type".to_string()))?,
@@ -164,6 +211,8 @@ pub(super) fn link_from_request(project_id: &str, payload: &LinkRequest) -> Resu
         folder: clean_folder(payload.folder.as_deref().unwrap_or_default())?,
         username: clean_username(payload.username.as_deref()),
         token: clean_token(payload.token.as_deref()),
+        account_id: None,
+        account_username: None,
         excluded_paths: clean_excluded_paths(payload.excluded_paths.as_deref().unwrap_or_default())?,
         base_commit: None,
         last_synced_at: None,
@@ -171,10 +220,23 @@ pub(super) fn link_from_request(project_id: &str, payload: &LinkRequest) -> Resu
     })
 }
 
+pub(super) async fn link_for_user(state: &AppState, project_id: &str, payload: &LinkRequest, user_id: &str) -> Result<GitLink, ApiError> {
+    let mut link = link_from_request(project_id, payload)?;
+    attach_saved_account(state, user_id, &mut link).await?;
+    Ok(link)
+}
+
+fn sealed_link_token(state: &AppState, link: &GitLink) -> Option<String> {
+    match (&link.account_id, &link.token) {
+        (None, Some(token)) => Some(sealed_secrets::seal(&state.key, &link_token_name(&link.project_id), token)),
+        _ => None,
+    }
+}
+
 pub(super) async fn save_new_link(state: &AppState, link: &GitLink, user_id: &str) -> Result<(), ApiError> {
     sqlx::query(sql(
-        "INSERT INTO git_links (project_id, created_by, provider, repo_url, branch, folder, username, token_sealed, excluded_paths) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        "INSERT INTO git_links (project_id, created_by, provider, repo_url, branch, folder, username, token_sealed, account_id, excluded_paths) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     ))
     .bind(&link.project_id)
     .bind(user_id)
@@ -183,7 +245,8 @@ pub(super) async fn save_new_link(state: &AppState, link: &GitLink, user_id: &st
     .bind(&link.branch)
     .bind(&link.folder)
     .bind(&link.username)
-    .bind(link.token.as_ref().map(|token| sealed_secrets::seal(&state.key, TOKEN_NAME, token)))
+    .bind(sealed_link_token(state, link))
+    .bind(&link.account_id)
     .bind(link.excluded_paths.join("\n"))
     .execute(&state.db)
     .await
@@ -224,7 +287,7 @@ pub async fn preview_link(
 ) -> Result<Json<ImportPreview>, ApiError> {
     let access = editable_project(&state, &project_id, &user_id).await?;
     access.require_owner()?;
-    let link = link_from_request(&project_id, &payload)?;
+    let link = link_for_user(&state, &project_id, &payload, &user_id).await?;
     load_policy(&state).await.check_provider(link.provider)?;
     let _guard = lock_project(&project_id)?;
     let local = local_files::load(&state, &project_id, &link.rules()).await?;
@@ -240,7 +303,7 @@ pub async fn create_link(
 ) -> Result<Json<LinkStatus>, ApiError> {
     let access = editable_project(&state, &project_id, &user_id).await?;
     access.require_owner()?;
-    let link = link_from_request(&project_id, &payload)?;
+    let link = link_for_user(&state, &project_id, &payload, &user_id).await?;
     let policy = load_policy(&state).await;
     policy.check_provider(link.provider)?;
     let _guard = lock_project(&project_id)?;
@@ -274,6 +337,14 @@ pub async fn update_link(
 
     if let Some(token) = &payload.token {
         link.token = clean_token(Some(token));
+        link.account_id = None;
+        link.account_username = None;
+    }
+    if payload.use_account == Some(true) {
+        link.token = None;
+        if !attach_saved_account(&state, &user_id, &mut link).await? {
+            return Err((StatusCode::BAD_REQUEST, format!("You have no saved account for {}. Add one in Settings, Git.", link.url.web_base())));
+        }
     }
     if let Some(username) = &payload.username {
         link.username = clean_username(Some(username));
@@ -282,9 +353,10 @@ pub async fn update_link(
         link.excluded_paths = clean_excluded_paths(excluded_paths)?;
     }
 
-    sqlx::query(sql("UPDATE git_links SET username = $1, token_sealed = $2, excluded_paths = $3 WHERE project_id = $4"))
+    sqlx::query(sql("UPDATE git_links SET username = $1, token_sealed = $2, account_id = $3, excluded_paths = $4 WHERE project_id = $5"))
         .bind(&link.username)
-        .bind(link.token.as_ref().map(|token| sealed_secrets::seal(&state.key, TOKEN_NAME, token)))
+        .bind(sealed_link_token(&state, &link))
+        .bind(&link.account_id)
         .bind(link.excluded_paths.join("\n"))
         .bind(&project_id)
         .execute(&state.db)

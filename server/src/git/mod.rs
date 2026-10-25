@@ -1,4 +1,5 @@
 mod access;
+pub mod accounts;
 mod file_rules;
 mod import;
 pub mod links;

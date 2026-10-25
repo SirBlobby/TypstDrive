@@ -4,6 +4,7 @@ use serde_json::{json, Value};
 
 use super::http::{encode_segment, text_field, Client};
 use super::{Author, ChangeKind, FileChange, RemoteEntry, RemoteRepo};
+use crate::git::repo_settings::RepoUrl;
 use crate::git::ApiError;
 
 const SERVICE: &str = "GitLab";
@@ -11,9 +12,17 @@ const PAGE_SIZE: usize = 100;
 const MAX_PAGES: usize = 200;
 const SYMLINK_MODE: &str = "120000";
 
+fn headers(token: Option<&str>) -> Vec<(&'static str, String)> {
+    token.iter().map(|token| ("PRIVATE-TOKEN", token.to_string())).collect()
+}
+
 fn client(repo: &RemoteRepo) -> Client {
-    let headers = repo.token.iter().map(|token| ("PRIVATE-TOKEN", token.clone())).collect();
-    Client::new(SERVICE, format!("{}/api/v4/projects/{}", repo.url.web_base(), encode_segment(&repo.url.path)), headers)
+    Client::new(SERVICE, format!("{}/api/v4/projects/{}", repo.url.web_base(), encode_segment(&repo.url.path)), headers(repo.token.as_deref()))
+}
+
+pub fn token_owner(server: &RepoUrl, token: &str) -> Result<String, ApiError> {
+    let body = Client::new(SERVICE, format!("{}/api/v4", server.web_base()), headers(Some(token))).get_json("/user")?;
+    text_field(&body, "/username").ok_or_else(unreadable)
 }
 
 fn unreadable() -> ApiError {

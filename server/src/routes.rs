@@ -193,6 +193,8 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/projects/{id}/git/preview", post(git::links::preview_link))
         .route("/git/policy", get(git::policy::own_policy))
+        .route("/git/accounts", get(git::accounts::list_accounts).post(git::accounts::connect_account))
+        .route("/git/accounts/{id}", delete(git::accounts::delete_account))
         .route("/git/preview", post(git::new_project::preview_new_project))
         .route("/git/import", post(git::new_project::import_new_project))
         .route("/projects/{id}/git/changes", get(git::status::list_changes))

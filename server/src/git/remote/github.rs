@@ -4,25 +4,35 @@ use serde_json::{json, Value};
 
 use super::http::{encode_segment, text_field, Client};
 use super::{Author, ChangeKind, FileChange, RemoteEntry, RemoteRepo};
+use crate::git::repo_settings::RepoUrl;
 use crate::git::ApiError;
 
 const SERVICE: &str = "GitHub";
 const FILE_MODE: &str = "100644";
 const SYMLINK_MODE: &str = "120000";
 
-fn api_base(repo: &RemoteRepo) -> String {
-    match repo.url.host_name() {
+fn api_base(url: &RepoUrl) -> String {
+    match url.host_name() {
         "github.com" | "www.github.com" => "https://api.github.com".to_string(),
-        _ => format!("{}/api/v3", repo.url.web_base()),
+        _ => format!("{}/api/v3", url.web_base()),
     }
 }
 
-fn client(repo: &RemoteRepo) -> Client {
+fn headers(token: Option<&str>) -> Vec<(&'static str, String)> {
     let mut headers = vec![("Accept", "application/vnd.github+json".to_string()), ("X-GitHub-Api-Version", "2022-11-28".to_string())];
-    if let Some(token) = &repo.token {
+    if let Some(token) = token {
         headers.push(("Authorization", format!("Bearer {token}")));
     }
-    Client::new(SERVICE, format!("{}/repos/{}", api_base(repo), repo.url.path), headers)
+    headers
+}
+
+fn client(repo: &RemoteRepo) -> Client {
+    Client::new(SERVICE, format!("{}/repos/{}", api_base(&repo.url), repo.url.path), headers(repo.token.as_deref()))
+}
+
+pub fn token_owner(server: &RepoUrl, token: &str) -> Result<String, ApiError> {
+    let body = Client::new(SERVICE, api_base(server), headers(Some(token))).get_json("/user")?;
+    text_field(&body, "/login").ok_or_else(unreadable)
 }
 
 fn branch_ref(repo: &RemoteRepo) -> String {
