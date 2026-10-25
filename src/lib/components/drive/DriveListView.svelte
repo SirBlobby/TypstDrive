@@ -23,6 +23,7 @@
         onDelete,
         onShare = undefined,
         onInfo = undefined,
+        onDuplicate = undefined,
         onReplaced = undefined,
         selectionFor = undefined
     }: {
@@ -37,6 +38,7 @@
         onDelete: (id: string, name: string, type: RenameType) => void;
         onShare?: (item: any, kind: ShareKind) => void;
         onInfo?: (item: any, type: string) => void;
+        onDuplicate?: (id: string, type: 'document' | 'project') => void;
         onReplaced?: (file: any) => void;
         selectionFor?: (entry: DriveEntry) => ItemSelection | undefined;
     } = $props();
@@ -190,6 +192,16 @@
                     >
                         <Icon icon="mdi:pencil-outline" class="text-base" />
                     </button>
+                    {#if onDuplicate && (entry.category === 'document' || entry.category === 'project')}
+                        <button
+                            onclick={(e) => { e.stopPropagation(); if (entry.category === 'document' || entry.category === 'project') onDuplicate(entry.item.id, entry.category); }}
+                            title="Duplicate"
+                            aria-label={`Duplicate ${itemName(entry.item)}`}
+                            class={iconButtonClass}
+                        >
+                            <Icon icon="mdi:content-copy" class="text-base" />
+                        </button>
+                    {/if}
                     <button
                         onclick={(e) => { e.stopPropagation(); onDelete(entry.item.id, itemName(entry.item), renameType(entry)); }}
                         title="Delete"

@@ -26,6 +26,9 @@
 ??? question "Can I work offline?"
     Yes, with the [Typst Desktop](guide/desktop.md) app for Linux. It keeps documents on your computer and syncs them when you are back online.
 
+??? question "I deleted something by mistake."
+    Open **Trash** in the drive sidebar and choose **Restore**. Deleted items stay there for 30 days, or however long your administrator chose. See [Trash](guide/drive.md#trash).
+
 ??? question "I forgot my password."
     Choose **Forgot password** on the sign-in page if your server has email set up. Otherwise ask an administrator to set a new one.
 

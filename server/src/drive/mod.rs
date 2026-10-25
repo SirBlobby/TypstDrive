@@ -4,6 +4,7 @@ pub mod content_search;
 pub mod document_assets;
 pub mod documents;
 pub mod downloads;
+pub mod duplicates;
 pub mod editor_library;
 pub mod file_data;
 pub mod file_replace;

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { downloadProject } from '#lib/ts/downloads';
+	import { duplicateItem, duplicatePath } from '#lib/ts/duplicates';
+	import { userStore } from '#lib/ts/auth';
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
@@ -289,6 +291,15 @@
 		showRenameModal = false;
 	}
 
+	async function makeCopy() {
+		try {
+			const copyId = await duplicateItem('project', projectId);
+			window.location.assign(duplicatePath('project', copyId));
+		} catch (err) {
+			alert((err as Error).message);
+		}
+	}
+
 	function confirmDelete() {
 		fetch(`/api/projects/${projectId}`, { method: 'DELETE' }).then((res) => {
 			if (res.ok) goto('/drive');
@@ -327,6 +338,9 @@
 								<button onclick={() => { activeMenu = null; goto('/drive'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Back to Drive</button>
 								<button onclick={() => { activeMenu = null; showInfoModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Project Info</button>
 								<button onclick={() => { activeMenu = null; downloadProject(projectId); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Download Project (.zip)</button>
+								{#if $userStore}
+									<button onclick={() => { activeMenu = null; makeCopy(); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Make a Copy</button>
+								{/if}
 								<button onclick={() => { activeMenu = null; showShareModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Share</button>
 								{#if !isViewer}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>

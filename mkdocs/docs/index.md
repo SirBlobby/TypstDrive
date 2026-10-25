@@ -18,7 +18,7 @@ You run TypstDrive on your own server, so your documents stay with you.
 :   Write basic [LaTeX documents and projects](guide/latex.md) with their own editor and toolbar, rendered with MiTeX.
 
 **Organize**
-:   Folders with colors, a search bar with filters that can also look inside your documents, sorting, a grid or list view, and stars for the things you open most.
+:   Folders with colors, a search bar with filters that can also look inside your documents, sorting, a grid or list view, stars for the things you open most, one-click duplicates, and a trash to restore anything deleted by mistake.
 
 **Work together**
 :   Several people can type in the same document at once and see each other's cursors. Leave comments, suggest changes for someone else to accept, and look back through the version history.

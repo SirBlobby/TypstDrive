@@ -43,6 +43,7 @@
     import { DriveSelection, entryKey, selectionKey } from '#lib/ts/drive-selection.svelte';
     import { moveEntries } from '#lib/ts/drive-bulk';
     import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
+    import { duplicateItem, type DuplicateKind } from '#lib/ts/duplicates';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);
@@ -136,6 +137,16 @@
 
     function deleteProject(id: string, name: string) {
         openDelete(id, 'project', name);
+    }
+
+    async function duplicate(id: string, kind: DuplicateKind) {
+        activeMenu = null;
+        try {
+            await duplicateItem(kind, id);
+            await loadDocs();
+        } catch (err) {
+            alert((err as Error).message);
+        }
     }
 
     async function deleteFile(id: string, name: string) {
@@ -787,6 +798,7 @@
                         onDelete={(id, name, type) => openDelete(id, type, name)}
                         onShare={shareItem}
                         onInfo={openInfo}
+                        onDuplicate={browsingSharedFolder ? undefined : duplicate}
                         onReplaced={replaceFileInList}
                         selectionFor={(entry) => selectionFor(entry.category, entry.item)}
                     />
@@ -821,6 +833,7 @@
                                         {openInfo}
                                         {openRename}
                                         {deleteProject}
+                                        duplicateProject={(id) => duplicate(id, 'project')}
                                         {shareItem}
                                         readOnly={browsingSharedFolder}
                                         selection={selectionFor('project', project)}
@@ -843,6 +856,7 @@
                                         {openRename}
                                         {shareItem}
                                         {deleteDoc}
+                                        duplicateDoc={(id) => duplicate(id, 'document')}
                                         readOnly={browsingSharedFolder}
                                         selection={selectionFor('document', doc)}
                                     />
