@@ -4,6 +4,12 @@
 
 Everyone who opens a document can work on it at the same moment. You see other people's changes as they type, their cursors in their own colors, and their profile pictures at the top of the editor. Nothing gets overwritten: all changes are merged automatically.
 
+## Following someone
+
+Click a collaborator's picture at the top of the editor to follow them. Your view scrolls along with their cursor, which is handy when someone walks you through a document. In a project, you also switch to whichever file they open.
+
+A **Following** label with their name appears next to the pictures. Following stops when you click their picture or the label again, click or type in the editor, scroll, or when they leave.
+
 ## Comments
 
 Select some text, then choose **Add comment** from the right-click menu, press the comment button in the toolbar, or press ++ctrl+alt+m++.

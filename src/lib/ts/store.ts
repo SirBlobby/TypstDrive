@@ -25,6 +25,8 @@ export interface AwarenessUser {
     avatar?: string | null;
     color: string;
     colorLight: string;
+    session?: string;
+    activeFile?: string | null;
     isLocal?: boolean;
 }
 

@@ -37,7 +37,7 @@ Password: password
 
 ### Working Together
 
-- **Real-Time Collaboration**: See other people's changes and cursors instantly.
+- **Real-Time Collaboration**: See other people's changes and cursors instantly, follow someone's cursor by clicking their picture, and see who is in which file of a project.
 - **Comments**: Comment on text, reply, and resolve or reopen threads.
 - **Suggestions**: Propose edits for others to accept or reject.
 - **Version History**: Automatic and manual versions, a timeline of who edited, side-by-side changes and one-click restore.

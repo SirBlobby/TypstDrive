@@ -2,6 +2,8 @@
 	import Icon from '@iconify/svelte';
 	import NewFileModal from './NewFileModal.svelte';
 	import PromptModal from '../PromptModal.svelte';
+	import FilePresence from './FilePresence.svelte';
+	import type { AwarenessUser } from '#lib/ts/store';
 	import { buildProjectTree, projectFolders, type ProjectFile, type TreeNode } from '#lib/ts/project-tree';
 
 	let {
@@ -9,6 +11,7 @@
 		activeFileId = '',
 		entrypoint = 'main.typ',
 		readOnly = false,
+		presence = new Map(),
 		onSelect,
 		onCreate,
 		onCreateFolder,
@@ -24,6 +27,7 @@
 		activeFileId?: string;
 		entrypoint?: string;
 		readOnly?: boolean;
+		presence?: Map<string, AwarenessUser[]>;
 		onSelect: (file: ProjectFile) => void;
 		onCreate: (path: string) => void;
 		onCreateFolder: (path: string) => void;
@@ -59,6 +63,15 @@
 		if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.svg') || lower.endsWith('.gif')) return 'mdi:image-outline';
 		if (lower.endsWith('.ttf') || lower.endsWith('.otf')) return 'mdi:format-font';
 		return 'mdi:file-outline';
+	}
+
+	function usersInFolder(path: string) {
+		const users = new Map<string, AwarenessUser>();
+		for (const file of files) {
+			if (!file.path.startsWith(`${path}/`)) continue;
+			for (const user of presence.get(file.id) ?? []) users.set(user.id ?? user.name, user);
+		}
+		return [...users.values()];
 	}
 
 	function toggleFolder(path: string) {
@@ -129,6 +142,9 @@
 					<Icon icon={collapsed ? 'mdi:chevron-right' : 'mdi:chevron-down'} class="text-sm flex-shrink-0" />
 					<Icon icon={collapsed ? 'mdi:folder-outline' : 'mdi:folder-open-outline'} class="text-base flex-shrink-0 text-amber-500" />
 					<span class="truncate">{node.name}</span>
+					{#if collapsed && usersInFolder(node.path).length > 0}
+						<FilePresence users={usersInFolder(node.path)} />
+					{/if}
 				</button>
 				{#if !readOnly}
 					<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -155,6 +171,9 @@
 						<span title="Entrypoint">
 							<Icon icon="mdi:star" class="text-amber-500 text-xs flex-shrink-0" />
 						</span>
+					{/if}
+					{#if presence.get(file.id)?.length}
+						<FilePresence users={presence.get(file.id) ?? []} />
 					{/if}
 				</button>
 				{#if !readOnly}
