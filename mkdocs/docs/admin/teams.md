@@ -1,6 +1,6 @@
 # Team spaces
 
-**Site Settings → Team Spaces** controls [team spaces](../guide/teams.md).
+**Site Settings → People → Team Spaces** controls [team spaces](../guide/teams.md).
 
 | Setting | Default | What it does |
 |---|---|---|

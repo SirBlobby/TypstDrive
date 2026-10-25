@@ -1,6 +1,6 @@
 # PDF links
 
-**Site Settings → PDF Links** controls [public PDF links](../guide/sharing.md#public-pdf-links), the `/pdf/name` URLs that always serve the latest compiled PDF of a document or project.
+**Site Settings → Content → PDF Links** controls [public PDF links](../guide/sharing.md#public-pdf-links), the `/pdf/name` URLs that always serve the latest compiled PDF of a document or project.
 
 | Setting | Default | What it does |
 |---|---|---|

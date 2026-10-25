@@ -41,10 +41,10 @@
     Your reverse proxy needs to pass WebSocket connections through. See [HTTPS and reverse proxies](self-hosting/reverse-proxy.md).
 
 ??? question "Sign in with Google or my company login fails."
-    Check that `PUBLIC_URL` matches the address in the browser exactly, including `https://`, and that the redirect URL registered with the provider matches the one shown in **Site Settings → Authentication**.
+    Check that `PUBLIC_URL` matches the address in the browser exactly, including `https://`, and that the redirect URL registered with the provider matches the one shown in **Site Settings → Security → Authentication**.
 
 ??? question "Emails never arrive."
-    Use **Send test** in **Site Settings → Email** to see what goes wrong. Check your spam folder, and for Gmail make sure you use an app password.
+    Use **Send test** in **Site Settings → Security → Email** to see what goes wrong. Check your spam folder, and for Gmail make sure you use an app password.
 
 ??? question "How do I back up?"
     Copy the data folder, or dump your database. See [Updates and backups](self-hosting/updates-and-backups.md).

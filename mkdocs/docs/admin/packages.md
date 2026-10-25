@@ -1,6 +1,6 @@
 # Packages
 
-**Site Settings → Packages** controls the server's [package library](../guide/packages.md).
+**Site Settings → Content → Packages** controls the server's [package library](../guide/packages.md).
 
 | Setting | Default | What it does |
 |---|---|---|

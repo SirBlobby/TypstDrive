@@ -17,4 +17,15 @@ Administrators look after a TypstDrive server from the browser. Open **Site Sett
 | [API access](api.md) | Turn the API on or off and set limits. |
 | [Server and about](server.md) | Check how the server is set up and which version it runs. |
 
+The site settings sidebar groups pages into dropdowns:
+
+| Group | Pages |
+|---|---|
+| People | Users, Accounts, Team Spaces |
+| Security | Authentication, Email, Audit Log |
+| Content | Storage, Packages, PDF Links, Citations |
+| System | Server, About |
+
+**Branding** and **API Access** sit on their own between the groups.
+
 Settings that need a restart, such as the database or email server, are set when [self-hosting](../self-hosting/index.md) instead.

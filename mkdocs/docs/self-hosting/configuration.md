@@ -4,7 +4,7 @@ TypstDrive is configured with environment variables in the `environment:` sectio
 
 Only `COOKIE_SECRET` and `PUBLIC_URL` matter for most installs. Everything else is optional, and features that need a setting stay hidden until it is set.
 
-**Site Settings → Server** shows which of these are set on your server. Their values are never shown.
+**Site Settings → System → Server** shows which of these are set on your server. Their values are never shown.
 
 ## The basics
 

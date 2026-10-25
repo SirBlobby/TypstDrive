@@ -8,7 +8,7 @@ Out of the box, people sign in with a username or email and a password. You can 
 - **Google** and **GitHub** sign-in.
 - **Single sign-on** with your organization's login, such as Keycloak, Authentik, Authelia, Microsoft Entra or any other OpenID Connect provider.
 
-Providers are set up with a few lines in `docker-compose.yml`. Turn them on and off later in **Site Settings → Authentication**. See [Sign-in and security](../admin/security.md).
+Providers are set up with a few lines in `docker-compose.yml`. Turn them on and off later in **Site Settings → Security → Authentication**. See [Sign-in and security](../admin/security.md).
 
 ## Before you start
 
@@ -20,7 +20,7 @@ Each provider asks for a **redirect URL** (also called a callback URL). For Typs
 https://typst.example.com/api/auth/sso/<provider>/callback
 ```
 
-Replace `<provider>` with `google`, `github` or the name you give your own provider. **Site Settings → Authentication** shows the exact URL for each provider, ready to copy.
+Replace `<provider>` with `google`, `github` or the name you give your own provider. **Site Settings → Security → Authentication** shows the exact URL for each provider, ready to copy.
 
 ## Google
 
@@ -79,7 +79,7 @@ When someone signs in with a provider:
 
 1. If they linked that provider before, they are signed in to that account.
 2. If their confirmed email matches an existing account, the provider is linked to it.
-3. Otherwise, a new account is made only if **Create accounts on first sign-in** is turned on in **Site Settings → Authentication**.
+3. Otherwise, a new account is made only if **Create accounts on first sign-in** is turned on in **Site Settings → Security → Authentication**.
 
 People can link and unlink providers themselves in **Settings → Security**.
 

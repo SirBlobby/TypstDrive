@@ -18,7 +18,7 @@ environment:
 
 Every copy must also share the same database and the same `COOKIE_SECRET`.
 
-Redis only passes messages along, so it needs no backups. If it goes down, each copy keeps working on its own and reconnects when it returns. **Site Settings → Server** shows whether the connection is up.
+Redis only passes messages along, so it needs no backups. If it goes down, each copy keeps working on its own and reconnects when it returns. **Site Settings → System → Server** shows whether the connection is up.
 
 !!! note
     Desktop devices show as online only on the copy they are connected to, and API rate limits are counted separately on each copy.

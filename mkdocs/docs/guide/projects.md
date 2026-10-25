@@ -11,12 +11,15 @@ Choose **New → Project** in the drive and pick a **Language**. The project is 
 
 ## Working in a project
 
-The project editor looks like the document editor, with a file list on the left.
+The project editor looks like the document editor, with a file list on the left. Folders show as a tree you can open and close.
 
-- **Create**, **upload**, **rename** and **delete** files and folders from the file list.
-- Choose which file is the **entry point**, the file that is rendered. It is `main.typ`, or `main.tex` in a LaTeX project, unless you change it. Any `.typ` or `.tex` file can be the entry point.
+- **New file** opens a window where you pick a type (Typst, LaTeX, Bibliography, Markdown or Text), a name and a folder. Typing your own extension, such as `data.csv`, overrides the type.
+- **New folder** makes an empty folder. **Upload file** adds files from your computer.
+- Hover over a folder to add a file or folder inside it, **rename** it or **delete** it. Renaming a folder moves everything inside it. Deleting a folder removes every file inside it.
+- Hover over a file to rename or delete it. Renaming accepts a new path, so it can also move the file to another folder.
+- Choose which file is the **entry point**, the file that is rendered, with the star next to it. It is `main.typ`, or `main.tex` in a LaTeX project, unless you change it. Any `.typ` or `.tex` file can be the entry point, and the owner and editors can change it. Renaming or moving the entry point, or its folder, keeps it as the entry point. If it is deleted, `main.typ` or `main.tex` takes its place, or else the `.typ` or `.tex` file nearest the top of the project.
 - Files can include each other, for example `#include "chapters/intro.typ"`.
-- Bibliographies (`.bib`), data files and images live right next to your text.
+- Bibliographies (`.bib`), data files and images live right next to your text. **Edit → Citations** adds references by DOI or arXiv ID and syncs Zotero into them; see [Citations](citations.md).
 - The owner can also use images and files from their drive. People the project is shared with only get the owner's fonts, so upload images into the project itself if others need to see them.
 - Everyone working on the project sees each other's changes live in every text file.
 - Collapse the file list when you want more room.

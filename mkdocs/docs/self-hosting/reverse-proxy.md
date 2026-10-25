@@ -98,4 +98,4 @@ Traefik, Nginx Proxy Manager, Cloudflare Tunnel and others work too. Whatever yo
 
 - Open your domain. You should see the TypstDrive sign-in page with a padlock in the address bar.
 - Open a document in two browsers. Typing in one should show up in the other straight away. If not, WebSockets are not getting through.
-- **Site Settings → Authentication** warns you if `PUBLIC_URL` is missing.
+- **Site Settings → Security → Authentication** warns you if `PUBLIC_URL` is missing.

@@ -1,6 +1,6 @@
 # Storage and history
 
-**Site Settings → Storage** shows how much space the whole server uses, and how much each account and team uses, largest first.
+**Site Settings → Content → Storage** shows how much space the whole server uses, and how much each account and team uses, largest first.
 
 ## Storage limits
 
