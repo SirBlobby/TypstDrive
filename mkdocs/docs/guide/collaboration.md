@@ -16,7 +16,7 @@ Everyone who can open the document can read comments. Owners, editors and sugges
 
 ## Suggesting changes
 
-Switch from **Editing** to **Suggesting** at the top of the editor to propose changes instead of making them directly. Each change opens a small box where you can adjust the new text and add a note. Suggestions show as crossed-out text with the proposed text next to it.
+Switch from **Editing** to **Suggesting** with the pencil button at the top of the editor to propose changes instead of making them directly. Each change opens a small box where you can adjust the new text and add a note. Suggestions show as crossed-out text with the proposed text next to it.
 
 Owners and editors **Accept** or **Reject** suggestions in the **Suggestions** tab of the comments panel. People with the suggester role are always in suggesting mode. You can take back your own suggestion while it is still waiting.
 

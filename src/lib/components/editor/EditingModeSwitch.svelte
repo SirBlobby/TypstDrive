@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { suggestingModeStore } from '#lib/ts/suggestions';
+	import HeaderIconButton from './header/HeaderIconButton.svelte';
 
 	let { canEdit }: { canEdit: boolean } = $props();
 
@@ -17,15 +18,14 @@
 
 {#if canEdit}
 	<div class="relative">
-		<button
+		<HeaderIconButton
+			icon={currentMode.icon}
+			label={`${currentMode.label}: change editing mode`}
+			chevron
+			expanded={menuOpen}
+			toneClass={$suggestingModeStore ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10' : undefined}
 			onclick={(event) => { event.stopPropagation(); menuOpen = !menuOpen; }}
-			class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors {$suggestingModeStore ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10' : 'text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)]'}"
-			title="Change editing mode"
-		>
-			<Icon icon={currentMode.icon} class="text-[16px]" />
-			{currentMode.label}
-			<Icon icon="mdi:chevron-down" class="text-sm opacity-70" />
-		</button>
+		/>
 		{#if menuOpen}
 			<div class="absolute right-0 top-full z-[100] mt-1 w-64 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] py-1 shadow-xl">
 				{#each modes as mode (mode.label)}
@@ -47,8 +47,7 @@
 		{/if}
 	</div>
 {:else}
-	<span class="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300" title="You can suggest changes to this document">
-		<Icon icon="mdi:file-document-edit-outline" class="text-[16px]" />
-		Suggesting
+	<span class="flex items-center rounded-md bg-emerald-500/10 p-1.5 text-emerald-700 dark:text-emerald-300" title="Suggesting: you can suggest changes to this document" aria-label="Suggesting">
+		<Icon icon="mdi:file-document-edit-outline" class="text-[18px]" />
 	</span>
 {/if}

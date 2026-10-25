@@ -17,6 +17,9 @@
 	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
 	import EditingModeSwitch from './editor/EditingModeSwitch.svelte';
 	import PreviewModeMenu from './editor/PreviewModeMenu.svelte';
+	import HeaderIconButton from './editor/header/HeaderIconButton.svelte';
+	import HeaderTypstLinks from './editor/header/HeaderTypstLinks.svelte';
+	import HeaderExportMenu from './editor/header/HeaderExportMenu.svelte';
 	import FormattingBar from './editor/FormattingBar.svelte';
 	import LatexFormattingBar from './editor/LatexFormattingBar.svelte';
 	import { uploadDocumentFile } from '#lib/ts/document-uploads';
@@ -507,101 +510,25 @@
 			</div>
 		</div>
 
-		<div class="flex items-center gap-3">
-			
+		<div class="flex items-center gap-1.5">
 			<CollaboratorAvatars />
-
-			
-			<div class="flex items-center gap-1.5 px-2">
-				<a href="https://typst.app/docs/" target="_blank" rel="noopener noreferrer" class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors" title="Typst Docs">
-					<Icon icon="mdi:book-open-page-variant-outline" class="text-[18px]" />
-				</a>
-				<a href="https://typst.app/universe/" target="_blank" rel="noopener noreferrer" class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors" title="Typst Universe">
-					<Icon icon="mdi:earth" class="text-[18px]" />
-				</a>
-			</div>
-			
-			<div class="w-px h-5 bg-[var(--color-line)]"></div>
-
-			
+			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
+			<HeaderTypstLinks />
+			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
 			{#if !readOnly}
-			<button
-				onclick={() => goto(`/doc/${docId}/history`)}
-				class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded-md hover:bg-[var(--color-surface-sunken)] transition-colors"
-				title="Version history"
-				aria-label="Version history"
-			>
-				<Icon icon="mdi:history" class="text-[18px]" />
-			</button>
-
-			<button
-				onclick={() => (isPresentationOpen = true)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors"
-			>
-				<Icon icon="mdi:presentation-play" class="text-[16px]" />
-				Present
-			</button>
-
-			<button
-				onclick={() => (isShareModalOpen = true)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors"
-			>
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
-				Share
-			</button>
+				<HeaderIconButton icon="mdi:history" label="Version history" onclick={() => goto(`/doc/${docId}/history`)} />
+				<HeaderIconButton icon="mdi:presentation-play" label="Present" onclick={() => (isPresentationOpen = true)} />
+				<HeaderIconButton icon="mdi:share-variant-outline" label="Share" onclick={() => (isShareModalOpen = true)} />
 			{/if}
-
+			<HeaderIconButton icon="mdi:comment-outline" label="Comments" active={$commentsSidebarOpen} onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)} />
 			{#if canComment}
 				<EditingModeSwitch canEdit={!readOnly} />
 			{/if}
-
-			<button
-				onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)}
-				class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-md transition-colors {$commentsSidebarOpen ? 'text-[var(--color-accent)] bg-[var(--color-accent-soft)]' : 'text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)]'}"
-			>
-				<Icon icon="mdi:comment-outline" class="text-[16px]" />
-				Comments
-			</button>
-
-			<div class="w-px h-5 bg-[var(--color-line)]"></div>
-
+			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
 			{#if canComment}
 				<PreviewModeMenu />
-
-				<div class="w-px h-5 bg-[var(--color-line)]"></div>
 			{/if}
-
-			<button onclick={handlePrint} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Print Document">
-				<Icon icon="mdi:printer" class="text-[16px]" />
-				Print
-			</button>
-
-			<div class="relative action-menu-container">
-				<button
-					onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'export' ? null : 'export'; }}
-					class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-soft)] hover:opacity-90 rounded-md transition-colors {activeMenu === 'export' ? 'ring-2 ring-[var(--color-accent)]/30' : ''}"
-				>
-					<Icon icon="mdi:export-variant" class="text-[16px]" />
-					Export
-					<Icon icon="mdi:chevron-down" class="text-sm opacity-70" />
-				</button>
-				{#if activeMenu === 'export'}
-					<div class="absolute right-0 top-full mt-1 w-44 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
-						<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
-							<Icon icon="mdi:file-pdf-box" class="text-base text-red-500" /> PDF document
-						</button>
-						<button onclick={() => { activeMenu = null; handleExport('source'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
-							<Icon icon="mdi:code-braces" class="text-base text-purple-500" /> {sourceFileExtension.toUpperCase()} source
-						</button>
-						<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
-							<Icon icon="mdi:svg" class="text-base text-orange-500" /> SVG graphics
-						</button>
-						<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2">
-							<Icon icon="mdi:image" class="text-base text-blue-500" /> PNG image
-						</button>
-					</div>
-				{/if}
-			</div>
+			<HeaderExportMenu sourceLabel={`${sourceFileExtension.toUpperCase()} source`} onexport={handleExport} onprint={handlePrint} />
 		</div>
 	</div>
 

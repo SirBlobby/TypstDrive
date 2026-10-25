@@ -10,7 +10,7 @@ The preview on the right shows every page of your document exactly as it will lo
 
 ## Downloading
 
-Use the **Export** button in the top right, or the **Download** section of the **File** menu:
+Use the **Print or export** button in the top right, or the **Download** section of the **File** menu:
 
 | Choice | What you get |
 |---|---|
@@ -19,7 +19,7 @@ Use the **Export** button in the top right, or the **Download** section of the *
 | .svg graphics | Every page as a scalable picture. |
 | .typ source | The Typst text itself. LaTeX documents download as **.tex source** instead. |
 
-**Print Document** in the **File** menu sends the document to your printer.
+**Print** in the **Print or export** button, or **Print Document** in the **File** menu, sends the document to your printer.
 
 ## Converting to other formats
 

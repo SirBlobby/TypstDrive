@@ -8,6 +8,9 @@
 	} from '../../ts/store';
 	import { previewModeOptions, previewModeStore } from '../../ts/preview-mode';
 	import PreviewModeMenu from '../editor/PreviewModeMenu.svelte';
+	import HeaderIconButton from '../editor/header/HeaderIconButton.svelte';
+	import HeaderTypstLinks from '../editor/header/HeaderTypstLinks.svelte';
+	import HeaderExportMenu from '../editor/header/HeaderExportMenu.svelte';
 	import { exportProject } from '../../ts/typst-api';
 	import PageSettingsModal from '../PageSettingsModal.svelte';
 	import PresentationMode from '../PresentationMode.svelte';
@@ -383,49 +386,27 @@
 			</div>
 		</div>
 
-		<div class="flex items-center gap-3">
+		<div class="flex items-center gap-1.5">
 			<CollaboratorAvatars />
-
-			<div class="w-px h-5 bg-[var(--color-line)]"></div>
-
-			<button onclick={() => (showShareModal = true)} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors">
-				<Icon icon="mdi:share-variant-outline" class="text-[16px]" /> Share
-			</button>
-
+			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
+			<HeaderTypstLinks />
+			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
 			{#if !isViewer}
-				<button onclick={() => (isPresentationOpen = true)} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors">
-					<Icon icon="mdi:presentation-play" class="text-[16px]" /> Present
-				</button>
-				{#if canPublish}
-					<button onclick={onPublish} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-white bg-[var(--color-accent)] hover:opacity-90 rounded-md transition-colors">
-						<Icon icon="mdi:package-variant-closed" class="text-[16px]" /> Publish
-					</button>
-				{/if}
+				<HeaderIconButton icon="mdi:presentation-play" label="Present" onclick={() => (isPresentationOpen = true)} />
 			{/if}
-
-			<div class="w-px h-5 bg-[var(--color-line)]"></div>
-
+			<HeaderIconButton icon="mdi:share-variant-outline" label="Share" onclick={() => (showShareModal = true)} />
+			{#if !isViewer && canPublish}
+				<HeaderIconButton icon="mdi:package-variant-closed" label="Publish as package" variant="primary" onclick={onPublish} />
+			{/if}
+			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
 			{#if !isViewer}
 				<PreviewModeMenu />
 			{/if}
-
-			<button onclick={handlePrint} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-ink-muted)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface-sunken)] rounded-md transition-colors" title="Print">
-				<Icon icon="mdi:printer" class="text-[16px]" /> Print
-			</button>
-
-			<div class="relative action-menu-container">
-				<button onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'export' ? null : 'export'; }} class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-soft)] hover:opacity-90 rounded-md transition-colors {activeMenu === 'export' ? 'ring-2 ring-[var(--color-accent)]/30' : ''}">
-					<Icon icon="mdi:export-variant" class="text-[16px]" /> Export <Icon icon="mdi:chevron-down" class="text-sm opacity-70" />
-				</button>
-				{#if activeMenu === 'export'}
-					<div class="absolute right-0 top-full mt-1 w-44 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
-						<button onclick={() => { activeMenu = null; handleExport('pdf'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:file-pdf-box" class="text-base text-red-500" /> PDF document</button>
-						<button onclick={() => { activeMenu = null; handleExport('typ'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:code-braces" class="text-base text-purple-500" /> active .{isLatexFile ? 'tex' : 'typ'}</button>
-						<button onclick={() => { activeMenu = null; handleExport('svg'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:svg" class="text-base text-orange-500" /> SVG graphics</button>
-						<button onclick={() => { activeMenu = null; handleExport('png'); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:image" class="text-base text-blue-500" /> PNG image</button>
-					</div>
-				{/if}
-			</div>
+			<HeaderExportMenu
+				sourceLabel={`Active .${isLatexFile ? 'tex' : 'typ'} file`}
+				onexport={(format) => handleExport(format === 'source' ? 'typ' : format)}
+				onprint={handlePrint}
+			/>
 		</div>
 	</div>
 
