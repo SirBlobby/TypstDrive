@@ -44,7 +44,7 @@ Password: password
 
 ### Organizing and Sharing
 
-- **Drive**: Folders with custom colors, sorting, grid and list views, stars, file previews, selecting several items to move, star or delete them together, and a trash that keeps deleted items for 30 days.
+- **Drive**: Folders with custom colors, sorting, grid and list views, stars, file previews, duplicating documents and projects, selecting several items to move, star or delete them together, and a trash that keeps deleted items for 30 days.
 - **Search**: A search bar with `type:`, `is:`, `before:` and `after:` filters, and `doc:` to search the text inside documents.
 - **Projects**: Multi-file workspaces for books, theses and templates, downloadable as a ZIP.
 - **Templates**: Start a document or project from any Typst Universe template, with search, type filters and previews. Only the templates people use are downloaded.

@@ -5,7 +5,7 @@
     import SelectCheckbox from './SelectCheckbox.svelte';
     import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
-    let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, readOnly = false, selection = undefined }: {
+    let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, duplicateDoc = undefined, readOnly = false, selection = undefined }: {
         doc: any;
         activeMenu: string | null;
         setActiveMenu: (id: string | null) => void;
@@ -13,6 +13,7 @@
         openRename: (id: string, title: string, type: 'document'|'folder'|'file') => void;
         shareItem: (item: any) => void;
         deleteDoc: (id: string, name: string) => void;
+        duplicateDoc?: (id: string) => void;
         readOnly?: boolean;
         selection?: ItemSelection;
     } = $props();
@@ -92,6 +93,12 @@
                             <Icon icon="mdi:pencil-outline" class="text-lg text-yellow-500" />
                             Rename
                         </button>
+                        {#if duplicateDoc}
+                        <button onclick={(e) => { e.stopPropagation(); duplicateDoc(doc.id); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
+                            <Icon icon="mdi:content-copy" class="text-lg text-indigo-500" />
+                            Duplicate
+                        </button>
+                        {/if}
                         <button onclick={(e) => { e.stopPropagation(); shareItem(doc); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
                             <Icon icon="mdi:share-variant-outline" class="text-lg text-green-500" />
                             Share

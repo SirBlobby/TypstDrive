@@ -21,6 +21,8 @@
 	import HeaderTypstLinks from './editor/header/HeaderTypstLinks.svelte';
 	import HeaderExportMenu from './editor/header/HeaderExportMenu.svelte';
 	import FormattingBar from './editor/FormattingBar.svelte';
+	import { userStore } from '#lib/ts/auth';
+	import { duplicateItem, duplicatePath } from '#lib/ts/duplicates';
 	import LatexFormattingBar from './editor/LatexFormattingBar.svelte';
 	import { uploadDocumentFile } from '#lib/ts/document-uploads';
 	import InsertDialogs from './editor/insert/InsertDialogs.svelte';
@@ -336,6 +338,16 @@
 		});
 	}
 
+	async function makeCopy() {
+		if (!docId) return;
+		try {
+			const copyId = await duplicateItem('document', docId);
+			window.location.assign(duplicatePath('document', copyId));
+		} catch (err) {
+			alert((err as Error).message);
+		}
+	}
+
 	function deleteDoc() {
 		showDeleteModal = true;
 	}
@@ -406,6 +418,9 @@
 							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100] max-h-[calc(100vh-8rem)] overflow-y-auto">
 								<button onclick={() => { activeMenu = null; goto('/drive'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">New / Open</button>
 								<button onclick={() => { activeMenu = null; openInfo(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Document Info</button>
+								{#if docId && $userStore}
+								<button onclick={() => { activeMenu = null; makeCopy(); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Make a Copy</button>
+								{/if}
 								{#if !readOnly}
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<button onclick={() => { activeMenu = null; handleSaveVersion(); }} disabled={saveStatus === 'saving'} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Save Version <span class="text-xs opacity-60">{shortcutText(currentKeybind('saveVersion'))}</span></button>

@@ -31,6 +31,8 @@ Hover over the team in the sidebar and choose the gear button.
 - **Change** someone's role or **remove** them.
 - **Leave** a team. The owner has to hand the team to someone else first.
 - **Make owner** hands the team to another member. You stay on as an admin.
-- **Delete** the team and everything in its drive.
+- **Delete** the team and everything in its drive. This skips the trash.
+
+Items deleted from a team's drive go to the team's own [trash](drive.md#trash), shown while you are working in the team.
 
 If the owner's account is deleted, the team passes to an admin, then a member, then a viewer.

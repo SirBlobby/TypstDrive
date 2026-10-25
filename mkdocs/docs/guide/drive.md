@@ -55,6 +55,12 @@ When you create a document or project, choose its **Language**: **Typst**, or **
 
 Documents show a small picture of their first page so you can recognize them at a glance. LaTeX documents also show a **LaTeX** badge.
 
+### Duplicating
+
+Choose **Duplicate** from the menu on a document or project (or the copy button in list view) to make a copy in the same folder. The copy is named after the original with "(copy)" added, and includes the latest text, even edits that have not been saved yet. A document copy keeps its attached images and fonts. Comments, suggestions, version history and sharing settings are not copied.
+
+Inside the editor, choose **File → Make a Copy** to copy the document or project and open the copy. This works for items shared with you too; the copy goes to the top of your own drive.
+
 ## Uploaded files
 
 Images, fonts, PDFs and other files you upload appear alongside your documents. Uploading a `.typ` file creates a Typst document, and uploading a `.tex` file creates a LaTeX document.

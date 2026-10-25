@@ -6,13 +6,14 @@
     import SelectCheckbox from './SelectCheckbox.svelte';
     import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
-    let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, shareItem = undefined, readOnly = false, selection = undefined }: {
+    let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, duplicateProject = undefined, shareItem = undefined, readOnly = false, selection = undefined }: {
         project: any;
         activeMenu: string | null;
         setActiveMenu: (id: string | null) => void;
         openInfo: (project: any, type: string) => void;
         openRename: (id: string, name: string, type: 'project') => void;
         deleteProject: (id: string, name: string) => void;
+        duplicateProject?: (id: string) => void;
         shareItem?: (item: any, kind: 'project') => void;
         readOnly?: boolean;
         selection?: ItemSelection;
@@ -93,6 +94,12 @@
                         <Icon icon="mdi:pencil-outline" class="text-lg text-yellow-500" />
                         Rename
                     </button>
+                    {#if duplicateProject}
+                        <button onclick={(e) => { e.stopPropagation(); duplicateProject(project.id); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">
+                            <Icon icon="mdi:content-copy" class="text-lg text-indigo-500" />
+                            Duplicate
+                        </button>
+                    {/if}
                     <div class="h-px bg-[var(--color-line)] my-1"></div>
                     <button onclick={(e) => { e.stopPropagation(); deleteProject(project.id, project.name); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 flex items-center gap-2">
                         <Icon icon="mdi:trash-can-outline" class="text-lg" />
