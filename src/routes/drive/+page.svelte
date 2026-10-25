@@ -40,6 +40,7 @@
     import ContentSearchResults from '#lib/components/drive/ContentSearchResults.svelte';
     import LanguagePicker from '#lib/components/drive/LanguagePicker.svelte';
     import DriveSelectionActions from '#lib/components/drive/DriveSelectionActions.svelte';
+    import GitImportModal from '#lib/components/git/GitImportModal.svelte';
     import { DriveSelection, entryKey, selectionKey } from '#lib/ts/drive-selection.svelte';
     import { moveEntries } from '#lib/ts/drive-bulk';
     import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
@@ -56,6 +57,7 @@
     let loading = $state(true);
     let showCreateModal = $state(false);
     let showCreateProjectModal = $state(false);
+    let showGitImport = $state(false);
     let newDocTitle = $state('');
     let newDocLanguage = $state<DocumentLanguage>('typst');
     let newProjectLanguage = $state<DocumentLanguage>('typst');
@@ -674,6 +676,7 @@
                 onNewFolder={openCreateFolderModal}
                 onUpload={() => fileInput?.click()}
                 onImport={() => importFileInput?.click()}
+                onImportGit={() => (showGitImport = true)}
                 controls={contentSearchText === null ? driveControls : undefined}
             />
 
@@ -942,6 +945,10 @@
     >
         <LanguagePicker bind:language={newProjectLanguage} />
     </PromptModal>
+{/if}
+
+{#if showGitImport}
+    <GitImportModal folderId={currentFolderId} onimported={(projectId) => goto(`/project/${projectId}`)} onclose={() => (showGitImport = false)} />
 {/if}
 
 {#if showCreateFolderModal}
