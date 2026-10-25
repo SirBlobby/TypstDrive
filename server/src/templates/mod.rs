@@ -1,3 +1,4 @@
+mod authors;
 pub mod create;
 mod files;
 pub mod index;

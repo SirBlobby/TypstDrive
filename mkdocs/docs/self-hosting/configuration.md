@@ -82,6 +82,12 @@ See [Bigger installs](scaling.md).
 |---|---|---|
 | `REMOTE_URLS_ALLOW_PRIVATE` | `false` | Documents can load images and data from web addresses. By default addresses on private networks, such as `localhost`, `192.168.x.x` or cloud metadata services, are blocked. Set to `true` only if documents need to reach servers on your own network. |
 
+## Citations
+
+| Setting | Default | What it does |
+|---|---|---|
+| `SEMANTIC_SCHOLAR_API_KEY` | not set | A free key from Semantic Scholar raises its request limit for Semantic Scholar lookups. Lookups work without it, but may be told to wait when many people use them. |
+
 ## Everything else
 
 Who can register, sign-in rules, branding, storage limits, teams, packages and API limits are all set in the browser. See [Administration](../admin/index.md).

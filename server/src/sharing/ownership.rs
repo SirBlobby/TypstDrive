@@ -181,6 +181,7 @@ pub async fn request_transfer(
         .execute(&state.db)
         .await
         .map_err(internal_error)?;
+    crate::sharing::notifications::ownership_offered(&state, kind, &payload.item_id, &user_id, &payload.to_user_id);
 
     fetch_transfers(&state, "t.id = $1", &transfer_id)
         .await?

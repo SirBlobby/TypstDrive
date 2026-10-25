@@ -11,7 +11,7 @@ use crate::admin::site_settings::{load_settings, save_settings};
 use crate::admin::users::require_admin;
 use crate::AppState;
 
-pub use logo::{get_logo, remove_logo, upload_logo};
+pub use logo::{get_logo, logo_updated_at, remove_logo, upload_logo};
 
 const SITE_NAME_KEY: &str = "branding.site_name";
 const TAGLINE_KEY: &str = "branding.tagline";

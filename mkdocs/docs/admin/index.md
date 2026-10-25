@@ -14,7 +14,7 @@ Administrators look after a TypstDrive server from the browser. Open **Site Sett
 | [Storage and history](storage.md) | Set storage limits, how many versions each document keeps, and how long the trash keeps deleted items. |
 | [Packages](packages.md) | Control who can publish packages and how big they can be. |
 | [PDF links](pdf-links.md) | Turn public PDF links on or off, limit them, and remove any link. |
-| [Citations](citations.md) | Turn DOI and arXiv lookups and Zotero sync on or off. |
+| [Citations](citations.md) | Turn reference lookups, ORCID lookups and Zotero sync on or off. |
 | [API access](api.md) | Turn the API on or off and set limits. |
 | [Server and about](server.md) | Check how the server is set up and which version it runs. |
 

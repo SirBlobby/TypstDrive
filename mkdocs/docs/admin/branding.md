@@ -12,6 +12,8 @@ Make TypstDrive look like your own in **Site Settings → Appearance → Brandin
 
 **Use defaults** puts everything back.
 
+Emails sent by the server use the same site name, accent color and logo. See [Email](../self-hosting/email.md).
+
 While any of these differ from the defaults, a small "Powered by TypstDrive" link is shown in the corner of each page to credit the project.
 
 People still choose their own color theme and dark or light mode in [their settings](../guide/settings.md#appearance). New browsers start with the Cerberus theme in dark mode. To add more color themes for everyone, see [Themes](themes.md).

@@ -1,3 +1,5 @@
+import type { TemplateAuthor } from './orcid';
+
 export interface UniverseTemplate {
     name: string;
     version: string;
@@ -13,6 +15,7 @@ export interface UniverseTemplate {
 export interface CreatedItem {
     kind: 'document' | 'project';
     id: string;
+    authors_filled?: boolean;
 }
 
 export type TemplateSort = 'name' | 'recent';
@@ -42,12 +45,13 @@ async function request<T>(url: string, method = 'GET', body?: unknown): Promise<
 
 export const fetchTemplates = () => request<UniverseTemplate[]>('/api/templates');
 
-export const createFromTemplate = (template: UniverseTemplate, title: string, folderId: string | null) =>
+export const createFromTemplate = (template: UniverseTemplate, title: string, folderId: string | null, authors: TemplateAuthor[]) =>
     request<CreatedItem>('/api/projects/from-template', 'POST', {
         name: template.name,
         version: template.version,
         title,
-        folder_id: folderId ?? undefined
+        folder_id: folderId ?? undefined,
+        authors
     });
 
 export function thumbnailUrl(template: UniverseTemplate) {

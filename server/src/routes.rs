@@ -104,6 +104,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/themes/{id}", put(themes::personal::update_theme).delete(themes::personal::delete_theme))
         .route("/citations/policy", get(citations::policy::own_policy))
         .route("/citations/lookup", post(citations::entries::lookup))
+        .route("/citations/orcid/{id}", get(citations::orcid::lookup))
         .route("/citations/zotero", get(citations::zotero_account::status).put(citations::zotero_account::connect).delete(citations::zotero_account::disconnect))
         .route("/citations/zotero/libraries", get(citations::zotero_account::libraries))
         .route("/citations/zotero/collections", get(citations::zotero_account::collections))

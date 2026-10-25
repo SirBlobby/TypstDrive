@@ -9,11 +9,18 @@ use crate::AppState;
 
 const LOOKUP_KEY: &str = "citations.lookup_enabled";
 const ZOTERO_KEY: &str = "citations.zotero_enabled";
+const ORCID_KEY: &str = "citations.orcid_enabled";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CitationPolicy {
     pub lookup_enabled: bool,
     pub zotero_enabled: bool,
+    #[serde(default = "enabled_by_default")]
+    pub orcid_enabled: bool,
+}
+
+fn enabled_by_default() -> bool {
+    true
 }
 
 impl CitationPolicy {
@@ -21,7 +28,7 @@ impl CitationPolicy {
         if self.lookup_enabled {
             Ok(())
         } else {
-            Err((StatusCode::FORBIDDEN, "DOI and arXiv lookups are turned off on this server".to_string()))
+            Err((StatusCode::FORBIDDEN, "Reference lookups are turned off on this server".to_string()))
         }
     }
 
@@ -32,12 +39,20 @@ impl CitationPolicy {
             Err((StatusCode::FORBIDDEN, "Zotero sync is turned off on this server".to_string()))
         }
     }
+
+    pub fn check_orcid(&self) -> Result<(), ApiError> {
+        if self.orcid_enabled {
+            Ok(())
+        } else {
+            Err((StatusCode::FORBIDDEN, "ORCID lookups are turned off on this server".to_string()))
+        }
+    }
 }
 
 pub async fn load_policy(state: &AppState) -> CitationPolicy {
     let settings = load_settings(state, "citations.").await;
     let flag = |key: &str| settings.get(key).map(|value| value == "true").unwrap_or(true);
-    CitationPolicy { lookup_enabled: flag(LOOKUP_KEY), zotero_enabled: flag(ZOTERO_KEY) }
+    CitationPolicy { lookup_enabled: flag(LOOKUP_KEY), zotero_enabled: flag(ZOTERO_KEY), orcid_enabled: flag(ORCID_KEY) }
 }
 
 pub async fn own_policy(State(state): State<AppState>) -> Json<CitationPolicy> {
@@ -59,6 +74,7 @@ pub async fn update_policy(
     let entries = [
         (LOOKUP_KEY, payload.lookup_enabled.to_string()),
         (ZOTERO_KEY, payload.zotero_enabled.to_string()),
+        (ORCID_KEY, payload.orcid_enabled.to_string()),
     ];
     save_settings(&state, &entries)
         .await
@@ -70,7 +86,7 @@ pub async fn update_policy(
         &client,
         "settings.citations",
         "",
-        &format!("lookups {}, zotero {}", payload.lookup_enabled, payload.zotero_enabled),
+        &format!("lookups {}, zotero {}, orcid {}", payload.lookup_enabled, payload.zotero_enabled, payload.orcid_enabled),
     )
     .await;
 

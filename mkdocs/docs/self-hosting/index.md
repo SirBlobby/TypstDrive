@@ -31,7 +31,10 @@ TypstDrive works without an internet connection, but some features reach outside
 | Service | Used for |
 |---|---|
 | `packages.typst.org` | `@preview` packages, the [template](../guide/templates.md) list, template previews and the MiTeX package for LaTeX |
-| `doi.org` | DOI and arXiv lookups in the [citation tools](../guide/citations.md) |
+| `doi.org`, `api.crossref.org` | DOI and arXiv lookups in the [citation tools](../guide/citations.md) |
+| `api.ncbi.nlm.nih.gov` | PubMed and PMC lookups |
+| `api.semanticscholar.org` | Semantic Scholar lookups |
+| `pub.orcid.org` | Filling in [template](../guide/templates.md) authors from ORCID |
 | `api.zotero.org` | Zotero sync |
 
 If your server cannot reach the internet, these features show an error and everything else keeps working. Citation services can be turned off in [Site Settings](../admin/citations.md).

@@ -5,7 +5,11 @@ With email set up, TypstDrive can send:
 - password reset links;
 - one-time sign-in codes;
 - codes to confirm email addresses;
-- team invitations.
+- team invitations;
+- a note when someone shares a document, project or folder with you;
+- a note when someone offers to give you ownership of an item.
+
+Every email uses the site name, accent color and logo from [Branding](../admin/branding.md). The logo only shows when `PUBLIC_URL` is set, because email clients load it from your server.
 
 Without email everything else works, and these options simply stay hidden.
 

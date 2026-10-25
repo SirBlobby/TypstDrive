@@ -1,0 +1,9 @@
+Hi {{username}},
+
+{{inviter}} shared the {{kind}} "{{item}}" with you. You can {{role_action}}.
+
+You will also find it under Shared with me in the drive.
+
+{{link}}
+
+If you were not expecting this, you can ignore this email or ask {{inviter}} to remove you.

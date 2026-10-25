@@ -48,7 +48,7 @@ pub async fn request_reset(
         .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
     let link = crate::site_url::link(&format!("/reset-password?token={token}")).unwrap_or_default();
 
-    if let Err(error) = state.mailer.send(&user.email, crate::email::messages::password_reset(&user.username, &link)).await {
+    if let Err(error) = state.mailer.send(&user.email, crate::email::messages::password_reset(&crate::email::brand::load(&state).await, &user.username, &link)).await {
         tracing::warn!("Password reset email to {} failed: {error}", user.email);
     }
     Ok(StatusCode::ACCEPTED)

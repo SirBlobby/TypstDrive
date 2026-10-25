@@ -1,0 +1,9 @@
+Hi {{username}},
+
+{{owner}} wants to make you the owner of the {{kind}} "{{item}}".
+
+Accepting moves it into your drive and counts it toward your storage. {{owner}} keeps access as an editor. Open the drive to accept or decline.
+
+{{link}}
+
+Nothing changes until you accept.

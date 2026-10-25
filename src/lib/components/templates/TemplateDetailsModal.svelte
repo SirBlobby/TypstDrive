@@ -3,16 +3,19 @@
     import { untrack } from 'svelte';
     import Modal from '../Modal.svelte';
     import TemplateThumbnail from './TemplateThumbnail.svelte';
+    import TemplateAuthorsEditor from './TemplateAuthorsEditor.svelte';
     import { focusOnMount } from '#lib/ts/focus-on-mount';
     import { categoryLabel, readableName, universeUrl, type UniverseTemplate } from '#lib/ts/templates';
+    import { loadSavedAuthors, saveAuthors, type TemplateAuthor } from '#lib/ts/orcid';
 
     let { template, oncreate, onclose }: {
         template: UniverseTemplate;
-        oncreate: (title: string) => Promise<void>;
+        oncreate: (title: string, authors: TemplateAuthor[]) => Promise<void>;
         onclose: () => void;
     } = $props();
 
     let title = $state(untrack(() => readableName(template.name)));
+    let authors = $state<TemplateAuthor[]>(loadSavedAuthors());
     let creating = $state(false);
     let problem = $state('');
 
@@ -21,8 +24,10 @@
         if (!title.trim() || creating) return;
         creating = true;
         problem = '';
+        const namedAuthors = authors.filter((author) => author.name.trim());
+        saveAuthors(namedAuthors);
         try {
-            await oncreate(title.trim());
+            await oncreate(title.trim(), namedAuthors);
         } catch (err) {
             problem = (err as Error).message;
             creating = false;
@@ -63,6 +68,9 @@
                     maxlength="200"
                     class="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
                 />
+                <div class="mt-2">
+                    <TemplateAuthorsEditor bind:authors />
+                </div>
             </form>
         </div>
     </div>

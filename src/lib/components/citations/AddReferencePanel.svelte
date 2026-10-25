@@ -91,16 +91,16 @@
 </script>
 
 {#if !enabled}
-    <p class="text-sm text-[var(--color-ink-muted)]">An administrator has turned off DOI and arXiv lookups on this server.</p>
+    <p class="text-sm text-[var(--color-ink-muted)]">An administrator has turned off reference lookups on this server.</p>
 {:else}
     <div class="flex flex-col gap-4">
         <form onsubmit={lookUp} class="flex flex-col gap-1.5 text-xs">
-            <label for="citation-identifier" class="font-medium text-[var(--color-ink-muted)]">DOI or arXiv ID</label>
+            <label for="citation-identifier" class="font-medium text-[var(--color-ink-muted)]">DOI, arXiv, PubMed, PMC or Semantic Scholar ID</label>
             <div class="flex gap-2">
                 <input
                     id="citation-identifier"
                     bind:value={identifier}
-                    placeholder="10.1038/nature14539 or 1706.03762"
+                    placeholder="10.1038/nature14539, 1706.03762, PMID 31452104"
                     class="min-w-0 flex-1 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 font-mono text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
                 />
                 <button type="submit" disabled={!identifier.trim() || busy !== null} class="flex items-center gap-1.5 rounded-md border border-[var(--color-line)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] disabled:opacity-50">
@@ -108,6 +108,7 @@
                     Look up
                 </button>
             </div>
+            <p class="text-[var(--color-ink-muted)]">Paste an identifier or a link from doi.org, arxiv.org, pubmed.ncbi.nlm.nih.gov or semanticscholar.org.</p>
         </form>
 
         <BibliographyFilePicker {files} bind:value={fileName} defaultName="references.bib" />

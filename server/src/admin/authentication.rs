@@ -113,7 +113,7 @@ pub async fn send_test_email(
 
     state
         .mailer
-        .send(&recipient, crate::email::messages::test_message(&admin.username))
+        .send(&recipient, crate::email::messages::test_message(&crate::email::brand::load(&state).await, &admin.username))
         .await
         .map_err(|error| (StatusCode::BAD_GATEWAY, format!("Sending failed: {error}")))?;
 

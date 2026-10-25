@@ -46,7 +46,7 @@ pub async fn send_verification(state: &AppState, user_id: &str, username: &str, 
 
     state
         .mailer
-        .send(email, crate::email::messages::email_verification(username, &link, &code, VERIFY_EMAIL_CODE_MINUTES))
+        .send(email, crate::email::messages::email_verification(&crate::email::brand::load(state).await, username, &link, &code, VERIFY_EMAIL_CODE_MINUTES))
         .await
         .map_err(|error| (StatusCode::BAD_GATEWAY, format!("Could not send the email: {error}")))
 }
