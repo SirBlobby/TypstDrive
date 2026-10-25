@@ -5,6 +5,7 @@
 With the built-in database, everything is in the folder mounted at `/data`, which is `./data` in the [install guide](install.md):
 
 - `typstdrive.db` and the files next to it hold accounts, documents, versions, settings and uploaded files.
+- `git-cache` holds partial clones used by [Git sync](../guide/git.md) for servers other than GitHub and GitLab. It does not need a backup; it is fetched again when missing.
 
 If you use [PostgreSQL or MySQL](databases.md), your data is in that database instead. If you use [object storage](scaling.md#object-storage), uploaded files are in your bucket.
 

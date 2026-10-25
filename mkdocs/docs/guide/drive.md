@@ -125,3 +125,5 @@ Download a folder or project as a ZIP file from its download button. To get a fi
 Choose **New → Import** to turn a Word (`.docx`), LaTeX (`.tex`), Markdown (`.md`) or web page (`.html`) file into a Typst document. The result usually needs a little tidying, but saves a lot of retyping.
 
 To keep a `.tex` file as LaTeX instead of converting it, use **Upload**.
+
+Choose **New → From Git** to create a project from a folder in a Git repository and keep it in sync. See [Git sync](git.md).
