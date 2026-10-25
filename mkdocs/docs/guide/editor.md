@@ -14,6 +14,22 @@ This page describes Typst documents. LaTeX documents have their own editor and t
 - Mistakes are underlined, and the error bar under the toolbar tells you what went wrong and on which line.
 - Smart features such as jumping to where something is defined, renaming and formatting are available to owners and editors.
 
+## The top bar
+
+The buttons in the top right show only icons. Hover over one to see its name. Documents and projects share the same order:
+
+| Button | What it does |
+|---|---|
+| Typst Docs, Typst Universe | Open the Typst documentation or package library in a new tab. |
+| Version history | Documents only. See [Version history](collaboration.md#version-history). |
+| Present | Show the document as slides. See [Presenting](presenting.md). |
+| Share | Choose who can open it. See [Sharing](sharing.md). |
+| Publish as package | Projects only, for the owner. See [Packages](packages.md). |
+| Comments | Documents only. Opens the comments panel. |
+| Editing or Suggesting | Documents only. See [Suggesting changes](collaboration.md#suggesting-changes). |
+| View | Chooses the view mode below. |
+| Print or export | Print, or download a PDF, the source file, SVG or PNG. |
+
 ## View modes
 
 The **View** button in the top bar chooses what the editor shows:
