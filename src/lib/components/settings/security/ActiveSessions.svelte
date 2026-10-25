@@ -2,10 +2,10 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import { dangerButtonClass, formatDate, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import { describeUserAgent, userAgentIcon } from '$lib/ts/user-agent';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
+    import { userStore } from '#lib/ts/auth';
+    import { dangerButtonClass, formatDate, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { describeUserAgent, userAgentIcon } from '#lib/ts/user-agent';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
 
     type Session = {
         id: string;

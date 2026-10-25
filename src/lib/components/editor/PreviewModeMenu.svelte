@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { previewModeOptions, previewModeStore, type PreviewMode } from '$lib/ts/preview-mode';
+	import { previewModeOptions, previewModeStore, type PreviewMode } from '#lib/ts/preview-mode';
 
 	let open = $state(false);
 	let menuContainer = $state<HTMLDivElement | null>(null);

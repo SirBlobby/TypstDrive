@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { darkModeStore, highContrastStore, textSizeStore, type TextSize } from '$lib/ts/store';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import { darkModeStore, highContrastStore, textSizeStore, type TextSize } from '#lib/ts/store';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
 
     const textSizes: { value: TextSize; label: string; title: string }[] = [
         { value: 'small', label: 'A−', title: 'Smaller text' },

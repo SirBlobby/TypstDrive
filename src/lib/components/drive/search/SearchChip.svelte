@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import type { SearchToken } from '$lib/ts/drive-search';
+    import type { SearchToken } from '#lib/ts/drive-search';
 
     let { token, onremove }: { token: SearchToken; onremove: () => void } = $props();
 </script>

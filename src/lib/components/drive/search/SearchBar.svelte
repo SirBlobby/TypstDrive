@@ -10,8 +10,8 @@
         withToken,
         withoutToken,
         type DriveSearch
-    } from '$lib/ts/drive-search';
-    import { searchSuggestions, type SearchSuggestion } from '$lib/ts/search-suggestions';
+    } from '#lib/ts/drive-search';
+    import { searchSuggestions, type SearchSuggestion } from '#lib/ts/search-suggestions';
 
     let { search = $bindable() }: { search: DriveSearch } = $props();
 

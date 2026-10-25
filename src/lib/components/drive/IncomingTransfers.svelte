@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { acceptTransfer, cancelTransfer, fetchTransfers, type OwnershipTransfer } from '$lib/ts/ownership';
+    import { acceptTransfer, cancelTransfer, fetchTransfers, type OwnershipTransfer } from '#lib/ts/ownership';
 
     let { onAccepted }: { onAccepted: () => void } = $props();
 

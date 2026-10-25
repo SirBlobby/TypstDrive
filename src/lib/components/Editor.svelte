@@ -5,8 +5,7 @@
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { autocompletion, snippetCompletion, type CompletionContext } from '@codemirror/autocomplete';
 	import { typst, TypstParser, typstHighlight } from 'codemirror-lang-typst';
-	import { Language, StreamLanguage } from '@codemirror/language';
-	import { toml } from '@codemirror/legacy-modes/mode/toml';
+	import { Language } from '@codemirror/language';
 	import { yCollab } from 'y-codemirror.next';
 	import { text, provider } from '../ts/yjs-setup';
 	import { getThemeExtension } from '../ts/themes';
@@ -24,6 +23,7 @@
 	import { loadEditorFont } from '../ts/editor-fonts';
 	import { latexEditorExtensions } from '../ts/editor-latex';
 	import type { DocumentLanguage } from '../ts/document-language';
+	import { editorFileKind, commentMarkerFor, dataFileLanguage } from '../ts/editor-file-kind';
 
 	let {
 		ytext = undefined,
@@ -183,12 +183,12 @@
 			'typst'
 		);
 
-		const isToml = (filePath ?? '').toLowerCase().endsWith('.toml');
-		const isLatex = language === 'latex' || (filePath ?? '').toLowerCase().endsWith('.tex');
-		const isTypst = !isToml && !isLatex;
-		const commentMarker = isToml ? '#' : isLatex ? '%' : '//';
-		let languageExtension: Extension = [typstLanguage, typstBracketSettings(typstLanguage)];
-		if (isToml) languageExtension = StreamLanguage.define(toml);
+		const fileKind = editorFileKind(filePath, language);
+		const isLatex = fileKind === 'latex';
+		const isTypst = fileKind === 'typst';
+		const commentMarker = commentMarkerFor(fileKind);
+		let languageExtension: Extension = dataFileLanguage(fileKind);
+		if (isTypst) languageExtension = [typstLanguage, typstBracketSettings(typstLanguage)];
 		if (isLatex) languageExtension = latexEditorExtensions();
 		const completionExtensions = isTypst ? [autocompletion({ override: [typstCompletions] })] : [];
 

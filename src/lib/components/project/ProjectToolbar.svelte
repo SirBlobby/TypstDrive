@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { downloadProject } from '$lib/ts/downloads';
+	import { downloadProject } from '#lib/ts/downloads';
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';

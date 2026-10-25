@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { dangerButtonClass, formatDate, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import { copyText, itemPageUrl, pdfLinkUrl, type PdfLink } from '$lib/ts/pdf-links';
+    import { dangerButtonClass, formatDate, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { copyText, itemPageUrl, pdfLinkUrl, type PdfLink } from '#lib/ts/pdf-links';
 
     let { link, showOwner = false, onrename, ondelete }: {
         link: PdfLink;

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { PersonSummary } from '$lib/ts/people';
+    import type { PersonSummary } from '#lib/ts/people';
 
     let { person, sizeClass = 'h-6 w-6', textClass = 'text-[10px]' }: { person: PersonSummary; sizeClass?: string; textClass?: string } = $props();
 

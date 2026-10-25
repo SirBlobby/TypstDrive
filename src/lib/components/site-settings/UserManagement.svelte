@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
+    import { userStore } from '#lib/ts/auth';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SetPasswordModal from './users/SetPasswordModal.svelte';
 
     type AdminUser = {

@@ -1,16 +1,16 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { doc, text } from '$lib/ts/yjs-setup';
-    import { editorViewStore } from '$lib/ts/store';
-    import { anchorRange } from '$lib/ts/document-anchors';
+    import { doc, text } from '#lib/ts/yjs-setup';
+    import { editorViewStore } from '#lib/ts/store';
+    import { anchorRange } from '#lib/ts/document-anchors';
     import {
         activeSuggestionStore,
         currentSuggestionRange,
         suggestingModeStore,
         suggestionDraftStore,
         suggestionsStore
-    } from '$lib/ts/suggestions';
-    import { setSuggestionMarks, suggestingCompartment, suggestingFilter, type CapturedEdit, type SuggestionMark } from '$lib/ts/editor-suggestions';
+    } from '#lib/ts/suggestions';
+    import { setSuggestionMarks, suggestingCompartment, suggestingFilter, type CapturedEdit, type SuggestionMark } from '#lib/ts/editor-suggestions';
 
     let documentRevision = $state(0);
 

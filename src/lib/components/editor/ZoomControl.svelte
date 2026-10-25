@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { documentZoomStore } from '$lib/ts/store';
+	import { documentZoomStore } from '#lib/ts/store';
 </script>
 
 <div class="flex items-center gap-1 bg-[var(--color-surface)] border border-[var(--color-line)] rounded shadow-sm overflow-hidden">

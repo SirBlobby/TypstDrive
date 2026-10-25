@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { fileDataUrl } from '$lib/ts/item-info';
+    import { fileDataUrl } from '#lib/ts/item-info';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
 
     let { file, deleteFile, openRename, openPreview, openInfo = undefined, onReplaced = undefined, readOnly = false }: {

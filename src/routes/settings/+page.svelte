@@ -1,20 +1,20 @@
 <script lang="ts">
-    import { brandingStore } from '$lib/ts/branding';
+    import { brandingStore } from '#lib/ts/branding';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import SettingsSidebar from '$lib/components/settings/SettingsSidebar.svelte';
-    import AccountSection from '$lib/components/settings/sections/AccountSection.svelte';
-    import AppearanceSection from '$lib/components/settings/sections/AppearanceSection.svelte';
-    import EditorSection from '$lib/components/settings/sections/EditorSection.svelte';
-    import StorageSection from '$lib/components/settings/sections/StorageSection.svelte';
-    import ApiKeysSection from '$lib/components/settings/sections/ApiKeysSection.svelte';
-    import DevicesSection from '$lib/components/settings/sections/DevicesSection.svelte';
-    import PdfLinksSection from '$lib/components/settings/sections/PdfLinksSection.svelte';
-    import CitationsSection from '$lib/components/settings/sections/CitationsSection.svelte';
-    import SecuritySection from '$lib/components/settings/sections/SecuritySection.svelte';
+    import { userStore } from '#lib/ts/auth';
+    import SettingsSidebar from '#lib/components/settings/SettingsSidebar.svelte';
+    import AccountSection from '#lib/components/settings/sections/AccountSection.svelte';
+    import AppearanceSection from '#lib/components/settings/sections/AppearanceSection.svelte';
+    import EditorSection from '#lib/components/settings/sections/EditorSection.svelte';
+    import StorageSection from '#lib/components/settings/sections/StorageSection.svelte';
+    import ApiKeysSection from '#lib/components/settings/sections/ApiKeysSection.svelte';
+    import DevicesSection from '#lib/components/settings/sections/DevicesSection.svelte';
+    import PdfLinksSection from '#lib/components/settings/sections/PdfLinksSection.svelte';
+    import CitationsSection from '#lib/components/settings/sections/CitationsSection.svelte';
+    import SecuritySection from '#lib/components/settings/sections/SecuritySection.svelte';
 
     const navItems = [
         { id: 'account', label: 'Account', icon: 'mdi:account-outline' },

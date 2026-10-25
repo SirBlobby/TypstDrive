@@ -1,8 +1,8 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { editorViewStore } from '$lib/ts/store';
-    import { focusOnMount } from '$lib/ts/focus-on-mount';
-    import { submitSuggestion, suggestionDraftStore, type SuggestionDraft } from '$lib/ts/suggestions';
+    import { editorViewStore } from '#lib/ts/store';
+    import { focusOnMount } from '#lib/ts/focus-on-mount';
+    import { submitSuggestion, suggestionDraftStore, type SuggestionDraft } from '#lib/ts/suggestions';
 
     let { docId }: { docId: string } = $props();
 

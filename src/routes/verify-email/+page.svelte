@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { brandingStore } from '$lib/ts/branding';
+    import { brandingStore } from '#lib/ts/branding';
     import { page } from '$app/state';
     import { onMount } from 'svelte';
-    import { fetchUser, userStore } from '$lib/ts/auth';
-    import { postJson, readError } from '$lib/ts/auth-options';
-    import AuthShell from '$lib/components/auth/AuthShell.svelte';
-    import FormNotice from '$lib/components/auth/FormNotice.svelte';
+    import { fetchUser, userStore } from '#lib/ts/auth';
+    import { postJson, readError } from '#lib/ts/auth-options';
+    import AuthShell from '#lib/components/auth/AuthShell.svelte';
+    import FormNotice from '#lib/components/auth/FormNotice.svelte';
 
     const token = page.url.searchParams.get('token') ?? '';
 

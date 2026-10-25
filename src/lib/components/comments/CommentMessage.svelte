@@ -1,10 +1,10 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import PersonAvatar from '$lib/components/people/PersonAvatar.svelte';
+    import PersonAvatar from '#lib/components/people/PersonAvatar.svelte';
     import CommentComposer from './CommentComposer.svelte';
-    import { userStore } from '$lib/ts/auth';
-    import { formatTimestamp } from '$lib/ts/item-info';
-    import type { CommentView } from '$lib/ts/comments';
+    import { userStore } from '#lib/ts/auth';
+    import { formatTimestamp } from '#lib/ts/item-info';
+    import type { CommentView } from '#lib/ts/comments';
 
     let { comment, canDelete, clampLines = false, onEdit, onDelete }: {
         comment: CommentView;

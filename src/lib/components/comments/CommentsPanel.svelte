@@ -1,16 +1,16 @@
 <script lang="ts">
     import { onMount, untrack } from 'svelte';
     import Icon from '@iconify/svelte';
-    import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+    import ConfirmModal from '#lib/components/ConfirmModal.svelte';
     import CommentThreadCard from './CommentThreadCard.svelte';
     import CommentComposer from './CommentComposer.svelte';
-    import SuggestionsList from '$lib/components/suggestions/SuggestionsList.svelte';
-    import { activeSuggestionStore, loadSuggestions, suggestionsStore } from '$lib/ts/suggestions';
-    import { doc } from '$lib/ts/yjs-setup';
-    import { editorViewStore } from '$lib/ts/store';
-    import { currentKeybind } from '$lib/ts/keybinds/keybinds-store';
-    import { shortcutText } from '$lib/ts/keybinds/key-format';
-    import { resolveRange } from '$lib/ts/document-anchors';
+    import SuggestionsList from '#lib/components/suggestions/SuggestionsList.svelte';
+    import { activeSuggestionStore, loadSuggestions, suggestionsStore } from '#lib/ts/suggestions';
+    import { doc } from '#lib/ts/yjs-setup';
+    import { editorViewStore } from '#lib/ts/store';
+    import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
+    import { shortcutText } from '#lib/ts/keybinds/key-format';
+    import { resolveRange } from '#lib/ts/document-anchors';
     import {
         activeThreadStore,
         buildThreads,
@@ -21,7 +21,7 @@
         pendingCommentStore,
         type CommentThread,
         type CommentView
-    } from '$lib/ts/comments';
+    } from '#lib/ts/comments';
 
     type PanelTab = 'open' | 'resolved' | 'suggestions';
 

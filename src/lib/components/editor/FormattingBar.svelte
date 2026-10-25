@@ -1,15 +1,15 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { text } from '$lib/ts/yjs-setup';
-	import { editorViewStore, triggerLspReconnect } from '$lib/ts/store';
-	import { replaceSelection, uploadDocumentFile } from '$lib/ts/document-uploads';
+	import { text } from '#lib/ts/yjs-setup';
+	import { editorViewStore, triggerLspReconnect } from '#lib/ts/store';
+	import { replaceSelection, uploadDocumentFile } from '#lib/ts/document-uploads';
 	import ZoomControl from './ZoomControl.svelte';
-	import { currentHeadingLevel, insertQuote, openFind, openReplace, setHeadingLevel, wrapSelection } from '$lib/ts/editor-insert';
-	import { insertDialogStore, insertOptions } from '$lib/ts/insert-dialog';
-	import { insertTypstSetting } from '$lib/ts/typst-settings';
-	import { startCommentOnSelection } from '$lib/ts/comments';
+	import { currentHeadingLevel, insertQuote, openFind, openReplace, setHeadingLevel, wrapSelection } from '#lib/ts/editor-insert';
+	import { insertDialogStore, insertOptions } from '#lib/ts/insert-dialog';
+	import { insertTypstSetting } from '#lib/ts/typst-settings';
+	import { startCommentOnSelection } from '#lib/ts/comments';
 	import ToolbarButton from './ToolbarButton.svelte';
-	import { withShortcut } from '$lib/ts/keybinds/keybinds-store';
+	import { withShortcut } from '#lib/ts/keybinds/keybinds-store';
 
 	let { docId, readOnly, canComment, unsharedFileCount, onOpenAssets, onOpenPageSettings }: {
 		docId?: string;

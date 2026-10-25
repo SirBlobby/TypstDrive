@@ -1,11 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import { brandingStore, defaultBranding, toSettings, type Branding, type BrandingSettings } from '$lib/ts/branding';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { brandingStore, defaultBranding, toSettings, type Branding, type BrandingSettings } from '#lib/ts/branding';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import LogoUploader from './branding/LogoUploader.svelte';
 
     const FALLBACK_COLOR_PICKER_VALUE = '#1e66f5';

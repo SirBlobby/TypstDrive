@@ -1,14 +1,14 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { fetchStarred, starKey, starredStore, type StarKind } from '$lib/ts/stars';
-    import { sortItems, type DriveEntry, type DriveFilters, type ViewMode } from '$lib/ts/drive-filters';
-    import { matchesItem, type DriveSearch } from '$lib/ts/drive-search';
-    import DocCard from '$lib/components/drive/DocCard.svelte';
-    import ProjectFolderRow from '$lib/components/drive/ProjectFolderRow.svelte';
-    import DriveListView from '$lib/components/drive/DriveListView.svelte';
-    import DriveEmptyState from '$lib/components/drive/DriveEmptyState.svelte';
-    import DriveSectionTitle from '$lib/components/drive/DriveSectionTitle.svelte';
+    import { fetchStarred, starKey, starredStore, type StarKind } from '#lib/ts/stars';
+    import { sortItems, type DriveEntry, type DriveFilters, type ViewMode } from '#lib/ts/drive-filters';
+    import { matchesItem, type DriveSearch } from '#lib/ts/drive-search';
+    import DocCard from '#lib/components/drive/DocCard.svelte';
+    import ProjectFolderRow from '#lib/components/drive/ProjectFolderRow.svelte';
+    import DriveListView from '#lib/components/drive/DriveListView.svelte';
+    import DriveEmptyState from '#lib/components/drive/DriveEmptyState.svelte';
+    import DriveSectionTitle from '#lib/components/drive/DriveSectionTitle.svelte';
 
     let { search, filters, viewMode, activeMenu, setActiveMenu, openInfo }: {
         search: DriveSearch;

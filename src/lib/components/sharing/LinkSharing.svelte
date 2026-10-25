@@ -7,7 +7,7 @@
         saveLinkSettings,
         toLocalInputValue,
         type LinkKind
-    } from '$lib/ts/share-links';
+    } from '#lib/ts/share-links';
 
     let { kind, itemId, canManage }: { kind: LinkKind; itemId: string; canManage: boolean } = $props();
 

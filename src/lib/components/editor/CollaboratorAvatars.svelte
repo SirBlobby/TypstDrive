@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { connectedUsers, type AwarenessUser } from '$lib/ts/store';
+	import { connectedUsers, type AwarenessUser } from '#lib/ts/store';
 
 	let failedImages = $state<Set<string>>(new Set());
 

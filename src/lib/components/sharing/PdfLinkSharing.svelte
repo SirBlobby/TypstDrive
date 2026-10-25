@@ -11,7 +11,7 @@
         savePdfLink,
         type ItemPdfLink,
         type PdfLinkKind
-    } from '$lib/ts/pdf-links';
+    } from '#lib/ts/pdf-links';
 
     let { kind, itemId }: { kind: PdfLinkKind; itemId: string } = $props();
 

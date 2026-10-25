@@ -2,11 +2,11 @@
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
-    import { driveSidebarCollapsedStore } from '$lib/ts/store';
-    import { fetchLatestRelease, fetchServerVersion, isNewerVersion, type LatestRelease } from '$lib/ts/version';
-    import StorageSummary from '$lib/components/drive/StorageSummary.svelte';
-    import TeamSwitcher from '$lib/components/drive/teams/TeamSwitcher.svelte';
-    import { activeTeamStore, type TeamSummary } from '$lib/ts/workspace';
+    import { driveSidebarCollapsedStore } from '#lib/ts/store';
+    import { fetchLatestRelease, fetchServerVersion, isNewerVersion, type LatestRelease } from '#lib/ts/version';
+    import StorageSummary from '#lib/components/drive/StorageSummary.svelte';
+    import TeamSwitcher from '#lib/components/drive/teams/TeamSwitcher.svelte';
+    import { activeTeamStore, type TeamSummary } from '#lib/ts/workspace';
 
     type DriveView = 'drive' | 'shared' | 'starred' | 'packages';
 

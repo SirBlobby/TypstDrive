@@ -1,11 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { dangerButtonClass, formatDate, inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
-    import ToggleSwitch from '$lib/components/settings/ToggleSwitch.svelte';
+    import { dangerButtonClass, formatDate, inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
+    import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
 
     type Policy = {
         enabled: boolean;

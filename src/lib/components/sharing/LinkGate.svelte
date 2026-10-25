@@ -2,8 +2,8 @@
     import type { Snippet } from 'svelte';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import { canOpenItem, fetchLinkStatus, unlockLink, type LinkKind, type LinkStatus } from '$lib/ts/share-links';
+    import { userStore } from '#lib/ts/auth';
+    import { canOpenItem, fetchLinkStatus, unlockLink, type LinkKind, type LinkStatus } from '#lib/ts/share-links';
 
     let { kind, itemId, children }: { kind: LinkKind; itemId: string; children: Snippet } = $props();
 

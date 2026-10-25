@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import Modal from '$lib/components/Modal.svelte';
-    import { focusOnMount } from '$lib/ts/focus-on-mount';
-    import { formatSize } from '$lib/ts/drive-filters';
+    import Modal from '#lib/components/Modal.svelte';
+    import { focusOnMount } from '#lib/ts/focus-on-mount';
+    import { formatSize } from '#lib/ts/drive-filters';
 
     type LibraryImage = { id: string; name: string; mime_type: string; size_bytes: number };
 

@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import { fetchAuthentication, saveAuthentication, type AuthenticationOverview, type AuthSettings } from '$lib/ts/admin-auth';
-    import SettingsHeader from '$lib/components/settings/SettingsHeader.svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
-    import ToggleSwitch from '$lib/components/settings/ToggleSwitch.svelte';
+    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { fetchAuthentication, saveAuthentication, type AuthenticationOverview, type AuthSettings } from '#lib/ts/admin-auth';
+    import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
+    import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
     import ProviderList from './auth/ProviderList.svelte';
 
     let overview = $state<AuthenticationOverview | null>(null);

@@ -11,9 +11,6 @@ function useRunesOutsideLibraries({ filename }: { filename: string }) {
 }
 
 const svelteKitOptions = {
-	alias: {
-		$lib: 'src/lib'
-	},
 	compilerOptions: {
 		runes: useRunesOutsideLibraries
 	},

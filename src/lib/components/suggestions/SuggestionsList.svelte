@@ -1,8 +1,8 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import SuggestionCard from './SuggestionCard.svelte';
-    import { doc, text } from '$lib/ts/yjs-setup';
-    import { editorViewStore } from '$lib/ts/store';
+    import { doc, text } from '#lib/ts/yjs-setup';
+    import { editorViewStore } from '#lib/ts/store';
     import {
         acceptSuggestion,
         activeSuggestionStore,
@@ -12,7 +12,7 @@
         textChangedSince,
         withdrawSuggestion,
         type SuggestionView
-    } from '$lib/ts/suggestions';
+    } from '#lib/ts/suggestions';
 
     let { docId, canReview }: { docId: string; canReview: boolean } = $props();
 

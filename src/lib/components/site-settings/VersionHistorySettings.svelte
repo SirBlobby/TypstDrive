@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { inputClass, primaryButtonClass, secondaryButtonClass } from '$lib/ts/settings-ui';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
+    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
 
     let savedLimit = $state<number | null>(null);
     let limitDraft = $state('0');

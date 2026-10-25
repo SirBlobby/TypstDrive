@@ -1,8 +1,8 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
-    import { downloadProject } from '$lib/ts/downloads';
-    import StarButton from '$lib/components/drive/stars/StarButton.svelte';
+    import { downloadProject } from '#lib/ts/downloads';
+    import StarButton from '#lib/components/drive/stars/StarButton.svelte';
 
     let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, shareItem = undefined, readOnly = false }: {
         project: any;

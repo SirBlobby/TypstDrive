@@ -2,7 +2,7 @@
 	import Icon from '@iconify/svelte';
 	import { untrack } from 'svelte';
 	import Modal from '../Modal.svelte';
-	import { focusOnMount } from '$lib/ts/focus-on-mount';
+	import { focusOnMount } from '#lib/ts/focus-on-mount';
 
 	let { existingPaths, folders, initialFolder = '', defaultExtension, onsubmit, onclose }: {
 		existingPaths: string[];

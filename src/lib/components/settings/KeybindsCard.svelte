@@ -1,11 +1,11 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import SettingsCard from '$lib/components/settings/SettingsCard.svelte';
-    import SettingsRow from '$lib/components/settings/SettingsRow.svelte';
-    import KeybindRecorder from '$lib/components/settings/KeybindRecorder.svelte';
-    import { secondaryButtonClass } from '$lib/ts/settings-ui';
-    import { keybindActions } from '$lib/ts/keybinds/keybind-actions';
-    import { conflictingActions, defaultKeybinds, keybindsStore, resetKeybinds, setKeybind } from '$lib/ts/keybinds/keybinds-store';
+    import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
+    import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
+    import KeybindRecorder from '#lib/components/settings/KeybindRecorder.svelte';
+    import { secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { keybindActions } from '#lib/ts/keybinds/keybind-actions';
+    import { conflictingActions, defaultKeybinds, keybindsStore, resetKeybinds, setKeybind } from '#lib/ts/keybinds/keybinds-store';
 
     const conflicts = $derived(conflictingActions($keybindsStore));
 </script>

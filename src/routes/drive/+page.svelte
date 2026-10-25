@@ -1,19 +1,19 @@
 <script lang="ts">
-    import { brandingStore } from '$lib/ts/branding';
+    import { brandingStore } from '#lib/ts/branding';
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import { page } from '$app/state';
-    import { userStore } from '$lib/ts/auth';
+    import { userStore } from '#lib/ts/auth';
     import Icon from '@iconify/svelte';
-    import Navbar from '$lib/components/drive/Navbar.svelte';
-    import FolderRow from '$lib/components/drive/FolderRow.svelte';
-    import ProjectFolderRow from '$lib/components/drive/ProjectFolderRow.svelte';
-    import DocCard from '$lib/components/drive/DocCard.svelte';
-    import FileCard from '$lib/components/drive/FileCard.svelte';
-    import FilePreviewModal from '$lib/components/drive/FilePreviewModal.svelte';
-    import DriveFilters from '$lib/components/drive/DriveFilters.svelte';
-    import DriveListView from '$lib/components/drive/DriveListView.svelte';
-    import { driveViewModeStore } from '$lib/ts/store';
+    import Navbar from '#lib/components/drive/Navbar.svelte';
+    import FolderRow from '#lib/components/drive/FolderRow.svelte';
+    import ProjectFolderRow from '#lib/components/drive/ProjectFolderRow.svelte';
+    import DocCard from '#lib/components/drive/DocCard.svelte';
+    import FileCard from '#lib/components/drive/FileCard.svelte';
+    import FilePreviewModal from '#lib/components/drive/FilePreviewModal.svelte';
+    import DriveFilters from '#lib/components/drive/DriveFilters.svelte';
+    import DriveListView from '#lib/components/drive/DriveListView.svelte';
+    import { driveViewModeStore } from '#lib/ts/store';
     import {
         defaultFilters,
         sortItems,
@@ -21,24 +21,24 @@
         type DriveEntry,
         type DriveFilters as DriveFilterState,
         type ViewMode
-    } from '$lib/ts/drive-filters';
-    import ShareModal from '$lib/components/ShareModal.svelte';
-    import PromptModal from '$lib/components/PromptModal.svelte';
-    import ConfirmModal from '$lib/components/ConfirmModal.svelte';
-    import InfoModal from '$lib/components/drive/InfoModal.svelte';
-    import DriveSidebar from '$lib/components/drive/DriveSidebar.svelte';
-    import DriveHeader from '$lib/components/drive/DriveHeader.svelte';
-    import IncomingTransfers from '$lib/components/drive/IncomingTransfers.svelte';
-    import DriveEmptyState from '$lib/components/drive/DriveEmptyState.svelte';
-    import DriveSectionTitle from '$lib/components/drive/DriveSectionTitle.svelte';
-    import StarredView from '$lib/components/drive/stars/StarredView.svelte';
-    import { fetchStarred, starredStore } from '$lib/ts/stars';
-    import { saveFolderColor } from '$lib/ts/folder-colors';
-    import { activeTeamStore, refreshTeams } from '$lib/ts/workspace';
-    import { languageLabel, type DocumentLanguage } from '$lib/ts/document-language';
-    import { emptySearch, matchesItem, tokenValue, type DriveSearch } from '$lib/ts/drive-search';
-    import ContentSearchResults from '$lib/components/drive/ContentSearchResults.svelte';
-    import LanguagePicker from '$lib/components/drive/LanguagePicker.svelte';
+    } from '#lib/ts/drive-filters';
+    import ShareModal from '#lib/components/ShareModal.svelte';
+    import PromptModal from '#lib/components/PromptModal.svelte';
+    import ConfirmModal from '#lib/components/ConfirmModal.svelte';
+    import InfoModal from '#lib/components/drive/InfoModal.svelte';
+    import DriveSidebar from '#lib/components/drive/DriveSidebar.svelte';
+    import DriveHeader from '#lib/components/drive/DriveHeader.svelte';
+    import IncomingTransfers from '#lib/components/drive/IncomingTransfers.svelte';
+    import DriveEmptyState from '#lib/components/drive/DriveEmptyState.svelte';
+    import DriveSectionTitle from '#lib/components/drive/DriveSectionTitle.svelte';
+    import StarredView from '#lib/components/drive/stars/StarredView.svelte';
+    import { fetchStarred, starredStore } from '#lib/ts/stars';
+    import { saveFolderColor } from '#lib/ts/folder-colors';
+    import { activeTeamStore, refreshTeams } from '#lib/ts/workspace';
+    import { languageLabel, type DocumentLanguage } from '#lib/ts/document-language';
+    import { emptySearch, matchesItem, tokenValue, type DriveSearch } from '#lib/ts/drive-search';
+    import ContentSearchResults from '#lib/components/drive/ContentSearchResults.svelte';
+    import LanguagePicker from '#lib/components/drive/LanguagePicker.svelte';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);

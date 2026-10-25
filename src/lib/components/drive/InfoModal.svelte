@@ -2,8 +2,8 @@
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import Modal from '../Modal.svelte';
-    import { formatBytes } from '$lib/ts/settings-ui';
-    import { fetchItemInfo, formatTimestamp, type InfoAccessEntry, type ItemInfo, type ItemKind } from '$lib/ts/item-info';
+    import { formatBytes } from '#lib/ts/settings-ui';
+    import { fetchItemInfo, formatTimestamp, type InfoAccessEntry, type ItemInfo, type ItemKind } from '#lib/ts/item-info';
 
     let { selectedInfo, onClose }: {
         selectedInfo: { id: string; type: ItemKind; title?: string; name?: string };

@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { brandingStore } from '$lib/ts/branding';
+	import { brandingStore } from '#lib/ts/branding';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import Editor from '$lib/components/Editor.svelte';
-	import Preview from '$lib/components/Preview.svelte';
-	import ErrorBanner from '$lib/components/ErrorBanner.svelte';
-	import DocFooter from '$lib/components/DocFooter.svelte';
-	import FileTree from '$lib/components/project/FileTree.svelte';
-	import ProjectToolbar from '$lib/components/project/ProjectToolbar.svelte';
-	import PublishPackageModal from '$lib/components/PublishPackageModal.svelte';
-	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
-	import { compileProject } from '$lib/ts/typst-api';
-	import type { Diagnostic } from '$lib/ts/typst-api';
-	import { editorErrors, documentStatsStore, editorViewStore, fileTreeCollapsedStore } from '$lib/ts/store';
-	import { previewModeStore, previewVisibleStore } from '$lib/ts/preview-mode';
+	import Editor from '#lib/components/Editor.svelte';
+	import Preview from '#lib/components/Preview.svelte';
+	import ErrorBanner from '#lib/components/ErrorBanner.svelte';
+	import DocFooter from '#lib/components/DocFooter.svelte';
+	import FileTree from '#lib/components/project/FileTree.svelte';
+	import ProjectToolbar from '#lib/components/project/ProjectToolbar.svelte';
+	import PublishPackageModal from '#lib/components/PublishPackageModal.svelte';
+	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
+	import { compileProject } from '#lib/ts/typst-api';
+	import type { Diagnostic } from '#lib/ts/typst-api';
+	import { editorErrors, documentStatsStore, editorViewStore, fileTreeCollapsedStore } from '#lib/ts/store';
+	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
 	import Icon from '@iconify/svelte';
-	import { isPlaceholder, placeholderPath } from '$lib/ts/project-tree';
-	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject } from '$lib/ts/yjs-project';
+	import { isPlaceholder, placeholderPath } from '#lib/ts/project-tree';
+	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject } from '#lib/ts/yjs-project';
 
 	interface ProjectFile {
 		id: string;

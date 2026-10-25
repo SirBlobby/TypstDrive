@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { inputClass, primaryButtonClass } from '$lib/ts/settings-ui';
-    import { API_SCOPES, EXPIRY_CHOICES, type CreatedApiKey } from '$lib/ts/api-keys';
+    import { inputClass, primaryButtonClass } from '#lib/ts/settings-ui';
+    import { API_SCOPES, EXPIRY_CHOICES, type CreatedApiKey } from '#lib/ts/api-keys';
 
     let { maxRateLimit, onCreated }: { maxRateLimit: number; onCreated: (key: CreatedApiKey) => void } = $props();
 

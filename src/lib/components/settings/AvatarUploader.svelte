@@ -1,8 +1,8 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
-    import { userStore } from '$lib/ts/auth';
-    import UserAvatar from '$lib/components/UserAvatar.svelte';
-    import ImageCropDialog from '$lib/components/ImageCropDialog.svelte';
+    import { userStore } from '#lib/ts/auth';
+    import UserAvatar from '#lib/components/UserAvatar.svelte';
+    import ImageCropDialog from '#lib/components/ImageCropDialog.svelte';
 
     const maxUploadBytes = 15 * 1024 * 1024;
 

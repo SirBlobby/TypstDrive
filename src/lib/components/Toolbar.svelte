@@ -10,8 +10,8 @@
 	import CitationsModal from './citations/CitationsModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
-	import { currentKeybind } from '$lib/ts/keybinds/keybinds-store';
-	import { matchesKeybind, shortcutText } from '$lib/ts/keybinds/key-format';
+	import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
+	import { matchesKeybind, shortcutText } from '#lib/ts/keybinds/key-format';
 	import CommentsPanel from './comments/CommentsPanel.svelte';
 	import InfoModal from './drive/InfoModal.svelte';
 	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
@@ -19,7 +19,7 @@
 	import PreviewModeMenu from './editor/PreviewModeMenu.svelte';
 	import FormattingBar from './editor/FormattingBar.svelte';
 	import LatexFormattingBar from './editor/LatexFormattingBar.svelte';
-	import { uploadDocumentFile } from '$lib/ts/document-uploads';
+	import { uploadDocumentFile } from '#lib/ts/document-uploads';
 	import InsertDialogs from './editor/insert/InsertDialogs.svelte';
 	import { insertDialogStore, insertOptions } from '../ts/insert-dialog';
 	import { openFind, openReplace } from '../ts/editor-insert';
@@ -27,9 +27,9 @@
 	import ConfirmModal from './ConfirmModal.svelte';
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
-	import type { DocumentRole } from '$lib/ts/document-role';
-	import { suggestingModeStore } from '$lib/ts/suggestions';
-	import { sourceExtension, type DocumentLanguage } from '$lib/ts/document-language';
+	import type { DocumentRole } from '#lib/ts/document-role';
+	import { suggestingModeStore } from '#lib/ts/suggestions';
+	import { sourceExtension, type DocumentLanguage } from '#lib/ts/document-language';
 
 	let isShareModalOpen = $state(false);
 	let isAssetsModalOpen = $state(false);
