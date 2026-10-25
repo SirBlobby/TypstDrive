@@ -13,6 +13,7 @@ export type GitLink = {
     folder: string;
     username: string | null;
     has_token: boolean;
+    account_username: string | null;
     excluded_paths: string[];
     base_commit: string | null;
     last_synced_at: string | null;
@@ -69,7 +70,18 @@ export type GitPullResult = {
 
 export type GitPushResult = { link: GitLink; commit: string; pushed: string[] };
 
-export type GitLinkUpdate = { token?: string; username?: string; excluded_paths?: string[] };
+export type GitLinkUpdate = { token?: string; use_account?: boolean; username?: string; excluded_paths?: string[] };
+
+export type GitAccountProvider = 'github' | 'gitlab';
+
+export type GitAccount = {
+    id: string;
+    provider: GitAccountProvider;
+    base_url: string;
+    username: string;
+    token_hint: string | null;
+    created_at: string;
+};
 
 export const providerLabels: Record<GitProvider, string> = {
     auto: 'Detect from address',
@@ -107,6 +119,11 @@ export const previewGitImport = (link: GitLinkRequest) => request<GitImportPrevi
 export const importGitProject = (name: string, folderId: string | null, link: GitLinkRequest) =>
     request<{ id: string }>('/api/git/import', 'POST', { ...link, name, folder_id: folderId });
 
+export const fetchGitAccounts = () => request<GitAccount[]>('/api/git/accounts');
+export const connectGitAccount = (provider: GitAccountProvider, server: string, token: string) =>
+    request<GitAccount[]>('/api/git/accounts', 'POST', { provider, server, token });
+export const deleteGitAccount = (accountId: string) => request<void>(`/api/git/accounts/${accountId}`, 'DELETE');
+
 export const fetchGitAdminPolicy = () => request<GitPolicy>('/api/admin/git-policy');
 export const saveGitAdminPolicy = (policy: GitPolicy) => request<GitPolicy>('/api/admin/git-policy', 'PUT', policy);
 
@@ -117,6 +134,29 @@ export function shortCommit(commit: string | null): string {
 export function repositoryName(repoUrl: string): string {
     const segments = repoUrl.trim().replace(/\/+$/, '').replace(/\.git$/, '').split('/');
     return segments.length > 3 ? segments[segments.length - 1] : '';
+}
+
+function serverOf(repoUrl: string): string | null {
+    try {
+        const url = new URL(repoUrl.trim());
+        return url.protocol === 'https:' || url.protocol === 'http:' ? `${url.protocol}//${url.host}`.toLowerCase() : null;
+    } catch {
+        return null;
+    }
+}
+
+export function matchingAccount(accounts: GitAccount[], provider: GitProvider, repoUrl: string): GitAccount | null {
+    const server = serverOf(repoUrl);
+    if (!server) return null;
+    const host = new URL(server).host;
+    const resolved = provider !== 'auto' ? provider : host === 'github.com' ? 'github' : host === 'gitlab.com' ? 'gitlab' : null;
+    return accounts.find((account) => account.provider === resolved && account.base_url === server) ?? null;
+}
+
+export function tokenPageUrl(account: Pick<GitAccount, 'provider' | 'base_url'>): string {
+    return account.provider === 'github'
+        ? `${account.base_url}/settings/personal-access-tokens/new`
+        : `${account.base_url}/-/user_settings/personal_access_tokens`;
 }
 
 export function parseExcludedPaths(text: string): string[] {

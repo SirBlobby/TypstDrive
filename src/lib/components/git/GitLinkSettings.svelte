@@ -1,7 +1,17 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import ConfirmModal from '../ConfirmModal.svelte';
-    import { deleteGitLink, parseExcludedPaths, updateGitLink, type GitLink, type GitLinkUpdate } from '#lib/ts/git';
+    import {
+        deleteGitLink,
+        fetchGitAccounts,
+        matchingAccount,
+        parseExcludedPaths,
+        updateGitLink,
+        type GitAccount,
+        type GitLink,
+        type GitLinkUpdate
+    } from '#lib/ts/git';
 
     let { projectId, link, onupdated, onunlinked }: {
         projectId: string;
@@ -18,6 +28,15 @@
     let busy = $state(false);
     let message = $state<{ kind: 'success' | 'error'; text: string } | null>(null);
     let confirmUnlink = $state(false);
+    let accounts = $state<GitAccount[]>([]);
+
+    let savedAccount = $derived(matchingAccount(accounts, link.provider, link.repo_url));
+
+    onMount(() => {
+        fetchGitAccounts()
+            .then((list) => (accounts = list))
+            .catch(() => {});
+    });
 
     async function save(update: GitLinkUpdate) {
         busy = true;
@@ -55,7 +74,12 @@
 <div class="flex flex-col gap-3">
     <label class="flex flex-col gap-1.5 text-xs">
         <span class="font-medium text-[var(--color-ink-muted)]">Access token</span>
-        <input bind:value={token} type="password" autocomplete="off" placeholder={link.has_token ? 'Saved. Enter a new token to replace it.' : 'No token saved'} class={fieldClass} />
+        <input bind:value={token} type="password" autocomplete="off" placeholder={link.account_username ? 'Enter a token to use instead of the saved account' : link.has_token ? 'Saved. Enter a new token to replace it.' : 'No token saved'} class={fieldClass} />
+        {#if link.account_username}
+            <span class="flex items-center gap-1 text-[var(--color-ink-muted)]"><Icon icon="mdi:account-check-outline" class="text-sm" /> Uses the saved account {link.account_username}.</span>
+        {:else if savedAccount}
+            <button type="button" onclick={() => save({ use_account: true })} disabled={busy} class="self-start text-xs font-semibold text-[var(--color-accent)] hover:underline disabled:opacity-60">Use my saved account {savedAccount.username} instead</button>
+        {/if}
     </label>
     {#if link.provider === 'generic'}
         <label class="flex flex-col gap-1.5 text-xs">
@@ -78,7 +102,7 @@
                 <Icon icon="mdi:link-variant-off" class="text-base" /> Unlink
             </button>
             {#if link.has_token}
-                <button onclick={() => save({ token: '' })} disabled={busy} class="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] disabled:opacity-60">Remove token</button>
+                <button onclick={() => save({ token: '' })} disabled={busy} class="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] disabled:opacity-60">{link.account_username ? 'Stop using account' : 'Remove token'}</button>
             {/if}
         </div>
         <button onclick={saveSettings} disabled={busy} class="flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60">

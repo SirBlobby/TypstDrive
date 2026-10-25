@@ -94,6 +94,7 @@
                 {providerLabels[link.provider]} · <span class="font-mono">{link.branch}</span>{#if link.folder} · <span class="font-mono">{link.folder}/</span>{/if}
                 {#if link.base_commit}· <span class="font-mono">{shortCommit(link.base_commit)}</span>{/if}
                 {#if link.last_synced_at}· Synced {formatDate(link.last_synced_at)}{/if}
+                {#if link.account_username}· As {link.account_username}{/if}
             </p>
             {#if !link.has_token}
                 <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">No access token is saved, so changes cannot be pushed.</p>
