@@ -17,11 +17,6 @@ TypstDrive is a self-hosted place to write, organize and share [Typst](https://t
 
 Full documentation, including a user guide, self-hosting, administration and the API reference, is at **[sirblobby.github.io/TypstDrive](https://sirblobby.github.io/TypstDrive/)**.
 
-**Try it out @** [https://typ.sirblob.co/](https://typ.sirblob.co/)
-
-Username: test@sirblob.co
-Password: password
-
 ## Features
 
 ### Writing
