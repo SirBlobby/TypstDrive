@@ -1,6 +1,6 @@
 # TypstDrive
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/SirBlobby/TypstDrive/releases)
+[![Version](https://img.shields.io/badge/version-2.2.2-blue.svg)](https://github.com/SirBlobby/TypstDrive/releases)
 [![Typst](https://img.shields.io/badge/Typst-0.15.1-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.92+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte&logoColor=white)](https://svelte.dev/docs/kit)
@@ -30,16 +30,17 @@ Password: password
 - **Editor**: Syntax highlighting for Typst, LaTeX, BibTeX, YAML and TOML, autocompletion, inline errors, auto-closing brackets and smart features from the tinymist language server.
 - **Formatting Toolbar**: Headings, bold, italic, code, quotes, math, lists, a font picker and page settings.
 - **LaTeX Documents**: Write basic LaTeX documents and projects with a LaTeX editor and toolbar, rendered through [MiTeX](https://github.com/mitex-rs/mitex).
-- **Quick Insert**: Images, tables, other documents, symbols and emoji.
+- **Quick Insert**: Images, tables, other documents, symbols and emoji, with an image picker that searches your drive and uploads by button, drop or paste.
+- **Slash Commands**: Type `/` for a searchable list of formatting, insert, export, view and review actions, or select text and press `/` to apply one to it.
 - **Find and Replace**, line comments and a spell checker that skips code and math.
 - **Customizable Keybinds**: Change the editor shortcuts and spot conflicts at a glance.
 - **Editor Settings**: Font, font size, line numbers and a minimap.
 
 ### Working Together
 
-- **Real-Time Collaboration**: See other people's changes and cursors instantly, follow someone's cursor by clicking their picture, and see who is in which file of a project.
-- **Comments**: Comment on text, reply, and resolve or reopen threads.
-- **Suggestions**: Propose edits for others to accept or reject.
+- **Real-Time Collaboration**: See other people's changes and cursors instantly, follow someone's cursor by clicking their picture, see who is in which file of a project, and whether each person is editing, suggesting or viewing.
+- **Comments**: Comment on text in documents and project files, reply, and resolve or reopen threads.
+- **Suggestions**: Type in suggesting mode to propose edits inline, shown live to others and in the preview, for owners and editors to accept or reject.
 - **Version History**: Automatic and manual versions, a timeline of who edited, side-by-side changes and one-click restore.
 
 ### Organizing and Sharing
@@ -190,6 +191,10 @@ TypstDrive is a community application and is not affiliated with, endorsed by, o
   <tr>
     <td width="50%"><img src="preview/settings.png" alt="Settings view" width="100%"></td>
     <td width="50%"><img src="preview/site-settings.png" alt="Site settings view" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="preview/comments.png" alt="Comments view" width="100%"></td>
+    <td width="50%"><img src="preview/suggestion.png" alt="Suggestions view" width="100%"></td>
   </tr>
   <tr>
     <td width="50%"><img src="preview/themes.png" alt="Theme editor view" width="100%"></td>

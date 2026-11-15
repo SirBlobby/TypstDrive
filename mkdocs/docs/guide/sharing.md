@@ -11,9 +11,9 @@ You decide who can see and change your work. Open **Share** from the editor tool
 | Suggester | Yes | Yes | Yes | No | No |
 | Viewer | Yes | No | No | No | No |
 
-The suggester role is for documents only. Suggesters propose changes that the owner or editors accept or reject. See [Suggesting changes](collaboration.md#suggesting-changes).
+Suggesters propose changes to documents and project files that the owner or editors accept or reject. See [Suggesting changes](collaboration.md#suggesting-changes).
 
-Viewers and suggesters truly cannot change the document. The server ignores any change they try to send.
+Viewers and suggesters truly cannot change the document or project. The server ignores any change they try to send.
 
 ## Sharing with people
 

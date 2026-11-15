@@ -29,7 +29,7 @@ Use an uploaded image by its file name:
 #image("logo.png", width: 50%)
 ```
 
-Or choose **Insert → Image** in the editor and pick it from a list. Images from the web work as well:
+Or choose **Insert → Image** in the editor, or type `/image`, to search your images and pick one. The same window uploads a new image from a button, by dropping it in, or by pasting it. In a project, picking an image from your drive copies it into the project so everyone can see it. Images from the web work as well:
 
 ```typst
 #image("https://example.com/logo.png", width: 50%)

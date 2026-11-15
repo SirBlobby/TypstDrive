@@ -11,7 +11,7 @@
 - Work with project files and folders like the web editor: create files from the same **New file** window, make folders, and rename or delete folders with everything inside them.
 - Browse your TypstDrive folders, documents and projects, including things shared with you.
 - Download the ones you want onto your computer and keep them in sync.
-- Edit together with others live when you are online, with comments, suggestions and version history.
+- Edit together with others live when you are online, with comments, suggestions and version history. Projects get comments and suggestions too.
 - Resolve conflicts when the same file changed in two places.
 - Folder colors you choose in TypstDrive show in the app, and the other way around.
 

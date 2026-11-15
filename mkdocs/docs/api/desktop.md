@@ -95,6 +95,13 @@ These endpoints use the same rules as the web editor: anyone with access can rea
 | `GET` | `/api/desktop/documents/{id}/suggestions` | Suggestions. |
 | `POST` | `/api/desktop/documents/{id}/suggestions` | Suggest an edit. |
 | `PATCH` | `/api/desktop/suggestions/{id}` | Accept, reject or withdraw a suggestion. |
+| `GET` | `/api/desktop/projects/{id}/comments` | Comments on every file of a project. |
+| `POST` | `/api/desktop/projects/{id}/files/{file_id}/comments` | Comment on a project file. |
+| `PATCH` | `/api/desktop/project-comments/{id}` | Edit a project comment or resolve a thread. |
+| `DELETE` | `/api/desktop/project-comments/{id}` | Delete a project comment and its replies. |
+| `GET` | `/api/desktop/projects/{id}/suggestions` | Suggestions on every file of a project. |
+| `POST` | `/api/desktop/projects/{id}/files/{file_id}/suggestions` | Suggest an edit to a project file. |
+| `PATCH` | `/api/desktop/project-suggestions/{id}` | Accept, reject, withdraw or change a project suggestion. |
 | `GET` | `/api/desktop/users/{id}/avatar` | A user's profile picture. |
 
 ### Uploaded files
