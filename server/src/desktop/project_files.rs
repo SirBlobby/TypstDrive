@@ -17,6 +17,7 @@ pub struct ProjectManifest {
     pub name: String,
     pub entrypoint: String,
     pub updated_at: String,
+    pub role: String,
     pub files: Vec<ManifestEntry>,
 }
 
@@ -64,7 +65,7 @@ pub async fn get_manifest(
     Path(project_id): Path<String>,
 ) -> Result<Json<ProjectManifest>, (StatusCode, String)> {
     let user_id = authenticate(&state, &headers).await?;
-    let project = readable_project(&state, &project_id, &user_id).await?;
+    let (project, role) = project_with_role(&state, &project_id, &user_id).await?;
 
     let files = plain_contents(&state, &project_id)
         .await?
@@ -84,6 +85,7 @@ pub async fn get_manifest(
         name: project.name,
         entrypoint: project.entrypoint,
         updated_at: project.updated_at,
+        role: role.as_str().to_string(),
         files,
     }))
 }

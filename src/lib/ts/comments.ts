@@ -1,12 +1,14 @@
 import { get, writable } from 'svelte/store';
 import type { PersonSummary } from './people';
 import { anchorRange, type AnchoredRange } from './document-anchors';
-import { text } from './yjs-setup';
 import { commentsSidebarOpen, editorViewStore } from './store';
+import { announceReviewChange } from './live-review';
+import { activeSource, createUrl, currentReviewTarget, itemUrl, listUrl, type ReviewTarget } from './review-target';
 
 export interface CommentView {
     id: string;
-    document_id: string;
+    document_id?: string;
+    file_id?: string;
     parent_id: string | null;
     author: PersonSummary | null;
     user_id: string;
@@ -36,18 +38,18 @@ async function errorText(res: Response, fallback: string) {
     return (await res.text()) || fallback;
 }
 
-export async function loadComments(docId: string) {
-    const res = await fetch(`/api/docs/${docId}/comments`);
+export async function loadComments(target: ReviewTarget) {
+    const res = await fetch(listUrl(target, 'comments'));
     if (!res.ok) throw new Error(await errorText(res, 'Failed to load comments.'));
     commentsStore.set(await res.json());
 }
 
 export async function createComment(
-    docId: string,
+    target: ReviewTarget,
     content: string,
-    options: { parentId?: string; pending?: PendingComment | null } = {}
+    options: { parentId?: string; fileId?: string | null; pending?: PendingComment | null } = {}
 ): Promise<CommentView> {
-    const res = await fetch(`/api/docs/${docId}/comments`, {
+    const res = await fetch(createUrl(target, 'comments', options.fileId ?? target.fileId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -60,24 +62,27 @@ export async function createComment(
     });
     if (!res.ok) throw new Error(await errorText(res, 'Failed to post the comment.'));
     const created: CommentView = await res.json();
-    await loadComments(docId);
+    announceReviewChange();
+    await loadComments(target);
     return created;
 }
 
-export async function updateComment(docId: string, commentId: string, changes: { content?: string; resolved?: boolean }) {
-    const res = await fetch(`/api/comments/${commentId}`, {
+export async function updateComment(target: ReviewTarget, commentId: string, changes: { content?: string; resolved?: boolean }) {
+    const res = await fetch(itemUrl(target, 'comments', commentId), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(changes)
     });
     if (!res.ok) throw new Error(await errorText(res, 'Failed to update the comment.'));
-    await loadComments(docId);
+    announceReviewChange();
+    await loadComments(target);
 }
 
-export async function deleteComment(docId: string, commentId: string) {
-    const res = await fetch(`/api/comments/${commentId}`, { method: 'DELETE' });
+export async function deleteComment(target: ReviewTarget, commentId: string) {
+    const res = await fetch(itemUrl(target, 'comments', commentId), { method: 'DELETE' });
     if (!res.ok) throw new Error(await errorText(res, 'Failed to delete the comment.'));
-    await loadComments(docId);
+    announceReviewChange();
+    await loadComments(target);
 }
 
 export function buildThreads(comments: CommentView[]): CommentThread[] {
@@ -93,11 +98,13 @@ export function buildThreads(comments: CommentView[]): CommentThread[] {
 
 export function startCommentOnSelection() {
     const view = get(editorViewStore);
-    if (view && text) {
+    const target = currentReviewTarget();
+    const source = target ? activeSource(target) : null;
+    if (view && source) {
         const selection = view.state.selection.main;
         if (selection.to > selection.from) {
             pendingCommentStore.set({
-                ...anchorRange(text, selection.from, selection.to),
+                ...anchorRange(source.text, selection.from, selection.to),
                 quoted_text: view.state.doc.sliceString(selection.from, selection.to)
             });
         }

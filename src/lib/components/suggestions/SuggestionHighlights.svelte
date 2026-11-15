@@ -1,36 +1,57 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { doc, text } from '#lib/ts/yjs-setup';
     import { editorViewStore } from '#lib/ts/store';
-    import { anchorRange } from '#lib/ts/document-anchors';
-    import {
-        activeSuggestionStore,
-        currentSuggestionRange,
-        suggestingModeStore,
-        suggestionDraftStore,
-        suggestionsStore
-    } from '#lib/ts/suggestions';
-    import { setSuggestionMarks, suggestingCompartment, suggestingFilter, type CapturedEdit, type SuggestionMark } from '#lib/ts/editor-suggestions';
+    import { userStore } from '#lib/ts/auth';
+    import { resolveRange } from '#lib/ts/document-anchors';
+    import { activeSource, currentReviewTarget, inActiveFile, reviewTargetStore, type ReviewSource } from '#lib/ts/review-target';
+    import { remoteDrafts, remoteDraftsChangedStore, type RemoteDraft } from '#lib/ts/live-review';
+    import { activeSuggestionStore, currentSuggestionRange, suggestingModeStore, suggestionsStore } from '#lib/ts/suggestions';
+    import { endLiveDraft, LIVE_DRAFT_ID, liveDraftStore, suggestingHandlers } from '#lib/ts/suggestion-drafts';
+    import { setSuggestionMarks, suggestingCompartment, type SuggestionMark } from '#lib/ts/editor-suggestions';
+    import { suggestingInput } from '#lib/ts/editor-suggesting-input';
 
     let documentRevision = $state(0);
 
-    function openDraft(edit: CapturedEdit) {
-        if (!text) return;
-        suggestionDraftStore.set({
-            ...anchorRange(text, edit.from, edit.to),
-            from: edit.from,
-            to: edit.to,
-            original_text: edit.original,
-            replacement_text: edit.replacement
-        });
+    function liveDraftMark(): SuggestionMark | null {
+        const target = $reviewTargetStore;
+        const source = target ? activeSource(target) : null;
+        const draft = $liveDraftStore;
+        if (!source || !draft) return null;
+        const range = resolveRange(source.doc, draft);
+        if (!range) return null;
+        return {
+            id: draft.serverId ?? LIVE_DRAFT_ID,
+            from: range.from,
+            to: range.to,
+            replacement: draft.replacement,
+            authorName: $userStore?.username ?? 'You',
+            note: null,
+            active: true,
+            caret: draft.caret
+        };
+    }
+
+    function remoteDraftMarks(drafts: RemoteDraft[], source: ReviewSource): SuggestionMark[] {
+        const marks: SuggestionMark[] = [];
+        for (const draft of drafts) {
+            const range = resolveRange(source.doc, draft);
+            if (!range) continue;
+            marks.push({ id: draft.id, ...range, replacement: draft.replacement, authorName: draft.authorName, note: null, active: false, caret: null });
+        }
+        return marks;
     }
 
     function pendingMarks(): SuggestionMark[] {
-        if (!doc) return [];
-        const marks: SuggestionMark[] = [];
+        $remoteDraftsChangedStore;
+        const target = $reviewTargetStore;
+        const source = target ? activeSource(target) : null;
+        if (!target || !source) return [];
+        const drafts = remoteDrafts(source.awareness);
+        const liveIds = new Set([$liveDraftStore?.serverId, ...drafts.map((draft) => draft.serverId)].filter(Boolean));
+        const marks: SuggestionMark[] = remoteDraftMarks(drafts, source);
         for (const suggestion of $suggestionsStore) {
-            if (suggestion.status !== 'pending') continue;
-            const range = currentSuggestionRange(doc, suggestion);
+            if (suggestion.status !== 'pending' || liveIds.has(suggestion.id) || !inActiveFile(target, suggestion)) continue;
+            const range = currentSuggestionRange(source.doc, suggestion);
             if (!range) continue;
             marks.push({
                 id: suggestion.id,
@@ -39,15 +60,18 @@
                 replacement: suggestion.replacement_text,
                 authorName: suggestion.author?.name ?? 'Someone',
                 note: suggestion.note,
-                active: suggestion.id === $activeSuggestionStore
+                active: suggestion.id === $activeSuggestionStore,
+                caret: null
             });
         }
-        return marks;
+        const draftMark = liveDraftMark();
+        return draftMark ? [...marks, draftMark] : marks;
     }
 
     onMount(() => {
-        const sharedDoc = doc;
-        if (!sharedDoc) return;
+        const target = currentReviewTarget();
+        const sharedDoc = target ? activeSource(target)?.doc : null;
+        if (!sharedDoc) return endLiveDraft;
         let timer: ReturnType<typeof setTimeout> | undefined;
         const refresh = () => {
             clearTimeout(timer);
@@ -57,6 +81,7 @@
         return () => {
             clearTimeout(timer);
             sharedDoc.off('update', refresh);
+            endLiveDraft();
         };
     });
 
@@ -71,7 +96,9 @@
 
     $effect(() => {
         const view = $editorViewStore;
+        const suggesting = $suggestingModeStore;
         if (!view) return;
-        view.dispatch({ effects: suggestingCompartment.reconfigure($suggestingModeStore ? suggestingFilter(openDraft) : []) });
+        if (!suggesting) endLiveDraft();
+        view.dispatch({ effects: suggestingCompartment.reconfigure(suggesting ? suggestingInput(suggestingHandlers) : []) });
     });
 </script>

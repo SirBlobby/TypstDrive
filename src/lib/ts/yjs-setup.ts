@@ -3,16 +3,20 @@ import { WebsocketProvider } from 'y-websocket';
 import { localAwarenessUser } from './awareness-user';
 import { connectionStatus } from './store';
 import { clearPresence, publishPresence, type PresenceSource } from './presence';
+import { watchLiveReview } from './live-review';
 
 export let doc: Y.Doc | null = null;
 export let text: Y.Text | null = null;
 export let provider: WebsocketProvider | null = null;
 export let undoManager: Y.UndoManager | null = null;
+let stopWatchingReview: (() => void) | null = null;
 
 export function initYjs(docId: string) {
 	if (typeof window === 'undefined') return;
 	
 	
+	stopWatchingReview?.();
+	stopWatchingReview = null;
 	if (provider) {
 		provider.disconnect();
 		provider = null;
@@ -41,6 +45,7 @@ export function initYjs(docId: string) {
 	});
 
 	provider.awareness.on('change', () => publishPresence(presenceSources()));
+	stopWatchingReview = watchLiveReview(provider.awareness);
 }
 
 export function presenceSources(): PresenceSource[] {
@@ -48,6 +53,8 @@ export function presenceSources(): PresenceSource[] {
 }
 
 export function cleanupYjs() {
+	stopWatchingReview?.();
+	stopWatchingReview = null;
 	if (provider) {
 		provider.disconnect();
 		provider = null;

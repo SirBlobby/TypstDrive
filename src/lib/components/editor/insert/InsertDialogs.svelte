@@ -4,12 +4,17 @@
     import { insertAtCursor, insertBlock } from '#lib/ts/editor-insert';
     import { symbolCategories, type PickerCharacter } from '#lib/ts/editor-symbols';
     import { emojiCategories } from '#lib/ts/editor-emoji';
+    import type { ImageCodeFormat, ImageLibrary } from '#lib/ts/image-library';
     import InsertImageModal from './InsertImageModal.svelte';
     import InsertTableModal from './InsertTableModal.svelte';
     import InsertDocumentModal from './InsertDocumentModal.svelte';
     import CharacterPickerModal from './CharacterPickerModal.svelte';
 
-    let { docId }: { docId: string } = $props();
+    let { docId = undefined, imageLibrary, imageFormat }: {
+        docId?: string;
+        imageLibrary: ImageLibrary;
+        imageFormat: ImageCodeFormat;
+    } = $props();
 
     function close() {
         insertDialogStore.set(null);
@@ -30,10 +35,10 @@
 </script>
 
 {#if $insertDialogStore === 'image'}
-    <InsertImageModal {docId} onInsert={insertAsBlock} onClose={close} />
+    <InsertImageModal library={imageLibrary} format={imageFormat} onInsert={insertAsBlock} onClose={close} />
 {:else if $insertDialogStore === 'table'}
     <InsertTableModal onInsert={insertAsBlock} onClose={close} />
-{:else if $insertDialogStore === 'document'}
+{:else if $insertDialogStore === 'document' && docId}
     <InsertDocumentModal currentDocId={docId} onInsert={insertAsBlock} onClose={close} />
 {:else if $insertDialogStore === 'symbol'}
     <CharacterPickerModal title="Insert symbol" icon="mdi:omega" categories={symbolCategories} onPick={pickCharacter} onClose={close} />

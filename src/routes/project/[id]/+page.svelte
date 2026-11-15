@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { brandingStore } from '#lib/ts/branding';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { page } from '$app/state';
 	import Editor from '#lib/components/Editor.svelte';
 	import Preview from '#lib/components/Preview.svelte';
@@ -12,11 +12,23 @@
 	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
 	import { compileProject } from '#lib/ts/typst-api';
 	import type { Diagnostic } from '#lib/ts/typst-api';
-	import { editorErrors, documentStatsStore, editorViewStore, fileTreeCollapsedStore } from '#lib/ts/store';
+	import EditorContextMenu from '#lib/components/editor/EditorContextMenu.svelte';
+	import SlashCommandPalette from '#lib/components/editor/SlashCommandPalette.svelte';
+	import { slashSessionStore } from '#lib/ts/slash/slash-session';
+	import CommentHighlights from '#lib/components/comments/CommentHighlights.svelte';
+	import CommentsPanel from '#lib/components/comments/CommentsPanel.svelte';
+	import SuggestionHighlights from '#lib/components/suggestions/SuggestionHighlights.svelte';
+	import { reviewExtensions } from '#lib/ts/review-extensions';
+	import { suggestingModeStore, suggestionsStore } from '#lib/ts/suggestions';
+	import { liveDraftStore } from '#lib/ts/suggestion-drafts';
+	import { previewText } from '#lib/ts/suggestion-preview';
+	import { remoteDraftsChangedStore, shareEditingMode } from '#lib/ts/live-review';
+	import { endReviewSession, startReviewSession, switchReviewFile } from '#lib/ts/review-session';
+	import { editorErrors, documentStatsStore, fileTreeCollapsedStore, commentsSidebarOpen } from '#lib/ts/store';
 	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
 	import Icon from '@iconify/svelte';
 	import { isPlaceholder, placeholderPath } from '#lib/ts/project-tree';
-	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
+	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
 	import { createFollowController } from '#lib/ts/follow';
 	import { filePresenceStore } from '#lib/ts/presence';
 
@@ -40,12 +52,12 @@
 	let timeoutId: number | undefined;
 	let lastCompiledSources: string | null = null;
 
-	let contextMenu = $state({ show: false, x: 0, y: 0, text: '' });
-
 	let readOnly = $derived(role === 'viewer');
+	let canEdit = $derived(role === 'owner' || role === 'editor');
+	const editorExtensions = reviewExtensions();
 	let showPreview = $derived($previewVisibleStore || readOnly);
 	let editorWidthClass = $derived(
-		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'flex-1'
+		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-1 border-r border-[var(--color-line)]' : 'flex-1 min-w-0'
 	);
 	let activeEntry = $derived(activeFileId ? getOpenFile(activeFileId) : undefined);
 	let activePath = $derived(files.find((f) => f.id === activeFileId)?.path ?? '');
@@ -60,12 +72,22 @@
 		scheduleCompile();
 	}
 
+	function previewSources() {
+		const sources: Record<string, string> = {};
+		for (const entry of openFiles()) {
+			const source = { doc: entry.doc, text: entry.text, awareness: entry.provider.awareness };
+			sources[entry.path] = previewText(source, entry.fileId, entry.fileId === activeFileId);
+		}
+		return sources;
+	}
+
 	function triggerCompile() {
 		if (!showPreview) return;
-		const sources = getAllText();
+		const sources = previewSources();
 		const fingerprint = JSON.stringify(sources);
 		if (fingerprint === lastCompiledSources) return;
 		lastCompiledSources = fingerprint;
+		const matchesEditor = fingerprint === JSON.stringify(getAllText());
 		compileProject(projectId, sources)
 			.then((res) => {
 				if (res.stats) $documentStatsStore = res.stats;
@@ -75,7 +97,7 @@
 					$editorErrors = [];
 				} else if (res.errors) {
 					errors = res.errors;
-					$editorErrors = res.errors;
+					$editorErrors = matchesEditor ? res.errors : [];
 				}
 			})
 			.catch(() => {
@@ -83,6 +105,21 @@
 				errors = [{ message: 'Network or server error compiling project.', severity: 'error' }];
 			});
 	}
+
+	$effect(() => {
+		if (ready) shareEditingMode(readOnly ? 'viewing' : $suggestingModeStore ? 'suggesting' : 'editing');
+	});
+
+	$effect(() => {
+		$suggestionsStore;
+		$liveDraftStore;
+		$remoteDraftsChangedStore;
+		$slashSessionStore;
+		$suggestingModeStore;
+		untrack(() => {
+			if (ready) scheduleCompile();
+		});
+	});
 
 	$effect(() => {
 		if (showPreview && ready) triggerCompile();
@@ -235,31 +272,32 @@
 		if (res.ok) await applyEntrypoint(res);
 	}
 
-	function handleContextMenu(e: MouseEvent) {
-		const view = $editorViewStore;
-		if (!view) return;
-		const target = e.target as HTMLElement;
-		if (!target.closest('.cm-editor') && !target.closest('.cm-content')) return;
-		const selection = view.state.selection.main;
-		const selectedText = view.state.doc.sliceString(selection.from, selection.to);
-		if (selectedText.trim()) {
-			e.preventDefault();
-			contextMenu = { show: true, x: e.clientX, y: e.clientY, text: selectedText.trim() };
-		}
-	}
-
-	function closeContextMenu() {
-		contextMenu.show = false;
-	}
-
-	$effect(() => setActiveFile(activeFileId || null));
+	$effect(() => {
+		setActiveFile(activeFileId || null);
+		switchReviewFile(activeFileId || null);
+	});
 
 	function followIntoFile(fileId: string) {
 		if (files.some((file) => file.id === fileId && file.kind === 'text')) activeFileId = fileId;
 	}
 
+	function startProjectReview() {
+		startReviewSession({
+			scope: 'project',
+			scopeId: projectId,
+			fileId: activeFileId || null,
+			sourceFor: (fileId) => {
+				const entry = fileId ? getOpenFile(fileId) : undefined;
+				return entry ? { doc: entry.doc, text: entry.text, awareness: entry.provider.awareness } : null;
+			},
+			filePath: (fileId) => files.find((file) => file.id === fileId)?.path ?? 'Deleted file',
+			openFile: followIntoFile
+		});
+	}
+
 	onMount(() => {
 		setProject(projectId);
+		startProjectReview();
 		const stopFollowController = createFollowController({ sources: presenceSources, activeFileId: () => activeFileId, openFile: followIntoFile });
 		fetch(`/api/projects/${projectId}`)
 			.then((r) => r.json())
@@ -267,6 +305,7 @@
 				if (p && p.name) projectName = p.name;
 				if (p && p.entrypoint) entrypoint = p.entrypoint;
 				if (p && p.effective_role) role = p.effective_role;
+				suggestingModeStore.set(role === 'suggester');
 			})
 			.then(loadFiles)
 			.then(() => {
@@ -278,6 +317,7 @@
 		return () => {
 			if (timeoutId) clearTimeout(timeoutId);
 			stopFollowController();
+			endReviewSession();
 			cleanupProject();
 		};
 	});
@@ -286,8 +326,6 @@
 <svelte:head>
 	<title>{projectName} - {$brandingStore.site_name}</title>
 </svelte:head>
-
-<svelte:window onclick={closeContextMenu} />
 
 <div class="flex flex-col h-screen relative">
 	<ProjectToolbar
@@ -302,7 +340,7 @@
 		onFilesChanged={loadFiles}
 	/>
 
-	<main class="flex-1 flex overflow-hidden relative" oncontextmenu={handleContextMenu}>
+	<main class="flex-1 flex overflow-hidden relative">
 		{#if $fileTreeCollapsedStore}
 			<aside class="w-10 flex-shrink-0 hidden md:flex flex-col items-center py-2 bg-[var(--color-surface)] border-r border-[var(--color-line)]">
 				<button onclick={() => fileTreeCollapsedStore.set(false)} title="Show files" aria-label="Show files" class="p-1.5 rounded hover:bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]">
@@ -315,7 +353,7 @@
 					{files}
 					{activeFileId}
 					{entrypoint}
-					{readOnly}
+					readOnly={!canEdit}
 					presence={$filePresenceStore}
 					onSelect={selectFile}
 					onCreate={createFile}
@@ -335,30 +373,32 @@
 			<div class="flex flex-col min-h-0 {editorWidthClass}">
 				{#if ready && activeEntry}
 					{#key activeFileId}
-						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} enableLsp={false} />
+						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} enableLsp={false} extensions={editorExtensions} slash={{ insertDialogs: canEdit, embedDocuments: false, canComment: !readOnly }} />
+						<CommentHighlights />
+						<SuggestionHighlights />
 					{/key}
 				{/if}
 			</div>
 		{/if}
 
 		{#if showPreview}
-			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-1/2'} relative bg-[var(--color-surface)] flex flex-col">
+			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-1'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
 				<Preview {svgs} />
 				<ErrorBanner {errors} />
 			</div>
+		{/if}
+
+		{#if $commentsSidebarOpen}
+			<CommentsPanel canComment={!readOnly} canReview={canEdit} isOwner={role === 'owner'} onClose={() => ($commentsSidebarOpen = false)} />
 		{/if}
 	</main>
 
 	<DocFooter />
 </div>
 
-{#if contextMenu.show}
-	<div class="fixed z-[9999] bg-[var(--theme-bg)] text-[var(--theme-text)] rounded-lg shadow-xl border border-[var(--theme-border)] py-1 min-w-[180px] overflow-hidden" style="left: {contextMenu.x}px; top: {contextMenu.y}px;">
-		<button onclick={() => { navigator.clipboard.writeText(contextMenu.text); closeContextMenu(); }} class="w-full text-left px-4 py-2 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2">
-			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--color-ink-muted)]"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-			Copy Text
-		</button>
-	</div>
+{#if ready && !readOnly}
+	<EditorContextMenu canComment={!readOnly} />
+	<SlashCommandPalette />
 {/if}
 
 {#if showPublish}

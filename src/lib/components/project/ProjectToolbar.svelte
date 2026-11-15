@@ -5,9 +5,15 @@
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
-	import {
-		editorViewStore
-	} from '../../ts/store';
+	import { editorViewStore, commentsSidebarOpen } from '../../ts/store';
+	import { suggestingModeStore } from '../../ts/suggestions';
+	import { startCommentOnSelection } from '../../ts/comments';
+	import { buildPageActions, registerPageActions } from '../../ts/slash/page-actions';
+	import { latexImageFormat, projectImageLibrary, typstImageFormat } from '../../ts/image-library';
+	import { insertDialogStore } from '../../ts/insert-dialog';
+	import InsertDialogs from '../editor/insert/InsertDialogs.svelte';
+	import { untrack } from 'svelte';
+	import EditingModeSwitch from '../editor/EditingModeSwitch.svelte';
 	import { previewModeOptions, previewModeStore } from '../../ts/preview-mode';
 	import PreviewModeMenu from '../editor/PreviewModeMenu.svelte';
 	import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
@@ -51,6 +57,9 @@
 	} = $props();
 
 	let isViewer = $derived(role === 'viewer');
+	let canEdit = $derived(role === 'owner' || role === 'editor');
+	let directEditing = $derived(canEdit && !$suggestingModeStore);
+	let imageLibrary = $derived(projectImageLibrary(projectId, onFilesChanged));
 	let isLatexFile = $derived(activePath.toLowerCase().endsWith('.tex'));
 	let isLatexProject = $derived(entrypoint.toLowerCase().endsWith('.tex'));
 	let canPublish = $derived(role === 'owner' && !isLatexProject);
@@ -308,6 +317,26 @@
 		});
 	}
 
+	$effect(() => {
+		const actions = buildPageActions({
+			sourceLabel: `Active .${isLatexFile ? 'tex' : 'typ'} file`,
+			canEdit,
+			exportAs: (format) => handleExport(format === 'source' ? 'typ' : format),
+			exportConverted: handlePandocExport,
+			print: handlePrint,
+			openShare: () => (showShareModal = true),
+			openPresentation: isViewer ? undefined : () => (isPresentationOpen = true),
+			openPageSettings: directEditing && !isLatexFile ? () => (isPageSettingsOpen = true) : undefined,
+			openCitations: canEdit ? () => (showCitations = true) : undefined,
+			openInfo: () => (showInfoModal = true),
+			openGit: canEdit && $userStore ? () => (showGit = true) : undefined,
+			makeCopy: $userStore ? makeCopy : undefined,
+			rename: canEdit ? () => { renameName = projectName; showRenameModal = true; } : undefined,
+			downloadArchive: () => downloadProject(projectId)
+		});
+		return untrack(() => registerPageActions(actions));
+	});
+
 	function handleWindowClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 		if (!target.closest('.action-menu-container')) activeMenu = null;
@@ -344,10 +373,10 @@
 									<button onclick={() => { activeMenu = null; makeCopy(); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Make a Copy</button>
 								{/if}
 								<button onclick={() => { activeMenu = null; showShareModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Share</button>
-								{#if !isViewer && $userStore}
+								{#if canEdit && $userStore}
 									<button onclick={() => { activeMenu = null; showGit = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="mdi:git" class="text-base" /> Git Sync</button>
 								{/if}
-								{#if !isViewer}
+								{#if canEdit}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
 									<button onclick={() => { activeMenu = null; renameName = projectName; showRenameModal = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Rename</button>
 									{#if !isLatexFile}
@@ -379,7 +408,7 @@
 						{/if}
 					</div>
 
-					{#if !isViewer}
+					{#if canEdit}
 						<div class="relative">
 							<button onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'edit' ? null : 'edit'; }} class="px-2 py-0.5 rounded transition-colors {activeMenu === 'edit' ? 'bg-[var(--theme-border)]' : 'hover:bg-[var(--theme-border)]'}">Edit</button>
 							{#if activeMenu === 'edit'}
@@ -416,8 +445,12 @@
 				<HeaderIconButton icon="mdi:presentation-play" label="Present" onclick={() => (isPresentationOpen = true)} />
 			{/if}
 			<HeaderIconButton icon="mdi:share-variant-outline" label="Share" onclick={() => (showShareModal = true)} />
-			{#if !isViewer && canPublish}
+			{#if canPublish}
 				<HeaderIconButton icon="mdi:package-variant-closed" label="Publish as package" variant="primary" onclick={onPublish} />
+			{/if}
+			<HeaderIconButton icon="mdi:comment-outline" label="Comments" active={$commentsSidebarOpen} onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)} />
+			{#if !isViewer}
+				<EditingModeSwitch {canEdit} />
 			{/if}
 			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
 			{#if !isViewer}
@@ -432,7 +465,7 @@
 	</div>
 
 	{#if isLatexFile}
-		<LatexFormattingBar readOnly={isViewer} uploadImage={uploadProjectImage} />
+		<LatexFormattingBar readOnly={!directEditing} uploadImage={uploadProjectImage} canComment={!isViewer} />
 	{:else}
 	<div class="flex items-center px-4 py-1.5 bg-[var(--color-surface-muted)] border-t border-[var(--color-line)] gap-4 overflow-x-auto no-scrollbar">
 		<div class="flex items-center gap-1">
@@ -444,8 +477,12 @@
 			<button onclick={() => applyFormat('- ', '', 'List item')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Bullet List"><Icon icon="mdi:format-list-bulleted" class="text-lg" /></button>
 			<button onclick={() => applyFormat('+ ', '', 'Numbered item')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Numbered List"><Icon icon="mdi:format-list-numbered" class="text-lg" /></button>
 			<div class="w-px h-4 mx-1 bg-[var(--color-line)]"></div>
-			<input type="file" bind:this={fileInput} onchange={handleUpload} class="hidden" accept="image/*,.ttf,.otf" />
 			{#if !isViewer}
+				<button onclick={startCommentOnSelection} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Comment on selection"><Icon icon="mdi:comment-plus-outline" class="text-lg" /></button>
+			{/if}
+			<input type="file" bind:this={fileInput} onchange={handleUpload} class="hidden" accept="image/*,.ttf,.otf" />
+			{#if directEditing}
+				<button onclick={() => insertDialogStore.set('image')} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Insert image"><Icon icon="mdi:image-search-outline" class="text-lg" /></button>
 				<button onclick={() => fileInput?.click()} class="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)] rounded transition-colors" title="Upload Image / Font"><Icon icon="mdi:image-plus" class="text-lg" /></button>
 			{/if}
 		</div>
@@ -471,7 +508,7 @@
 
 		<div class="w-px h-4 bg-[var(--color-line)]"></div>
 
-		{#if !isViewer}
+		{#if directEditing}
 			<button onclick={() => (isPageSettingsOpen = true)} class="flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold bg-[var(--theme-bg)] text-[var(--theme-text)] border border-[var(--theme-border)] rounded shadow-sm transition-colors opacity-90 hover:opacity-100">
 				<Icon icon="mdi:file-document-edit-outline" class="text-sm" /> Page Settings
 			</button>
@@ -515,6 +552,10 @@
 
 {#if showGit}
 	<GitModal {projectId} isOwner={role === 'owner'} onchanged={onFilesChanged} onclose={() => (showGit = false)} />
+{/if}
+
+{#if canEdit}
+	<InsertDialogs {imageLibrary} imageFormat={isLatexFile ? latexImageFormat : typstImageFormat} />
 {/if}
 
 {#if showCitations}

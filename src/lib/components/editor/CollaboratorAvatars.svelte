@@ -3,6 +3,7 @@
 	import { connectedUsers, type AwarenessUser } from '#lib/ts/store';
 	import { followingStore, stopFollowing, toggleFollow } from '#lib/ts/follow';
 	import UserAvatar from './UserAvatar.svelte';
+	import EditingModeBadge, { editingModeDetails } from './EditingModeBadge.svelte';
 
 	let followedUser = $derived($connectedUsers.find((user) => !user.isLocal && user.session && user.session === $followingStore) ?? null);
 
@@ -10,10 +11,15 @@
 		return !user.isLocal && !!user.session;
 	}
 
+	function modeSuffix(user: AwarenessUser) {
+		return user.mode ? ` · ${editingModeDetails[user.mode].label}` : '';
+	}
+
 	function label(user: AwarenessUser) {
-		if (user.isLocal) return `${user.name} (You)`;
-		if (!user.session) return user.name;
-		return user.session === $followingStore ? `Stop following ${user.name}` : `Follow ${user.name}`;
+		if (user.isLocal) return `${user.name} (You)${modeSuffix(user)}`;
+		if (!user.session) return `${user.name}${modeSuffix(user)}`;
+		const action = user.session === $followingStore ? `Stop following ${user.name}` : `Follow ${user.name}`;
+		return `${action}${modeSuffix(user)}`;
 	}
 </script>
 
@@ -38,14 +44,20 @@
 						title={label(user)}
 						aria-label={label(user)}
 						aria-pressed={user.session === $followingStore}
-						class="rounded-full transition-transform hover:z-20 hover:-translate-y-0.5 {user.session === $followingStore ? 'z-20 ring-2 ring-offset-2 ring-offset-[var(--color-surface)]' : 'z-[1]'}"
+						class="relative rounded-full transition-transform hover:z-20 hover:-translate-y-0.5 {user.session === $followingStore ? 'z-20 ring-2 ring-offset-2 ring-offset-[var(--color-surface)]' : 'z-[1]'}"
 						style="--tw-ring-color: {user.color};"
 					>
 						<UserAvatar {user} sizeClass="w-7 h-7 text-xs" />
+						{#if user.mode}
+							<EditingModeBadge mode={user.mode} />
+						{/if}
 					</button>
 				{:else}
-					<span title={label(user)} class={user.isLocal ? 'z-10' : 'z-[1]'}>
+					<span title={label(user)} class="relative {user.isLocal ? 'z-10' : 'z-[1]'}">
 						<UserAvatar {user} sizeClass="w-7 h-7 text-xs" />
+						{#if user.mode}
+							<EditingModeBadge mode={user.mode} />
+						{/if}
 					</span>
 				{/if}
 			{/each}

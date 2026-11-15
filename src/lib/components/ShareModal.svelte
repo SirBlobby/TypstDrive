@@ -177,9 +177,7 @@
                 <div class="h-6 w-px bg-[var(--color-line)]"></div>
                 <select bind:value={inviteRole} class="bg-transparent border-none text-sm text-[var(--color-ink-muted)] px-2 py-2 focus:ring-0 focus:outline-none cursor-pointer font-medium">
                     <option value="editor">Editor</option>
-                    {#if kind === 'document'}
-                        <option value="suggester">Suggester</option>
-                    {/if}
+                    <option value="suggester">Suggester</option>
                     <option value="viewer">Viewer</option>
                 </select>
                 <button

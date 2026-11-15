@@ -12,7 +12,6 @@
 	import PresentationMode from "./PresentationMode.svelte";
 	import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
 	import { matchesKeybind, shortcutText } from '#lib/ts/keybinds/key-format';
-	import CommentsPanel from './comments/CommentsPanel.svelte';
 	import InfoModal from './drive/InfoModal.svelte';
 	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
 	import EditingModeSwitch from './editor/EditingModeSwitch.svelte';
@@ -36,6 +35,9 @@
 	import { suggestingModeStore } from '#lib/ts/suggestions';
 	import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
 	import { sourceExtension, type DocumentLanguage } from '#lib/ts/document-language';
+	import { buildPageActions, registerPageActions } from '#lib/ts/slash/page-actions';
+	import { documentImageLibrary, latexImageFormat, typstImageFormat } from '#lib/ts/image-library';
+	import { untrack } from 'svelte';
 
 	let isShareModalOpen = $state(false);
 	let isAssetsModalOpen = $state(false);
@@ -359,6 +361,27 @@
 		}
 	}
 
+	$effect(() => {
+		const canEdit = !readOnly;
+		const actions = buildPageActions({
+			sourceLabel: `${sourceFileExtension.toUpperCase()} source file`,
+			canEdit,
+			exportAs: handleExport,
+			exportConverted: handlePandocExport,
+			print: handlePrint,
+			openShare: canEdit ? () => (isShareModalOpen = true) : undefined,
+			openPresentation: canEdit ? () => (isPresentationOpen = true) : undefined,
+			openPageSettings: directEditing && !isLatex ? () => (isPageSettingsOpen = true) : undefined,
+			openCitations: canEdit && docId ? () => (isCitationsOpen = true) : undefined,
+			openInfo: docId ? openInfo : undefined,
+			openHistory: canEdit && docId ? () => goto(`/doc/${docId}/history`) : undefined,
+			saveVersion: canEdit && docId ? handleSaveVersion : undefined,
+			makeCopy: $userStore && docId ? makeCopy : undefined,
+			rename: canEdit && docId ? openRename : undefined
+		});
+		return untrack(() => registerPageActions(actions));
+	});
+
 	function handleWindowClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 		if (!target.closest('.action-menu-container')) {
@@ -570,7 +593,7 @@
 </header>
 
 {#if docId && !readOnly}
-	<InsertDialogs {docId} />
+	<InsertDialogs {docId} imageLibrary={documentImageLibrary(docId)} imageFormat={isLatex ? latexImageFormat : typstImageFormat} />
 {/if}
 
 {#if isShareModalOpen}
@@ -593,9 +616,6 @@
 	<PresentationMode onClose={() => (isPresentationOpen = false)} />
 {/if}
 
-{#if $commentsSidebarOpen && docId}
-	<CommentsPanel {docId} {canComment} canReview={!readOnly} isOwner={role === 'owner'} onClose={() => ($commentsSidebarOpen = false)} />
-{/if}
 
 
 {#if showInfoModal && docId}

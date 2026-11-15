@@ -3,6 +3,7 @@ import { WebsocketProvider } from 'y-websocket';
 import { localAwarenessUser } from './awareness-user';
 import { connectionStatus } from './store';
 import { clearPresence, publishPresence, type PresenceSource } from './presence';
+import { watchLiveReview } from './live-review';
 
 export interface OpenFile {
 	fileId: string;
@@ -13,6 +14,7 @@ export interface OpenFile {
 }
 
 const open = new Map<string, OpenFile>();
+const reviewWatchers = new Map<string, () => void>();
 let projectId: string | null = null;
 let activeFileId: string | null = null;
 
@@ -45,6 +47,7 @@ export function openFile(fileId: string, path: string): OpenFile {
 	});
 
 	provider.awareness.on('change', () => publishPresence(presenceSources()));
+	reviewWatchers.set(fileId, watchLiveReview(provider.awareness));
 
 	const entry: OpenFile = { fileId, path, doc, text, provider };
 	open.set(fileId, entry);
@@ -71,6 +74,8 @@ export function renameOpenFile(fileId: string, path: string) {
 
 export function closeFile(fileId: string) {
 	const entry = open.get(fileId);
+	reviewWatchers.get(fileId)?.();
+	reviewWatchers.delete(fileId);
 	if (entry) {
 		entry.provider.disconnect();
 		entry.provider.destroy();
@@ -78,6 +83,10 @@ export function closeFile(fileId: string) {
 		open.delete(fileId);
 		publishPresence(presenceSources());
 	}
+}
+
+export function openFiles(): OpenFile[] {
+	return [...open.values()];
 }
 
 export function getAllText(): Record<string, string> {

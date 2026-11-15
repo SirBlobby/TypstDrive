@@ -1,19 +1,21 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { doc } from '#lib/ts/yjs-setup';
     import { editorViewStore } from '#lib/ts/store';
     import { activeThreadStore, buildThreads, commentsStore } from '#lib/ts/comments';
     import { resolveRange } from '#lib/ts/document-anchors';
+    import { activeSource, currentReviewTarget, inActiveFile, reviewTargetStore } from '#lib/ts/review-target';
     import { setCommentMarks, type CommentMark } from '#lib/ts/editor-comment-marks';
 
     let documentRevision = $state(0);
 
     function visibleMarks(): CommentMark[] {
-        if (!doc) return [];
+        const target = $reviewTargetStore;
+        const source = target ? activeSource(target) : null;
+        if (!target || !source) return [];
         const marks: CommentMark[] = [];
         for (const thread of buildThreads($commentsStore)) {
-            if (thread.root.resolved) continue;
-            const range = resolveRange(doc, thread.root);
+            if (thread.root.resolved || !inActiveFile(target, thread.root)) continue;
+            const range = resolveRange(source.doc, thread.root);
             if (!range || range.to <= range.from) continue;
             marks.push({
                 id: thread.root.id,
@@ -29,7 +31,8 @@
     }
 
     onMount(() => {
-        const sharedDoc = doc;
+        const target = currentReviewTarget();
+        const sharedDoc = target ? activeSource(target)?.doc : null;
         if (!sharedDoc) return;
         let timer: ReturnType<typeof setTimeout> | undefined;
         const refresh = () => {

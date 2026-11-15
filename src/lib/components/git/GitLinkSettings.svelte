@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import Icon from '@iconify/svelte';
     import ConfirmModal from '../ConfirmModal.svelte';
     import {
@@ -23,8 +23,8 @@
     const fieldClass = 'rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none';
 
     let token = $state('');
-    let username = $state(link.username ?? '');
-    let excludedText = $state(link.excluded_paths.join('\n'));
+    let username = $state(untrack(() => link.username ?? ''));
+    let excludedText = $state(untrack(() => link.excluded_paths.join('\n')));
     let busy = $state(false);
     let message = $state<{ kind: 'success' | 'error'; text: string } | null>(null);
     let confirmUnlink = $state(false);

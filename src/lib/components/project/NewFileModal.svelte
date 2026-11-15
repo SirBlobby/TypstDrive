@@ -23,7 +23,7 @@
 
 	let folder = $state(untrack(() => initialFolder));
 	let name = $state('');
-	let extension = $state(defaultExtension);
+	let extension = $state(untrack(() => defaultExtension));
 
 	let typedExtension = $derived(name.trim().match(/\.([a-z0-9]+)$/i)?.[1].toLowerCase() ?? null);
 	let baseName = $derived(typedExtension ? name.trim().slice(0, -(typedExtension.length + 1)) : name.trim());

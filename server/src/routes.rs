@@ -151,6 +151,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/docs/{id}/files/{file_id}/attach", post(drive::document_assets::attach_asset))
         .route("/docs/{id}/fonts", get(drive::document_assets::list_fonts))
         .route("/docs/{id}/library/images", get(drive::editor_library::list_images))
+        .route("/projects/{id}/library/images", get(drive::editor_library::list_project_images))
         .route("/docs/{id}/text", get(drive::editor_library::document_text))
         .route("/editor/documents", get(drive::editor_library::list_documents))
         .route("/docs/{id}/collaborators", get(sharing::members::list_document_collaborators))
@@ -184,6 +185,12 @@ pub fn build_router(state: AppState) -> Router {
         .route("/projects/{id}/entrypoint", put(drive::project_entrypoints::set_project_entrypoint))
         .route("/projects/{id}/folders", patch(drive::project_folders::rename_project_folder).delete(drive::project_folders::delete_project_folder))
         .route("/projects/{id}/files/{fid}", get(drive::projects::get_project_file).patch(drive::projects::update_project_file).delete(drive::projects::delete_project_file))
+        .route("/projects/{id}/comments", get(drive::project_reviews::list_comments))
+        .route("/projects/{id}/files/{fid}/comments", post(drive::project_reviews::add_comment))
+        .route("/project-comments/{id}", patch(drive::project_reviews::update_comment).delete(drive::project_reviews::delete_comment))
+        .route("/projects/{id}/suggestions", get(drive::project_reviews::list_suggestions))
+        .route("/projects/{id}/files/{fid}/suggestions", post(drive::project_reviews::create_suggestion))
+        .route("/project-suggestions/{id}", patch(drive::project_reviews::update_suggestion))
         .route(
             "/projects/{id}/git",
             get(git::links::link_status)
@@ -242,6 +249,12 @@ pub fn build_router(state: AppState) -> Router {
         .route("/comments/{id}", patch(drive::comments::update_comment).delete(drive::comments::delete_comment))
         .route("/documents/{id}/suggestions", get(drive::suggestions::list_suggestions).post(drive::suggestions::create_suggestion))
         .route("/suggestions/{id}", patch(drive::suggestions::update_suggestion))
+        .route("/projects/{id}/comments", get(drive::project_reviews::list_comments))
+        .route("/projects/{id}/files/{fid}/comments", post(drive::project_reviews::add_comment))
+        .route("/project-comments/{id}", patch(drive::project_reviews::update_comment).delete(drive::project_reviews::delete_comment))
+        .route("/projects/{id}/suggestions", get(drive::project_reviews::list_suggestions))
+        .route("/projects/{id}/files/{fid}/suggestions", post(drive::project_reviews::create_suggestion))
+        .route("/project-suggestions/{id}", patch(drive::project_reviews::update_suggestion))
         .route("/users/{id}/avatar", get(accounts::avatars::get_user_avatar))
         .route("/ws", get(desktop::devices::ws_handler));
 

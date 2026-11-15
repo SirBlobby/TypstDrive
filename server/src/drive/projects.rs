@@ -373,7 +373,7 @@ pub async fn update_project(
         project.folder_id = if folder_id.is_empty() { None } else { Some(folder_id) };
     }
     if let Some(public_role) = payload.public_role {
-        project.public_role = crate::sharing::links::parse_public_role(&public_role, false)?;
+        project.public_role = crate::sharing::links::parse_public_role(&public_role)?;
     }
 
     sqlx::query(sql("UPDATE projects SET name = $1, entrypoint = $2, folder_id = $3, public_role = $4, updated_at = $5 WHERE id = $6 AND owner_id = $7"))

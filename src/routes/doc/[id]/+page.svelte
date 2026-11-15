@@ -6,21 +6,26 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import DocFooter from '#lib/components/DocFooter.svelte';
 	import ErrorBanner from '#lib/components/ErrorBanner.svelte';
-	import { text, initYjs, cleanupYjs, presenceSources } from '#lib/ts/yjs-setup';
+	import { doc, text, provider, initYjs, cleanupYjs, presenceSources } from '#lib/ts/yjs-setup';
 	import { createFollowController } from '#lib/ts/follow';
 	import { compileTypst } from '#lib/ts/typst-api';
 	import type { Diagnostic } from '#lib/ts/typst-api';
 	import { page } from '$app/state';
 	import EditorContextMenu from '#lib/components/editor/EditorContextMenu.svelte';
+	import SlashCommandPalette from '#lib/components/editor/SlashCommandPalette.svelte';
+	import { slashSessionStore } from '#lib/ts/slash/slash-session';
 	import CommentHighlights from '#lib/components/comments/CommentHighlights.svelte';
 	import SuggestionHighlights from '#lib/components/suggestions/SuggestionHighlights.svelte';
-	import SuggestionComposer from '#lib/components/suggestions/SuggestionComposer.svelte';
-	import { editorErrors, documentStatsStore } from '#lib/ts/store';
+	import CommentsPanel from '#lib/components/comments/CommentsPanel.svelte';
+	import { editorErrors, documentStatsStore, commentsSidebarOpen } from '#lib/ts/store';
 	import { bibliographyChangedStore } from '#lib/ts/citations';
 	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
 	import { reviewExtensions } from '#lib/ts/review-extensions';
-	import { suggestingModeStore, suggestionDraftStore } from '#lib/ts/suggestions';
-	import { activeThreadStore, pendingCommentStore } from '#lib/ts/comments';
+	import { suggestingModeStore, suggestionsStore } from '#lib/ts/suggestions';
+	import { liveDraftStore } from '#lib/ts/suggestion-drafts';
+	import { previewText } from '#lib/ts/suggestion-preview';
+	import { remoteDraftsChangedStore, shareEditingMode } from '#lib/ts/live-review';
+	import { endReviewSession, startReviewSession } from '#lib/ts/review-session';
 	import type { DocumentRole } from '#lib/ts/document-role';
 	import { documentLanguage, type DocumentLanguage } from '#lib/ts/document-language';
 
@@ -38,15 +43,21 @@
 	let canComment = $derived(role !== 'viewer');
 	let showPreview = $derived($previewVisibleStore || isViewer);
 	let editorWidthClass = $derived(
-		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full md:w-1/2 border-r border-[var(--color-line)]' : 'w-full'
+		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-1 border-r border-[var(--color-line)]' : 'w-full min-w-0'
 	);
 	const editorExtensions = reviewExtensions();
 
+	function scheduleCompile() {
+		if (timeoutId) clearTimeout(timeoutId);
+		timeoutId = window.setTimeout(triggerCompile, 500);
+	}
+
 	function triggerCompile() {
-		if (!text || !showPreview) return;
-		const content = text.toString();
+		if (!text || !doc || !showPreview) return;
+		const content = previewText({ doc, text, awareness: provider?.awareness });
 		if (content === lastCompiledContent) return;
 		lastCompiledContent = content;
+		const matchesEditor = content === text.toString();
 		const docId = page.params.id;
 		compileTypst(content, docId)
 			.then((res) => {
@@ -59,7 +70,7 @@
 					$editorErrors = [];
 				} else if (res.errors) {
 					errors = res.errors;
-					$editorErrors = res.errors;
+					$editorErrors = matchesEditor ? res.errors : [];
 				}
 			})
 			.catch((e) => {
@@ -83,14 +94,33 @@
 		}
 	});
 
+	$effect(() => {
+		if (roleLoaded) shareEditingMode(isViewer ? 'viewing' : $suggestingModeStore ? 'suggesting' : 'editing');
+	});
+
+	$effect(() => {
+		$suggestionsStore;
+		$liveDraftStore;
+		$remoteDraftsChangedStore;
+		$slashSessionStore;
+		$suggestingModeStore;
+		untrack(() => {
+			if (initialized) scheduleCompile();
+		});
+	});
+
 	onMount(() => {
 		const docId = page.params.id;
 		if (!docId) return;
 
-		suggestingModeStore.set(false);
-		suggestionDraftStore.set(null);
-		pendingCommentStore.set(null);
-		activeThreadStore.set(null);
+		startReviewSession({
+			scope: 'document',
+			scopeId: docId,
+			fileId: null,
+			sourceFor: () => (doc && text ? { doc, text, awareness: provider?.awareness } : null),
+			filePath: () => '',
+			openFile: () => {}
+		});
 
 		fetch(`/api/docs/${docId}`)
 			.then(res => res.json())
@@ -110,13 +140,12 @@
 		const stopFollowController = createFollowController({ sources: presenceSources });
 
 		text?.observe(() => {
-			if (timeoutId) clearTimeout(timeoutId);
-			timeoutId = window.setTimeout(triggerCompile, 500);
+			scheduleCompile();
 		});
 
 		return () => {
 			if (timeoutId) clearTimeout(timeoutId);
-			suggestingModeStore.set(false);
+			endReviewSession();
 			stopFollowController();
 			cleanupYjs();
 		};
@@ -137,7 +166,7 @@
 		{#if !isViewer}
 		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 {editorWidthClass}">
 			{#if initialized && roleLoaded}
-				<Editor extensions={editorExtensions} {language} />
+				<Editor extensions={editorExtensions} {language} slash={{ insertDialogs: role === 'owner' || role === 'editor', embedDocuments: role === 'owner' || role === 'editor', canComment }} />
 				<CommentHighlights />
 				<SuggestionHighlights />
 			{/if}
@@ -145,10 +174,14 @@
 		{/if}
 
 		{#if showPreview}
-		<div class="{isViewer || $previewModeStore === 'preview' ? 'w-full' : 'w-full md:w-1/2'} relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
+		<div class="{isViewer || $previewModeStore === 'preview' ? 'w-full' : 'w-full md:w-0 md:flex-1'} min-w-0 relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
 			<Preview {svgs} />
 			<ErrorBanner {errors} />
 		</div>
+		{/if}
+
+		{#if $commentsSidebarOpen}
+			<CommentsPanel {canComment} canReview={role === 'owner' || role === 'editor'} isOwner={role === 'owner'} onClose={() => ($commentsSidebarOpen = false)} />
 		{/if}
 	</main>
 
@@ -157,5 +190,5 @@
 
 {#if initialized && !isViewer}
 	<EditorContextMenu {canComment} />
-	<SuggestionComposer docId={page.params.id ?? ''} />
+	<SlashCommandPalette />
 {/if}

@@ -172,7 +172,7 @@ pub async fn update_document(
         }
     }
     if let Some(new_public_role) = payload.public_role {
-        doc.public_role = crate::sharing::links::parse_public_role(&new_public_role, true)?;
+        doc.public_role = crate::sharing::links::parse_public_role(&new_public_role)?;
     }
 
     sqlx::query(sql("UPDATE documents SET title = $1, folder_id = $2, public_role = $3, updated_at = $4 WHERE id = $5 AND owner_id = $6"))

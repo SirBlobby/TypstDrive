@@ -25,6 +25,9 @@
 	import { latexEditorExtensions } from '../ts/editor-latex';
 	import type { DocumentLanguage } from '../ts/document-language';
 	import { editorFileKind, commentMarkerFor, dataFileLanguage } from '../ts/editor-file-kind';
+	import { isSlashPaletteOpen, slashCommands } from '../ts/slash/slash-extension';
+	import { slashSessionStore } from '../ts/slash/slash-session';
+	import { get } from 'svelte/store';
 
 	let {
 		ytext = undefined,
@@ -33,7 +36,8 @@
 		enableLsp = true,
 		filePath = undefined,
 		language = 'typst',
-		extensions = []
+		extensions = [],
+		slash = null
 	}: {
 		ytext?: any;
 		awarenessProvider?: any;
@@ -42,6 +46,7 @@
 		filePath?: string;
 		language?: DocumentLanguage;
 		extensions?: Extension[];
+		slash?: { insertDialogs: boolean; embedDocuments: boolean; canComment: boolean } | null;
 	} = $props();
 
 	let editorContainer: HTMLElement;
@@ -152,7 +157,14 @@
 		snippetCompletion("mid(${|})", { label: "mid", type: "function", info: "Mid delimiter (Math)" })
 	];
 
+	function openSlashLine() {
+		const session = get(slashSessionStore);
+		if (!view || session?.trigger !== 'typed') return null;
+		return view.state.doc.lineAt(Math.min(session.from, view.state.doc.length)).number - 1;
+	}
+
 	function typstCompletions(context: CompletionContext) {
+		if (isSlashPaletteOpen(context.state)) return null;
 		let word = context.matchBefore(/[\w#]*/);
 		if (!word || (word.from == word.to && !context.explicit)) return null;
 		
@@ -193,6 +205,7 @@
 		if (isTypst) languageExtension = [typstLanguage, typstBracketSettings(typstLanguage)];
 		if (isLatex) languageExtension = latexEditorExtensions();
 		const completionExtensions = isTypst ? [autocompletion({ override: [typstCompletions] })] : [];
+		const slashExtensions = slash ? slashCommands({ fileKind, context: { ...slash, commentMarker } }) : [];
 
 		state = EditorState.create({
 			doc: activeText.toString(),
@@ -207,6 +220,7 @@
 				languageExtension,
 				yCollab(activeText, activeProvider.awareness),
 				...completionExtensions,
+				slashExtensions,
 				themeCompartment.of(getThemeExtension(currentTheme as any, isDark)),
 				lspCompartment.of([]),
 				EditorView.lineWrapping,
@@ -334,7 +348,10 @@
 					try {
 						const msg = JSON.parse(data);
 						if (msg.method === 'textDocument/publishDiagnostics' && msg.params && msg.params.diagnostics) {
-							msg.params.diagnostics = msg.params.diagnostics.filter((d: any) => !d.message.toLowerCase().includes('unknown font family'));
+							const slashLine = openSlashLine();
+							msg.params.diagnostics = msg.params.diagnostics.filter(
+								(d: any) => !d.message.toLowerCase().includes('unknown font family') && d.range?.start?.line !== slashLine
+							);
 							processedData = JSON.stringify(msg);
 
 							const snapshot = `${msg.params.uri}:${msg.params.version ?? ''}:${JSON.stringify(msg.params.diagnostics)}`;
