@@ -90,6 +90,7 @@ pub async fn create_project(
         Some(path) => crate::drive::project_paths::clean_project_path(path)?,
         None => "main.typ".to_string(),
     };
+    crate::compile::latex_policy::check_entrypoint(&entrypoint)?;
 
     sqlx::query(sql("INSERT INTO projects (id, owner_id, folder_id, name, entrypoint) VALUES ($1, $2, $3, $4, $5)"))
     .bind(&project_id)

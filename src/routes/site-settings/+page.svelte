@@ -12,6 +12,7 @@
     import PackageSettings from '#lib/components/site-settings/PackageSettings.svelte';
     import PdfLinkSettings from '#lib/components/site-settings/PdfLinkSettings.svelte';
     import CitationSettings from '#lib/components/site-settings/CitationSettings.svelte';
+    import LatexSettings from '#lib/components/site-settings/LatexSettings.svelte';
     import GitSettings from '#lib/components/site-settings/GitSettings.svelte';
     import ServerSettings from '#lib/components/site-settings/ServerSettings.svelte';
     import AuthenticationSettings from '#lib/components/site-settings/AuthenticationSettings.svelte';
@@ -20,6 +21,7 @@
     import BrandingSettings from '#lib/components/site-settings/BrandingSettings.svelte';
     import ThemeSettings from '#lib/components/site-settings/ThemeSettings.svelte';
     import AuditLog from '#lib/components/site-settings/AuditLog.svelte';
+    import PerformanceSettings from '#lib/components/site-settings/PerformanceSettings.svelte';
     import AboutSettings from '#lib/components/site-settings/AboutSettings.svelte';
 
     const navItems = [
@@ -52,6 +54,7 @@
                 { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
                 { id: 'pdf-links', label: 'PDF Links', icon: 'mdi:file-pdf-box' },
                 { id: 'citations', label: 'Citations', icon: 'ph:quotes' },
+                { id: 'latex', label: 'LaTeX', icon: 'mdi:sigma' },
                 { id: 'git', label: 'Git', icon: 'mdi:git' }
             ]
         },
@@ -71,6 +74,7 @@
             icon: 'mdi:server-outline',
             children: [
                 { id: 'server', label: 'Server', icon: 'mdi:server-network' },
+                { id: 'performance', label: 'Performance', icon: 'mdi:speedometer' },
                 { id: 'about', label: 'About', icon: 'mdi:information-outline' }
             ]
         }
@@ -137,6 +141,8 @@
                     <PdfLinkSettings />
                 {:else if activeSection === 'citations'}
                     <CitationSettings />
+                {:else if activeSection === 'latex'}
+                    <LatexSettings />
                 {:else if activeSection === 'git'}
                     <GitSettings />
                 {:else if activeSection === 'api-access'}
@@ -145,6 +151,8 @@
                     <AuditLog />
                 {:else if activeSection === 'server'}
                     <ServerSettings />
+                {:else if activeSection === 'performance'}
+                    <PerformanceSettings />
                 {:else if activeSection === 'about'}
                     <AboutSettings />
                 {/if}

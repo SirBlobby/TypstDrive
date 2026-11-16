@@ -95,7 +95,7 @@ pub async fn editable_project(
 
 fn is_entrypoint_candidate(path: &str) -> bool {
     let lower = path.to_lowercase();
-    lower.ends_with(".typ") || lower.ends_with(".tex")
+    lower.ends_with(".typ") || (lower.ends_with(".tex") && crate::compile::latex_policy::is_enabled())
 }
 
 pub fn project_entrypoint_after_removal(current: &str, remaining_paths: &[String]) -> String {

@@ -1,8 +1,13 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import type { DocumentLanguage } from '#lib/ts/document-language';
+    import { latexEnabledStore } from '#lib/ts/latex-policy';
 
     let { language = $bindable() }: { language: DocumentLanguage } = $props();
+
+    $effect(() => {
+        if (!$latexEnabledStore && language === 'latex') language = 'typst';
+    });
 
     const options: { value: DocumentLanguage; label: string; description: string; icon: string }[] = [
         { value: 'typst', label: 'Typst', description: 'Full support', icon: 'mdi:alpha-t-box-outline' },
@@ -10,6 +15,7 @@
     ];
 </script>
 
+{#if $latexEnabledStore}
 <div class="flex flex-col gap-1 text-xs">
     <span class="font-medium text-[var(--color-ink-muted)]">Language</span>
     <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Language">
@@ -32,3 +38,4 @@
         {/each}
     </div>
 </div>
+{/if}
