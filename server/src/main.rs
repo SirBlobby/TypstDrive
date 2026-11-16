@@ -20,6 +20,7 @@ mod email;
 mod file_storage;
 mod git;
 mod hashing;
+mod metrics;
 mod models;
 mod packages;
 mod realtime;
@@ -114,6 +115,11 @@ async fn main() {
     cluster::start(state.clone());
     file_storage::maintenance::spawn(state.clone());
     trash::purge::spawn(state.clone());
+    metrics::start();
+    compile::latex_policy::reload(&state).await;
+    if compile::latex_policy::is_enabled() {
+        compile::tectonic::warm_up();
+    }
 
     let app = routes::build_router(state);
 

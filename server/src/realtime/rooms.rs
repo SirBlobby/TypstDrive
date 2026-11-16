@@ -14,6 +14,11 @@ pub struct LiveRoom {
 
 pub type LiveRooms = HashMap<String, LiveRoom>;
 
+pub async fn activity(state: &AppState) -> (usize, usize) {
+    let rooms = state.live_rooms.lock().await;
+    (rooms.len(), rooms.values().map(|room| room.connections).sum())
+}
+
 pub async fn join_existing(state: &AppState, room_id: &str) -> Option<Arc<BroadcastGroup>> {
     let mut rooms = state.live_rooms.lock().await;
     let room = rooms.get_mut(room_id)?;

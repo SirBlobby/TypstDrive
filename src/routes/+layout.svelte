@@ -11,6 +11,7 @@
 	import { applyCustomThemeStyles } from '#lib/ts/theme-styles';
 	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '#lib/ts/branding';
 	import BrandingCredit from '#lib/components/BrandingCredit.svelte';
+	import { reportPageLoad } from '#lib/ts/page-load';
 
 	let { children } = $props();
 	let loaded = $state(false);
@@ -31,6 +32,7 @@
 		}
 		await fetchUser();
 		loaded = true;
+		if ($userStore) reportPageLoad();
 	});
 
 	let currentColors = $derived.by(() => {
