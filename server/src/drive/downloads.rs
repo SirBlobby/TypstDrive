@@ -103,15 +103,18 @@ async fn project_entries(state: &AppState, project: &Project, prefix: &str, read
     }
 
     let input = assemble_project(state, project, HashMap::new(), reader).await;
-    let used = crate::compile::compiler::run_blocking(move |compiler| compiler.used_resources(input))
-        .await
-        .unwrap_or_default();
-
     let account_files = sqlx::query_as::<_, (String, String)>(sql("SELECT id, name FROM files WHERE owner_id = $1 AND deleted_at IS NULL"))
         .bind(&project.owner_id)
         .fetch_all(&state.db)
         .await
         .map_err(internal_error)?;
+    let used = if crate::compile::latex::is_latex_path(&input.entrypoint) {
+        names_mentioned_in_latex(&input.files, &account_files)
+    } else {
+        crate::compile::compiler::run_blocking(move |compiler| compiler.used_resources(input))
+            .await
+            .unwrap_or_default()
+    };
 
     let mut included = HashSet::new();
     let used_files: Vec<(String, String)> = account_files
@@ -281,4 +284,15 @@ pub async fn download_project(
     let reader = ProjectReader::for_role(role, &user_id);
     let entries = project_entries(&state, &project, &format!("{name}/"), reader).await?;
     zip_response(entries, &name).await
+}
+
+fn names_mentioned_in_latex(files: &HashMap<String, Vec<u8>>, account_files: &[(String, String)]) -> crate::compile::world::UsedResources {
+    let sources: String = files
+        .iter()
+        .filter(|(path, _)| crate::compile::latex::is_latex_path(path) || path.ends_with(".sty") || path.ends_with(".cls"))
+        .map(|(_, bytes)| String::from_utf8_lossy(bytes).into_owned())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let paths = account_files.iter().map(|(_, name)| name).filter(|name| sources.contains(name.as_str())).cloned().collect();
+    crate::compile::world::UsedResources { paths, font_files: HashSet::new() }
 }
