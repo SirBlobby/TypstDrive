@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, citations, compile, desktop, drive, git, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, AppState,
+    accounts, admin, api, citations, compile, desktop, drive, git, metrics, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -37,6 +37,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/api-access/defaults", put(api::limits::update_defaults))
         .route("/admin/api-access/users/{id}", put(api::limits::update_user_limits))
         .route("/admin/citation-policy", get(citations::policy::get_policy).put(citations::policy::update_policy))
+        .route("/admin/latex-policy", get(compile::latex_policy::get_policy).put(compile::latex_policy::update_policy))
         .route("/admin/git-policy", get(git::policy::get_policy).put(git::policy::update_policy))
         .route("/admin/themes", post(themes::admin::create_site_theme))
         .route("/admin/themes/{id}", put(themes::admin::update_site_theme).delete(themes::admin::delete_site_theme))
@@ -47,6 +48,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/pdf-links/{id}", delete(sharing::pdf_links::admin::delete_link))
         .route("/admin/package-policy", get(packages::policy::get_policy).put(packages::policy::update_policy))
         .route("/admin/server", get(admin::server_info::server_info))
+        .route("/admin/performance", get(metrics::handlers::performance))
+        .route("/metrics/page-load", post(metrics::handlers::report_page_load))
         .route("/admin/storage", get(accounts::storage::overview))
         .route("/admin/storage/default-quota", put(accounts::storage::update_default_quota))
         .route("/admin/storage/users/{id}", put(accounts::storage::update_user_quota))
@@ -104,6 +107,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/themes", get(themes::personal::list_themes).post(themes::personal::create_theme))
         .route("/themes/{id}", put(themes::personal::update_theme).delete(themes::personal::delete_theme))
         .route("/citations/policy", get(citations::policy::own_policy))
+        .route("/latex/policy", get(compile::latex_policy::own_policy))
         .route("/citations/lookup", post(citations::entries::lookup))
         .route("/citations/orcid/{id}", get(citations::orcid::lookup))
         .route("/citations/zotero", get(citations::zotero_account::status).put(citations::zotero_account::connect).delete(citations::zotero_account::disconnect))
@@ -260,6 +264,14 @@ pub fn build_router(state: AppState) -> Router {
 
     let v1_routes = Router::new()
         .route("/render", post(api::render::render_handler))
+        .route("/typst/render", post(api::render::render_handler))
+        .route("/typst/math", post(api::typst::render_math))
+        .route("/typst/snippet", post(api::typst::render_snippet))
+        .route("/typst/check", post(api::typst::check_document))
+        .route("/latex/render", post(api::latex::render_document))
+        .route("/latex/math", post(api::latex::render_math))
+        .route("/latex/snippet", post(api::latex::render_snippet))
+        .route("/latex/check", post(api::latex::check_document))
         .route("/documents", get(api::read::documents::list_documents))
         .route("/documents/{id}", get(api::read::documents::get_document))
         .route("/documents/{id}/render", post(api::stored_render::render_document))
@@ -283,8 +295,17 @@ pub fn build_router(state: AppState) -> Router {
     let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "../build".to_string());
 
     Router::new()
-        .nest("/api", api_routes.nest("/desktop", desktop_routes).layer(TraceLayer::new_for_http()))
-        .nest("/v1", v1_routes.layer(TraceLayer::new_for_http()))
+        .nest(
+            "/api",
+            api_routes
+                .nest("/desktop", desktop_routes)
+                .layer(axum::middleware::from_fn(metrics::middleware::time_requests))
+                .layer(TraceLayer::new_for_http()),
+        )
+        .nest(
+            "/v1",
+            v1_routes.layer(axum::middleware::from_fn(metrics::middleware::time_requests)).layer(TraceLayer::new_for_http()),
+        )
         .nest("/yjs", yjs_routes.layer(TraceLayer::new_for_http()))
         .route("/pdf/{slug}", get(sharing::pdf_links::serve::serve_pdf).layer(TraceLayer::new_for_http()))
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))

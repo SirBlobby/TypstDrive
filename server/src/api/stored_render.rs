@@ -7,7 +7,9 @@ use axum::Json;
 use serde::Deserialize;
 
 use crate::api::authentication::{authenticate, ApiScope};
-use crate::api::render::{invalid_format, render_to_response, RenderFormat};
+use crate::api::options::{bad_request, page_image, RenderFormat, ALL_FORMATS};
+use crate::api::render::render_to_response;
+use crate::compile::render::PageImage;
 use crate::compile::latex;
 use crate::drive::versions::current_text;
 use crate::sharing::access::{self, AccessRole};
@@ -15,7 +17,15 @@ use crate::AppState;
 
 #[derive(Deserialize)]
 pub struct StoredRenderRequest {
-    pub format: String,
+    pub format: Option<String>,
+    pub page: Option<usize>,
+    pub scale: Option<f32>,
+}
+
+fn output_choices(request: &StoredRenderRequest) -> Result<(RenderFormat, PageImage), Response> {
+    let format = RenderFormat::choose(request.format.as_deref(), RenderFormat::Pdf, ALL_FORMATS).map_err(bad_request)?;
+    let image = page_image(request.page, request.scale).map_err(bad_request)?;
+    Ok((format, image))
 }
 
 fn not_found(label: &str) -> Response {
@@ -32,8 +42,9 @@ pub async fn render_document(
         Ok(caller) => caller,
         Err(response) => return response,
     };
-    let Some(format) = RenderFormat::parse(&payload.format) else {
-        return invalid_format();
+    let (format, image) = match output_choices(&payload) {
+        Ok(choices) => choices,
+        Err(response) => return response,
     };
 
     let account = Some(caller.account_id);
@@ -46,7 +57,7 @@ pub async fn render_document(
     let files = crate::drive::document_assets::compile_files(&state, &document, AccessRole::Owner, &account).await;
     let source = (!latex::is_latex(&document)).then_some(text.as_str());
     let input = latex::document_input(&document, text.clone(), files);
-    render_to_response(input, format, source).await
+    render_to_response(input, format, image, source).await
 }
 
 pub async fn render_project(
@@ -59,8 +70,9 @@ pub async fn render_project(
         Ok(caller) => caller,
         Err(response) => return response,
     };
-    let Some(format) = RenderFormat::parse(&payload.format) else {
-        return invalid_format();
+    let (format, image) = match output_choices(&payload) {
+        Ok(choices) => choices,
+        Err(response) => return response,
     };
 
     let account = Some(caller.account_id);
@@ -70,5 +82,5 @@ pub async fn render_project(
     };
 
     let input = crate::drive::projects::assemble_project(&state, &project, HashMap::new(), crate::drive::projects::ProjectReader::Owner).await;
-    render_to_response(input, format, None).await
+    render_to_response(input, format, image, None).await
 }
