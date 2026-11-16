@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack, type Snippet } from "svelte";
   import Modal from "./Modal.svelte";
+  import { modalCancelClass, modalConfirmClass } from "#lib/ts/modal-ui";
 
   interface Props {
     title: string;
@@ -43,12 +44,12 @@
   }
 </script>
 
-<Modal {title} {icon} {onclose}>
+<Modal {title} {icon} tone={danger ? "danger" : "accent"} {onclose}>
   <form id="prompt-form" onsubmit={submit}>
-    <label class="flex flex-col gap-1 text-xs">
-      <span class="font-medium text-[var(--color-ink-muted)]">{label}</span>
+    <label class="flex flex-col gap-1.5 text-sm">
+      <span class="font-medium text-[var(--color-ink)]">{label}</span>
       <div
-        class="flex items-center rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] focus-within:border-[var(--color-accent)]"
+        class="flex items-center rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] transition-colors focus-within:border-[var(--color-accent)] focus-within:ring-2 focus-within:ring-[var(--color-accent-soft)]"
       >
         <!-- svelte-ignore a11y_autofocus -->
         <input
@@ -63,26 +64,14 @@
       </div>
     </label>
     {#if children}
-      <div class="mt-3">
+      <div class="mt-4">
         {@render children()}
       </div>
     {/if}
   </form>
 
   {#snippet footer()}
-    <button
-      class="rounded-md px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]"
-      onclick={onclose}
-    >
-      Cancel
-    </button>
-    <button
-      type="submit"
-      form="prompt-form"
-      class="rounded-md px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90
-        {danger ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-accent)]'}"
-    >
-      {confirmLabel}
-    </button>
+    <button type="button" class={modalCancelClass} onclick={onclose}>Cancel</button>
+    <button type="submit" form="prompt-form" class={modalConfirmClass(danger ? "danger" : "accent")}>{confirmLabel}</button>
   {/snippet}
 </Modal>

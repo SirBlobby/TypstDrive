@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { modalPrimaryClass } from '#lib/ts/modal-ui';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import Modal from '#lib/components/Modal.svelte';
@@ -167,6 +168,6 @@
         {:else if team}
             <button onclick={leave} disabled={busy} class="mr-auto rounded-md px-3 py-1.5 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10">Leave team</button>
         {/if}
-        <button onclick={onClose} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">Done</button>
+        <button onclick={onClose} class={modalPrimaryClass}>Done</button>
     {/snippet}
 </Modal>

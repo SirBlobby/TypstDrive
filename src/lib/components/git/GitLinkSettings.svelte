@@ -116,6 +116,7 @@
         title="Unlink repository"
         message="Stop syncing this project with Git? The project files stay as they are, and nothing changes in the repository."
         confirmLabel="Unlink"
+        tone="accent"
         onconfirm={unlink}
         onclose={() => (confirmUnlink = false)}
     />

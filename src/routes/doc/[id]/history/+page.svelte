@@ -179,6 +179,7 @@
         title="Restore this version"
         message="The document will be replaced with this version for everyone. The current content is saved as a version first, so you can undo this from history."
         confirmLabel="Restore"
+        tone="accent"
         onconfirm={restoreSelected}
         onclose={() => (confirmRestore = false)}
     />

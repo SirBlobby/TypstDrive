@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
     import Modal from '#lib/components/Modal.svelte';
     import { createTeam, type TeamSummary } from '#lib/ts/workspace';
 
@@ -43,8 +44,8 @@
     </form>
 
     {#snippet footer()}
-        <button onclick={onClose} class="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]">Cancel</button>
-        <button type="submit" form="create-team-form" disabled={saving || !name.trim()} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60">
+        <button onclick={onClose} class={modalCancelClass}>Cancel</button>
+        <button type="submit" form="create-team-form" disabled={saving || !name.trim()} class={modalPrimaryClass}>
             {saving ? 'Creating...' : 'Create team'}
         </button>
     {/snippet}

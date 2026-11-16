@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
     import Modal from '#lib/components/Modal.svelte';
 
     let { user, onClose }: {
@@ -47,10 +48,10 @@
 
     {#snippet footer()}
         {#if saved}
-            <button type="button" onclick={onClose} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90">Done</button>
+            <button type="button" onclick={onClose} class={modalPrimaryClass}>Done</button>
         {:else}
-            <button type="button" onclick={onClose} class="rounded-md px-3 py-1.5 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]">Cancel</button>
-            <button type="submit" form="set-password-form" disabled={saving} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50">
+            <button type="button" onclick={onClose} class={modalCancelClass}>Cancel</button>
+            <button type="submit" form="set-password-form" disabled={saving} class={modalPrimaryClass}>
                 {saving ? 'Saving...' : 'Set password'}
             </button>
         {/if}
