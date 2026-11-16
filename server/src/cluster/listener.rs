@@ -63,6 +63,9 @@ async fn apply_event(state: &AppState, event: ClusterEvent) {
         }
         ClusterEvent::DeviceNotification { user_id, event } => devices::deliver_local(state, &user_id, event).await,
         ClusterEvent::ReloadThemes { owner_id } => crate::themes::cache::reload(state, owner_id.as_deref()).await,
-        ClusterEvent::ReloadSettings => crate::admin::site_settings::forget_cached(),
+        ClusterEvent::ReloadSettings => {
+            crate::admin::site_settings::forget_cached();
+            crate::compile::latex_policy::reload(state).await;
+        }
     }
 }

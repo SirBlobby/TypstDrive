@@ -8,8 +8,9 @@ use axum_extra::extract::cookie::SignedCookieJar;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::compile::compiler::{run_blocking, CompileFailure, DocumentStats, ProjectInput};
+use crate::compile::compiler::{CompileFailure, DocumentStats, ProjectInput};
 use crate::compile::latex;
+use crate::compile::render::{self, RenderFailure};
 use crate::sharing::access;
 use crate::AppState;
 use crate::db::sql;
@@ -37,6 +38,8 @@ pub struct Diagnostic {
     pub severity: String,
     pub from: Option<usize>,
     pub to: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
 }
 
 enum ThumbnailTarget {
@@ -47,7 +50,6 @@ enum ThumbnailTarget {
 struct CompileSource {
     input: ProjectInput,
     thumbnail_target: Option<ThumbnailTarget>,
-    generated_source: bool,
 }
 
 fn map_diagnostics(diagnostics: CompileFailure) -> Vec<Diagnostic> {
@@ -58,21 +60,36 @@ fn map_diagnostics(diagnostics: CompileFailure) -> Vec<Diagnostic> {
             severity: format!("{:?}", diagnostic.severity),
             from: range.as_ref().map(|range| range.start),
             to: range.as_ref().map(|range| range.end),
+            file: None,
         })
         .collect()
 }
 
+fn single_error(message: &str) -> Vec<Diagnostic> {
+    vec![Diagnostic { message: message.to_string(), severity: "Error".to_string(), from: None, to: None, file: None }]
+}
+
+fn failure_diagnostics(failure: RenderFailure) -> Vec<Diagnostic> {
+    match failure {
+        RenderFailure::Typst(diagnostics) => map_diagnostics(diagnostics),
+        RenderFailure::Latex { entrypoint, problems } => problems
+            .into_iter()
+            .map(|problem| Diagnostic {
+                message: problem.located_message(&entrypoint),
+                severity: "Error".to_string(),
+                from: problem.range.map(|range| range.0),
+                to: problem.range.map(|range| range.1),
+                file: problem.range.and(problem.file),
+            })
+            .collect(),
+        RenderFailure::Unsupported(message) => single_error(&message),
+        RenderFailure::LatexTurnedOff => single_error(crate::compile::latex_policy::TURNED_OFF_MESSAGE),
+        RenderFailure::Stopped => single_error("Compilation stopped unexpectedly"),
+    }
+}
+
 fn error_response(message: &str) -> Json<CompileResponse> {
-    Json(CompileResponse {
-        svgs: None,
-        errors: Some(vec![Diagnostic {
-            message: message.to_string(),
-            severity: "Error".to_string(),
-            from: None,
-            to: None,
-        }]),
-        stats: None,
-    })
+    Json(CompileResponse { svgs: None, errors: Some(single_error(message)), stats: None })
 }
 
 async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<CompileSource> {
@@ -82,8 +99,7 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
         let reader = crate::drive::projects::ProjectReader::for_role(role, user_id);
         let input = crate::drive::projects::assemble_project(state, &project, overrides, reader).await;
         let thumbnail_target = role.can_edit().then(|| ThumbnailTarget::Project(project.id.clone()));
-        let generated_source = latex::is_latex_path(&input.entrypoint);
-        return Some(CompileSource { input, thumbnail_target, generated_source });
+        return Some(CompileSource { input, thumbnail_target });
     }
 
     let Some(document_id) = &payload.document_id else {
@@ -91,22 +107,20 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
         return Some(CompileSource {
             input: ProjectInput::single(payload.text.clone().unwrap_or_default(), HashMap::new()),
             thumbnail_target: None,
-            generated_source: false,
         });
     };
 
     let (document, role) = access::document_role(state, document_id, user_id).await?;
     let files = crate::drive::document_assets::compile_files(state, &document, role, user_id).await;
-    let generated_source = latex::is_latex(&document);
     match (role.can_edit(), payload.text.clone()) {
         (true, Some(submitted_text)) => {
             let thumbnail_target = Some(ThumbnailTarget::Document(document.id.clone()));
             let input = latex::document_input(&document, submitted_text, files);
-            Some(CompileSource { input, thumbnail_target, generated_source })
+            Some(CompileSource { input, thumbnail_target })
         }
         _ => {
             let input = latex::document_input(&document, current_text(state, &document.id).await, files);
-            Some(CompileSource { input, thumbnail_target: None, generated_source })
+            Some(CompileSource { input, thumbnail_target: None })
         }
     }
 }
@@ -117,14 +131,6 @@ async fn current_text(state: &AppState, document_id: &str) -> String {
         Some(text) => text,
         None => crate::drive::documents::saved_text(state, document_id).await,
     }
-}
-
-fn without_ranges(mut diagnostics: Vec<Diagnostic>) -> Vec<Diagnostic> {
-    for diagnostic in &mut diagnostics {
-        diagnostic.from = None;
-        diagnostic.to = None;
-    }
-    diagnostics
 }
 
 async fn save_thumbnail(state: &AppState, target: ThumbnailTarget, thumbnail: &str) {
@@ -145,23 +151,14 @@ pub async fn compile_handler(
         return error_response("Unauthorized");
     };
 
-    let generated_source = source.generated_source;
-    let Some(result) = run_blocking(move |compiler| compiler.compile_svg(source.input)).await else {
-        return error_response("Compilation stopped unexpectedly");
-    };
-
-    match result {
-        Ok((svgs, thumbnail, stats)) => {
+    match render::preview(source.input).await {
+        Ok(preview) => {
             if let Some(target) = source.thumbnail_target {
-                save_thumbnail(&state, target, &thumbnail).await;
+                save_thumbnail(&state, target, &preview.thumbnail).await;
             }
-            Json(CompileResponse { svgs: Some(svgs), errors: None, stats: Some(stats) })
+            Json(CompileResponse { svgs: Some(preview.svgs), errors: None, stats: Some(preview.stats) })
         }
-        Err(diagnostics) => {
-            let mapped = map_diagnostics(diagnostics);
-            let errors = if generated_source { without_ranges(mapped) } else { mapped };
-            Json(CompileResponse { svgs: None, errors: Some(errors), stats: None })
-        }
+        Err(failure) => Json(CompileResponse { svgs: None, errors: Some(failure_diagnostics(failure)), stats: None }),
     }
 }
 
@@ -185,16 +182,18 @@ pub async fn export_handler(
     };
 
     let input = source.input;
-    let exported = run_blocking(move |compiler| match format.as_str() {
-        "pdf" => compiler.export_pdf(input).map(|bytes| ("application/pdf", bytes)),
-        "png" => compiler.export_png(input).map(|bytes| ("image/png", bytes)),
-        "html" => compiler.export_html(input).map(|html| ("text/html; charset=utf-8", html.into_bytes())),
-        _ => compiler.compile_svg(input).map(|(svgs, _, _)| ("image/svg+xml", svgs.join("\n").into_bytes())),
-    })
-    .await;
+    let exported = match format.as_str() {
+        "pdf" => render::pdf(input).await.map(|bytes| ("application/pdf", bytes)),
+        "png" => render::png(input).await.map(|bytes| ("image/png", bytes)),
+        "html" => render::html(input).await.map(|html| ("text/html; charset=utf-8", html.into_bytes())),
+        _ => render::svg(input).await.map(|svg| ("image/svg+xml", svg.into_bytes())),
+    };
 
     match exported {
-        Some(Ok((content_type, bytes))) => file_response(content_type, bytes),
-        _ => (StatusCode::BAD_REQUEST, "Compilation failed").into_response(),
+        Ok((content_type, bytes)) => file_response(content_type, bytes),
+        Err(failure) => {
+            let summary = failure_diagnostics(failure).into_iter().map(|diagnostic| diagnostic.message).collect::<Vec<_>>().join("\n");
+            (StatusCode::BAD_REQUEST, summary).into_response()
+        }
     }
 }

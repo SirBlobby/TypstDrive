@@ -1,6 +1,6 @@
 # TypstDrive
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/SirBlobby/TypstDrive/releases)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/SirBlobby/TypstDrive/releases)
 [![Typst](https://img.shields.io/badge/Typst-0.15.1-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.92+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte&logoColor=white)](https://svelte.dev/docs/kit)
@@ -24,17 +24,19 @@ Full documentation, including a user guide, self-hosting, administration and the
 - **Live Preview**: Pages update as you type, with zoom and a view menu to show the editor and preview, the editor only, or the preview only.
 - **Editor**: Syntax highlighting for Typst, LaTeX, BibTeX, YAML and TOML, autocompletion, inline errors, auto-closing brackets and smart features from the tinymist language server.
 - **Formatting Toolbar**: Headings, bold, italic, code, quotes, math, lists, a font picker and page settings.
-- **LaTeX Documents**: Write basic LaTeX documents and projects with a LaTeX editor and toolbar, rendered through [MiTeX](https://github.com/mitex-rs/mitex).
-- **Quick Insert**: Images, tables, other documents, symbols and emoji.
+- **LaTeX Documents**: Write LaTeX documents and projects with a LaTeX editor and toolbar, compiled on the server by [Tectonic](https://tectonic-typesetting.github.io/), which downloads the packages a document uses. Compiles run in a locked-down sandbox, packages a command needs are added to the preamble for you, and administrators can turn LaTeX off.
+- **Quick Insert**: Images, tables, other documents, symbols and emoji, with an image picker that searches your drive and uploads by button, drop or paste.
+- **Slash Commands**: Type `/` for a searchable list of formatting, insert, export, view and review actions, or select text and press `/` to apply one to it.
+- **Learn Typst and LaTeX**: Step-by-step guides for both languages in the documentation, with the rendered result under every example.
 - **Find and Replace**, line comments and a spell checker that skips code and math.
 - **Customizable Keybinds**: Change the editor shortcuts and spot conflicts at a glance.
 - **Editor Settings**: Font, font size, line numbers and a minimap.
 
 ### Working Together
 
-- **Real-Time Collaboration**: See other people's changes and cursors instantly, follow someone's cursor by clicking their picture, and see who is in which file of a project.
-- **Comments**: Comment on text, reply, and resolve or reopen threads.
-- **Suggestions**: Propose edits for others to accept or reject.
+- **Real-Time Collaboration**: See other people's changes and cursors instantly, follow someone's cursor by clicking their picture, see who is in which file of a project, and whether each person is editing, suggesting or viewing.
+- **Comments**: Comment on text in documents and project files, reply, and resolve or reopen threads.
+- **Suggestions**: Type in suggesting mode to propose edits inline, shown live to others and in the preview, for owners and editors to accept or reject.
 - **Version History**: Automatic and manual versions, a timeline of who edited, side-by-side changes and one-click restore.
 
 ### Organizing and Sharing
@@ -57,7 +59,7 @@ Full documentation, including a user guide, self-hosting, administration and the
 
 - **Export**: PDF, HTML, PNG, SVG and Typst or LaTeX source from the editor or straight from the drive's action menu, plus Word, Markdown, LaTeX and HTML through Pandoc.
 - **Presentation Mode**: Full-screen slides with a slide overview, timer, progress bar, laser pointer, pen, highlighter and eraser.
-- **Render API**: Turn Typst into PNG, PDF or HTML from your own code, with scoped keys, rate limits and usage charts.
+- **Render API**: Turn Typst and LaTeX into PDF, PNG, SVG or HTML from your own code, render single formulas and snippets as tightly cropped images, pick a page and size, and check documents for errors, with scoped keys, rate limits and usage charts.
 - **Typst Desktop**: Keep documents on your computer and in sync with the [Typst Desktop](https://github.com/SirBlobby/typst-desktop) app.
 
 ### Accounts and Administration
@@ -67,7 +69,8 @@ Full documentation, including a user guide, self-hosting, administration and the
 - **Account Security**: Email verification, password reset, active sessions, connected accounts and sign-in lockout.
 - **Themes**: Cerberus, Catppuccin and Arch Linux themes in light and dark mode, site themes added by admins, and personal themes made with color pickers or uploaded as YAML, plus text size and high contrast options.
 - **Branding**: Your own site name, logo, accent color, tagline and sign-in message.
-- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, Git sync, site themes, trash retention, API limits and an audit log.
+- **Admin Tools**: Users, registration rules, sign-in methods, email testing, team limits, storage quotas, version history limits, package rules, PDF link rules, citation services, LaTeX support, Git sync, site themes, trash retention, API limits and an audit log.
+- **Performance Page**: Uptime, CPU, memory, disk and live-editing activity, with charts of page load, server response, Typst compile and LaTeX compile times.
 - **Flexible Hosting**: SQLite, PostgreSQL or MySQL/MariaDB with automatic upgrades, plus Redis or Valkey and S3-compatible storage for larger installs.
 
 
@@ -126,6 +129,7 @@ Before opening TypstDrive to the internet, put it behind a reverse proxy with HT
 ## Documentation
 
 - [Your first document](https://sirblobby.github.io/TypstDrive/start/first-document/)
+- [Learn Typst and LaTeX](https://sirblobby.github.io/TypstDrive/learn/)
 - [User guide](https://sirblobby.github.io/TypstDrive/guide/)
 - [Self-hosting](https://sirblobby.github.io/TypstDrive/self-hosting/)
 - [Administration](https://sirblobby.github.io/TypstDrive/admin/)
@@ -139,7 +143,7 @@ TypstDrive is built on the work of many open-source projects and services:
 - [Typst](https://typst.app/) and its open-source [compiler](https://github.com/typst/typst), which turns documents into PDF, PNG, SVG and HTML (Apache License 2.0). Thanks to the Typst team and contributors for making it possible to build tools like this.
 - The authors of the packages and templates on [Typst Universe](https://typst.app/universe), which TypstDrive downloads and offers as templates.
 - [tinymist](https://github.com/Myriad-Dreamin/tinymist) for language server features such as completions and hover help.
-- [MiTeX](https://github.com/mitex-rs/mitex) for rendering LaTeX documents with Typst.
+- [Tectonic](https://tectonic-typesetting.github.io/) for compiling LaTeX documents.
 - [Hayagriva](https://github.com/typst/hayagriva), Typst's bibliography format, used for `.yml` reference files.
 - [Pandoc](https://pandoc.org/) for converting to and from Word, Markdown, LaTeX and HTML.
 - [SvelteKit](https://svelte.dev/docs/kit), [Svelte](https://svelte.dev/), [Vite](https://vite.dev/) and [Tailwind CSS](https://tailwindcss.com/) for the web app.
@@ -185,6 +189,10 @@ TypstDrive is a community application and is not affiliated with, endorsed by, o
   <tr>
     <td width="50%"><img src="preview/settings.png" alt="Settings view" width="100%"></td>
     <td width="50%"><img src="preview/site-settings.png" alt="Site settings view" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="preview/comments.png" alt="Comments view" width="100%"></td>
+    <td width="50%"><img src="preview/suggestion.png" alt="Suggestions view" width="100%"></td>
   </tr>
   <tr>
     <td width="50%"><img src="preview/themes.png" alt="Theme editor view" width="100%"></td>

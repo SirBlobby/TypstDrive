@@ -33,6 +33,7 @@ export function collectPresence(sources: PresenceSource[]) {
 				clientId,
 				...state.user,
 				activeFile: state.activeFile ?? source.fileId,
+				mode: state.editingMode ?? null,
 				isLocal: clientId === localId
 			};
 			addUnique(everyone, user);

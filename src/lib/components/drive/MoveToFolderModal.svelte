@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
     import Icon from '@iconify/svelte';
     import { onMount } from 'svelte';
     import Modal from '../Modal.svelte';
@@ -100,12 +101,12 @@
         {#if problem}
             <p class="mr-auto text-xs text-[var(--color-danger)]">{problem}</p>
         {/if}
-        <button class="rounded-md px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]" onclick={onclose}>Cancel</button>
+        <button class={modalCancelClass} onclick={onclose}>Cancel</button>
         <button
             onclick={move}
             disabled={moving || isCurrentFolder}
             title={isCurrentFolder ? 'The items are already here' : undefined}
-            class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+            class={modalPrimaryClass}
         >
             {moving ? 'Moving...' : `Move to ${path.at(-1)?.name ?? rootLabel}`}
         </button>

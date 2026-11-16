@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
     import Icon from '@iconify/svelte';
     import { untrack } from 'svelte';
     import Modal from '../Modal.svelte';
@@ -144,14 +145,14 @@
         {#if problem}
             <p class="mr-auto text-xs text-[var(--color-danger)]">{problem}</p>
         {/if}
-        <button class="rounded-md px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]" onclick={onclose}>
+        <button class={modalCancelClass} onclick={onclose}>
             Cancel
         </button>
         <button
             type="submit"
             form="theme-editor-form"
             disabled={!canSave}
-            class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+            class={modalPrimaryClass}
         >
             {saving ? 'Saving...' : 'Save theme'}
         </button>

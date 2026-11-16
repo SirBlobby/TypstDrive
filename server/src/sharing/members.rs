@@ -177,11 +177,8 @@ async fn invite(
     let inviter_id = session_user(jar)?;
     require_owner(state, kind, item_id, &inviter_id).await?;
 
-    let suggesting_allowed = kind == ShareKind::Document;
-    let valid_role = payload.role == "viewer" || payload.role == "editor" || (suggesting_allowed && payload.role == "suggester");
-    if !valid_role {
-        let message = if suggesting_allowed { "Role must be viewer, suggester or editor" } else { "Role must be viewer or editor" };
-        return Err((StatusCode::BAD_REQUEST, message.to_string()));
+    if !matches!(payload.role.as_str(), "viewer" | "suggester" | "editor") {
+        return Err((StatusCode::BAD_REQUEST, "Role must be viewer, suggester or editor".to_string()));
     }
 
     let invited_user_id = crate::accounts::lookup::shareable_user_id(state, &payload.email).await?;

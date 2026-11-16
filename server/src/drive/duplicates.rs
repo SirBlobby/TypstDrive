@@ -94,6 +94,9 @@ pub async fn duplicate_document(
 ) -> Result<Json<DuplicateCreated>, ApiError> {
     let user_id = session_user(&jar)?;
     let (document, _) = document_role(&state, &id, &Some(user_id.clone())).await.ok_or_else(forbidden)?;
+    if crate::compile::latex::is_latex(&document) {
+        crate::compile::latex_policy::check_enabled()?;
+    }
     let same_owner = document.owner_id == user_id;
 
     let text = match live_text(&state, &document_room(&id)).await {
@@ -167,6 +170,7 @@ pub async fn duplicate_project(
 ) -> Result<Json<DuplicateCreated>, ApiError> {
     let user_id = session_user(&jar)?;
     let (project, _) = project_role(&state, &id, &Some(user_id.clone())).await.ok_or_else(forbidden)?;
+    crate::compile::latex_policy::check_entrypoint(&project.entrypoint)?;
 
     let rows = sqlx::query_as::<_, ProjectFileRow>(sql("SELECT id, path, kind, content, mime_type FROM project_files WHERE project_id = $1"))
         .bind(&id)

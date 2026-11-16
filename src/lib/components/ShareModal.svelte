@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { modalPrimaryClass } from '#lib/ts/modal-ui';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import Modal from './Modal.svelte';
@@ -177,9 +178,7 @@
                 <div class="h-6 w-px bg-[var(--color-line)]"></div>
                 <select bind:value={inviteRole} class="bg-transparent border-none text-sm text-[var(--color-ink-muted)] px-2 py-2 focus:ring-0 focus:outline-none cursor-pointer font-medium">
                     <option value="editor">Editor</option>
-                    {#if kind === 'document'}
-                        <option value="suggester">Suggester</option>
-                    {/if}
+                    <option value="suggester">Suggester</option>
                     <option value="viewer">Viewer</option>
                 </select>
                 <button
@@ -300,7 +299,7 @@
         </button>
         {/if}
 
-        <button onclick={onClose} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90">
+        <button onclick={onClose} class={modalPrimaryClass}>
             Done
         </button>
     {/snippet}

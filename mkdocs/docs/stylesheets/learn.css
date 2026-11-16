@@ -1,0 +1,44 @@
+.md-typeset .highlight:has(+ p > img.learn-result) {
+  margin-bottom: 0;
+}
+
+.md-typeset .highlight:has(+ p > img.learn-result) pre,
+.md-typeset .highlight:has(+ p > img.learn-result) code {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.md-typeset p:has(> img.learn-result) {
+  position: relative;
+  margin: 0 0 1.6em;
+  padding: 2.4rem 1.2rem 1.4rem;
+  text-align: center;
+  background: var(--md-code-bg-color);
+  border-top: 1px dashed var(--md-default-fg-color--lightest);
+  border-radius: 0 0 0.1rem 0.1rem;
+}
+
+.md-typeset p:has(> img.learn-result)::before {
+  content: "Result";
+  position: absolute;
+  top: 0.75rem;
+  left: 1.2rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset img.learn-result {
+  display: inline-block;
+  max-width: 100%;
+  max-height: 34rem;
+  width: auto;
+  height: auto;
+  zoom: 0.72;
+  vertical-align: top;
+  background: #ffffff;
+  border-radius: 0.15rem;
+  box-shadow: 0 0.1rem 0.5rem rgba(0, 0, 0, 0.28);
+}

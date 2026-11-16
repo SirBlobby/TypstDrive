@@ -106,6 +106,30 @@ See [Bigger installs](scaling.md).
 |---|---|---|
 | `GIT_CACHE_DIR` | system temp folder | Where partial clones of repositories on servers other than GitHub and GitLab are kept. It is a disposable cache of a few MB per linked project. The Docker image uses `/data/git-cache`. |
 
+## LaTeX
+
+[LaTeX documents](../guide/latex.md) are compiled by [Tectonic](https://tectonic-typesetting.github.io/), which the Docker image includes. Outside Docker, install the static Linux build from the [Tectonic releases](https://github.com/tectonic-typesetting/tectonic/releases), such as `tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz`, and put it on the `PATH`.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `TECTONIC_PATH` | found on the `PATH` | Path to the `tectonic` program. |
+| `LATEX_DIR` | `latex-sandbox` in the working folder | The sandbox folder, with the LaTeX package cache. The cache grows with the packages people use, usually a few hundred MB. The Docker image uses `/data/latex`, so the cache survives updates. |
+| `LATEX_TIMEOUT_SECONDS` | `90` | How long one compile may run before it is stopped. |
+| `LATEX_MAX_PARALLEL` | `2` | How many compiles may run at the same time. Others wait their turn. |
+| `LATEX_MEMORY_MB` | `2048` | Memory limit for one compile. |
+| `LATEX_BUNDLE` | Tectonic's default | URL or path of a Tectonic bundle, for example a local copy for servers without internet access. |
+| `LATEX_SANDBOX` | on | Set to `off` only on a server where every user is trusted. See below. |
+
+### The LaTeX sandbox
+
+LaTeX can read any file it is given a path to, so a shared document could otherwise read server secrets. Every compile therefore runs as a separate program locked in a folder that holds only the LaTeX packages and that compile's own files:
+
+- In Docker, where TypstDrive runs as root, the compile runs in a chroot jail as the unprivileged `nobody` user. This needs the `CHOWN`, `SETUID`, `SETGID` and `SYS_CHROOT` capabilities, which Docker gives containers by default. If you drop capabilities, keep these four.
+- Outside Docker, the compile runs in a chroot jail inside a user namespace. Some systems, such as Ubuntu 24.04, block these for normal users; run TypstDrive in Docker there.
+- Each compile gets an empty environment, no shell escape, limits on time, memory and file size, and is stopped completely when it runs out of time.
+
+If the sandbox cannot start, LaTeX documents show an error instead of compiling, and **Site Settings → System → About** shows why. `LATEX_SANDBOX=off` runs Tectonic without the sandbox. Only use it when every account on the server is trusted, because LaTeX files could then read the database and secrets.
+
 ## Citations
 
 | Setting | Default | What it does |

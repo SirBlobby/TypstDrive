@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
 	import Modal from './Modal.svelte';
 
 	let props: {
@@ -151,10 +152,10 @@
 	</div>
 
 	{#snippet footer()}
-		<button onclick={() => props.onClose()} class="rounded-md px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]">
+		<button onclick={() => props.onClose()} class={modalCancelClass}>
 			Cancel
 		</button>
-		<button onclick={apply} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90">
+		<button onclick={apply} class={modalPrimaryClass}>
 			Apply settings
 		</button>
 	{/snippet}

@@ -26,13 +26,6 @@ enum LinkKind {
     Project,
 }
 
-fn invalid_role_message(kind: LinkKind) -> &'static str {
-    match kind {
-        LinkKind::Document => "Role must be viewer, suggester, editor or none",
-        LinkKind::Project => "Role must be viewer, editor or none",
-    }
-}
-
 impl LinkKind {
     fn parse(value: &str) -> Result<Self, ApiError> {
         match value {
@@ -95,14 +88,13 @@ pub struct LinkSettingsRequest {
     pub expires_at: Option<String>,
 }
 
-pub fn parse_public_role(value: &str, allow_suggester: bool) -> Result<Option<String>, ApiError> {
+pub fn parse_public_role(value: &str) -> Result<Option<String>, ApiError> {
     match value.trim() {
         "viewer" => Ok(Some("viewer".to_string())),
         "editor" => Ok(Some("editor".to_string())),
-        "suggester" if allow_suggester => Ok(Some("suggester".to_string())),
+        "suggester" => Ok(Some("suggester".to_string())),
         "none" | "" => Ok(None),
-        _ if allow_suggester => Err((StatusCode::BAD_REQUEST, invalid_role_message(LinkKind::Document).to_string())),
-        _ => Err((StatusCode::BAD_REQUEST, invalid_role_message(LinkKind::Project).to_string())),
+        _ => Err((StatusCode::BAD_REQUEST, "Role must be viewer, suggester, editor or none".to_string())),
     }
 }
 
@@ -255,7 +247,7 @@ pub async fn update_link(
     }
 
     let public_role = match payload.public_role.as_deref() {
-        Some(role) => parse_public_role(role, matches!(kind, LinkKind::Document))?,
+        Some(role) => parse_public_role(role)?,
         None => link.public_role.clone(),
     };
 

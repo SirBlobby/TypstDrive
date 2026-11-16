@@ -25,8 +25,8 @@ The buttons in the top right show only icons. Hover over one to see its name. Do
 | Present | Show the document as slides. See [Presenting](presenting.md). |
 | Share | Choose who can open it. See [Sharing](sharing.md). |
 | Publish as package | Projects only, for the owner. See [Packages](packages.md). |
-| Comments | Documents only. Opens the comments panel. |
-| Editing or Suggesting | Documents only. See [Suggesting changes](collaboration.md#suggesting-changes). |
+| Comments | Opens the comments panel. |
+| Editing or Suggesting | See [Suggesting changes](collaboration.md#suggesting-changes). |
 | View | Chooses the view mode below. |
 | Print or export | Print, or download a PDF, the source file, SVG or PNG. |
 
@@ -63,11 +63,21 @@ The **Insert** button adds things at the cursor:
 
 | Item | What it does |
 |---|---|
-| Image | Pick one of the images in your drive. |
+| Image | Search the images in your drive (and, in a project, the project's own images), or upload a new one with the button, by dropping it in, or by pasting it. Picking a drive image in a project copies it into the project. Type to search, use the arrow keys to pick, and press ++enter++ to insert. |
 | Table | Choose how many rows and columns, with an optional header row. |
 | Document | Include another document you own or that is shared with you. |
 | Symbol | Search math and text symbols by name, such as "arrow" or "alpha". |
 | Emoji | Search emoji by name. |
+
+## Slash commands
+
+![The slash command list](../assets/previews/slash_menu.png)
+
+Type `/` at the start of a line or after a space to open a list of commands, such as headings, lists, tables, math, page breaks and comments. It also has actions for the whole document: switching between editing and suggesting, changing the view, exporting, printing, presenting, sharing, saving a version, page settings and citations. Keep typing to filter the list: letters do not need to be next to each other, so `pgbrk` finds **Page break**. Use the arrow keys to choose, ++enter++ or ++tab++ to run, and ++escape++ to close the list and keep what you typed.
+
+Select some text and press `/` to apply a command to it, for example to make it bold, turn it into a heading or a link, or comment on it. A search box opens so the selected text stays as it is.
+
+Typst and LaTeX files each get their own commands. `//` comments and division like `a/b` do not open the list.
 
 ## Find and replace
 

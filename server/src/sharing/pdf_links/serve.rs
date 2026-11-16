@@ -7,7 +7,7 @@ use axum::response::{IntoResponse, Response};
 
 use super::cache;
 use super::policy::load_policy;
-use crate::compile::compiler::{run_blocking, ProjectInput};
+use crate::compile::compiler::ProjectInput;
 use crate::compile::latex;
 use crate::db::{sql, timestamp_now};
 use crate::drive::versions::current_text;
@@ -127,7 +127,7 @@ pub async fn serve_pdf(State(state): State<AppState>, Path(slug): Path<String>, 
     let compiled = if cache::has_failed(&link_id, &fingerprint) {
         None
     } else {
-        run_blocking(move |compiler| compiler.export_pdf(input)).await
+        Some(crate::compile::render::pdf(input).await)
     };
     match compiled {
         Some(Ok(bytes)) => {

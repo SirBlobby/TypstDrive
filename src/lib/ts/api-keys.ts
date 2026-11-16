@@ -23,7 +23,7 @@ export type CreatedApiKey = {
 };
 
 export const API_SCOPES = [
-    { id: 'render', label: 'Render', description: 'Compile Typst code with POST /v1/render.' },
+    { id: 'render', label: 'Render', description: 'Compile Typst and LaTeX code with POST /v1/render and /v1/latex.' },
     { id: 'read', label: 'Read only', description: 'List and read your documents and projects.' }
 ];
 

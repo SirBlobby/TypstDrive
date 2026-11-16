@@ -89,7 +89,7 @@
                             <Icon icon="mdi:information-outline" class="text-lg text-blue-500" />
                             View Info
                         </button>
-                        <ExportMenuItems kind="document" id={doc.id} name={doc.title} onstart={() => setActiveMenu(null)} />
+                        <ExportMenuItems kind="document" id={doc.id} name={doc.title} isLatex={doc.language === 'latex'} onstart={() => setActiveMenu(null)} />
                         {#if !readOnly}
                         <div class="h-px bg-[var(--color-line)] my-1"></div>
                         <button onclick={(e) => { e.stopPropagation(); openRename(doc.id, doc.title, 'document'); }} class="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-ink)] flex items-center gap-2">

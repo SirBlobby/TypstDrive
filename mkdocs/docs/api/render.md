@@ -1,6 +1,6 @@
-# POST /v1/render
+# Typst documents
 
-Compile Typst markup and return the rendered output.
+`POST /v1/render` compiles Typst markup and returns the rendered output. `POST /v1/typst/render` is the same endpoint under a name that matches the other [Typst endpoints](typst.md).
 
 ```http
 POST /v1/render
@@ -13,7 +13,9 @@ Content-Type: application/json
 ```json
 {
   "code": "= My Report\n\nSome body text.",
-  "format": "pdf",
+  "format": "png",
+  "page": 1,
+  "scale": 2,
   "files": [
     { "name": "logo.png", "data": "<base64>" }
   ]
@@ -23,7 +25,9 @@ Content-Type: application/json
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `code` | string | Yes | Typst markup to compile. Cannot be empty. |
-| `format` | string | Yes | `png`, `pdf` or `html`. |
+| `format` | string | No | `pdf` (the default), `png`, `svg` or `html`. |
+| `page` | number | No | The page to return as PNG or SVG, starting at 1. Defaults to the first page. |
+| `scale` | number | No | Size multiplier for PNG, from `0.25` to `4`. `1` is 144 pixels per inch. |
 | `files` | array | No | Extra files available to the compiler, described below. |
 
 ### Inline files
@@ -47,8 +51,10 @@ Keys with the `render` scope can also render a document or project that is alrea
 | `POST` | `/v1/projects/{id}/render` | The project from its entrypoint, with every project file. |
 
 ```json
-{ "format": "pdf" }
+{ "format": "png", "page": 2, "scale": 2 }
 ```
+
+They take the same `format`, `page` and `scale` fields.
 
 The item must belong to the key's account, or to the team named in `X-Workspace`. Responses match the ones below. For projects, compile errors in `details` have no `line` or `column`. Stored renders are not cached.
 
@@ -62,6 +68,7 @@ The rendered file, with the matching content type:
 |---|---|
 | `png` | `image/png` |
 | `pdf` | `application/pdf` |
+| `svg` | `image/svg+xml` |
 | `html` | `text/html` |
 
 ### 422 Unprocessable Entity
@@ -88,10 +95,10 @@ The Typst code did not compile. The body lists every error:
 
 | Status | Meaning |
 |---|---|
-| `400 Bad Request` | Unsupported `format`, empty `code`, or a body that is not valid JSON. |
+| `400 Bad Request` | Unsupported `format`, empty `code`, a `page` of 0, a `scale` outside 0.25 to 4, or a body that is not valid JSON. |
 | `401 Unauthorized` | Missing or malformed `Authorization` header, or an unknown key. |
 | `401 Unauthorized` | The key has expired. |
 | `403 Forbidden` | API access is turned off for your account, or the key has no `render` scope. |
-| `422 Unprocessable Entity` | The Typst code failed to compile, or the JSON body is missing a required field. Compile errors include the JSON body shown above. |
+| `422 Unprocessable Entity` | The Typst code failed to compile, `page` is past the last page, or the JSON body is missing a required field. Compile errors include the JSON body shown above. |
 | `429 Too Many Requests` | Your per-minute rate limit or daily quota was reached. See [Limits and Caching](limits.md). |
 | `500 Internal Server Error` | Unexpected server error. Retry after a short delay. |

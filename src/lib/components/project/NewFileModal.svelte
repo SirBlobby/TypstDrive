@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
 	import Icon from '@iconify/svelte';
 	import { untrack } from 'svelte';
 	import Modal from '../Modal.svelte';
@@ -23,7 +24,7 @@
 
 	let folder = $state(untrack(() => initialFolder));
 	let name = $state('');
-	let extension = $state(defaultExtension);
+	let extension = $state(untrack(() => defaultExtension));
 
 	let typedExtension = $derived(name.trim().match(/\.([a-z0-9]+)$/i)?.[1].toLowerCase() ?? null);
 	let baseName = $derived(typedExtension ? name.trim().slice(0, -(typedExtension.length + 1)) : name.trim());
@@ -94,14 +95,14 @@
 	</form>
 
 	{#snippet footer()}
-		<button class="rounded-md px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]" onclick={onclose}>
+		<button class={modalCancelClass} onclick={onclose}>
 			Cancel
 		</button>
 		<button
 			type="submit"
 			form="new-file-form"
 			disabled={problem !== null}
-			class="rounded-md px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50 bg-[var(--color-accent)]"
+			class={modalPrimaryClass}
 		>
 			Create
 		</button>

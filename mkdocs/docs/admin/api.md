@@ -1,6 +1,6 @@
 # API access
 
-The [API](../api/index.md) lets people's own programs and scripts turn Typst into PDFs and images, and read their documents. **Site Settings → API Access** decides who can use it and how much.
+The [API](../api/index.md) lets people's own programs and scripts turn Typst and LaTeX into PDFs and images, and read their documents. **Site Settings → API Access** decides who can use it and how much.
 
 ## Default limits
 

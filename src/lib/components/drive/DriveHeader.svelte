@@ -1,6 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import type { Snippet } from 'svelte';
+    import { latexEnabledStore } from '#lib/ts/latex-policy';
 
     type FolderCrumb = { id: string; name: string };
 
@@ -50,14 +51,16 @@
 
     let showNewMenu = $state(false);
 
-    const secondaryNewItems = [
-        { label: 'LaTeX document', description: 'Basic LaTeX rendered with MiTeX', icon: 'mdi:sigma', color: 'text-teal-500', action: () => onNewLatexDocument() },
+    const allSecondaryNewItems = [
+        { label: 'LaTeX document', description: 'LaTeX compiled with Tectonic', icon: 'mdi:sigma', color: 'text-teal-500', action: () => onNewLatexDocument() },
         { label: 'Project', description: 'Multi-file workspace', icon: 'mdi:folder-star', color: 'text-indigo-500', action: () => onNewProject() },
         { label: 'From template', description: 'Start from a Typst Universe template', icon: 'mdi:view-grid-plus-outline', color: 'text-sky-500', action: () => onNewFromTemplate() },
         { label: 'Folder', description: 'Organize your files', icon: 'mdi:folder-plus', color: 'text-yellow-500', action: () => onNewFolder() },
         { label: 'Import', description: '.docx, .tex, .md, .html', icon: 'mdi:file-import', color: 'text-purple-500', action: () => onImport() },
         { label: 'From Git', description: 'Project from a GitHub, GitLab or Git repository', icon: 'mdi:git', color: 'text-orange-500', action: () => onImportGit() }
     ];
+
+    let secondaryNewItems = $derived(allSecondaryNewItems.filter((item) => $latexEnabledStore || item.label !== 'LaTeX document'));
 
     function runNewItem(action: () => void) {
         showNewMenu = false;

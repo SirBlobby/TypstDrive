@@ -24,6 +24,13 @@ const KNOWN_VARIABLES: &[KnownVariable] = &[
     variable("RUST_LOG", "Server", "Log filter."),
     variable("REMOTE_URLS_ALLOW_PRIVATE", "Server", "Let documents load images and files from private network addresses. Off by default."),
     variable("GIT_CACHE_DIR", "Server", "Folder for the disposable partial clones used to sync with Git servers other than GitHub and GitLab."),
+    variable("TECTONIC_PATH", "LaTeX", "Path to the tectonic program. Found on the PATH when not set."),
+    variable("LATEX_DIR", "LaTeX", "Folder for the LaTeX sandbox and its package cache."),
+    variable("LATEX_TIMEOUT_SECONDS", "LaTeX", "How long one LaTeX compile may run before it is stopped. Default 90."),
+    variable("LATEX_MAX_PARALLEL", "LaTeX", "How many LaTeX compiles may run at the same time. Default 2."),
+    variable("LATEX_MEMORY_MB", "LaTeX", "Memory limit for one LaTeX compile. Default 2048."),
+    variable("LATEX_BUNDLE", "LaTeX", "URL or path of a tectonic bundle to use instead of the default one."),
+    variable("LATEX_SANDBOX", "LaTeX", "Set to off to run LaTeX without the sandbox. Only for servers where every user is trusted."),
     variable("COOKIE_SECRET", "Security", "Secret used to sign session cookies."),
     variable("PUBLIC_URL", "Security", "Address people use to open TypstDrive. Needed for sign-on and email links."),
     variable("TRUST_PROXY_HEADERS", "Security", "Read client addresses from X-Forwarded-For behind a reverse proxy."),
@@ -90,11 +97,23 @@ const TYPST_VERSION: &str = "0.15.1";
 pub struct ServerInfo {
     server_version: &'static str,
     typst_version: &'static str,
-    latex_package: &'static str,
+    latex: LatexView,
     database: DatabaseView,
     realtime: RealtimeView,
     file_storage: FileStorageView,
     environment: Vec<EnvironmentVariableView>,
+}
+
+#[derive(Serialize)]
+struct LatexView {
+    engine: Option<String>,
+    sandbox: Option<&'static str>,
+    problem: Option<String>,
+}
+
+async fn latex_view() -> LatexView {
+    let status = crate::compile::tectonic::engine_status().await;
+    LatexView { engine: status.version, sandbox: status.sandbox, problem: status.problem }
 }
 
 fn is_set(name: &str) -> bool {
@@ -123,7 +142,7 @@ pub async fn server_info(
     Ok(Json(ServerInfo {
         server_version: env!("CARGO_PKG_VERSION"),
         typst_version: TYPST_VERSION,
-        latex_package: crate::compile::latex::MITEX_PACKAGE,
+        latex: latex_view().await,
         database: DatabaseView {
             kind: dialect.label(),
             version: db::server_version(&state.db).await,

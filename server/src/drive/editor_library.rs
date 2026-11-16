@@ -69,6 +69,35 @@ pub async fn list_images(
     Ok(Json(images))
 }
 
+pub async fn list_project_images(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+    SignedInUser(user_id): SignedInUser,
+) -> Result<Json<Vec<LibraryImage>>, ApiError> {
+    let user = Some(user_id);
+    let (project, role) = access::project_access(&state, &project_id, &user).await.ok_or_else(access::forbidden)?;
+
+    type ImageRow = (String, String, String, i64, Option<String>);
+    let rows: Vec<ImageRow> = sqlx::query_as(sql(
+        "SELECT id, name, mime_type, size_bytes, folder_id FROM files \
+         WHERE owner_id = $1 AND deleted_at IS NULL AND mime_type LIKE 'image/%' ORDER BY name ASC",
+    ))
+    .bind(&project.owner_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(internal_error)?;
+
+    let mut images = Vec::new();
+    for (id, name, mime_type, size_bytes, folder_id) in rows {
+        let usable = role == AccessRole::Owner
+            || (folder_id.is_some() && access::inherited_role(&state, &folder_id, &project.owner_id, &user).await.is_some());
+        if usable {
+            images.push(LibraryImage { id, name, mime_type, size_bytes });
+        }
+    }
+    Ok(Json(images))
+}
+
 pub async fn list_documents(
     State(state): State<AppState>,
     SignedInUser(user_id): SignedInUser,

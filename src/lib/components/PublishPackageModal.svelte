@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import Modal from './Modal.svelte';
@@ -106,8 +107,8 @@
 	{/if}
 
 	{#snippet footer()}
-		<button onclick={onClose} class="rounded-md px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunken)]">Close</button>
-		<button onclick={publish} disabled={publishing || Boolean(blockedReason)} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+		<button onclick={onClose} class={modalCancelClass}>Close</button>
+		<button onclick={publish} disabled={publishing || Boolean(blockedReason)} class={modalPrimaryClass}>
 			{#if publishing}<Icon icon="mdi:loading" class="animate-spin" />{/if}
 			Publish
 		</button>

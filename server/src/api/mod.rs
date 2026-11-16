@@ -1,6 +1,12 @@
 pub mod authentication;
+pub mod errors;
 pub mod keys;
+pub mod latex;
 pub mod limits;
+pub mod options;
 pub mod read;
 pub mod render;
+pub mod render_cache;
+pub mod source_render;
+pub mod typst;
 pub mod stored_render;

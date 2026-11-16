@@ -8,7 +8,11 @@ export interface EnvironmentVariable {
 export interface ServerInfo {
     server_version: string;
     typst_version: string;
-    latex_package: string;
+    latex: {
+        engine: string | null;
+        sandbox: string | null;
+        problem: string | null;
+    };
     database: {
         kind: string;
         version: string | null;

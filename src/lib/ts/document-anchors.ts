@@ -20,7 +20,8 @@ function encodeAnchor(text: Y.Text, index: number, assoc: number) {
 }
 
 export function anchorRange(text: Y.Text, from: number, to: number): AnchoredRange {
-    return { anchor_start: encodeAnchor(text, from, 0), anchor_end: encodeAnchor(text, to, -1) };
+    const startAssociation = from === to ? -1 : 0;
+    return { anchor_start: encodeAnchor(text, from, startAssociation), anchor_end: encodeAnchor(text, to, -1) };
 }
 
 function resolveAnchor(doc: Y.Doc, encoded: string): number | null {
@@ -36,6 +37,7 @@ export function resolveRange(doc: Y.Doc, range: { anchor_start: string | null; a
     if (!range.anchor_start || !range.anchor_end) return null;
     const from = resolveAnchor(doc, range.anchor_start);
     const to = resolveAnchor(doc, range.anchor_end);
-    if (from === null || to === null || to < from) return null;
+    if (from === null || to === null) return null;
+    if (to < from) return { from: to, to };
     return { from, to };
 }

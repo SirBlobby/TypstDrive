@@ -5,6 +5,8 @@ import { activeThreadStore, startCommentOnSelection } from '#lib/ts/comments';
 import { activeSuggestionStore } from '#lib/ts/suggestions';
 import { commentMarks } from '#lib/ts/editor-comment-marks';
 import { suggestionMarks } from '#lib/ts/editor-suggestions';
+import { isLiveDraftSuggestion } from '#lib/ts/suggestion-drafts';
+import { isRemoteDraftId } from '#lib/ts/live-review';
 import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
 
 function openThread(commentId: string) {
@@ -13,6 +15,7 @@ function openThread(commentId: string) {
 }
 
 function openSuggestion(suggestionId: string) {
+    if (isLiveDraftSuggestion(suggestionId) || isRemoteDraftId(suggestionId)) return;
     activeSuggestionStore.set(suggestionId);
     commentsSidebarOpen.set(true);
 }

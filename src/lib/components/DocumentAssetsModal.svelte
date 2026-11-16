@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { modalPrimaryClass } from '#lib/ts/modal-ui';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import Modal from './Modal.svelte';
@@ -124,6 +125,6 @@
     {/if}
 
     {#snippet footer()}
-        <button onclick={onClose} class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90">Done</button>
+        <button onclick={onClose} class={modalPrimaryClass}>Done</button>
     {/snippet}
 </Modal>

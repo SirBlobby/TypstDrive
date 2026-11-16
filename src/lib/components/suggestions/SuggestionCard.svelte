@@ -5,8 +5,9 @@
     import { formatTimestamp } from '#lib/ts/item-info';
     import type { SuggestionView } from '#lib/ts/suggestions';
 
-    let { suggestion, active, canReview, changedSince, onSelect, onAccept, onReject, onWithdraw }: {
+    let { suggestion, fileLabel = '', active, canReview, changedSince, onSelect, onAccept, onReject, onWithdraw }: {
         suggestion: SuggestionView;
+        fileLabel?: string;
         active: boolean;
         canReview: boolean;
         changedSince: boolean;
@@ -48,6 +49,12 @@
     onkeydown={(event) => { if (event.key === 'Enter') onSelect(); }}
     class="cursor-pointer rounded-xl border bg-[var(--color-surface)] p-3 shadow-sm transition {active ? 'border-[var(--color-accent)] shadow-md' : 'border-[var(--color-line)] hover:shadow-md'} {suggestion.status !== 'pending' ? 'opacity-70' : ''}"
 >
+    {#if fileLabel}
+        <p class="mb-1.5 flex items-center gap-1 truncate text-[10px] font-medium text-[var(--color-ink-muted)]" title={fileLabel}>
+            <Icon icon="mdi:file-document-outline" class="text-xs" />
+            {fileLabel}
+        </p>
+    {/if}
     <div class="flex items-center gap-2">
         <PersonAvatar person={suggestion.author ?? fallbackPerson} sizeClass="h-7 w-7" textClass="text-xs" />
         <div class="min-w-0 flex-1">

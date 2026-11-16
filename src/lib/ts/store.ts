@@ -28,7 +28,10 @@ export interface AwarenessUser {
     session?: string;
     activeFile?: string | null;
     isLocal?: boolean;
+    mode?: EditingMode | null;
 }
+
+export type EditingMode = 'editing' | 'suggesting' | 'viewing';
 
 export const connectedUsers = writable<AwarenessUser[]>([]);
 

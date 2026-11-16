@@ -39,6 +39,7 @@
     import { emptySearch, matchesItem, tokenValue, type DriveSearch } from '#lib/ts/drive-search';
     import ContentSearchResults from '#lib/components/drive/ContentSearchResults.svelte';
     import LanguagePicker from '#lib/components/drive/LanguagePicker.svelte';
+    import { latexEnabledStore, loadLatexPolicy } from '#lib/ts/latex-policy';
     import DriveSelectionActions from '#lib/components/drive/DriveSelectionActions.svelte';
     import GitImportModal from '#lib/components/git/GitImportModal.svelte';
     import { DriveSelection, entryKey, selectionKey } from '#lib/ts/drive-selection.svelte';
@@ -103,7 +104,7 @@
         for (let i = 0; i < target.files.length; i++) {
             const file = target.files[i];
             
-            const sourceMatch = file.name.match(/\.(typ|tex)$/i);
+            const sourceMatch = file.name.match($latexEnabledStore ? /\.(typ|tex)$/i : /\.(typ)$/i);
             if (sourceMatch) {
 
                 const content = await file.text();
@@ -355,6 +356,7 @@
     }
 
     onMount(() => {
+        loadLatexPolicy();
         if (!$userStore) {
             goto('/login');
             return;

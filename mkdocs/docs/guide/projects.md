@@ -7,7 +7,7 @@ A project is a document made of many files. Use one when a single file is no lon
 Choose **New → Project** in the drive and pick a **Language**. The project is created in the folder you are looking at.
 
 - A **Typst** project starts with a `main.typ` file and a `typst.toml` file that describes it.
-- A **LaTeX** project starts with a single `main.tex` file. Only that file is rendered; see [LaTeX documents](latex.md).
+- A **LaTeX** project starts with a single `main.tex` file. Other files are pulled in with `\input`, `\include`, `\includegraphics` or a bibliography, as usual; see [LaTeX documents](latex.md).
 
 ## Working in a project
 
@@ -21,7 +21,7 @@ The project editor looks like the document editor, with a file list on the left.
 - Files can include each other, for example `#include "chapters/intro.typ"`.
 - Bibliographies (`.bib`), data files and images live right next to your text. **Edit → Citations** adds references by DOI, arXiv, PubMed or Semantic Scholar ID and syncs Zotero into them; see [Citations](citations.md).
 - **New → From Git** in your drive creates a project from a Git repository, and **File → Git Sync** links an existing project to a folder in a Git repository so you can pull and push changes; see [Git sync](git.md).
-- The owner can also use images and files from their drive. People the project is shared with only get the owner's fonts, so upload images into the project itself if others need to see them.
+- The owner can also use images and files from their drive. People the project is shared with only get the owner's fonts, so upload images into the project itself if others need to see them. The **Insert image** button in the formatting bar does this for you: it searches the project and your drive, and copies a drive image into the project when you pick it.
 - Everyone working on the project sees each other's changes live in every text file. Small profile pictures next to a file show who has it open, and a collapsed folder shows everyone inside it. Click a picture at the top of the editor to [follow](collaboration.md#following-someone) that person.
 - Collapse the file list when you want more room.
 

@@ -5,13 +5,13 @@
 ## What it does
 
 - Write Typst offline, with a live preview and the same kind of editor as the web app.
-- Write basic LaTeX in `.tex` files and projects too, with a LaTeX toolbar. See [LaTeX documents](latex.md).
+- Write basic LaTeX in `.tex` files and projects too, with a LaTeX toolbar. The app previews LaTeX offline with a simpler converter, so packages and `\input` only work in the TypstDrive web editor. See [LaTeX documents](latex.md).
 - Add references by DOI, arXiv, PubMed, PMC or Semantic Scholar ID and sync Zotero into bibliography files, like the web editor's [citation tools](citations.md). Connect Zotero in the app's own **Settings → Citations**.
 - Show the editor and preview side by side, the editor only, or the preview only.
 - Work with project files and folders like the web editor: create files from the same **New file** window, make folders, and rename or delete folders with everything inside them.
 - Browse your TypstDrive folders, documents and projects, including things shared with you.
 - Download the ones you want onto your computer and keep them in sync.
-- Edit together with others live when you are online, with comments, suggestions and version history.
+- Edit together with others live when you are online, with comments, suggestions and version history. Projects get comments and suggestions too.
 - Resolve conflicts when the same file changed in two places.
 - Folder colors you choose in TypstDrive show in the app, and the other way around.
 

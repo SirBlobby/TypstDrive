@@ -29,7 +29,7 @@ FROM alpine:3.19
 # Provided automatically by buildx (e.g. "amd64", "arm64").
 ARG TARGETARCH
 WORKDIR /app
-RUN apk add --no-cache libgcc openssl pandoc curl sqlite font-noto-emoji git
+RUN apk add --no-cache libgcc openssl pandoc curl sqlite font-noto-emoji git ca-certificates
 RUN mkdir -p /data
 # Install tinymist for the target architecture.
 RUN case "$TARGETARCH" in \
@@ -41,6 +41,19 @@ RUN case "$TARGETARCH" in \
     tar -xzf /tmp/tinymist.tar.gz -C /usr/local/bin --strip-components=1 "tinymist-${TINYMIST_TRIPLE}/tinymist" && \
     chmod +x /usr/local/bin/tinymist && \
     rm /tmp/tinymist.tar.gz
+# Install tectonic for LaTeX documents. The static musl build is required because
+# LaTeX compiles run inside a chroot jail. Checksums pin the exact release files.
+ARG TECTONIC_VERSION=0.17.0
+RUN case "$TARGETARCH" in \
+        amd64) TECTONIC_TRIPLE="x86_64-unknown-linux-musl"; TECTONIC_SHA256="8533d07f9ccbd7a65824b9e0459041bca34af1eb33daba48f59215593753a3b7" ;; \
+        arm64) TECTONIC_TRIPLE="aarch64-unknown-linux-musl"; TECTONIC_SHA256="b10954a95404f3ab2328d2fa59a5ebab8e657f893fab096f98be8db7c0c979b8" ;; \
+        *) echo "Unsupported TARGETARCH: $TARGETARCH" && exit 1 ;; \
+    esac && \
+    curl -fL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-${TECTONIC_TRIPLE}.tar.gz" -o /tmp/tectonic.tar.gz && \
+    echo "${TECTONIC_SHA256}  /tmp/tectonic.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/tectonic.tar.gz -C /usr/local/bin tectonic && \
+    chmod 755 /usr/local/bin/tectonic && \
+    rm /tmp/tectonic.tar.gz
 COPY --from=frontend-builder /app/build /app/build
 COPY --from=backend-builder /app/server-binary /app/server
 
@@ -77,9 +90,13 @@ COPY --from=backend-builder /app/server-binary /app/server
 #                      OIDC_<ID>_ISSUER, OIDC_<ID>_CLIENT_ID and OIDC_<ID>_CLIENT_SECRET
 # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_HOSTED_DOMAIN   Sign in with Google
 # GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET                         Sign in with GitHub
+# LATEX_DIR            Sandbox and package cache for LaTeX compiles (default here: /data/latex)
+# LATEX_TIMEOUT_SECONDS, LATEX_MAX_PARALLEL, LATEX_MEMORY_MB     Limits for each LaTeX compile
+# LATEX_BUNDLE         URL or path of a tectonic bundle to use instead of the default one
 ENV PORT=3000
 ENV STATIC_DIR=/app/build
 ENV DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
 ENV GIT_CACHE_DIR=/data/git-cache
+ENV LATEX_DIR=/data/latex
 EXPOSE 3000
 CMD ["/app/server"]

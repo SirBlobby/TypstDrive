@@ -57,6 +57,8 @@ Lines that start with `//` are notes for yourself and do not appear in the docum
 
 ## Learn more
 
+The [Learn](../learn/index.md) section has detailed guides for [Typst](../learn/typst/basics.md) and [LaTeX](../learn/latex/basics.md), from the basics to templates.
+
 - [Typst tutorial](https://typst.app/docs/tutorial/)
 - [Typst reference](https://typst.app/docs/reference/)
 - [Typst Universe](https://typst.app/universe/) for templates and packages

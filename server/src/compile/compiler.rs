@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use typst::diag::{SourceDiagnostic, Warned};
 use typst::format::Complete;
 use typst::layout::{Frame, FrameItem};
+use typst::utils::Scalar;
 use typst::model::Document;
 use typst_html::{HtmlDocument, HtmlOptions};
 use typst_layout::PagedDocument;
@@ -91,8 +92,7 @@ impl ProjectInput {
     }
 
     fn into_world(self, enable_html: bool) -> MemoryWorld {
-        let input = crate::compile::latex::with_generated_entrypoint(self);
-        MemoryWorld::new_project(input.entrypoint, input.files, input.packages, enable_html)
+        MemoryWorld::new_project(self.entrypoint, self.files, self.packages, enable_html)
     }
 }
 
@@ -101,6 +101,23 @@ pub type CompileFailure = Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)
 const MEMO_CACHE_MAX_AGE: usize = 10;
 
 pub struct TypstCompiler;
+
+pub enum PageOutput<T> {
+    Page(T),
+    Missing { pages: usize },
+}
+
+fn paged_document(input: ProjectInput) -> Result<PagedDocument, CompileFailure> {
+    let world = input.into_world(false);
+    let Warned { output, warnings: _ } = typst::compile::<PagedDocument>(&world);
+    output.map_err(|errors| {
+        use typst::WorldExt;
+        errors.into_iter().map(|diagnostic| {
+            let range = world.range(diagnostic.span);
+            (diagnostic, range)
+        }).collect()
+    })
+}
 
 pub async fn run_blocking<T, F>(job: F) -> Option<T>
 where
@@ -171,6 +188,28 @@ impl TypstCompiler {
                 Err(diag)
             }
         }
+    }
+
+    pub fn export_png_page(&self, input: ProjectInput, page_number: usize, scale: f32) -> Result<PageOutput<Vec<u8>>, CompileFailure> {
+        let document = paged_document(input)?;
+        let Some(page) = page_number.checked_sub(1).and_then(|index| document.pages().get(index)) else {
+            return Ok(PageOutput::Missing { pages: document.pages().len() });
+        };
+        let mut options = png_options(&document);
+        options.format.ppi.v = Scalar::new(options.format.ppi.v.get() * scale as f64);
+        Ok(PageOutput::Page(render(page, &options).encode_png().unwrap_or_default()))
+    }
+
+    pub fn export_svg_page(&self, input: ProjectInput, page_number: usize) -> Result<PageOutput<String>, CompileFailure> {
+        let document = paged_document(input)?;
+        let Some(page) = page_number.checked_sub(1).and_then(|index| document.pages().get(index)) else {
+            return Ok(PageOutput::Missing { pages: document.pages().len() });
+        };
+        Ok(PageOutput::Page(typst_svg::svg(page, &svg_options(&document))))
+    }
+
+    pub fn page_count(&self, input: ProjectInput) -> Result<usize, CompileFailure> {
+        paged_document(input).map(|document| document.pages().len())
     }
 
     pub fn export_pdf(

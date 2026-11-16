@@ -1,6 +1,5 @@
-import { Compartment, EditorState, StateEffect, StateField, type Extension, type Transaction } from '@codemirror/state';
+import { Compartment, StateEffect, StateField, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, hoverTooltip } from '@codemirror/view';
-import { ySyncAnnotation } from 'y-codemirror.next';
 
 export interface SuggestionMark {
     id: string;
@@ -10,19 +9,13 @@ export interface SuggestionMark {
     authorName: string;
     note: string | null;
     active: boolean;
-}
-
-export interface CapturedEdit {
-    from: number;
-    to: number;
-    original: string;
-    replacement: string;
+    caret: number | null;
 }
 
 export const setSuggestionMarks = StateEffect.define<SuggestionMark[]>();
 export const suggestingCompartment = new Compartment();
 
-const suggestionMarksField = StateField.define<SuggestionMark[]>({
+export const suggestionMarksField = StateField.define<SuggestionMark[]>({
     create: () => [],
     update(marks, transaction) {
         for (const effect of transaction.effects) {
@@ -37,20 +30,33 @@ const suggestionMarksField = StateField.define<SuggestionMark[]>({
     }
 });
 
+function caretInside(mark: SuggestionMark) {
+    return mark.caret !== null && mark.caret < mark.replacement.length;
+}
+
 class InsertedTextWidget extends WidgetType {
-    constructor(readonly inserted: string, readonly suggestionId: string, readonly active: boolean) {
+    constructor(readonly mark: SuggestionMark) {
         super();
     }
 
     eq(other: InsertedTextWidget) {
-        return other.inserted === this.inserted && other.suggestionId === this.suggestionId && other.active === this.active;
+        const first = this.mark;
+        const second = other.mark;
+        return first.replacement === second.replacement && first.id === second.id && first.active === second.active && first.caret === second.caret;
     }
 
     toDOM() {
         const element = document.createElement('span');
-        element.className = this.active ? 'cm-suggestion-insert cm-suggestion-active' : 'cm-suggestion-insert';
-        element.dataset.suggestionId = this.suggestionId;
-        element.textContent = this.inserted;
+        element.className = this.mark.active ? 'cm-suggestion-insert cm-suggestion-active' : 'cm-suggestion-insert';
+        element.dataset.suggestionId = this.mark.id;
+        if (!caretInside(this.mark)) {
+            element.textContent = this.mark.replacement;
+            return element;
+        }
+        const caretOffset = this.mark.caret ?? 0;
+        const caret = document.createElement('span');
+        caret.className = 'cm-suggestion-caret';
+        element.append(this.mark.replacement.slice(0, caretOffset), caret, this.mark.replacement.slice(caretOffset));
         return element;
     }
 
@@ -71,17 +77,21 @@ const suggestionDecorations = EditorView.decorations.compute([suggestionMarksFie
             );
         }
         if (mark.replacement) {
-            ranges.push(Decoration.widget({ widget: new InsertedTextWidget(mark.replacement, mark.id, mark.active), side: 1 }).range(mark.to));
+            ranges.push(Decoration.widget({ widget: new InsertedTextWidget(mark), side: -1 }).range(mark.to));
         }
     }
     return Decoration.set(ranges, true);
 });
 
+const hideNativeCaret = EditorView.editorAttributes.compute([suggestionMarksField], (state): Record<string, string> =>
+    state.field(suggestionMarksField).some(caretInside) ? { class: 'cm-suggestion-caret-inside' } : {}
+);
+
 function markAt(marks: SuggestionMark[], position: number) {
     return marks.find((mark) => position >= mark.from && position <= mark.to);
 }
 
-function suggestionIdFromEvent(event: Event) {
+export function suggestionIdFromEvent(event: Event) {
     const target = event.target as HTMLElement | null;
     return target?.closest<HTMLElement>('[data-suggestion-id]')?.dataset.suggestionId ?? null;
 }
@@ -117,9 +127,20 @@ const suggestionTheme = EditorView.baseTheme({
         color: 'rgb(5, 150, 105)',
         backgroundColor: 'rgba(16, 185, 129, 0.14)',
         borderBottom: '1px dashed rgba(5, 150, 105, 0.8)',
-        cursor: 'pointer',
+        cursor: 'text',
         whiteSpace: 'pre-wrap'
     },
+    '.cm-suggestion-caret': {
+        display: 'inline-block',
+        width: '0',
+        height: '1.15em',
+        verticalAlign: 'text-bottom',
+        borderLeft: '1.5px solid currentColor',
+        marginRight: '-1.5px',
+        animation: 'cm-suggestion-blink 1.1s steps(1) infinite'
+    },
+    '@keyframes cm-suggestion-blink': { '50%': { visibility: 'hidden' } },
+    '&.cm-suggestion-caret-inside .cm-cursor': { display: 'none' },
     '.cm-suggestion-active': { outline: '1px solid rgba(99, 102, 241, 0.7)', borderRadius: '2px' },
     '.cm-suggestion-tooltip': { maxWidth: '300px', padding: '8px 10px', fontSize: '12px', lineHeight: '1.45' },
     '.cm-suggestion-tooltip-author': { fontWeight: '600' },
@@ -131,6 +152,7 @@ export function suggestionMarks(onOpenSuggestion: (suggestionId: string) => void
     return [
         suggestionMarksField,
         suggestionDecorations,
+        hideNativeCaret,
         suggestionTheme,
         hoverTooltip((view, position) => {
             const mark = markAt(view.state.field(suggestionMarksField), position);
@@ -147,37 +169,4 @@ export function suggestionMarks(onOpenSuggestion: (suggestionId: string) => void
         }),
         suggestingCompartment.of([])
     ];
-}
-
-function isRemoteSync(transaction: Transaction) {
-    return transaction.annotation(ySyncAnnotation) !== undefined;
-}
-
-function captureEdit(transaction: Transaction): CapturedEdit | null {
-    let from = Infinity;
-    let to = -Infinity;
-    transaction.changes.iterChangedRanges((fromA, toA) => {
-        from = Math.min(from, fromA);
-        to = Math.max(to, toA);
-    });
-    if (!Number.isFinite(from)) return null;
-    const newFrom = transaction.changes.mapPos(from, -1);
-    const newTo = transaction.changes.mapPos(to, 1);
-    return {
-        from,
-        to,
-        original: transaction.startState.doc.sliceString(from, to),
-        replacement: transaction.newDoc.sliceString(newFrom, newTo)
-    };
-}
-
-export function suggestingFilter(onCapture: (edit: CapturedEdit) => void): Extension {
-    return EditorState.transactionFilter.of((transaction) => {
-        if (!transaction.docChanged || isRemoteSync(transaction)) return transaction;
-        const edit = captureEdit(transaction);
-        if (edit && edit.original !== edit.replacement) {
-            queueMicrotask(() => onCapture(edit));
-        }
-        return [];
-    });
 }

@@ -33,6 +33,7 @@ pub async fn set_project_entrypoint(
     if !lower.ends_with(".typ") && !lower.ends_with(".tex") {
         return Err((StatusCode::BAD_REQUEST, "The entrypoint must be a .typ or .tex file".to_string()));
     }
+    crate::compile::latex_policy::check_entrypoint(&entrypoint)?;
 
     let exists = sqlx::query_as::<_, (String,)>(sql("SELECT id FROM project_files WHERE project_id = $1 AND path = $2"))
         .bind(&id)

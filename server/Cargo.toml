@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "2.2.0"
+version = "2.3.0"
 edition = "2021"
 
 [dependencies]
@@ -27,6 +27,8 @@ typst-render = { path = "../typst/crates/typst-render" }
 typst-svg = { path = "../typst/crates/typst-svg" }
 typst-html = { path = "../typst/crates/typst-html" }
 typst-layout = { path = "../typst/crates/typst-layout" }
+hayro-syntax = { git = "https://github.com/LaurenzV/hayro", rev = "d8e24e29eda62581e1ea15497effb2a884fb1608" }
+libc = "0.2"
 
 yrs = "0.18.8"
 yrs-axum = "0.8.2"
