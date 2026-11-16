@@ -97,7 +97,7 @@
 					$editorErrors = [];
 				} else if (res.errors) {
 					errors = res.errors;
-					$editorErrors = matchesEditor ? res.errors : [];
+					$editorErrors = matchesEditor ? res.errors.filter((error) => !error.file || error.file === activePath) : [];
 				}
 			})
 			.catch(() => {

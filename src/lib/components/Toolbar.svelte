@@ -37,6 +37,7 @@
 	import { sourceExtension, type DocumentLanguage } from '#lib/ts/document-language';
 	import { buildPageActions, registerPageActions } from '#lib/ts/slash/page-actions';
 	import { documentImageLibrary, latexImageFormat, typstImageFormat } from '#lib/ts/image-library';
+	import { latexFileReference } from '#lib/ts/latex-file-reference';
 	import { untrack } from 'svelte';
 
 	let isShareModalOpen = $state(false);
@@ -215,7 +216,7 @@
 		const view = $editorViewStore;
 		if (!view) return;
 		const selection = view.state.selection.main;
-		const replacement = `#image("${file.name}")\n`;
+		const replacement = isLatex ? latexFileReference(file.name) : `#image("${file.name}")\n`;
 		view.dispatch({
 			changes: { from: selection.from, to: selection.to, insert: replacement },
 			selection: { anchor: selection.from + replacement.length }
@@ -366,6 +367,7 @@
 		const actions = buildPageActions({
 			sourceLabel: `${sourceFileExtension.toUpperCase()} source file`,
 			canEdit,
+			isLatex,
 			exportAs: handleExport,
 			exportConverted: handlePandocExport,
 			print: handlePrint,
@@ -568,7 +570,7 @@
 			{#if canComment}
 				<PreviewModeMenu />
 			{/if}
-			<HeaderExportMenu sourceLabel={`${sourceFileExtension.toUpperCase()} source`} onexport={handleExport} onprint={handlePrint} />
+			<HeaderExportMenu isLatex={isLatex} sourceLabel={`${sourceFileExtension.toUpperCase()} source`} onexport={handleExport} onprint={handlePrint} />
 		</div>
 	</div>
 

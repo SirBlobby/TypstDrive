@@ -26,6 +26,7 @@
 	import type { DocumentLanguage } from '../ts/document-language';
 	import { editorFileKind, commentMarkerFor, dataFileLanguage } from '../ts/editor-file-kind';
 	import { isSlashPaletteOpen, slashCommands } from '../ts/slash/slash-extension';
+	import { latexPackageLoader } from '../ts/latex-packages';
 	import { slashSessionStore } from '../ts/slash/slash-session';
 	import { get } from 'svelte/store';
 
@@ -203,7 +204,7 @@
 		const commentMarker = commentMarkerFor(fileKind);
 		let languageExtension: Extension = dataFileLanguage(fileKind);
 		if (isTypst) languageExtension = [typstLanguage, typstBracketSettings(typstLanguage)];
-		if (isLatex) languageExtension = latexEditorExtensions();
+		if (isLatex) languageExtension = [latexEditorExtensions(), latexPackageLoader()];
 		const completionExtensions = isTypst ? [autocompletion({ override: [typstCompletions] })] : [];
 		const slashExtensions = slash ? slashCommands({ fileKind, context: { ...slash, commentMarker } }) : [];
 

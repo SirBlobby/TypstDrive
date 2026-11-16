@@ -1,12 +1,13 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import HeaderIconButton from './HeaderIconButton.svelte';
-	import { exportFormats, type ExportFormat as RenderedFormat } from '#lib/ts/typst-api';
+	import { exportFormatsFor, type ExportFormat as RenderedFormat } from '#lib/ts/typst-api';
 
 	type ExportFormat = RenderedFormat | 'source';
 
-	let { sourceLabel, onexport, onprint }: {
+	let { sourceLabel, onexport, onprint, isLatex = false }: {
 		sourceLabel: string;
+		isLatex?: boolean;
 		onexport: (format: ExportFormat) => void;
 		onprint: () => void;
 	} = $props();
@@ -14,11 +15,10 @@
 	let open = $state(false);
 	let container = $state<HTMLDivElement | null>(null);
 
-	const formats: { format: ExportFormat; label: string; icon: string; color: string }[] = [
-		exportFormats[0],
-		{ format: 'source', label: '', icon: 'mdi:code-braces', color: 'text-purple-500' },
-		...exportFormats.slice(1)
-	];
+	let formats = $derived.by((): { format: ExportFormat; label: string; icon: string; color: string }[] => {
+		const rendered = exportFormatsFor(isLatex);
+		return [rendered[0], { format: 'source', label: '', icon: 'mdi:code-braces', color: 'text-purple-500' }, ...rendered.slice(1)];
+	});
 
 	const itemClass = 'w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center gap-2';
 

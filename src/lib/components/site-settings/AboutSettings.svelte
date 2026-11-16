@@ -10,7 +10,7 @@
     const links = [
         { label: 'Typst Documentation', url: 'https://typst.app/docs/', icon: 'mdi:book-open-page-variant-outline' },
         { label: 'Typst Universe', url: 'https://typst.app/universe/', icon: 'mdi:earth' },
-        { label: 'MiTeX, used for LaTeX documents', url: 'https://github.com/mitex-rs/mitex', icon: 'mdi:sigma' },
+        { label: 'Tectonic, used for LaTeX documents', url: 'https://tectonic-typesetting.github.io/', icon: 'mdi:sigma' },
         { label: 'TypstDrive Documentation', url: 'https://sirblobby.github.io/TypstDrive/', icon: 'mdi:file-document-multiple-outline' },
         { label: 'GitHub Repository', url: PROJECT_URL, icon: 'mdi:github' },
         { label: 'Report an Issue', url: `${PROJECT_URL}/issues`, icon: 'mdi:bug-outline' }
@@ -24,7 +24,8 @@
             ? [
                   ['Version', info.server_version],
                   ['Typst', info.typst_version],
-                  ['LaTeX renderer', info.latex_package],
+                  ['LaTeX engine', info.latex.engine ?? 'Not available'],
+                  ['LaTeX sandbox', info.latex.sandbox ?? info.latex.problem ?? 'Not available'],
                   ['Database schema', String(info.database.schema_version)],
                   ['Author', 'SirBlobby'],
                   ['License', 'Apache-2.0']
@@ -82,6 +83,6 @@
 
     <p class="text-xs leading-relaxed text-[var(--color-ink-muted)]">
         TypstDrive is a community application and is not affiliated with, endorsed by, or supported by the official Typst project. The Typst links above open the official Typst website in a new tab.
-        LaTeX documents are converted to Typst with the MiTeX package, which the server downloads from Typst Universe the first time a LaTeX document is rendered, so it needs internet access.
+        LaTeX documents are compiled with Tectonic, which downloads the LaTeX packages a document uses the first time it needs them, so the server needs internet access.
     </p>
 </div>

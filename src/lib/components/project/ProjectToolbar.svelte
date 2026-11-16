@@ -10,6 +10,7 @@
 	import { startCommentOnSelection } from '../../ts/comments';
 	import { buildPageActions, registerPageActions } from '../../ts/slash/page-actions';
 	import { latexImageFormat, projectImageLibrary, typstImageFormat } from '../../ts/image-library';
+	import { latexFileReference } from '../../ts/latex-file-reference';
 	import { insertDialogStore } from '../../ts/insert-dialog';
 	import InsertDialogs from '../editor/insert/InsertDialogs.svelte';
 	import { untrack } from 'svelte';
@@ -271,7 +272,9 @@
 				if (view) {
 					const selection = view.state.selection.main;
 					let replacement = '';
-					if (lower.endsWith('.ttf') || lower.endsWith('.otf')) {
+					if (isLatexFile) {
+						replacement = latexFileReference(file.name);
+					} else if (lower.endsWith('.ttf') || lower.endsWith('.otf')) {
 						replacement = `// Font ${file.name} uploaded — use #set text(font: "Family Name")\n`;
 					} else {
 						replacement = `#image("${file.name}")\n`;
@@ -321,6 +324,7 @@
 		const actions = buildPageActions({
 			sourceLabel: `Active .${isLatexFile ? 'tex' : 'typ'} file`,
 			canEdit,
+			isLatex: isLatexProject,
 			exportAs: (format) => handleExport(format === 'source' ? 'typ' : format),
 			exportConverted: handlePandocExport,
 			print: handlePrint,
@@ -457,6 +461,7 @@
 				<PreviewModeMenu />
 			{/if}
 			<HeaderExportMenu
+				isLatex={isLatexProject}
 				sourceLabel={`Active .${isLatexFile ? 'tex' : 'typ'} file`}
 				onexport={(format) => handleExport(format === 'source' ? 'typ' : format)}
 				onprint={handlePrint}

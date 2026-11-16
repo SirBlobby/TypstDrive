@@ -2,7 +2,7 @@ import { get, writable } from 'svelte/store';
 import { commentsSidebarOpen } from '../store';
 import { previewModeOptions, previewModeStore } from '../preview-mode';
 import { suggestingModeStore } from '../suggestions';
-import { exportFormats, type ExportFormat } from '../typst-api';
+import { exportFormatsFor, type ExportFormat } from '../typst-api';
 import type { SlashCommand } from './slash-command-types';
 
 type ConvertedFormat = 'docx' | 'latex' | 'markdown';
@@ -10,6 +10,7 @@ type ConvertedFormat = 'docx' | 'latex' | 'markdown';
 export interface PageActionHandlers {
     sourceLabel: string;
     canEdit: boolean;
+    isLatex: boolean;
     exportAs: (format: ExportFormat | 'source') => void;
     exportConverted: (format: ConvertedFormat) => void;
     print: () => void;
@@ -40,7 +41,7 @@ const convertedFormats: { format: ConvertedFormat; label: string; icon: string; 
 ];
 
 function exportCommands(handlers: PageActionHandlers): SlashCommand[] {
-    const rendered: SlashCommand[] = exportFormats.map((option) => ({
+    const rendered: SlashCommand[] = exportFormatsFor(handlers.isLatex).map((option) => ({
         id: `export-${option.format}`,
         label: `Export as ${option.format.toUpperCase()}`,
         description: `Download a ${option.label}`,

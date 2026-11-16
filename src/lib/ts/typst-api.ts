@@ -3,6 +3,7 @@ export interface Diagnostic {
 	severity: string;
 	from?: number;
 	to?: number;
+	file?: string;
 }
 
 export interface CompileResponse {
@@ -37,6 +38,10 @@ export const exportFormats: { format: ExportFormat; label: string; icon: string;
 	{ format: 'svg', label: 'SVG graphics', icon: 'mdi:svg', color: 'text-orange-500' },
 	{ format: 'png', label: 'PNG image', icon: 'mdi:image', color: 'text-blue-500' }
 ];
+
+export function exportFormatsFor(isLatex: boolean) {
+	return isLatex ? exportFormats.filter((option) => option.format !== 'html') : exportFormats;
+}
 
 export function safeFileName(name: string) {
 	return name.replace(/[^a-z0-9_-]/gi, '_') || 'document';
