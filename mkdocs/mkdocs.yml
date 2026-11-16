@@ -39,6 +39,9 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
+extra_css:
+  - stylesheets/learn.css
+
 markdown_extensions:
   - admonition
   - attr_list
@@ -59,57 +62,100 @@ markdown_extensions:
 nav:
   - Home:
       - Welcome: index.md
-      - Your first document: start/first-document.md
-      - A short Typst primer: start/typst-primer.md
-      - Questions and answers: faq.md
-      - About and disclaimer: about.md
+      - Getting started:
+          - Your first document: start/first-document.md
+          - A short Typst primer: start/typst-primer.md
+      - Help:
+          - Questions and answers: faq.md
+          - About and disclaimer: about.md
+  - Learn:
+      - learn/index.md
+      - Typst:
+          - The basics: learn/typst/basics.md
+          - Math: learn/typst/math.md
+          - Page layout and styling: learn/typst/layout.md
+          - Images, tables and references: learn/typst/figures.md
+          - Scripting: learn/typst/scripting.md
+          - Show rules and templates: learn/typst/templates.md
+      - LaTeX:
+          - The basics: learn/latex/basics.md
+          - Math: learn/latex/math.md
+          - Page layout and fonts: learn/latex/layout.md
+          - Images, tables and references: learn/latex/figures.md
+          - Bibliographies: learn/latex/bibliography.md
+          - Commands, packages and drawings: learn/latex/macros.md
+      - Switching:
+          - Typst for LaTeX users: learn/typst-for-latex-users.md
   - User Guide:
       - guide/index.md
-      - Your drive: guide/drive.md
-      - Writing in the editor: guide/editor.md
-      - Preview and export: guide/preview-and-export.md
-      - Working together: guide/collaboration.md
-      - Presenting: guide/presenting.md
-      - Projects: guide/projects.md
-      - Templates: guide/templates.md
-      - LaTeX documents: guide/latex.md
-      - Packages: guide/packages.md
-      - Fonts and images: guide/fonts-and-images.md
-      - Citations: guide/citations.md
-      - Git sync: guide/git.md
-      - Sharing: guide/sharing.md
-      - Team spaces: guide/teams.md
-      - Your settings: guide/settings.md
-      - Typst Desktop: guide/desktop.md
+      - Writing:
+          - Your drive: guide/drive.md
+          - Writing in the editor: guide/editor.md
+          - Preview and export: guide/preview-and-export.md
+          - Presenting: guide/presenting.md
+      - Bigger documents:
+          - Projects: guide/projects.md
+          - Templates: guide/templates.md
+          - Packages: guide/packages.md
+          - LaTeX documents: guide/latex.md
+      - Sources and media:
+          - Fonts and images: guide/fonts-and-images.md
+          - Citations: guide/citations.md
+      - Working with others:
+          - Working together: guide/collaboration.md
+          - Sharing: guide/sharing.md
+          - Team spaces: guide/teams.md
+      - Sync:
+          - Git sync: guide/git.md
+          - Typst Desktop: guide/desktop.md
+      - Account:
+          - Your settings: guide/settings.md
   - Self-Hosting:
       - self-hosting/index.md
-      - Install with Docker: self-hosting/install.md
-      - HTTPS and reverse proxies: self-hosting/reverse-proxy.md
-      - Updates and backups: self-hosting/updates-and-backups.md
-      - Databases: self-hosting/databases.md
-      - Sign-in and single sign-on: self-hosting/sign-in.md
-      - Email: self-hosting/email.md
-      - Settings reference: self-hosting/configuration.md
-      - Bigger installs: self-hosting/scaling.md
+      - Getting started:
+          - Install with Docker: self-hosting/install.md
+          - HTTPS and reverse proxies: self-hosting/reverse-proxy.md
+          - Updates and backups: self-hosting/updates-and-backups.md
+      - Configuration:
+          - Settings reference: self-hosting/configuration.md
+          - Databases: self-hosting/databases.md
+          - Sign-in and single sign-on: self-hosting/sign-in.md
+          - Email: self-hosting/email.md
+      - Scaling:
+          - Bigger installs: self-hosting/scaling.md
   - Administration:
       - admin/index.md
-      - Users and accounts: admin/users.md
-      - Sign-in and security: admin/security.md
-      - Look and feel: admin/branding.md
-      - Themes: admin/themes.md
-      - Team spaces: admin/teams.md
-      - Storage and history: admin/storage.md
-      - Packages: admin/packages.md
-      - PDF links: admin/pdf-links.md
-      - Citations: admin/citations.md
-      - Git: admin/git.md
-      - API access: admin/api.md
-      - Server and about: admin/server.md
+      - People:
+          - Users and accounts: admin/users.md
+          - Team spaces: admin/teams.md
+      - Security:
+          - Sign-in and security: admin/security.md
+      - Content:
+          - Storage and history: admin/storage.md
+          - Packages: admin/packages.md
+          - PDF links: admin/pdf-links.md
+          - Citations: admin/citations.md
+          - LaTeX: admin/latex.md
+          - Git: admin/git.md
+      - Appearance:
+          - Look and feel: admin/branding.md
+          - Themes: admin/themes.md
+      - API:
+          - API access: admin/api.md
+      - System:
+          - Server, performance and about: admin/server.md
   - Developers:
-      - API overview: api/index.md
-      - POST /v1/render: api/render.md
-      - Read endpoints: api/read.md
-      - Examples: api/examples.md
-      - Limits and caching: api/limits.md
-      - Desktop sync API: api/desktop.md
-      - Contributing: development.md
+      - api/index.md
+      - Rendering:
+          - Typst documents: api/render.md
+          - Typst formulas and snippets: api/typst.md
+          - LaTeX: api/latex.md
+      - Reading data:
+          - Read endpoints: api/read.md
+      - Using the API:
+          - Examples: api/examples.md
+          - Limits and caching: api/limits.md
+      - Desktop app:
+          - Desktop sync API: api/desktop.md
+      - Contributing:
+          - Developing TypstDrive: development.md
