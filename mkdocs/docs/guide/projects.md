@@ -7,7 +7,7 @@ A project is a document made of many files. Use one when a single file is no lon
 Choose **New → Project** in the drive and pick a **Language**. The project is created in the folder you are looking at.
 
 - A **Typst** project starts with a `main.typ` file and a `typst.toml` file that describes it.
-- A **LaTeX** project starts with a single `main.tex` file. Only that file is rendered; see [LaTeX documents](latex.md).
+- A **LaTeX** project starts with a single `main.tex` file. Other files are pulled in with `\input`, `\include`, `\includegraphics` or a bibliography, as usual; see [LaTeX documents](latex.md).
 
 ## Working in a project
 

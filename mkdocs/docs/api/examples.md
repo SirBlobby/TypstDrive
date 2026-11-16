@@ -34,6 +34,57 @@ Replace `https://typst.example.com` with the address of your TypstDrive instance
       --output report.html
     ```
 
+=== "SVG, page 2"
+
+    ```bash
+    curl -X POST https://typst.example.com/v1/render \
+      -H "Authorization: Bearer td_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{"code":"= One\n#pagebreak()\n= Two","format":"svg","page":2}' \
+      --output page-2.svg
+    ```
+
+### Formulas and snippets
+
+=== "Typst formula"
+
+    ```bash
+    curl -X POST https://typst.example.com/v1/typst/math \
+      -H "Authorization: Bearer td_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{"math":"sum_(i=1)^n i = (n(n+1))/2","format":"png","scale":3,"transparent":true}' \
+      --output sum.png
+    ```
+
+=== "LaTeX formula"
+
+    ```bash
+    curl -X POST https://typst.example.com/v1/latex/math \
+      -H "Authorization: Bearer td_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{"math":"\\int_0^\\infty e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2}"}' \
+      --output integral.svg
+    ```
+
+=== "TikZ drawing"
+
+    ```bash
+    curl -X POST https://typst.example.com/v1/latex/snippet \
+      -H "Authorization: Bearer td_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{"code":"\\begin{tikzpicture}\\draw[->] (0,0) -- (2,1);\\end{tikzpicture}","packages":["tikz"]}' \
+      --output arrow.svg
+    ```
+
+=== "Check a document"
+
+    ```bash
+    curl -X POST https://typst.example.com/v1/typst/check \
+      -H "Authorization: Bearer td_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{"code":"= Report\n#foo"}'
+    ```
+
 ## JavaScript and TypeScript
 
 ```javascript

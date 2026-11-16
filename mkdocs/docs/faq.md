@@ -3,13 +3,13 @@
 ## Using TypstDrive
 
 ??? question "Do I need to know Typst?"
-    No. The toolbar has buttons for headings, bold, lists, math, tables and images, and the preview shows the result straight away. [A short Typst primer](start/typst-primer.md) covers the basics in a few minutes.
+    No. The toolbar has buttons for headings, bold, lists, math, tables and images, and the preview shows the result straight away. [A short Typst primer](start/typst-primer.md) covers the basics in a few minutes, and the [Learn](learn/index.md) guides teach Typst and LaTeX step by step.
 
 ??? question "Do I need to save?"
     No. Everything is saved automatically every few seconds. Pressing ++ctrl+s++ saves a named point in the [version history](guide/collaboration.md#version-history) that you can go back to.
 
 ??? question "Can I write LaTeX?"
-    Yes, basic LaTeX. Pick **LaTeX** as the language when you create a document or project. It is converted to Typst behind the scenes, so packages, `\input` and bibliographies are not supported. See [LaTeX documents](guide/latex.md).
+    Yes. Pick **LaTeX** as the language when you create a document or project. It is compiled by a real TeX engine, so packages, `\input` and BibTeX bibliographies work. Shell escape and Biber do not. See [LaTeX documents](guide/latex.md). If the LaTeX choices are missing, your administrator has [turned LaTeX off](admin/latex.md).
 
 ??? question "How do I find text inside my documents?"
     Type `doc:` followed by the phrase in the search bar and press ++enter++. See [Searching](guide/drive.md#searching).
@@ -36,6 +36,9 @@
     Choose **Forgot password** on the sign-in page if your server has email set up. Otherwise ask an administrator to set a new one.
 
 ## Running a server
+
+??? question "How do I see how busy the server is?"
+    **Site Settings → System → Performance** shows uptime, CPU, memory and disk, live-editing activity, and how long page loads, server responses and Typst and LaTeX compiles take. See [Server, performance and about](admin/server.md#performance).
 
 ??? question "How many people can one server handle?"
     A small server with 1 CPU and 1 GB of memory is fine for a handful of people writing at the same time. Add more memory for larger groups. For very large installs, see [Bigger installs](self-hosting/scaling.md).

@@ -19,7 +19,7 @@ Your current limits, key usage and today's request count are shown in **Settings
 
 ## Caching
 
-Requests with identical code, format and inline files from the same account are served from a cache for up to one hour, without recompiling. Cached responses still count toward your rate limit and daily quota.
+Render requests with identical code, format, page, scale and inline files from the same account are served from a cache for up to one hour, without recompiling. This applies to `POST /v1/render` and to the [Typst](typst.md) and [LaTeX](latex.md) endpoints. Check requests and renders of stored documents and projects are never cached. Cached responses still count toward your rate limit and daily quota.
 
 !!! note
     The cache key does not include your uploaded account files. If you replace an uploaded file, a cached render of the same code can be returned for up to an hour. Change the code or send the file inline to get a fresh render.

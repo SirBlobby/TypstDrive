@@ -15,8 +15,8 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"docs": "mkdocs serve -f mkdocs/mkdocs.yml",
-		"docs:build": "mkdocs build --strict -f mkdocs/mkdocs.yml"
+		"docs": ". venv/bin/activate && mkdocs serve -f mkdocs/mkdocs.yml",
+		"docs:build": ". venv/bin/activate && mkdocs build --strict -f mkdocs/mkdocs.yml"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^8.0.1",

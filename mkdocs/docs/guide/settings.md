@@ -68,7 +68,7 @@ Save access tokens for GitHub and GitLab, including GitHub Enterprise and self-h
 
 ## API keys
 
-Keys let your own programs and scripts turn Typst into PDFs and images through TypstDrive. Create, renew and delete keys here, and watch how much they are used. A new key is only shown once, so copy it straight away. See the [API overview](../api/index.md).
+Keys let your own programs and scripts turn Typst and LaTeX into PDFs and images through TypstDrive. Create, renew and delete keys here, and watch how much they are used. A new key is only shown once, so copy it straight away. See the [API overview](../api/index.md).
 
 ## Devices
 

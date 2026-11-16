@@ -1,4 +1,4 @@
-# Read Endpoints
+# Read endpoints
 
 Keys with the `read` scope can list and download the items owned by the key's account, or by a team when the `X-Workspace` header is sent. See [Team workspaces](index.md#team-workspaces). Items shared with you by other people are not included.
 

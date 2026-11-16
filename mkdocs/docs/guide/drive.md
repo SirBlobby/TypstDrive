@@ -51,7 +51,7 @@ Move something into a folder by dragging it onto the folder, or onto a folder na
 
 A **document** is a single file. A **project** holds many files, which is handy for longer work. Projects show a star-shaped folder icon. See [Projects](projects.md).
 
-When you create a document or project, choose its **Language**: **Typst**, or **LaTeX** for basic LaTeX support. See [LaTeX documents](latex.md).
+When you create a document or project, choose its **Language**: **Typst**, or **LaTeX**. See [LaTeX documents](latex.md).
 
 Documents show a small picture of their first page so you can recognize them at a glance. LaTeX documents also show a **LaTeX** badge.
 

@@ -31,7 +31,7 @@ TypstDrive is built on the work of many open-source projects and services:
 - [Typst](https://typst.app/) and its open-source [compiler](https://github.com/typst/typst), which turns documents into PDF, PNG, SVG and HTML (Apache License 2.0). Thanks to the Typst team and contributors for making it possible to build tools like this.
 - The authors of the packages and templates on [Typst Universe](https://typst.app/universe), which TypstDrive downloads and offers as templates.
 - [tinymist](https://github.com/Myriad-Dreamin/tinymist) for language server features such as completions and hover help.
-- [MiTeX](https://github.com/mitex-rs/mitex) for rendering LaTeX documents with Typst.
+- [Tectonic](https://tectonic-typesetting.github.io/) for compiling LaTeX documents.
 - [Hayagriva](https://github.com/typst/hayagriva), Typst's bibliography format, used for `.yml` reference files.
 - [Pandoc](https://pandoc.org/) for converting to and from Word, Markdown, LaTeX and HTML.
 - [SvelteKit](https://svelte.dev/docs/kit), [Svelte](https://svelte.dev/), [Vite](https://vite.dev/) and [Tailwind CSS](https://tailwindcss.com/) for the web app.

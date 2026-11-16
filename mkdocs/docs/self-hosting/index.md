@@ -30,7 +30,8 @@ TypstDrive works without an internet connection, but some features reach outside
 
 | Service | Used for |
 |---|---|
-| `packages.typst.org` | `@preview` packages, the [template](../guide/templates.md) list, template previews and the MiTeX package for LaTeX |
+| `packages.typst.org` | `@preview` packages, the [template](../guide/templates.md) list and template previews |
+| `relay.fullyjustified.net` and the servers it redirects to | LaTeX packages, downloaded by Tectonic the first time a [LaTeX document](../guide/latex.md) needs them |
 | `doi.org`, `api.crossref.org` | DOI and arXiv lookups in the [citation tools](../guide/citations.md) |
 | `api.ncbi.nlm.nih.gov` | PubMed and PMC lookups |
 | `api.semanticscholar.org` | Semantic Scholar lookups |

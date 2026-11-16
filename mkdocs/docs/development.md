@@ -1,4 +1,4 @@
-# Development
+# Developing TypstDrive
 
 ## Contributing
 
