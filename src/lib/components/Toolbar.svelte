@@ -11,7 +11,7 @@
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
 	import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
-	import { matchesKeybind, shortcutText } from '#lib/ts/keybinds/key-format';
+	import { editShortcuts, matchesKeybind, shortcutText } from '#lib/ts/keybinds/key-format';
 	import InfoModal from './drive/InfoModal.svelte';
 	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
 	import EditingModeSwitch from './editor/EditingModeSwitch.svelte';
@@ -491,19 +491,19 @@
 							Edit
 						</button>
 						{#if activeMenu === 'edit'}
-							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
-								<button onclick={handleUndo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Undo (Ctrl+Z)</button>
-								<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Redo (Ctrl+Y)</button>
+							<div class="absolute left-0 top-full mt-1 min-w-48 w-max bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+								<button onclick={handleUndo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Undo <span class="text-xs opacity-60">{shortcutText(editShortcuts.undo)}</span></button>
+								<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Redo <span class="text-xs opacity-60">{shortcutText(editShortcuts.redo)}</span></button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; document.execCommand('cut'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Cut (Ctrl+X)</button>
-								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Copy (Ctrl+C)</button>
-								<button onclick={() => { activeMenu = null; navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t)); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Paste (Ctrl+V)</button>
+								<button onclick={() => { activeMenu = null; document.execCommand('cut'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Cut <span class="text-xs opacity-60">{shortcutText(editShortcuts.cut)}</span></button>
+								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Copy <span class="text-xs opacity-60">{shortcutText(editShortcuts.copy)}</span></button>
+								<button onclick={() => { activeMenu = null; navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t)); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Paste <span class="text-xs opacity-60">{shortcutText(editShortcuts.paste)}</span></button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; if ($editorViewStore) openFind($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Find <span class="text-xs opacity-60">{shortcutText(currentKeybind('find'))}</span></button>
-								<button onclick={() => { activeMenu = null; if ($editorViewStore) openReplace($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Search and Replace</button>
+								<button onclick={() => { activeMenu = null; if ($editorViewStore) openFind($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Find <span class="text-xs opacity-60">{shortcutText(currentKeybind('find'))}</span></button>
+								<button onclick={() => { activeMenu = null; if ($editorViewStore) openReplace($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Search and Replace <span class="text-xs opacity-60">{shortcutText(currentKeybind('replace'))}</span></button>
 								{#if directEditing && !isLatex}
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
-									<button onclick={() => { activeMenu = null; if ($editorViewStore) formatDocument($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Format document <span class="text-xs opacity-60">{shortcutText(currentKeybind('formatDocument'))}</span></button>
+									<button onclick={() => { activeMenu = null; if ($editorViewStore) formatDocument($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Format document <span class="text-xs opacity-60">{shortcutText(currentKeybind('formatDocument'))}</span></button>
 								{/if}
 							</div>
 						{/if}

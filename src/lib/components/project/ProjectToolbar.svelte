@@ -10,7 +10,7 @@
 	import { startCommentOnSelection } from '../../ts/comments';
 	import { formatDocument } from '../../ts/editor-format';
 	import { currentKeybind } from '../../ts/keybinds/keybinds-store';
-	import { shortcutText } from '../../ts/keybinds/key-format';
+	import { editShortcuts, shortcutText } from '../../ts/keybinds/key-format';
 	import { buildPageActions, registerPageActions } from '../../ts/slash/page-actions';
 	import { latexImageFormat, projectImageLibrary, typstImageFormat } from '../../ts/image-library';
 	import { latexFileReference } from '../../ts/latex-file-reference';
@@ -420,13 +420,13 @@
 						<div class="relative">
 							<button onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'edit' ? null : 'edit'; }} class="px-2 py-0.5 rounded transition-colors {activeMenu === 'edit' ? 'bg-[var(--theme-border)]' : 'hover:bg-[var(--theme-border)]'}">Edit</button>
 							{#if activeMenu === 'edit'}
-								<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
-									<button onclick={handleUndo} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Undo (Ctrl+Z)</button>
-									<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Redo (Ctrl+Y)</button>
+								<div class="absolute left-0 top-full mt-1 min-w-48 w-max bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+									<button onclick={handleUndo} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Undo <span class="text-xs opacity-60">{shortcutText(editShortcuts.undo)}</span></button>
+									<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Redo <span class="text-xs opacity-60">{shortcutText(editShortcuts.redo)}</span></button>
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
 									<button onclick={() => { activeMenu = null; showCitations = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="ph:quotes" class="text-base" /> Citations</button>
 									{#if directEditing && isTypstFile}
-										<button onclick={() => { activeMenu = null; if ($editorViewStore) formatDocument($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between">Format document <span class="text-xs opacity-60">{shortcutText(currentKeybind('formatDocument'))}</span></button>
+										<button onclick={() => { activeMenu = null; if ($editorViewStore) formatDocument($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Format document <span class="text-xs opacity-60">{shortcutText(currentKeybind('formatDocument'))}</span></button>
 									{/if}
 								</div>
 							{/if}
