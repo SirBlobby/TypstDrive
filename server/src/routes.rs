@@ -58,6 +58,7 @@ pub fn build_router(state: AppState) -> Router {
             get(drive::versions::retention::get_version_limit).put(drive::versions::retention::update_version_limit),
         )
         .route("/compile", post(compile::handlers::compile_handler))
+        .route("/format", post(compile::format::format_handler))
         .route("/export/{format}", post(compile::handlers::export_handler))
         .route("/export/pandoc/{format}", post(compile::pandoc::pandoc_export_handler))
         .route("/import/pandoc", post(compile::pandoc::pandoc_import_handler))

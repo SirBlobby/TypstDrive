@@ -17,6 +17,7 @@
 	import { setDiagnostics, lintGutter } from '@codemirror/lint';
 	import { bracketExtensions, typstBracketSettings } from '../ts/editor-brackets';
 	import { editorKeybindExtension } from '../ts/editor-keybinds';
+	import { formatScopeFacet } from '../ts/editor-format';
 	import { searchKeymap } from '@codemirror/search';
 	import { searchExtensions } from '../ts/editor-search';
 	import { editorSettingsStore } from '../ts/editor-settings';
@@ -202,6 +203,8 @@
 		const isLatex = fileKind === 'latex';
 		const isTypst = fileKind === 'typst';
 		const commentMarker = commentMarkerFor(fileKind);
+		// Project files are opened with a filePath; the route id is then the project.
+		const formatScope = filePath ? { project_id: page.params.id } : { document_id: lspDocId ?? page.params.id };
 		let languageExtension: Extension = dataFileLanguage(fileKind);
 		if (isTypst) languageExtension = [typstLanguage, typstBracketSettings(typstLanguage)];
 		if (isLatex) languageExtension = [latexEditorExtensions(), latexPackageLoader()];
@@ -217,6 +220,7 @@
 				...bracketExtensions,
 				...searchExtensions(),
 				editorKeybindExtension(commentMarker, isTypst, isLatex),
+				isTypst ? formatScopeFacet.of(formatScope) : [],
 				keymap.of([...searchKeymap.filter((binding) => binding.key !== 'Mod-f'), ...defaultKeymap, ...historyKeymap, indentWithTab] as any),
 				languageExtension,
 				yCollab(activeText, activeProvider.awareness),

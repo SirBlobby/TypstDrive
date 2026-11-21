@@ -1,5 +1,6 @@
 pub mod compiler;
 pub mod fonts;
+pub mod format;
 pub mod handlers;
 pub mod latex;
 pub mod latex_policy;
