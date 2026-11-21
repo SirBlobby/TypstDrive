@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::compile::compiler::{run_blocking, CompileFailure, DocumentStats, PageOutput, ProjectInput, TypstCompiler};
+use crate::compile::compiler::{run_blocking, ClickTarget, CompileFailure, DocumentStats, PageOutput, PagePoint, ProjectInput, TypstCompiler};
 use crate::compile::latex::is_latex_path;
 use crate::compile::latex_policy;
 use crate::compile::latex_preview::{chosen_page_input, pdf_page_count, source_stats, PageChoice};
@@ -228,4 +228,19 @@ pub async fn html(input: ProjectInput) -> Result<String, RenderFailure> {
         return Err(RenderFailure::Unsupported("HTML export is not available for LaTeX documents.".to_string()));
     }
     typst_job(input, |compiler, input| compiler.export_html(input)).await
+}
+
+// Cursor sync needs Typst's layout introspection, so LaTeX documents have none.
+pub async fn cursor_positions(input: ProjectInput, path: String, offset: usize) -> Vec<PagePoint> {
+    if is_latex(&input) {
+        return Vec::new();
+    }
+    run_blocking(move |compiler| compiler.cursor_positions(input, &path, offset)).await.unwrap_or_default()
+}
+
+pub async fn click_target(input: ProjectInput, page: usize, x: f64, y: f64) -> Option<ClickTarget> {
+    if is_latex(&input) {
+        return None;
+    }
+    run_blocking(move |compiler| compiler.click_target(input, page, x, y)).await.flatten()
 }

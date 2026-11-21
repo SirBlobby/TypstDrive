@@ -42,6 +42,8 @@ The **View** button in the top bar chooses what the editor shows:
 
 Your choice is remembered in your browser. Viewers only ever see the preview.
 
+In a Typst file, the editor and preview follow each other. Click in the text and the preview scrolls to that spot, marking it briefly. Click the preview and the text it came from is selected in the editor; in a project, its file opens first. Typing does not move the preview, and while the preview is out of date (or the document has an error) clicks do nothing until it catches up.
+
 ## The toolbar
 
 The formatting toolbar sits above the text:

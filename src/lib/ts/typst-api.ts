@@ -30,6 +30,37 @@ export async function compileProject(project_id: string, files: Record<string, s
 	return await res.json();
 }
 
+// The body /api/compile takes; cursor sync sends the same one so it resolves against the same text.
+export type CompileInput = { text: string; document_id?: string } | { project_id: string; files: Record<string, string> };
+
+// A spot on a page as fractions of its width and height.
+export interface PagePoint {
+	page: number;
+	x: number;
+	y: number;
+}
+
+export type ClickTarget = { kind: 'source'; path: string; offset: number } | ({ kind: 'page' } & PagePoint);
+
+async function postSync<T>(endpoint: string, body: Record<string, unknown>): Promise<T | null> {
+	const res = await fetch(`/api/sync/${endpoint}`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+	return res.ok ? await res.json() : null;
+}
+
+export async function syncCursor(input: CompileInput, path: string | undefined, offset: number): Promise<PagePoint[]> {
+	const res = await postSync<{ positions: PagePoint[] }>('cursor', { ...input, path, offset });
+	return res?.positions ?? [];
+}
+
+export async function syncClick(input: CompileInput, point: PagePoint): Promise<ClickTarget | null> {
+	const res = await postSync<{ target: ClickTarget | null }>('click', { ...input, ...point });
+	return res?.target ?? null;
+}
+
 export type ExportFormat = 'pdf' | 'png' | 'svg' | 'html';
 
 export const exportFormats: { format: ExportFormat; label: string; icon: string; color: string }[] = [
