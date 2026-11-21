@@ -10,6 +10,8 @@ export interface CompileResponse {
 	svgs: string[] | null;
 	errors: Diagnostic[] | null;
 	stats?: { pages: number; words: number; characters: number; characters_excluding_spaces: number };
+	/** Speaker notes per page; absent when the document has none. */
+	notes?: (string | null)[];
 }
 
 export async function compileTypst(text: string, document_id?: string): Promise<CompileResponse> {

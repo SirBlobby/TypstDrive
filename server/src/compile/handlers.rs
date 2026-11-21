@@ -30,6 +30,8 @@ pub struct CompileResponse {
     pub svgs: Option<Vec<String>>,
     pub errors: Option<Vec<Diagnostic>>,
     pub stats: Option<DocumentStats>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<Vec<Option<String>>>,
 }
 
 #[derive(Serialize)]
@@ -89,7 +91,7 @@ fn failure_diagnostics(failure: RenderFailure) -> Vec<Diagnostic> {
 }
 
 fn error_response(message: &str) -> Json<CompileResponse> {
-    Json(CompileResponse { svgs: None, errors: Some(single_error(message)), stats: None })
+    Json(CompileResponse { svgs: None, errors: Some(single_error(message)), stats: None, notes: None })
 }
 
 async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<CompileSource> {
@@ -156,9 +158,9 @@ pub async fn compile_handler(
             if let Some(target) = source.thumbnail_target {
                 save_thumbnail(&state, target, &preview.thumbnail).await;
             }
-            Json(CompileResponse { svgs: Some(preview.svgs), errors: None, stats: Some(preview.stats) })
+            Json(CompileResponse { svgs: Some(preview.svgs), errors: None, stats: Some(preview.stats), notes: preview.notes })
         }
-        Err(failure) => Json(CompileResponse { svgs: None, errors: Some(failure_diagnostics(failure)), stats: None }),
+        Err(failure) => Json(CompileResponse { svgs: None, errors: Some(failure_diagnostics(failure)), stats: None, notes: None }),
     }
 }
 

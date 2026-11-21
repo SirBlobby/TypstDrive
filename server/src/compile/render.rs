@@ -1,18 +1,14 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::compile::compiler::{run_blocking, CompileFailure, DocumentStats, PageOutput, ProjectInput, TypstCompiler};
+use crate::compile::compiler::{run_blocking, CompileFailure, PageOutput, ProjectInput, TypstCompiler};
 use crate::compile::latex::is_latex_path;
 use crate::compile::latex_policy;
 use crate::compile::latex_preview::{chosen_page_input, pdf_page_count, source_stats, PageChoice};
 use crate::compile::tectonic::{compile_to_pdf, LatexError};
 use crate::metrics::{self, Metric};
 
-pub struct Preview {
-    pub svgs: Vec<String>,
-    pub thumbnail: String,
-    pub stats: DocumentStats,
-}
+pub use crate::compile::compiler::Preview;
 
 pub struct LatexProblem {
     pub message: String,
@@ -149,7 +145,7 @@ async fn latex_png(input: ProjectInput, image: PageImage) -> Result<Vec<u8>, Ren
 
 async fn latex_svg(input: ProjectInput, image: PageImage) -> Result<String, RenderFailure> {
     let pages = latex_image_input(&input, &image).await?;
-    latex_page_job(pages, |compiler, pages| compiler.compile_svg(pages).map(|(_, first_page, _)| first_page)).await
+    latex_page_job(pages, |compiler, pages| compiler.compile_svg(pages).map(|preview| preview.thumbnail)).await
 }
 
 async fn latex_page_count(input: ProjectInput) -> Result<usize, RenderFailure> {
@@ -191,13 +187,13 @@ async fn latex_page_job<T: Send + 'static>(
 
 pub async fn preview(input: ProjectInput) -> Result<Preview, RenderFailure> {
     if !is_latex(&input) {
-        let (svgs, thumbnail, stats) = typst_job(input, |compiler, input| compiler.compile_svg(input)).await?;
-        return Ok(Preview { svgs, thumbnail, stats });
+        return typst_job(input, |compiler, input| compiler.compile_svg(input)).await;
     }
     let pages = latex_pages(&input).await?;
-    let (svgs, thumbnail, _) = latex_page_job(pages, |compiler, pages| compiler.compile_svg(pages)).await?;
-    let stats = source_stats(&input.entrypoint, &input.files, svgs.len());
-    Ok(Preview { svgs, thumbnail, stats })
+    let preview = latex_page_job(pages, |compiler, pages| compiler.compile_svg(pages)).await?;
+    // LaTeX pages come from a PDF, so stats come from the source and there are no Typst notes.
+    let stats = source_stats(&input.entrypoint, &input.files, preview.svgs.len());
+    Ok(Preview { stats, notes: None, ..preview })
 }
 
 pub async fn pdf(input: ProjectInput) -> Result<Vec<u8>, RenderFailure> {
@@ -216,7 +212,7 @@ pub async fn png(input: ProjectInput) -> Result<Vec<u8>, RenderFailure> {
 }
 
 pub async fn svg(input: ProjectInput) -> Result<String, RenderFailure> {
-    let job = |compiler: &TypstCompiler, input| compiler.compile_svg(input).map(|(svgs, _, _)| svgs.join("\n"));
+    let job = |compiler: &TypstCompiler, input| compiler.compile_svg(input).map(|preview| preview.svgs.join("\n"));
     if is_latex(&input) {
         return latex_page_job(latex_pages(&input).await?, job).await;
     }

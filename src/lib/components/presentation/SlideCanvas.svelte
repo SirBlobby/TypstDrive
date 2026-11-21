@@ -9,14 +9,17 @@
 		tool: DrawingTool;
 		color: string;
 		strokes: Stroke[];
+		/** Laser position as a fraction of the slide size. */
+		laser: Point | null;
+		interactive: boolean;
 		oncommit: (strokes: Stroke[]) => void;
+		onlaser: (point: Point | null) => void;
 	}
 
-	let { slide, width, height, tool, color, strokes, oncommit }: Props = $props();
+	let { slide, width, height, tool, color, strokes, laser, interactive, oncommit, onlaser }: Props = $props();
 
 	let canvas = $state<HTMLCanvasElement | null>(null);
 	let activeStroke = $state<Stroke | null>(null);
-	let laserPosition = $state<{ x: number; y: number } | null>(null);
 
 	$effect(() => {
 		if (!canvas) return;
@@ -44,8 +47,7 @@
 
 	function moveStroke(event: PointerEvent) {
 		if (tool === 'laser') {
-			const point = pointFrom(event);
-			laserPosition = { x: point.x * width, y: point.y * height };
+			onlaser(pointFrom(event));
 			return;
 		}
 		activeStroke?.points.push(pointFrom(event));
@@ -66,18 +68,19 @@
 
 	<canvas
 		bind:this={canvas}
-		class="absolute inset-0 h-full w-full touch-none {tool === 'laser' ? 'cursor-none' : 'cursor-crosshair'}"
+		class="absolute inset-0 h-full w-full touch-none
+			{!interactive ? 'pointer-events-none' : tool === 'laser' ? 'cursor-none' : 'cursor-crosshair'}"
 		onpointerdown={startStroke}
 		onpointermove={moveStroke}
 		onpointerup={finishStroke}
 		onpointercancel={finishStroke}
-		onpointerleave={() => (laserPosition = null)}
+		onpointerleave={() => onlaser(null)}
 	></canvas>
 
-	{#if tool === 'laser' && laserPosition}
+	{#if laser}
 		<span
 			class="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_14px_5px_rgba(239,68,68,0.75)]"
-			style="left: {laserPosition.x}px; top: {laserPosition.y}px;"
+			style="left: {laser.x * width}px; top: {laser.y * height}px;"
 		></span>
 	{/if}
 </div>
