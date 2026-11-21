@@ -19,7 +19,8 @@
 	import CommentsPanel from '#lib/components/comments/CommentsPanel.svelte';
 	import { editorErrors, documentStatsStore, commentsSidebarOpen } from '#lib/ts/store';
 	import { bibliographyChangedStore } from '#lib/ts/citations';
-	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
+	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
+	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import { reviewExtensions } from '#lib/ts/review-extensions';
 	import { suggestingModeStore, suggestionsStore } from '#lib/ts/suggestions';
 	import { liveDraftStore } from '#lib/ts/suggestion-drafts';
@@ -43,7 +44,7 @@
 	let canComment = $derived(role !== 'viewer');
 	let showPreview = $derived($previewVisibleStore || isViewer);
 	let editorWidthClass = $derived(
-		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-1 border-r border-[var(--color-line)]' : 'w-full min-w-0'
+		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]' : 'w-full min-w-0'
 	);
 	const editorExtensions = reviewExtensions();
 
@@ -161,7 +162,7 @@
 <div class="flex flex-col h-screen relative">
 	<Toolbar title={documentTitle} docId={page.params.id ?? ''} {role} {language} />
 
-	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+	<main class="flex-1 flex flex-col md:flex-row overflow-hidden relative" style="--editor-grow: {$splitRatioStore}; --preview-grow: {1 - $splitRatioStore}">
 
 		{#if !isViewer}
 		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 {editorWidthClass}">
@@ -173,8 +174,12 @@
 		</div>
 		{/if}
 
+		{#if !isViewer && showPreview && $previewModeStore === 'split'}
+			<SplitDivider />
+		{/if}
+
 		{#if showPreview}
-		<div class="{isViewer || $previewModeStore === 'preview' ? 'w-full' : 'w-full md:w-0 md:flex-1'} min-w-0 relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
+		<div class="{isViewer || $previewModeStore === 'preview' ? 'w-full' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
 			<Preview {svgs} />
 			<ErrorBanner {errors} />
 		</div>

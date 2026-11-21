@@ -40,7 +40,9 @@ The **View** button in the top bar chooses what the editor shows:
 | Editor only | Just the text, with the full width to write in. |
 | Preview only | Just the pages, for reading or checking the layout. |
 
-Your choice is remembered in your browser. Viewers only ever see the preview.
+In **Editor and preview**, drag the line between the two to give either side more room, or double-click it to split them evenly again. With the line focused, the left and right arrow keys move it too.
+
+Your choice and the split are remembered in your browser. Viewers only ever see the preview.
 
 ## The toolbar
 
