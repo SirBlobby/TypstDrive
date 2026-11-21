@@ -4,6 +4,8 @@ export interface ProjectFile {
     id: string;
     path: string;
     kind: string;
+    mime_type: string;
+    updated_at?: string;
 }
 
 export interface FolderNode {

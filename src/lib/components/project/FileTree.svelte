@@ -4,6 +4,7 @@
 	import PromptModal from '../PromptModal.svelte';
 	import FilePresence from './FilePresence.svelte';
 	import type { AwarenessUser } from '#lib/ts/store';
+	import { previewKindFor } from '#lib/ts/file-preview';
 	import { buildProjectTree, projectFolders, type ProjectFile, type TreeNode } from '#lib/ts/project-tree';
 
 	let {
@@ -51,8 +52,8 @@
 	let folders = $derived(projectFolders(files));
 	let defaultExtension = $derived(entrypoint.toLowerCase().endsWith('.tex') ? 'tex' : 'typ');
 
-	function iconFor(path: string): string {
-		const lower = path.toLowerCase();
+	function iconFor(file: ProjectFile): string {
+		const lower = file.path.toLowerCase();
 		if (lower.endsWith('.typ')) return 'mdi:alpha-t-box-outline';
 		if (lower.endsWith('.tex')) return 'mdi:sigma';
 		if (lower.endsWith('.toml')) return 'mdi:cog-outline';
@@ -60,7 +61,9 @@
 		if (lower.endsWith('.yml') || lower.endsWith('.yaml')) return 'mdi:code-braces';
 		if (lower.endsWith('.md')) return 'mdi:language-markdown-outline';
 		if (lower.endsWith('.txt')) return 'mdi:file-document-outline';
-		if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.svg') || lower.endsWith('.gif')) return 'mdi:image-outline';
+		const preview = previewKindFor(file.mime_type, file.path);
+		if (preview === 'image') return 'mdi:image-outline';
+		if (preview === 'pdf') return 'mdi:file-pdf-box';
 		if (lower.endsWith('.ttf') || lower.endsWith('.otf')) return 'mdi:format-font';
 		return 'mdi:file-outline';
 	}
@@ -165,7 +168,7 @@
 				style="padding-left: {0.5 + depth * 0.875 + (depth > 0 ? 0.875 : 0)}rem;"
 			>
 				<button class="flex items-center gap-2 flex-1 min-w-0 text-left" onclick={() => onSelect(file)} title={file.path}>
-					<Icon icon={iconFor(file.path)} class="text-base flex-shrink-0" />
+					<Icon icon={iconFor(file)} class="text-base flex-shrink-0" />
 					<span class="truncate">{node.name}</span>
 					{#if file.path === entrypoint}
 						<span title="Entrypoint">

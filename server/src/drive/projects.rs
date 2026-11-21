@@ -427,7 +427,7 @@ pub async fn list_project_files(
         .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
 
     let files = sqlx::query_as::<_, ProjectFile>(
-        sql("SELECT id, project_id, path, kind, mime_type, created_at FROM project_files WHERE project_id = $1 ORDER BY path ASC")
+        sql("SELECT id, project_id, path, kind, mime_type, created_at, updated_at FROM project_files WHERE project_id = $1 ORDER BY path ASC")
     )
     .bind(&id)
     .fetch_all(&state.db)
@@ -465,7 +465,7 @@ pub async fn create_project_file(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let file = sqlx::query_as::<_, ProjectFile>(sql("SELECT id, project_id, path, kind, mime_type, created_at FROM project_files WHERE id = $1"))
+    let file = sqlx::query_as::<_, ProjectFile>(sql("SELECT id, project_id, path, kind, mime_type, created_at, updated_at FROM project_files WHERE id = $1"))
     .bind(&file_id)
     .fetch_one(&state.db)
     .await
@@ -509,8 +509,8 @@ pub async fn upload_project_file(
         crate::accounts::storage::ensure_room(&state, &project.owner_id, content.len() as i64 - existing_size).await?;
 
         let _ = sqlx::query(
-            sql("INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES ($1, $2, $3, $4, $5, $6) \
-             ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, kind = excluded.kind, mime_type = excluded.mime_type")
+            sql("INSERT INTO project_files (id, project_id, path, kind, content, mime_type, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) \
+             ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, kind = excluded.kind, mime_type = excluded.mime_type, updated_at = excluded.updated_at")
         )
         .bind(Uuid::new_v4().to_string())
         .bind(&id)
@@ -518,6 +518,7 @@ pub async fn upload_project_file(
         .bind(kind)
         .bind(content)
         .bind(&mime_type)
+        .bind(crate::db::timestamp_now())
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
