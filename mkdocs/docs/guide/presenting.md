@@ -60,6 +60,11 @@ The speaker view shows notes written with a slide package:
 - [Polylux](https://polylux.dev/book/): `#pdfpc.speaker-note("Mention the survey results.")`
 - [Mosaic](https://vincentarelbundock.github.io/mosaic/presenting/notes.html): `#m.note[Mention the survey results.]`
 
-Without a slide package, place `#metadata((t: "Note", v: "Mention the survey results.")) <pdfpc>` on the page the note belongs to.
+Without a slide package, place `#metadata((t: "Note", v: [Mention the survey results.])) <pdfpc>` on the page the note belongs to.
+
+Notes are typeset with Typst, so lists, emphasis and math look as you wrote them, in Typst's default font. A few things don't carry over:
+
+- A note can't use variables or functions defined elsewhere in your document. Such a note is shown as plain text.
+- Touying and Polylux keep notes as text, so math in their notes shows as plain text. Lists, bold and italic still work.
 
 Notes appear only in the speaker view. If you use Touying's `show-notes-on-second-screen`, turn it off: the speaker view already shows the notes, and the setting would also draw them on every slide.

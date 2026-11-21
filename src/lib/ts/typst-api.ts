@@ -11,7 +11,13 @@ export interface CompileResponse {
 	errors: Diagnostic[] | null;
 	stats?: { pages: number; words: number; characters: number; characters_excluding_spaces: number };
 	/** Speaker notes per page; absent when the document has none. */
-	notes?: (string | null)[];
+	notes?: (SpeakerNote | null)[];
+}
+
+/** A note typeset by Typst as SVG, with plain text for when typesetting failed. */
+export interface SpeakerNote {
+	text: string;
+	svg?: string;
 }
 
 export async function compileTypst(text: string, document_id?: string): Promise<CompileResponse> {

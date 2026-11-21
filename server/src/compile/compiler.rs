@@ -1,3 +1,4 @@
+use crate::compile::speaker_notes::Note;
 use crate::compile::world::{MemoryWorld, UsedResources};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -17,7 +18,7 @@ pub struct Preview {
     pub svgs: Vec<String>,
     pub thumbnail: String,
     pub stats: DocumentStats,
-    pub notes: Option<Vec<Option<String>>>,
+    pub notes: Option<Vec<Option<Note>>>,
 }
 
 #[derive(Serialize, Clone)]
@@ -62,7 +63,7 @@ fn extract_frame_text(frame: &Frame, text: &mut String) {
     }
 }
 
-fn svg_options(doc: &PagedDocument) -> SvgOptions<Complete> {
+pub(crate) fn svg_options(doc: &PagedDocument) -> SvgOptions<Complete> {
     let requested: SvgOptions = SvgOptions::default();
     requested.resolve(doc.options().get::<SvgFormat>())
 }
@@ -176,7 +177,7 @@ impl TypstCompiler {
                 } else {
                     String::new()
                 };
-                let notes = crate::compile::speaker_notes::page_notes(&doc);
+                let notes = crate::compile::speaker_notes::page_notes(&world, &doc);
                 Ok(Preview { svgs, thumbnail, stats, notes })
             }
             Warned {

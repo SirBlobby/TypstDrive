@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use crate::compile::compiler::{CompileFailure, DocumentStats, ProjectInput};
 use crate::compile::latex;
 use crate::compile::render::{self, RenderFailure};
+use crate::compile::speaker_notes::Note;
 use crate::sharing::access;
 use crate::AppState;
 use crate::db::sql;
@@ -31,7 +32,7 @@ pub struct CompileResponse {
     pub errors: Option<Vec<Diagnostic>>,
     pub stats: Option<DocumentStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<Vec<Option<String>>>,
+    pub notes: Option<Vec<Option<Note>>>,
 }
 
 #[derive(Serialize)]

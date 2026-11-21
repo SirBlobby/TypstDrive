@@ -40,6 +40,9 @@
 	const fontSizeKey = 'typstdrive.speakerNotesFontSize';
 	const minFontSize = 12;
 	const maxFontSize = 40;
+	// Typst sets notes 300pt wide at 11pt, so the page scales with the chosen font size.
+	const notePageWidth = 300;
+	const noteTextSize = 11;
 
 	let noteFontSize = $state(readFontSize());
 
@@ -103,8 +106,10 @@
 				</button>
 			</div>
 			<div class="min-h-0 flex-1 overflow-y-auto rounded-lg border border-white/10 bg-neutral-900/70 p-4 leading-relaxed" style="font-size: {noteFontSize}px;">
-				{#if current?.note}
-					<p class="whitespace-pre-wrap text-white/90">{current.note}</p>
+				{#if current?.note?.svg}
+					<div class="speaker-note max-w-full" style="width: {(notePageWidth * noteFontSize) / noteTextSize}px;">{@html current.note.svg}</div>
+				{:else if current?.note}
+					<p class="whitespace-pre-wrap text-white/90">{current.note.text}</p>
 				{:else}
 					<p class="text-white/40">No notes for this slide.</p>
 				{/if}
@@ -112,3 +117,11 @@
 		</div>
 	</section>
 </div>
+
+<style>
+	.speaker-note :global(svg) {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+</style>

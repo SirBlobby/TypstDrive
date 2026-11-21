@@ -1,12 +1,14 @@
+import type { SpeakerNote } from '#lib/ts/typst-api';
+
 export interface Slide {
 	markup: string;
 	aspectRatio: number;
-	note: string | null;
+	note: SpeakerNote | null;
 }
 
 export const defaultAspectRatio = 16 / 9;
 
-export function collectSlides(notes: (string | null)[] = []): Slide[] {
+export function collectSlides(notes: (SpeakerNote | null)[] = []): Slide[] {
 	const pages = document.querySelectorAll<SVGSVGElement>('.preview-container svg');
 	return Array.from(pages, (page, index) => {
 		const viewBox = page.viewBox.baseVal;
