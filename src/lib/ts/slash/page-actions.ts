@@ -136,7 +136,7 @@ export function buildPageActions(handlers: PageActionHandlers): SlashCommand[] {
         ...modeCommands(handlers),
         ...viewCommands(),
         ...optionalCommand(handlers.openPresentation, { id: 'present', label: 'Present', description: 'Show the pages as slides', icon: 'mdi:presentation-play', group: 'View', keywords: ['slides', 'presentation', 'fullscreen'] }),
-        ...optionalCommand(handlers.openSpeakerView, { id: 'speaker', label: 'Speaker view', description: 'Presentation in a separate window', icon: 'mdi:account-voice', group: 'View', keywords: ['slides', 'presentation', 'notes', 'presenter'] }),
+        ...optionalCommand(handlers.openSpeakerView, { id: 'speaker', label: 'Speaker view', description: 'Present in a new window', icon: 'mdi:account-voice', group: 'View', keywords: ['slides', 'presentation', 'notes', 'presenter'] }),
         ...exportCommands(handlers),
         ...optionalCommand(handlers.saveVersion, { id: 'save-version', label: 'Save version', description: 'Keep a snapshot in the history', icon: 'mdi:content-save-outline', group: 'File', keywords: ['snapshot', 'checkpoint'], shortcut: 'saveVersion' }),
         ...optionalCommand(handlers.openHistory, { id: 'version-history', label: 'Version history', description: 'Look back at older versions', icon: 'mdi:history', group: 'File', keywords: ['versions', 'restore', 'revisions'] }),

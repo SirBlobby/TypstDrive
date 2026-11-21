@@ -10,7 +10,7 @@
 
 	const options: { layout: PresentationLayout; label: string; description: string; icon: string }[] = [
 		{ layout: 'audience', label: 'Present', description: 'Full screen in this tab', icon: 'mdi:presentation-play' },
-		{ layout: 'speaker', label: 'Speaker view', description: 'Presentation in a separate window', icon: 'mdi:account-voice' }
+		{ layout: 'speaker', label: 'Speaker view', description: 'Present in a new window', icon: 'mdi:account-voice' }
 	];
 
 	function choose(layout: PresentationLayout) {
