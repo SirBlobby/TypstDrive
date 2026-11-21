@@ -27,6 +27,7 @@
 	import InsertDialogs from './editor/insert/InsertDialogs.svelte';
 	import { insertDialogStore, insertOptions } from '../ts/insert-dialog';
 	import { openFind, openReplace } from '../ts/editor-insert';
+	import { formatDocument } from '../ts/editor-format';
 	import PromptModal from './PromptModal.svelte';
 	import ConfirmModal from './ConfirmModal.svelte';
 	import Icon from '@iconify/svelte';
@@ -500,6 +501,10 @@
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
 								<button onclick={() => { activeMenu = null; if ($editorViewStore) openFind($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Find <span class="text-xs opacity-60">{shortcutText(currentKeybind('find'))}</span></button>
 								<button onclick={() => { activeMenu = null; if ($editorViewStore) openReplace($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Search and Replace</button>
+								{#if directEditing && !isLatex}
+									<div class="h-px bg-[var(--theme-border)] my-1"></div>
+									<button onclick={() => { activeMenu = null; if ($editorViewStore) formatDocument($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Format document <span class="text-xs opacity-60">{shortcutText(currentKeybind('formatDocument'))}</span></button>
+								{/if}
 							</div>
 						{/if}
 					</div>

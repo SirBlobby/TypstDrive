@@ -43,7 +43,7 @@ fn import_format(file_name: &str) -> &'static str {
     }
 }
 
-async fn may_convert(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> bool {
+pub async fn may_convert(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> bool {
     if user_id.is_some() {
         return true;
     }

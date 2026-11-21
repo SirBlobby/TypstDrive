@@ -2,7 +2,6 @@ import {
 	serverCompletion,
 	serverDiagnostics,
 	signatureHelp,
-	formatKeymap,
 	renameKeymap,
 	jumpToDefinitionKeymap,
 	findReferencesKeymap
@@ -14,6 +13,6 @@ export function typstLspExtensions() {
 		serverCompletion(),
 		signatureHelp(),
 		serverDiagnostics(),
-		keymap.of([...formatKeymap, ...renameKeymap, ...jumpToDefinitionKeymap, ...findReferencesKeymap])
+		keymap.of([...renameKeymap, ...jumpToDefinitionKeymap, ...findReferencesKeymap])
 	];
 }

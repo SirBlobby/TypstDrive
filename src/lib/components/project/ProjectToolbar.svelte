@@ -8,6 +8,9 @@
 	import { editorViewStore, commentsSidebarOpen } from '../../ts/store';
 	import { suggestingModeStore } from '../../ts/suggestions';
 	import { startCommentOnSelection } from '../../ts/comments';
+	import { formatDocument } from '../../ts/editor-format';
+	import { currentKeybind } from '../../ts/keybinds/keybinds-store';
+	import { shortcutText } from '../../ts/keybinds/key-format';
 	import { buildPageActions, registerPageActions } from '../../ts/slash/page-actions';
 	import { latexImageFormat, projectImageLibrary, typstImageFormat } from '../../ts/image-library';
 	import { latexFileReference } from '../../ts/latex-file-reference';
@@ -62,6 +65,7 @@
 	let directEditing = $derived(canEdit && !$suggestingModeStore);
 	let imageLibrary = $derived(projectImageLibrary(projectId, onFilesChanged));
 	let isLatexFile = $derived(activePath.toLowerCase().endsWith('.tex'));
+	let isTypstFile = $derived(activePath.toLowerCase().endsWith('.typ'));
 	let isLatexProject = $derived(entrypoint.toLowerCase().endsWith('.tex'));
 	let canPublish = $derived(role === 'owner' && !isLatexProject);
 
@@ -421,6 +425,9 @@
 									<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)]">Redo (Ctrl+Y)</button>
 									<div class="h-px bg-[var(--theme-border)] my-1"></div>
 									<button onclick={() => { activeMenu = null; showCitations = true; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center gap-2"><Icon icon="ph:quotes" class="text-base" /> Citations</button>
+									{#if directEditing && isTypstFile}
+										<button onclick={() => { activeMenu = null; if ($editorViewStore) formatDocument($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between">Format document <span class="text-xs opacity-60">{shortcutText(currentKeybind('formatDocument'))}</span></button>
+									{/if}
 								</div>
 							{/if}
 						</div>
