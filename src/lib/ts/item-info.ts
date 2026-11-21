@@ -1,3 +1,5 @@
+import { versionedUrl } from './file-preview';
+
 export type ItemKind = 'document' | 'project' | 'folder' | 'file';
 
 export type InfoPerson = {
@@ -45,8 +47,7 @@ export async function replaceFileData(fileId: string, file: File) {
 }
 
 export function fileDataUrl(file: { id: string; updated_at?: string | null }) {
-    const version = file.updated_at ? `?v=${encodeURIComponent(file.updated_at)}` : '';
-    return `/api/files/${file.id}/data${version}`;
+    return versionedUrl(`/api/files/${file.id}/data`, file.updated_at);
 }
 
 export function formatTimestamp(value: string) {
