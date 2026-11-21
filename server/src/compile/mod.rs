@@ -8,5 +8,6 @@ pub mod lsp;
 pub mod lsp_guard;
 pub mod pandoc;
 pub mod render;
+pub mod speaker_notes;
 pub mod tectonic;
 pub mod world;

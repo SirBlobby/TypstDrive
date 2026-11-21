@@ -10,6 +10,8 @@
 	import CitationsModal from './citations/CitationsModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
+	import PresentMenu from "./presentation/PresentMenu.svelte";
+	import type { PresentationLayout } from "#lib/ts/presentation-sync";
 	import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
 	import { matchesKeybind, shortcutText } from '#lib/ts/keybinds/key-format';
 	import InfoModal from './drive/InfoModal.svelte';
@@ -65,7 +67,7 @@
 		checkUnsharedFiles();
 	});
 	let isPageSettingsOpen = $state(false);
-	let isPresentationOpen = $state(false);
+	let presentationLayout = $state<PresentationLayout | null>(null);
 	
 	let { title = 'Untitled Document', docId = undefined, role = 'viewer', language = 'typst' }: { title?: string, docId?: string, role?: DocumentRole, language?: DocumentLanguage } = $props();
 
@@ -372,7 +374,8 @@
 			exportConverted: handlePandocExport,
 			print: handlePrint,
 			openShare: canEdit ? () => (isShareModalOpen = true) : undefined,
-			openPresentation: canEdit ? () => (isPresentationOpen = true) : undefined,
+			openPresentation: canEdit ? () => (presentationLayout = 'audience') : undefined,
+			openSpeakerView: canEdit ? () => (presentationLayout = 'speaker') : undefined,
 			openPageSettings: directEditing && !isLatex ? () => (isPageSettingsOpen = true) : undefined,
 			openCitations: canEdit && docId ? () => (isCitationsOpen = true) : undefined,
 			openInfo: docId ? openInfo : undefined,
@@ -559,7 +562,7 @@
 			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
 			{#if !readOnly}
 				<HeaderIconButton icon="mdi:history" label="Version history" onclick={() => goto(`/doc/${docId}/history`)} />
-				<HeaderIconButton icon="mdi:presentation-play" label="Present" onclick={() => (isPresentationOpen = true)} />
+				<PresentMenu onpresent={(layout) => (presentationLayout = layout)} />
 				<HeaderIconButton icon="mdi:share-variant-outline" label="Share" onclick={() => (isShareModalOpen = true)} />
 			{/if}
 			<HeaderIconButton icon="mdi:comment-outline" label="Comments" active={$commentsSidebarOpen} onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)} />
@@ -614,8 +617,8 @@
 	<PageSettingsModal onClose={() => (isPageSettingsOpen = false)} onApply={handlePageSettings} currentSettings={parseSettings()} />
 {/if}
 
-{#if isPresentationOpen}
-	<PresentationMode onClose={() => (isPresentationOpen = false)} />
+{#if presentationLayout}
+	<PresentationMode mode={presentationLayout} onClose={() => (presentationLayout = null)} />
 {/if}
 
 

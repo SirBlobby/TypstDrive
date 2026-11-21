@@ -24,7 +24,7 @@
 	import { previewText } from '#lib/ts/suggestion-preview';
 	import { remoteDraftsChangedStore, shareEditingMode } from '#lib/ts/live-review';
 	import { endReviewSession, startReviewSession, switchReviewFile } from '#lib/ts/review-session';
-	import { editorErrors, documentStatsStore, fileTreeCollapsedStore, commentsSidebarOpen } from '#lib/ts/store';
+	import { editorErrors, documentStatsStore, speakerNotesStore, fileTreeCollapsedStore, commentsSidebarOpen } from '#lib/ts/store';
 	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
 	import Icon from '@iconify/svelte';
 	import { isPlaceholder, placeholderPath } from '#lib/ts/project-tree';
@@ -93,6 +93,7 @@
 				if (res.stats) $documentStatsStore = res.stats;
 				if (res.svgs) {
 					svgs = res.svgs;
+					$speakerNotesStore = res.notes ?? [];
 					errors = [];
 					$editorErrors = [];
 				} else if (res.errors) {

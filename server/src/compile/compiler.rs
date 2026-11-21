@@ -12,6 +12,14 @@ use typst_pdf::{pdf, PdfOptions};
 use typst_render::{render, PngFormat, RenderOptions};
 use typst_svg::{SvgFormat, SvgOptions};
 
+/// Rendered pages for the live preview.
+pub struct Preview {
+    pub svgs: Vec<String>,
+    pub thumbnail: String,
+    pub stats: DocumentStats,
+    pub notes: Option<Vec<Option<String>>>,
+}
+
 #[derive(Serialize, Clone)]
 pub struct DocumentStats {
     pub pages: usize,
@@ -149,10 +157,7 @@ impl TypstCompiler {
     pub fn compile_svg(
         &self,
         input: ProjectInput,
-    ) -> Result<
-        (Vec<String>, String, DocumentStats),
-        Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>,
-    > {
+    ) -> Result<Preview, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
         let world = input.into_world(false);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
@@ -171,7 +176,8 @@ impl TypstCompiler {
                 } else {
                     String::new()
                 };
-                Ok((svgs, thumbnail, stats))
+                let notes = crate::compile::speaker_notes::page_notes(&doc);
+                Ok(Preview { svgs, thumbnail, stats, notes })
             }
             Warned {
                 output: Err(errors),

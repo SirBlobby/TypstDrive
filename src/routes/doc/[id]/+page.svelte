@@ -17,7 +17,7 @@
 	import CommentHighlights from '#lib/components/comments/CommentHighlights.svelte';
 	import SuggestionHighlights from '#lib/components/suggestions/SuggestionHighlights.svelte';
 	import CommentsPanel from '#lib/components/comments/CommentsPanel.svelte';
-	import { editorErrors, documentStatsStore, commentsSidebarOpen } from '#lib/ts/store';
+	import { editorErrors, documentStatsStore, speakerNotesStore, commentsSidebarOpen } from '#lib/ts/store';
 	import { bibliographyChangedStore } from '#lib/ts/citations';
 	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
 	import { reviewExtensions } from '#lib/ts/review-extensions';
@@ -66,6 +66,7 @@
 				}
 				if (res.svgs) {
 					svgs = res.svgs;
+					$speakerNotesStore = res.notes ?? [];
 					errors = [];
 					$editorErrors = [];
 				} else if (res.errors) {
