@@ -31,7 +31,7 @@
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import Icon from '@iconify/svelte';
 	import { isPlaceholder, placeholderPath, type ProjectFile } from '#lib/ts/project-tree';
-	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
+	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile, whenSynced } from '#lib/ts/yjs-project';
 	import { createFollowController } from '#lib/ts/follow';
 	import { filePresenceStore } from '#lib/ts/presence';
 
@@ -49,6 +49,8 @@
 	let ready = $state(false);
 	let timeoutId: number | undefined;
 	let lastCompiledSources: string | null = null;
+	let sourcesReady = false;
+	const SYNC_WAIT_MS = 8000;
 
 	let readOnly = $derived(role === 'viewer');
 	let canEdit = $derived(role === 'owner' || role === 'editor');
@@ -84,6 +86,7 @@
 	function previewSources() {
 		const sources: Record<string, string> = {};
 		for (const entry of openFiles()) {
+			if (!entry.provider.synced) continue;
 			const source = { doc: entry.doc, text: entry.text, awareness: entry.provider.awareness };
 			sources[entry.path] = previewText(source, entry.fileId, entry.fileId === activeFileId);
 		}
@@ -91,7 +94,7 @@
 	}
 
 	function triggerCompile() {
-		if (!showPreview) return;
+		if (!showPreview || !sourcesReady) return;
 		const sources = previewSources();
 		const fingerprint = JSON.stringify(sources);
 		if (fingerprint === lastCompiledSources) return;
@@ -360,8 +363,10 @@
 				suggestingModeStore.set(role === 'suggester');
 			})
 			.then(loadFiles)
-			.then(() => {
+			.then(async () => {
 				ready = true;
+				await Promise.all(openFiles().map((entry) => whenSynced(entry, SYNC_WAIT_MS)));
+				sourcesReady = true;
 				triggerCompile();
 			})
 			.catch((e) => console.error('Failed to load project', e));
