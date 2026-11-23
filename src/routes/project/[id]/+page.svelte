@@ -7,6 +7,7 @@
 	import ErrorBanner from '#lib/components/ErrorBanner.svelte';
 	import DocFooter from '#lib/components/DocFooter.svelte';
 	import FileTree from '#lib/components/project/FileTree.svelte';
+	import AssetPreview from '#lib/components/project/AssetPreview.svelte';
 	import ProjectToolbar from '#lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '#lib/components/PublishPackageModal.svelte';
 	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
@@ -28,16 +29,10 @@
 	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import Icon from '@iconify/svelte';
-	import { isPlaceholder, placeholderPath } from '#lib/ts/project-tree';
+	import { isPlaceholder, placeholderPath, type ProjectFile } from '#lib/ts/project-tree';
 	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
 	import { createFollowController } from '#lib/ts/follow';
 	import { filePresenceStore } from '#lib/ts/presence';
-
-	interface ProjectFile {
-		id: string;
-		path: string;
-		kind: string;
-	}
 
 	const projectId = page.params.id as string;
 
@@ -46,6 +41,8 @@
 	let role = $state('owner');
 	let files = $state<ProjectFile[]>([]);
 	let activeFileId = $state('');
+	// Binary files open in a viewer in place of the editor; activeFileId keeps the last text file.
+	let previewFileId = $state('');
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
 	let showPublish = $state(false);
@@ -57,8 +54,17 @@
 	let canEdit = $derived(role === 'owner' || role === 'editor');
 	const editorExtensions = reviewExtensions();
 	let showPreview = $derived($previewVisibleStore || readOnly);
+	let previewFile = $derived(files.find((f) => f.id === previewFileId));
+	// The asset viewer shows beside the PDF even when the editor column would be hidden.
+	let assetBesidePreview = $derived(!!previewFile && (readOnly || $previewModeStore === 'preview'));
 	let editorWidthClass = $derived(
-		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]' : 'flex-1 min-w-0'
+		assetBesidePreview
+			? 'w-full min-w-0 md:w-0 md:flex-1 border-r border-[var(--color-line)]'
+			: $previewModeStore === 'split'
+				? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]'
+				: $previewModeStore === 'preview'
+					? 'hidden'
+					: 'flex-1 min-w-0'
 	);
 	let activeEntry = $derived(activeFileId ? getOpenFile(activeFileId) : undefined);
 	let activePath = $derived(files.find((f) => f.id === activeFileId)?.path ?? '');
@@ -145,8 +151,12 @@
 	}
 
 	function selectFile(file: ProjectFile) {
-		if (file.kind !== 'text') return;
-		activeFileId = file.id;
+		if (file.kind === 'text') {
+			activeFileId = file.id;
+			previewFileId = '';
+		} else {
+			previewFileId = file.id;
+		}
 	}
 
 	async function createFile(path: string) {
@@ -161,6 +171,7 @@
 			const entry = openFile(file.id, file.path);
 			entry.text.observe(scheduleCompile);
 			activeFileId = file.id;
+			previewFileId = '';
 		}
 	}
 
@@ -279,7 +290,9 @@
 	});
 
 	function followIntoFile(fileId: string) {
-		if (files.some((file) => file.id === fileId && file.kind === 'text')) activeFileId = fileId;
+		if (!files.some((file) => file.id === fileId && file.kind === 'text')) return;
+		activeFileId = fileId;
+		previewFileId = '';
 	}
 
 	function startProjectReview() {
@@ -352,7 +365,7 @@
 			<aside class="w-56 flex-shrink-0 hidden md:block">
 				<FileTree
 					{files}
-					{activeFileId}
+					activeFileId={previewFile?.id ?? activeFileId}
 					{entrypoint}
 					readOnly={!canEdit}
 					presence={$filePresenceStore}
@@ -370,9 +383,11 @@
 			</aside>
 		{/if}
 
-		{#if !readOnly}
+		{#if !readOnly || previewFile}
 			<div class="flex flex-col min-h-0 {editorWidthClass}">
-				{#if ready && activeEntry}
+				{#if previewFile}
+					<AssetPreview {projectId} file={previewFile} onClose={() => (previewFileId = '')} />
+				{:else if ready && activeEntry}
 					{#key activeFileId}
 						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} enableLsp={false} extensions={editorExtensions} slash={{ insertDialogs: canEdit, embedDocuments: false, canComment: !readOnly }} />
 						<CommentHighlights />

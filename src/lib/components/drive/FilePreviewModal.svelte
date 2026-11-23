@@ -1,6 +1,8 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import { fileDataUrl } from '#lib/ts/item-info';
+    import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP, previewKindFor, stepZoom } from '#lib/ts/file-preview';
+    import FileViewer from '#lib/components/FileViewer.svelte';
     import Icon from '@iconify/svelte';
 
     let { files, startFileId, onClose }: {
@@ -9,42 +11,25 @@
         onClose: () => void;
     } = $props();
 
-    const minZoom = 0.25;
-    const maxZoom = 4;
-
     let currentIndex = $state(untrack(() => Math.max(0, files.findIndex((file) => file.id === startFileId))));
     let zoom = $state(1);
-    let imageFailed = $state(false);
 
     let currentFile = $derived(files[currentIndex]);
     let fileUrl = $derived(fileDataUrl(currentFile));
-    let previewKind = $derived(previewKindFor(currentFile));
+    let previewKind = $derived(previewKindFor(currentFile.mime_type, currentFile.name));
     let hasMultiple = $derived(files.length > 1);
-
-    function previewKindFor(file: any): 'image' | 'pdf' | 'none' {
-        const mimeType = (file.mime_type ?? '').toLowerCase();
-        const name = (file.name ?? '').toLowerCase();
-        if (mimeType.startsWith('image/')) return 'image';
-        if (mimeType === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
-        return 'none';
-    }
 
     function showFile(index: number) {
         currentIndex = (index + files.length) % files.length;
         zoom = 1;
-        imageFailed = false;
-    }
-
-    function changeZoom(step: number) {
-        zoom = Math.min(maxZoom, Math.max(minZoom, Math.round((zoom + step) * 100) / 100));
     }
 
     function handleKeydown(e: KeyboardEvent) {
         if (e.key === 'Escape') onClose();
         else if (e.key === 'ArrowRight' && hasMultiple) showFile(currentIndex + 1);
         else if (e.key === 'ArrowLeft' && hasMultiple) showFile(currentIndex - 1);
-        else if (previewKind === 'image' && (e.key === '+' || e.key === '=')) changeZoom(0.25);
-        else if (previewKind === 'image' && e.key === '-') changeZoom(-0.25);
+        else if (previewKind === 'image' && (e.key === '+' || e.key === '=')) zoom = stepZoom(zoom, ZOOM_STEP);
+        else if (previewKind === 'image' && e.key === '-') zoom = stepZoom(zoom, -ZOOM_STEP);
     }
 </script>
 
@@ -70,9 +55,9 @@
 
         {#if previewKind === 'image'}
             <div class="hidden sm:flex items-center gap-1 rounded-md bg-white/10 px-1">
-                {@render toolbarButton('mdi:magnify-minus-outline', 'Zoom out', () => changeZoom(-0.25), zoom <= minZoom)}
+                {@render toolbarButton('mdi:magnify-minus-outline', 'Zoom out', () => (zoom = stepZoom(zoom, -ZOOM_STEP)), zoom <= MIN_ZOOM)}
                 <button onclick={() => (zoom = 1)} title="Reset zoom" class="min-w-14 text-xs font-medium text-white/80 hover:text-white">{Math.round(zoom * 100)}%</button>
-                {@render toolbarButton('mdi:magnify-plus-outline', 'Zoom in', () => changeZoom(0.25), zoom >= maxZoom)}
+                {@render toolbarButton('mdi:magnify-plus-outline', 'Zoom in', () => (zoom = stepZoom(zoom, ZOOM_STEP)), zoom >= MAX_ZOOM)}
             </div>
         {/if}
 
@@ -94,31 +79,11 @@
             </div>
         {/if}
 
-        {#key currentFile.id}
-            {#if previewKind === 'image' && !imageFailed}
-                <div class="w-full h-full overflow-auto flex items-center justify-center">
-                    <img
-                        src={fileUrl}
-                        alt={currentFile.name}
-                        onerror={() => (imageFailed = true)}
-                        style="transform: scale({zoom}); transform-origin: center;"
-                        class="max-w-full max-h-full object-contain transition-transform duration-150 select-none"
-                        draggable="false"
-                    />
-                </div>
-            {:else if previewKind === 'pdf'}
-                <iframe src={fileUrl} title={currentFile.name} class="w-full h-full max-w-5xl rounded-lg bg-white"></iframe>
-            {:else}
-                <div class="flex flex-col items-center gap-4 text-center text-white/80">
-                    <Icon icon="mdi:file-eye-outline" class="text-6xl" />
-                    <p class="text-sm">{imageFailed ? 'This image could not be loaded.' : 'No preview available for this file.'}</p>
-                    <a href={fileUrl} download={currentFile.name} class="inline-flex items-center gap-2 rounded-md bg-white/10 hover:bg-white/20 px-4 py-2 text-sm text-white transition-colors">
-                        <Icon icon="mdi:download" class="text-lg" />
-                        Download
-                    </a>
-                </div>
-            {/if}
-        {/key}
+        <div class="w-full h-full flex items-center justify-center text-white">
+            {#key currentFile.id}
+                <FileViewer url={fileUrl} name={currentFile.name} kind={previewKind} {zoom} />
+            {/key}
+        </div>
     </div>
 
     {#if hasMultiple}

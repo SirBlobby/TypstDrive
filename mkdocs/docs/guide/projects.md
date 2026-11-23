@@ -17,6 +17,7 @@ The project editor looks like the document editor, with a file list on the left.
 - **New folder** makes an empty folder. **Upload file** adds files from your computer.
 - Hover over a folder to add a file or folder inside it, **rename** it or **delete** it. Renaming a folder moves everything inside it. Deleting a folder removes every file inside it.
 - Hover over a file to rename or delete it. Renaming accepts a new path, so it can also move the file to another folder.
+- Click an image or PDF to preview it in place of the editor, with zoom, download and open-in-new-tab buttons. Other uploaded files, such as fonts, offer a download instead. Click a text file, or the close button, to go back to editing.
 - Choose which file is the **entry point**, the file that is rendered, with the star next to it. It is `main.typ`, or `main.tex` in a LaTeX project, unless you change it. Any `.typ` or `.tex` file can be the entry point, and the owner and editors can change it. Renaming or moving the entry point, or its folder, keeps it as the entry point. If it is deleted, `main.typ` or `main.tex` takes its place, or else the `.typ` or `.tex` file nearest the top of the project.
 - Files can include each other, for example `#include "chapters/intro.typ"`.
 - Bibliographies (`.bib`), data files and images live right next to your text. **Edit → Citations** adds references by DOI, arXiv, PubMed or Semantic Scholar ID and syncs Zotero into them; see [Citations](citations.md).
