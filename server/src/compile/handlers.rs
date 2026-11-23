@@ -125,6 +125,11 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
     }
 }
 
+/// The input `/api/compile` would build for this request, with the same access checks.
+pub(crate) async fn compile_input(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<ProjectInput> {
+    resolve_source(state, payload, user_id).await.map(|source| source.input)
+}
+
 async fn current_text(state: &AppState, document_id: &str) -> String {
     let room_id = crate::realtime::live_documents::document_room(document_id);
     match crate::realtime::live_documents::live_text(state, &room_id).await {

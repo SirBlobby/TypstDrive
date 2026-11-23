@@ -8,7 +8,8 @@
 	import ErrorBanner from '#lib/components/ErrorBanner.svelte';
 	import { doc, text, provider, initYjs, cleanupYjs, presenceSources } from '#lib/ts/yjs-setup';
 	import { createFollowController } from '#lib/ts/follow';
-	import { compileTypst } from '#lib/ts/typst-api';
+	import { compileTypst, syncClick, syncCursor, type PagePoint } from '#lib/ts/typst-api';
+	import { cursorClickSync, revealOffset } from '#lib/ts/editor-preview-sync';
 	import type { Diagnostic } from '#lib/ts/typst-api';
 	import { page } from '$app/state';
 	import EditorContextMenu from '#lib/components/editor/EditorContextMenu.svelte';
@@ -17,7 +18,7 @@
 	import CommentHighlights from '#lib/components/comments/CommentHighlights.svelte';
 	import SuggestionHighlights from '#lib/components/suggestions/SuggestionHighlights.svelte';
 	import CommentsPanel from '#lib/components/comments/CommentsPanel.svelte';
-	import { editorErrors, documentStatsStore, commentsSidebarOpen } from '#lib/ts/store';
+	import { editorErrors, documentStatsStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
 	import { bibliographyChangedStore } from '#lib/ts/citations';
 	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
@@ -46,7 +47,32 @@
 	let editorWidthClass = $derived(
 		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]' : 'w-full min-w-0'
 	);
-	const editorExtensions = reviewExtensions();
+	const editorExtensions = [reviewExtensions(), cursorClickSync(syncPreviewToCursor)];
+	// The text of the last successful compile: cursor sync only works while the editor still shows it.
+	let lastCompiledInput: { text: string; document_id?: string } | null = null;
+	let jumpTo = $state<(PagePoint & { seq: number }) | null>(null);
+
+	function syncInput() {
+		if (language === 'latex' || !showPreview || !text || !lastCompiledInput) return null;
+		return text.toString() === lastCompiledInput.text ? lastCompiledInput : null;
+	}
+
+	async function syncPreviewToCursor(offset: number) {
+		const input = syncInput();
+		if (!input) return;
+		const [position] = await syncCursor(input, undefined, offset);
+		if (position) jumpTo = { ...position, seq: (jumpTo?.seq ?? 0) + 1 };
+	}
+
+	async function syncCursorToPreview(point: PagePoint) {
+		const input = syncInput();
+		if (!input) return;
+		const target = await syncClick(input, point);
+		if (target?.kind === 'page') jumpTo = { ...target, seq: (jumpTo?.seq ?? 0) + 1 };
+		if (target?.kind === 'source' && $editorViewStore) {
+			revealOffset($editorViewStore, target.offset);
+		}
+	}
 
 	function scheduleCompile() {
 		if (timeoutId) clearTimeout(timeoutId);
@@ -67,6 +93,7 @@
 				}
 				if (res.svgs) {
 					svgs = res.svgs;
+					lastCompiledInput = { text: content, document_id: docId };
 					errors = [];
 					$editorErrors = [];
 				} else if (res.errors) {
@@ -180,7 +207,7 @@
 
 		{#if showPreview}
 		<div class="{isViewer || $previewModeStore === 'preview' ? 'w-full' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
-			<Preview {svgs} />
+			<Preview {svgs} {jumpTo} onPageClick={syncCursorToPreview} />
 			<ErrorBanner {errors} />
 		</div>
 		{/if}

@@ -11,7 +11,8 @@
 	import ProjectToolbar from '#lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '#lib/components/PublishPackageModal.svelte';
 	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
-	import { compileProject } from '#lib/ts/typst-api';
+	import { compileProject, syncClick, syncCursor, type PagePoint } from '#lib/ts/typst-api';
+	import { cursorClickSync, revealOffset } from '#lib/ts/editor-preview-sync';
 	import type { Diagnostic } from '#lib/ts/typst-api';
 	import EditorContextMenu from '#lib/components/editor/EditorContextMenu.svelte';
 	import SlashCommandPalette from '#lib/components/editor/SlashCommandPalette.svelte';
@@ -25,7 +26,7 @@
 	import { previewText } from '#lib/ts/suggestion-preview';
 	import { remoteDraftsChangedStore, shareEditingMode } from '#lib/ts/live-review';
 	import { endReviewSession, startReviewSession, switchReviewFile } from '#lib/ts/review-session';
-	import { editorErrors, documentStatsStore, fileTreeCollapsedStore, commentsSidebarOpen } from '#lib/ts/store';
+	import { editorErrors, documentStatsStore, fileTreeCollapsedStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
 	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import Icon from '@iconify/svelte';
@@ -52,7 +53,12 @@
 
 	let readOnly = $derived(role === 'viewer');
 	let canEdit = $derived(role === 'owner' || role === 'editor');
-	const editorExtensions = reviewExtensions();
+	const editorExtensions = [reviewExtensions(), cursorClickSync(syncPreviewToCursor)];
+	// The sources of the last successful compile: cursor sync only works while the editors still show them.
+	let lastCompiledFiles: Record<string, string> | null = null;
+	let jumpTo = $state<(PagePoint & { seq: number }) | null>(null);
+	// A source selection to apply once the editor for its file has opened.
+	let pendingSelection = $state<{ path: string; offset: number } | null>(null);
 	let showPreview = $derived($previewVisibleStore || readOnly);
 	let previewFile = $derived(files.find((f) => f.id === previewFileId));
 	// The asset viewer shows beside the PDF even when the editor column would be hidden.
@@ -100,6 +106,7 @@
 				if (res.stats) $documentStatsStore = res.stats;
 				if (res.svgs) {
 					svgs = res.svgs;
+					lastCompiledFiles = sources;
 					errors = [];
 					$editorErrors = [];
 				} else if (res.errors) {
@@ -149,6 +156,41 @@
 			if (entry) activeFileId = entry.id;
 		}
 	}
+
+	function syncInput() {
+		if (!showPreview || !lastCompiledFiles) return null;
+		if (JSON.stringify(getAllText()) !== JSON.stringify(lastCompiledFiles)) return null;
+		return { project_id: projectId, files: lastCompiledFiles };
+	}
+
+	async function syncPreviewToCursor(offset: number) {
+		const input = activePath.endsWith('.typ') ? syncInput() : null;
+		if (!input) return;
+		const [position] = await syncCursor(input, activePath, offset);
+		if (position) jumpTo = { ...position, seq: (jumpTo?.seq ?? 0) + 1 };
+	}
+
+	async function syncCursorToPreview(point: PagePoint) {
+		const input = syncInput();
+		if (!input) return;
+		const target = await syncClick(input, point);
+		if (target?.kind === 'page') jumpTo = { ...target, seq: (jumpTo?.seq ?? 0) + 1 };
+		if (target?.kind !== 'source') return;
+		const file = files.find((f) => f.path === target.path);
+		if (!file) return;
+		pendingSelection = { path: target.path, offset: target.offset };
+		if (file.id !== activeFileId) selectFile(file);
+	}
+
+	$effect(() => {
+		const view = $editorViewStore;
+		if (!view || !pendingSelection || pendingSelection.path !== activePath) return;
+		// The store can briefly hold the previous file's view while the editor switches.
+		if (view.state.doc.toString() !== activeEntry?.text.toString()) return;
+		const { offset } = pendingSelection;
+		pendingSelection = null;
+		revealOffset(view, offset);
+	});
 
 	function selectFile(file: ProjectFile) {
 		if (file.kind === 'text') {
@@ -403,7 +445,7 @@
 
 		{#if showPreview}
 			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
-				<Preview {svgs} />
+				<Preview {svgs} {jumpTo} onPageClick={syncCursorToPreview} />
 				<ErrorBanner {errors} />
 			</div>
 		{/if}

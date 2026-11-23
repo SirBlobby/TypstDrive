@@ -69,6 +69,16 @@ fn normalize_path(path: &str) -> String {
     path.trim_start_matches('/').replace('\\', "/")
 }
 
+/// The id of a file in the project itself (not in a package).
+pub fn project_file_id(path: &str) -> Option<FileId> {
+    VirtualPath::new(path).ok().map(|vpath| FileId::new(RootedPath::new(VirtualRoot::Project, vpath)))
+}
+
+/// The project path of `id`, or `None` for files that live in a package.
+pub fn project_path(id: FileId) -> Option<String> {
+    matches!(id.root(), VirtualRoot::Project).then(|| normalize_path(id.vpath().get_without_slash()))
+}
+
 fn export_formats() -> [Format; 4] {
     [
         typst_html::FORMAT,
@@ -118,10 +128,7 @@ impl MemoryWorld {
         local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
         enable_html: bool,
     ) -> Self {
-        let main = FileId::new(RootedPath::new(
-            VirtualRoot::Project,
-            VirtualPath::new(&entrypoint).unwrap_or_else(|_| VirtualPath::new("main.typ").unwrap()),
-        ));
+        let main = project_file_id(&entrypoint).unwrap_or_else(|| project_file_id("main.typ").unwrap());
         let downloader = SystemDownloader::new("TypstDrive (typst-kit)");
         let packages = SystemPackages::new(downloader);
 
@@ -194,6 +201,12 @@ impl MemoryWorld {
             }
         }
         data.ok_or_else(|| FileError::NotFound(path.into()))
+    }
+}
+
+impl typst_ide::IdeWorld for MemoryWorld {
+    fn upcast(&self) -> &dyn World {
+        self
     }
 }
 
