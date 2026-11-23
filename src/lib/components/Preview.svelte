@@ -26,12 +26,25 @@
 		return width > 0 && height > 0 ? { width, height } : null;
 	}
 
-	let pages = $derived(
-		svgs.map((raw) => {
-			const svg = safeSvg(raw);
-			return { svg, size: pageSize(svg) };
-		})
-	);
+	type PreparedPage = { svg: string; size: { width: number; height: number } | null };
+	let preparedPages = new Map<string, PreparedPage>();
+
+	function preparePages(rawPages: string[]) {
+		const nextPrepared = new Map<string, PreparedPage>();
+		const result = rawPages.map((raw) => {
+			let prepared = nextPrepared.get(raw) ?? preparedPages.get(raw);
+			if (!prepared) {
+				const svg = safeSvg(raw);
+				prepared = { svg, size: pageSize(svg) };
+			}
+			nextPrepared.set(raw, prepared);
+			return prepared;
+		});
+		preparedPages = nextPrepared;
+		return result;
+	}
+
+	let pages = $derived(preparePages(svgs));
 	let maxPageWidth = $derived(Math.max(0, ...pages.map((page) => page.size?.width ?? 0)));
 	let columnWidth = $derived(maxPageWidth > 0 ? `width: min(${maxPageWidth}px, 100%);` : '');
 
