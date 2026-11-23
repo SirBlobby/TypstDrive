@@ -42,9 +42,9 @@ The **View** button in the top bar chooses what the editor shows:
 
 In **Editor and preview**, drag the line between the two to give either side more room, or double-click it to split them evenly again. With the line focused, the left and right arrow keys move it too.
 
-Your choice and the split are remembered in your browser. Viewers only ever see the preview.
+In a Typst file, the editor and preview follow each other. Click in the text and the preview scrolls to that spot, marking it briefly. Click the preview and the cursor moves to the text it came from; in a project, its file opens first. Typing does not move the preview, and while the preview is out of date or the document has an error, clicks do nothing until it catches up.
 
-In a Typst file, the editor and preview follow each other. Click in the text and the preview scrolls to that spot, marking it briefly. Click the preview and the text it came from is selected in the editor; in a project, its file opens first. Typing does not move the preview, and while the preview is out of date (or the document has an error) clicks do nothing until it catches up.
+Your choice and the split are remembered in your browser. Viewers only ever see the preview.
 
 ## The toolbar
 

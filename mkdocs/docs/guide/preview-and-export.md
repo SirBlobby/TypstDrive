@@ -6,6 +6,7 @@ The preview on the right shows every page of your document exactly as it will lo
 
 - Zoom in and out with the zoom buttons.
 - Use the **View** button to show the editor and preview side by side, the editor only, or the preview only. See [View modes](editor.md#view-modes).
+- In a Typst file, click the preview to move the cursor to the text it came from, or click the text to scroll the preview there. See [View modes](editor.md#view-modes).
 - If there is a mistake in your document, the preview keeps showing the last version that worked, and the error bar tells you what to fix.
 
 ## Downloading
