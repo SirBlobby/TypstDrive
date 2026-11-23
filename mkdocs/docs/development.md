@@ -101,7 +101,7 @@ bun run docs
 
 The image workflow signs in to `ghcr.io` with the built-in `GITHUB_TOKEN`. Run it manually with `linux/amd64,linux/arm64` to build arm images too.
 
-Workflows on pull requests from forks wait for a maintainer to approve them before they run. Dependabot opens weekly pull requests against `dev` for web app packages and GitHub Actions.
+Workflows on pull requests from forks wait for a maintainer to approve them before they run.
 
 ### Branch rules
 
