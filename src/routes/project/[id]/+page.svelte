@@ -176,7 +176,7 @@
 		const file = files.find((f) => f.path === target.path);
 		if (!file) return;
 		pendingSelection = { path: target.path, offset: target.offset };
-		if (file.id !== activeFileId) selectFile(file);
+		selectFile(file);
 	}
 
 	$effect(() => {
