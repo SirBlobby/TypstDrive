@@ -77,6 +77,14 @@ if (typeof window !== 'undefined') {
     });
 }
 
+export function normalizeColor(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const color = value.trim().toLowerCase();
+    if (/^#[0-9a-f]{6}$/.test(color)) return color;
+    if (/^#[0-9a-f]{3}$/.test(color)) return `#${[...color.slice(1)].map((digit) => digit + digit).join('')}`;
+    return null;
+}
+
 export function themeKey(scope: ThemeScope, id: string) {
     return `${scope}:${id}`;
 }

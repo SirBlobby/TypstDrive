@@ -12,6 +12,7 @@
     import SsoButtons from '#lib/components/auth/SsoButtons.svelte';
     import EmailCodeForm from '#lib/components/auth/EmailCodeForm.svelte';
     import type { User } from '#lib/ts/auth';
+    import { safeRedirectPath } from '#lib/ts/links';
 
     const EMAIL_NOT_VERIFIED = 428;
 
@@ -28,7 +29,7 @@
     let emailCodeAvailable = $derived(options?.email_code_login_available ?? false);
     let showEmailCode = $derived(emailCodeAvailable && (useEmailCode || !passwordAvailable));
 
-    const redirectTo = page.url.searchParams.get('redirect') ?? '/drive';
+    const redirectTo = safeRedirectPath(page.url.searchParams.get('redirect'));
 
     async function login(e: Event) {
         e.preventDefault();
@@ -53,7 +54,7 @@
 
     function finishSignIn(user: User) {
         userStore.set(user);
-        goto(redirectTo.startsWith('/') ? redirectTo : '/drive');
+        goto(redirectTo);
     }
 
     function switchMethod(toEmailCode: boolean) {

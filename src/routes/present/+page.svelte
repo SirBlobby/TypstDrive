@@ -4,6 +4,7 @@
 	import Icon from '@iconify/svelte';
 	import { brandingStore } from '#lib/ts/branding';
 	import SlideStage from '#lib/components/presentation/SlideStage.svelte';
+	import { safeSvg } from '#lib/ts/safe-svg';
 	import {
 		forwardedKey,
 		presentationChannel,
@@ -31,7 +32,7 @@
 	}
 
 	function handleMessage(message: SpeakerMessage) {
-		if (message.type === 'slides') slides = message.slides;
+		if (message.type === 'slides') slides = message.slides.map((slide) => ({ ...slide, markup: safeSvg(slide.markup) }));
 		else if (message.type === 'state') audience = message.state;
 		else if (message.type === 'laser') laser = message.point;
 		else if (message.type === 'end') {

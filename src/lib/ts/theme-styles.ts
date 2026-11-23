@@ -1,13 +1,17 @@
-import { appColorFields, themeKey, type CustomTheme, type ThemeLibrary, type ThemePalette } from './custom-themes';
+import { appColorFields, normalizeColor, themeKey, type CustomTheme, type ThemeLibrary, type ThemePalette } from './custom-themes';
 
 const STYLE_ELEMENT_ID = 'custom-theme-colors';
 
 function cssVariables(palette: ThemePalette) {
-    return appColorFields.map(({ key }) => `--color-${key.replace(/_/g, '-')}: ${palette[key]};`).join(' ');
+    return appColorFields
+        .map(({ key }) => ({ name: key.replace(/_/g, '-'), color: normalizeColor(palette[key]) }))
+        .filter(({ color }) => color !== null)
+        .map(({ name, color }) => `--color-${name}: ${color};`)
+        .join(' ');
 }
 
 function themeRules(key: string, theme: CustomTheme) {
-    const selector = `:root[data-color-theme="${key}"]`;
+    const selector = `:root[data-color-theme="${CSS.escape(key)}"]`;
     return [
         `${selector}:not([data-theme='dark']) { ${cssVariables(theme.light)} }`,
         `${selector}[data-theme='dark'] { ${cssVariables(theme.dark)} }`
