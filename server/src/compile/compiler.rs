@@ -70,6 +70,35 @@ pub(crate) fn svg_options(doc: &PagedDocument) -> SvgOptions<Complete> {
     requested.resolve(doc.options().get::<SvgFormat>())
 }
 
+fn export_svg_pages(pages: &[typst_layout::Page], options: &SvgOptions<Complete>) -> Vec<String> {
+    let threads = std::thread::available_parallelism()
+        .map_or(1, |n| n.get())
+        .min(8)
+        .min(pages.len());
+    if threads <= 1 {
+        return pages.iter().map(|page| typst_svg::svg(page, options)).collect();
+    }
+    let mut svgs = vec![String::new(); pages.len()];
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..threads)
+            .map(|worker| {
+                scope.spawn(move || {
+                    (worker..pages.len())
+                        .step_by(threads)
+                        .map(|index| (index, typst_svg::svg(&pages[index], options)))
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        for worker in workers {
+            for (index, svg) in worker.join().expect("SVG export thread panicked") {
+                svgs[index] = svg;
+            }
+        }
+    });
+    svgs
+}
+
 fn png_options(doc: &PagedDocument) -> RenderOptions<Complete> {
     let requested: RenderOptions = RenderOptions::default();
     requested.resolve(doc.options().get::<PngFormat>())
@@ -137,7 +166,38 @@ fn page_point(document: &PagedDocument, position: &PagedPosition) -> Option<Page
 
 pub type CompileFailure = Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>;
 
-const MEMO_CACHE_MAX_AGE: usize = 10;
+const CACHE_TICK: std::time::Duration = std::time::Duration::from_secs(60);
+
+fn env_usize(name: &str, default: usize) -> usize {
+    std::env::var(name).ok().and_then(|v| v.trim().parse().ok()).unwrap_or(default)
+}
+
+fn resident_bytes() -> Option<usize> {
+    let statm = std::fs::read_to_string("/proc/self/statm").ok()?;
+    let pages: usize = statm.split_whitespace().nth(1)?.parse().ok()?;
+    let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+    (page_size > 0).then(|| pages * page_size as usize)
+}
+
+pub fn spawn_cache_eviction() {
+    let max_idle_ticks = env_usize("TYPST_CACHE_MAX_IDLE_MINUTES", 60).max(1);
+    let max_memory = env_usize("TYPST_CACHE_MAX_MEMORY_MB", 2560).saturating_mul(1_000_000);
+    tracing::info!(
+        "Typst cache: entries dropped after {max_idle_ticks} min unused, or after 1 min above {} MB resident",
+        max_memory / 1_000_000
+    );
+    std::thread::Builder::new()
+        .name("typst-cache-eviction".into())
+        .spawn(move || loop {
+            std::thread::sleep(CACHE_TICK);
+            let over_budget = resident_bytes().is_some_and(|rss| rss > max_memory);
+            if over_budget {
+                tracing::info!("Typst cache: over the memory budget, dropping entries unused for 1 min");
+            }
+            typst::comemo::evict(if over_budget { 1 } else { max_idle_ticks });
+        })
+        .expect("failed to start the Typst cache eviction thread");
+}
 
 pub struct TypstCompiler;
 
@@ -163,12 +223,7 @@ where
     F: FnOnce(&TypstCompiler) -> T + Send + 'static,
     T: Send + 'static,
 {
-    let result = tokio::task::spawn_blocking(move || {
-        let output = job(&TypstCompiler);
-        typst::comemo::evict(MEMO_CACHE_MAX_AGE);
-        output
-    })
-    .await;
+    let result = tokio::task::spawn_blocking(move || job(&TypstCompiler)).await;
     match result {
         Ok(output) => Some(output),
         Err(error) => {
@@ -197,16 +252,8 @@ impl TypstCompiler {
             } => {
                 let stats = extract_stats(&doc);
                 let options = svg_options(&doc);
-                let svgs = doc
-                    .pages()
-                    .iter()
-                    .map(|page| typst_svg::svg(page, &options))
-                    .collect();
-                let thumbnail = if let Some(page) = doc.pages().first() {
-                    typst_svg::svg(page, &options)
-                } else {
-                    String::new()
-                };
+                let svgs = export_svg_pages(doc.pages(), &options);
+                let thumbnail = svgs.first().cloned().unwrap_or_default();
                 let notes = crate::compile::speaker_notes::page_notes(&world, &doc);
                 Ok(Preview { svgs, thumbnail, stats, notes })
             }

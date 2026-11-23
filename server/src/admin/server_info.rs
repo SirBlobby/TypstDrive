@@ -24,6 +24,8 @@ const KNOWN_VARIABLES: &[KnownVariable] = &[
     variable("RUST_LOG", "Server", "Log filter."),
     variable("REMOTE_URLS_ALLOW_PRIVATE", "Server", "Let documents load images and files from private network addresses. Off by default."),
     variable("GIT_CACHE_DIR", "Server", "Folder for the disposable partial clones used to sync with Git servers other than GitHub and GitLab."),
+    variable("TYPST_CACHE_MAX_IDLE_MINUTES", "Typst", "How long Typst keeps what it learnt from compiling a document nobody edits. Default 60."),
+    variable("TYPST_CACHE_MAX_MEMORY_MB", "Typst", "Above this memory use, Typst keeps only what was used in the last minute. Default 2560."),
     variable("TECTONIC_PATH", "LaTeX", "Path to the tectonic program. Found on the PATH when not set."),
     variable("LATEX_DIR", "LaTeX", "Folder for the LaTeX sandbox and its package cache."),
     variable("LATEX_TIMEOUT_SECONDS", "LaTeX", "How long one LaTeX compile may run before it is stopped. Default 90."),

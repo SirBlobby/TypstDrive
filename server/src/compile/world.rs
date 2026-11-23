@@ -136,13 +136,19 @@ impl MemoryWorld {
 
         // Add custom fonts from files, registered only by their embedded metadata
         // so that all variants (Bold, Italic, etc.) resolve correctly under one family name.
-        for (name, data) in &files {
-            if name.to_lowercase().ends_with(".ttf") || name.to_lowercase().ends_with(".otf") {
-                for font in Font::iter(Bytes::new(data.clone())) {
-                    custom_fonts.push(font.info().clone());
-                    fonts.push(font);
-                    font_file_names.push(name.clone());
-                }
+        let mut font_names: Vec<&String> = files
+            .keys()
+            .filter(|name| {
+                let lower = name.to_lowercase();
+                lower.ends_with(".ttf") || lower.ends_with(".otf")
+            })
+            .collect();
+        font_names.sort();
+        for name in font_names {
+            for font in Font::iter(Bytes::new(files[name].clone())) {
+                custom_fonts.push(font.info().clone());
+                fonts.push(font);
+                font_file_names.push(name.clone());
             }
         }
 

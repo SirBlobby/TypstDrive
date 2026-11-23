@@ -106,6 +106,15 @@ See [Bigger installs](scaling.md).
 |---|---|---|
 | `GIT_CACHE_DIR` | system temp folder | Where partial clones of repositories on servers other than GitHub and GitLab are kept. It is a disposable cache of a few MB per linked project. The Docker image uses `/data/git-cache`. |
 
+## Typst compiles
+
+Typst keeps in memory what it learnt from earlier compiles, so an edit recompiles only what changed. TypstDrive drops what no document has used for a while, and trims it when the server uses too much memory.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `TYPST_CACHE_MAX_IDLE_MINUTES` | `60` | How long Typst keeps in memory what it learnt from compiling a document nobody edits. |
+| `TYPST_CACHE_MAX_MEMORY_MB` | `2560` | Above this memory use, Typst keeps only what was used in the last minute. |
+
 ## LaTeX
 
 [LaTeX documents](../guide/latex.md) are compiled by [Tectonic](https://tectonic-typesetting.github.io/), which the Docker image includes. Outside Docker, install the static Linux build from the [Tectonic releases](https://github.com/tectonic-typesetting/tectonic/releases), such as `tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz`, and put it on the `PATH`.

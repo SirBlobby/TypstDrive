@@ -37,6 +37,9 @@ mod themes;
 mod trash;
 mod user_content;
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 pub type RateLimiterMap = Arc<Mutex<HashMap<String, (u32, std::time::Instant)>>>;
 
 #[derive(Clone)]
@@ -77,6 +80,7 @@ async fn main() {
     let _ = rustls::crypto::ring::default_provider().install_default();
 
     let db = db::init_db().await;
+    compile::compiler::spawn_cache_eviction();
 
     let key = match std::env::var("COOKIE_SECRET") {
         Ok(secret) => {
