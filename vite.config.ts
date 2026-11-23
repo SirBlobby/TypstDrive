@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
+import type { Config } from '@sveltejs/kit';
 import { defineConfig } from 'vite';
 import wasm from 'vite-plugin-wasm';
 
@@ -10,22 +11,20 @@ function useRunesOutsideLibraries({ filename }: { filename: string }) {
 	return isExternalLibrary ? undefined : true;
 }
 
-const iconApiHosts = ['https://api.iconify.design', 'https://api.simplesvg.com', 'https://api.unisvg.com'];
-
-const contentSecurityPolicy = {
-	mode: 'hash' as const,
+const contentSecurityPolicy: Config['csp'] = {
+	mode: 'hash',
 	directives: {
-		'default-src': ['self' as const],
-		'script-src': ['self' as const, 'wasm-unsafe-eval' as const],
-		'style-src': ['self' as const, 'unsafe-inline' as const, 'https://fonts.googleapis.com'],
-		'font-src': ['self' as const, 'data:' as const, 'https://fonts.gstatic.com'],
-		'img-src': ['self' as const, 'data:' as const, 'blob:' as const, 'https:' as const],
-		'connect-src': ['self' as const, 'https://api.github.com', ...iconApiHosts],
-		'frame-src': ['self' as const, 'blob:' as const],
-		'worker-src': ['self' as const, 'blob:' as const],
-		'object-src': ['none' as const],
-		'base-uri': ['self' as const],
-		'form-action': ['self' as const]
+		'default-src': ['self'],
+		'script-src': ['self', 'wasm-unsafe-eval'],
+		'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
+		'font-src': ['self', 'data:', 'https://fonts.gstatic.com'],
+		'img-src': ['self', 'data:', 'blob:', 'https:'],
+		'connect-src': ['self', 'https://api.github.com', 'https://api.iconify.design', 'https://api.simplesvg.com', 'https://api.unisvg.com'],
+		'frame-src': ['self', 'blob:'],
+		'worker-src': ['self', 'blob:'],
+		'object-src': ['none'],
+		'base-uri': ['self'],
+		'form-action': ['self']
 	}
 };
 
