@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { Diagnostic } from './typst-api';
+import type { Diagnostic, SpeakerNote } from './typst-api';
 
 export const themeStore = writable('Cerberus');
 export const darkModeStore = writable(true);
@@ -16,6 +16,8 @@ export const documentZoomStore = writable(100);
 export const commentsSidebarOpen = writable(false);
 export const editorErrors = writable<Diagnostic[]>([]);
 export const documentStatsStore = writable<{pages: number; words: number; characters: number; characters_excluding_spaces: number} | null>(null);
+// Notes per preview page, read by presentation mode.
+export const speakerNotesStore = writable<(SpeakerNote | null)[]>([]);
 export const triggerLspReconnect = writable(0);
 
 export interface AwarenessUser {

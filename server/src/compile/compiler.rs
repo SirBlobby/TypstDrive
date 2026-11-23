@@ -1,3 +1,4 @@
+use crate::compile::speaker_notes::Note;
 use crate::compile::world::{project_file_id, project_path, MemoryWorld, UsedResources};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -14,6 +15,14 @@ use typst_layout::PagedDocument;
 use typst_pdf::{pdf, PdfOptions};
 use typst_render::{render, PngFormat, RenderOptions};
 use typst_svg::{SvgFormat, SvgOptions};
+
+/// Rendered pages for the live preview.
+pub struct Preview {
+    pub svgs: Vec<String>,
+    pub thumbnail: String,
+    pub stats: DocumentStats,
+    pub notes: Option<Vec<Option<Note>>>,
+}
 
 #[derive(Serialize, Clone)]
 pub struct DocumentStats {
@@ -57,7 +66,7 @@ fn extract_frame_text(frame: &Frame, text: &mut String) {
     }
 }
 
-fn svg_options(doc: &PagedDocument) -> SvgOptions<Complete> {
+pub(crate) fn svg_options(doc: &PagedDocument) -> SvgOptions<Complete> {
     let requested: SvgOptions = SvgOptions::default();
     requested.resolve(doc.options().get::<SvgFormat>())
 }
@@ -182,10 +191,7 @@ impl TypstCompiler {
     pub fn compile_svg(
         &self,
         input: ProjectInput,
-    ) -> Result<
-        (Vec<String>, String, DocumentStats),
-        Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>,
-    > {
+    ) -> Result<Preview, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
         let world = input.into_world(false);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
@@ -204,7 +210,8 @@ impl TypstCompiler {
                 } else {
                     String::new()
                 };
-                Ok((svgs, thumbnail, stats))
+                let notes = crate::compile::speaker_notes::page_notes(&world, &doc);
+                Ok(Preview { svgs, thumbnail, stats, notes })
             }
             Warned {
                 output: Err(errors),

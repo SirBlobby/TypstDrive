@@ -27,6 +27,8 @@
 	import { exportProject, type ExportFormat } from '../../ts/typst-api';
 	import PageSettingsModal from '../PageSettingsModal.svelte';
 	import PresentationMode from '../PresentationMode.svelte';
+	import PresentMenu from '../presentation/PresentMenu.svelte';
+	import type { PresentationLayout } from '#lib/ts/presentation-sync';
 	import Modal from '../Modal.svelte';
 	import InfoModal from '../drive/InfoModal.svelte';
 	import CollaboratorAvatars from '../editor/CollaboratorAvatars.svelte';
@@ -87,7 +89,7 @@
 	});
 
 	let isPageSettingsOpen = $state(false);
-	let isPresentationOpen = $state(false);
+	let presentationLayout = $state<PresentationLayout | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let activeMenu = $state<string | null>(null);
 	let showInfoModal = $state(false);
@@ -333,7 +335,8 @@
 			exportConverted: handlePandocExport,
 			print: handlePrint,
 			openShare: () => (showShareModal = true),
-			openPresentation: isViewer ? undefined : () => (isPresentationOpen = true),
+			openPresentation: isViewer ? undefined : () => (presentationLayout = 'audience'),
+			openSpeakerView: isViewer ? undefined : () => (presentationLayout = 'speaker'),
 			openPageSettings: directEditing && !isLatexFile ? () => (isPageSettingsOpen = true) : undefined,
 			openCitations: canEdit ? () => (showCitations = true) : undefined,
 			openInfo: () => (showInfoModal = true),
@@ -453,7 +456,7 @@
 			<HeaderTypstLinks />
 			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
 			{#if !isViewer}
-				<HeaderIconButton icon="mdi:presentation-play" label="Present" onclick={() => (isPresentationOpen = true)} />
+				<PresentMenu onpresent={(layout) => (presentationLayout = layout)} />
 			{/if}
 			<HeaderIconButton icon="mdi:share-variant-outline" label="Share" onclick={() => (showShareModal = true)} />
 			{#if canPublish}
@@ -538,8 +541,8 @@
 	<PageSettingsModal onClose={() => (isPageSettingsOpen = false)} onApply={handlePageSettings} currentSettings={parseSettings()} />
 {/if}
 
-{#if isPresentationOpen}
-	<PresentationMode onClose={() => (isPresentationOpen = false)} />
+{#if presentationLayout}
+	<PresentationMode mode={presentationLayout} onClose={() => (presentationLayout = null)} />
 {/if}
 
 {#if showInfoModal}

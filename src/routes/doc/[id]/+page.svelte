@@ -18,7 +18,7 @@
 	import CommentHighlights from '#lib/components/comments/CommentHighlights.svelte';
 	import SuggestionHighlights from '#lib/components/suggestions/SuggestionHighlights.svelte';
 	import CommentsPanel from '#lib/components/comments/CommentsPanel.svelte';
-	import { editorErrors, documentStatsStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
+	import { editorErrors, documentStatsStore, speakerNotesStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
 	import { bibliographyChangedStore } from '#lib/ts/citations';
 	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
@@ -94,6 +94,7 @@
 				if (res.svgs) {
 					svgs = res.svgs;
 					lastCompiledInput = { text: content, document_id: docId };
+					$speakerNotesStore = res.notes ?? [];
 					errors = [];
 					$editorErrors = [];
 				} else if (res.errors) {

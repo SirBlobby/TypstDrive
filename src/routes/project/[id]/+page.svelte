@@ -26,7 +26,7 @@
 	import { previewText } from '#lib/ts/suggestion-preview';
 	import { remoteDraftsChangedStore, shareEditingMode } from '#lib/ts/live-review';
 	import { endReviewSession, startReviewSession, switchReviewFile } from '#lib/ts/review-session';
-	import { editorErrors, documentStatsStore, fileTreeCollapsedStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
+	import { editorErrors, documentStatsStore, speakerNotesStore, fileTreeCollapsedStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
 	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import Icon from '@iconify/svelte';
@@ -107,6 +107,7 @@
 				if (res.svgs) {
 					svgs = res.svgs;
 					lastCompiledFiles = sources;
+					$speakerNotesStore = res.notes ?? [];
 					errors = [];
 					$editorErrors = [];
 				} else if (res.errors) {
