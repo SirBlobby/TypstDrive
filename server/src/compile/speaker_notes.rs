@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::ops::Range;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use typst::diag::Warned;
 use typst::foundations::{Content, Label, SequenceElem, Selector, Value};
 use typst::introspection::Introspector;
@@ -21,7 +21,7 @@ const MAX_SINGLE_NOTE_RETRIES: usize = 20;
 const NOTES_PREAMBLE: &str = "#set page(width: 300pt, height: auto, margin: (x: 0pt, y: 4pt), fill: none)\n\
 #set text(size: 11pt, fill: white)\n";
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Note {
     pub text: String,
     #[serde(skip_serializing_if = "Option::is_none")]

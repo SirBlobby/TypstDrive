@@ -10,6 +10,7 @@ use std::collections::HashMap;
 
 use crate::compile::compiler::{CompileFailure, DocumentStats, ProjectInput};
 use crate::compile::latex;
+use crate::compile::{preview_store, warm_up};
 use crate::compile::render::{self, RenderFailure};
 use crate::compile::speaker_notes::Note;
 use crate::sharing::access;
@@ -50,9 +51,10 @@ enum ThumbnailTarget {
     Project(String),
 }
 
-struct CompileSource {
-    input: ProjectInput,
+pub(crate) struct CompileSource {
+    pub input: ProjectInput,
     thumbnail_target: Option<ThumbnailTarget>,
+    pub cache_target: Option<String>,
 }
 
 fn map_diagnostics(diagnostics: CompileFailure) -> Vec<Diagnostic> {
@@ -95,14 +97,15 @@ fn error_response(message: &str) -> Json<CompileResponse> {
     Json(CompileResponse { svgs: None, errors: Some(single_error(message)), stats: None, notes: None })
 }
 
-async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<CompileSource> {
+pub(crate) async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<CompileSource> {
     if let Some(project_id) = &payload.project_id {
         let (project, role) = access::project_access(state, project_id, user_id).await?;
         let overrides = if role.can_edit() { payload.files.clone().unwrap_or_default() } else { HashMap::new() };
         let reader = crate::drive::projects::ProjectReader::for_role(role, user_id);
         let input = crate::drive::projects::assemble_project(state, &project, overrides, reader).await;
         let thumbnail_target = role.can_edit().then(|| ThumbnailTarget::Project(project.id.clone()));
-        return Some(CompileSource { input, thumbnail_target });
+        let cache_target = Some(format!("project:{}", project.id));
+        return Some(CompileSource { input, thumbnail_target, cache_target });
     }
 
     let Some(document_id) = &payload.document_id else {
@@ -110,20 +113,22 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
         return Some(CompileSource {
             input: ProjectInput::single(payload.text.clone().unwrap_or_default(), HashMap::new()),
             thumbnail_target: None,
+            cache_target: None,
         });
     };
 
     let (document, role) = access::document_role(state, document_id, user_id).await?;
     let files = crate::drive::document_assets::compile_files(state, &document, role, user_id).await;
+    let cache_target = Some(format!("document:{}", document.id));
     match (role.can_edit(), payload.text.clone()) {
         (true, Some(submitted_text)) => {
             let thumbnail_target = Some(ThumbnailTarget::Document(document.id.clone()));
             let input = latex::document_input(&document, submitted_text, files);
-            Some(CompileSource { input, thumbnail_target })
+            Some(CompileSource { input, thumbnail_target, cache_target })
         }
         _ => {
             let input = latex::document_input(&document, current_text(state, &document.id).await, files);
-            Some(CompileSource { input, thumbnail_target: None })
+            Some(CompileSource { input, thumbnail_target: None, cache_target })
         }
     }
 }
@@ -158,9 +163,42 @@ pub async fn compile_handler(
         return error_response("Unauthorized");
     };
 
-    match render::preview(source.input).await {
+    let CompileSource { input, thumbnail_target, cache_target } = source;
+    let cache_target = cache_target.filter(|_| !render::is_latex(&input));
+    let (input, key) = match &cache_target {
+        Some(_) => match tokio::task::spawn_blocking(move || {
+            let key = preview_store::key(&input);
+            (input, key)
+        })
+        .await
+        {
+            Ok(keyed) => keyed,
+            Err(_) => return error_response("Compilation stopped unexpectedly"),
+        },
+        None => (input, None),
+    };
+
+    if let (Some(target), Some(key)) = (&cache_target, &key) {
+        let lookup = key.clone();
+        if let Ok(Some(stored)) = tokio::task::spawn_blocking(move || preview_store::load(&lookup)).await {
+            if let (Some(thumbnail_target), Some(first_page)) = (thumbnail_target, stored.svgs.first()) {
+                save_thumbnail(&state, thumbnail_target, first_page).await;
+            }
+            warm_up::refresh(input, key.clone(), target.clone());
+            return Json(CompileResponse { svgs: Some(stored.svgs), errors: None, stats: Some(stored.stats), notes: stored.notes });
+        }
+    }
+
+    match render::preview(input).await {
         Ok(preview) => {
-            if let Some(target) = source.thumbnail_target {
+            if let Some(target) = &cache_target {
+                warm_up::note_compiled(target);
+                if let (Some(key), Some(today)) = (key, preview.outside_dependencies) {
+                    let (target, svgs, stats, notes) = (target.clone(), preview.svgs.clone(), preview.stats.clone(), preview.notes.clone());
+                    tokio::task::spawn_blocking(move || preview_store::save(&key, &target, &svgs, &stats, &notes, today));
+                }
+            }
+            if let Some(target) = thumbnail_target {
                 save_thumbnail(&state, target, &preview.thumbnail).await;
             }
             Json(CompileResponse { svgs: Some(preview.svgs), errors: None, stats: Some(preview.stats), notes: preview.notes })

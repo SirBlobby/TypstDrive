@@ -115,6 +115,26 @@ Typst keeps in memory what it learnt from earlier compiles, so an edit recompile
 | `TYPST_CACHE_MAX_IDLE_MINUTES` | `60` | How long Typst keeps in memory what it learnt from compiling a document nobody edits. |
 | `TYPST_CACHE_MAX_MEMORY_MB` | `2560` | Above this memory use, Typst keeps only what was used in the last minute. |
 
+## Typst previews
+
+TypstDrive keeps the last preview of each document and project on disk. After a restart, a document that has not changed shows its preview at once instead of waiting for a full compile, and is compiled again in the background so the next edit is quick. A preview is reused only when everything it was made from is unchanged: every file of the project, its fonts and packages, and the TypstDrive version. Documents that load web addresses are not kept.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `PREVIEW_CACHE_DIR` | `preview-cache` in the working folder | Where the previews are kept. The Docker image uses `/data/preview-cache`. A page shared by several previews is stored once. |
+| `PREVIEW_CACHE_MB` | `2000` | Disk space for the previews. The least recently used go first when it is full. `0` turns the store off. |
+
+After a start, TypstDrive also compiles the most recently edited projects and documents in the background, at low priority, so their first edit is quick too.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `TYPST_WARMUP_COUNT` | `4` | How many recently edited projects and documents to compile after a start. `0` turns this off. |
+| `TYPST_WARMUP_MAX_AGE_DAYS` | `7` | Only those edited in the last days. |
+| `TYPST_WARMUP_PARALLEL` | `1` | How many of these compiles run at the same time. |
+| `TYPST_WARMUP_DELAY_SECONDS` | `10` | How long to wait after the start. |
+
+The warm-up stops early once TypstDrive uses 70 % of `TYPST_CACHE_MAX_MEMORY_MB`.
+
 ## LaTeX
 
 [LaTeX documents](../guide/latex.md) are compiled by [Tectonic](https://tectonic-typesetting.github.io/), which the Docker image includes. Outside Docker, install the static Linux build from the [Tectonic releases](https://github.com/tectonic-typesetting/tectonic/releases), such as `tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz`, and put it on the `PATH`.

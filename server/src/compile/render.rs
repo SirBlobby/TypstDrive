@@ -60,7 +60,7 @@ fn locate(errors: Vec<LatexError>, files: &HashMap<String, Vec<u8>>) -> Vec<Late
         .collect()
 }
 
-fn is_latex(input: &ProjectInput) -> bool {
+pub fn is_latex(input: &ProjectInput) -> bool {
     is_latex_path(&input.entrypoint)
 }
 
@@ -192,7 +192,7 @@ pub async fn preview(input: ProjectInput) -> Result<Preview, RenderFailure> {
     let pages = latex_pages(&input).await?;
     let preview = latex_page_job(pages, |compiler, pages| compiler.compile_svg(pages)).await?;
     let stats = source_stats(&input.entrypoint, &input.files, preview.svgs.len());
-    Ok(Preview { stats, notes: None, ..preview })
+    Ok(Preview { stats, notes: None, outside_dependencies: None, ..preview })
 }
 
 pub async fn pdf(input: ProjectInput) -> Result<Vec<u8>, RenderFailure> {

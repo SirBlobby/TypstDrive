@@ -1,6 +1,6 @@
 use crate::compile::speaker_notes::Note;
-use crate::compile::world::{project_file_id, project_path, MemoryWorld, UsedResources};
-use serde::Serialize;
+use crate::compile::world::{project_file_id, project_path, MemoryWorld, TodayAnswer, UsedResources};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use typst::diag::{SourceDiagnostic, Warned};
 use typst::format::Complete;
@@ -21,9 +21,10 @@ pub struct Preview {
     pub thumbnail: String,
     pub stats: DocumentStats,
     pub notes: Option<Vec<Option<Note>>>,
+    pub outside_dependencies: Option<Vec<TodayAnswer>>,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DocumentStats {
     pub pages: usize,
     pub words: usize,
@@ -168,20 +169,28 @@ pub type CompileFailure = Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)
 
 const CACHE_TICK: std::time::Duration = std::time::Duration::from_secs(60);
 
-fn env_usize(name: &str, default: usize) -> usize {
+pub(crate) fn env_usize(name: &str, default: usize) -> usize {
     std::env::var(name).ok().and_then(|v| v.trim().parse().ok()).unwrap_or(default)
 }
 
-fn resident_bytes() -> Option<usize> {
+pub(crate) fn resident_bytes() -> Option<usize> {
     let statm = std::fs::read_to_string("/proc/self/statm").ok()?;
     let pages: usize = statm.split_whitespace().nth(1)?.parse().ok()?;
     let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
     (page_size > 0).then(|| pages * page_size as usize)
 }
 
+pub(crate) fn cache_max_idle() -> std::time::Duration {
+    CACHE_TICK * env_usize("TYPST_CACHE_MAX_IDLE_MINUTES", 60).max(1) as u32
+}
+
+pub(crate) fn cache_memory_budget() -> usize {
+    env_usize("TYPST_CACHE_MAX_MEMORY_MB", 2560).saturating_mul(1_000_000)
+}
+
 pub fn spawn_cache_eviction() {
     let max_idle_ticks = env_usize("TYPST_CACHE_MAX_IDLE_MINUTES", 60).max(1);
-    let max_memory = env_usize("TYPST_CACHE_MAX_MEMORY_MB", 2560).saturating_mul(1_000_000);
+    let max_memory = cache_memory_budget();
     tracing::info!(
         "Typst cache: entries dropped after {max_idle_ticks} min unused, or after 1 min above {} MB resident",
         max_memory / 1_000_000
@@ -255,7 +264,7 @@ impl TypstCompiler {
                 let svgs = export_svg_pages(doc.pages(), &options);
                 let thumbnail = svgs.first().cloned().unwrap_or_default();
                 let notes = crate::compile::speaker_notes::page_notes(&world, &doc);
-                Ok(Preview { svgs, thumbnail, stats, notes })
+                Ok(Preview { svgs, thumbnail, stats, notes, outside_dependencies: world.outside_dependencies() })
             }
             Warned {
                 output: Err(errors),
@@ -341,10 +350,13 @@ impl TypstCompiler {
                 warnings: _,
             } => {
                 let opts = PdfOptions::default();
-                match pdf(&doc, &opts).output {
-                    Ok(bytes) => Ok(bytes),
-                    Err(_) => Err(vec![]),
-                }
+                pdf(&doc, &opts).output.map_err(|errors| {
+                    use typst::WorldExt;
+                    errors.into_iter().map(|d| {
+                        let range = world.range(d.span);
+                        (d, range)
+                    }).collect()
+                })
             }
             Warned {
                 output: Err(errors),
