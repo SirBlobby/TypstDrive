@@ -4,8 +4,7 @@
 	import { EditorView, keymap } from '@codemirror/view';
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { autocompletion, snippetCompletion, type CompletionContext } from '@codemirror/autocomplete';
-	import { typst, typstTags } from 'codemirror-lang-typst';
-	import { typstEditorHighlighting } from '../ts/typst-highlight';
+	import { typst_lezer, typstTags } from 'codemirror-lang-typst/lezer';
 	import { yCollab } from 'y-codemirror.next';
 	import { text, provider } from '../ts/yjs-setup';
 	import { getThemeExtension, type ExtraTagStyles } from '../ts/themes';
@@ -196,7 +195,7 @@
 		themeStore.subscribe(t => { currentTheme = t; })();
 		darkModeStore.subscribe(d => { isDark = d; })();
 
-		const typstLanguage = typst().language;
+		const typstLanguage = typst_lezer().language;
 
 		const fileKind = editorFileKind(filePath, language);
 		const isLatex = fileKind === 'latex';
@@ -204,7 +203,7 @@
 		const commentMarker = commentMarkerFor(fileKind);
 		const formatScope = filePath ? { project_id: page.params.id } : { document_id: lspDocId ?? page.params.id };
 		let languageExtension: Extension = dataFileLanguage(fileKind);
-		if (isTypst) languageExtension = [typstLanguage, typstEditorHighlighting, typstBracketSettings(typstLanguage)];
+		if (isTypst) languageExtension = [typstLanguage, typstBracketSettings(typstLanguage)];
 		if (isLatex) languageExtension = [latexEditorExtensions(), latexPackageLoader()];
 		const completionExtensions = isTypst ? [autocompletion({ override: [typstCompletions] })] : [];
 		const slashExtensions = slash ? slashCommands({ fileKind, context: { ...slash, commentMarker } }) : [];
