@@ -1,6 +1,6 @@
 # TypstDrive
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/SirBlobby/TypstDrive/releases)
+[![Version](https://img.shields.io/badge/version-2.3.1-blue.svg)](https://github.com/SirBlobby/TypstDrive/releases)
 [![Typst](https://img.shields.io/badge/Typst-0.15.1-239dad?logo=typst&logoColor=white)](https://typst.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.92+-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00?logo=svelte&logoColor=white)](https://svelte.dev/docs/kit)
@@ -21,8 +21,8 @@ Full documentation, including a user guide, self-hosting, administration and the
 
 ### Writing
 
-- **Live Preview**: Pages update as you type, with zoom and a view menu to show the editor and preview, the editor only, or the preview only.
-- **Editor**: Syntax highlighting for Typst, LaTeX, BibTeX, YAML and TOML, autocompletion, inline errors, auto-closing brackets and smart features from the tinymist language server.
+- **Live Preview**: Pages update as you type, with zoom, a resizable split, and a view menu to show the editor and preview, the editor only, or the preview only. Click the preview to jump to its source, or click the text to scroll the preview there.
+- **Editor**: Syntax highlighting for Typst, LaTeX, BibTeX, YAML and TOML, autocompletion, inline errors, auto-closing brackets, a Format document shortcut for Typst and smart features from the tinymist language server.
 - **Formatting Toolbar**: Headings, bold, italic, code, quotes, math, lists, a font picker and page settings.
 - **LaTeX Documents**: Write LaTeX documents and projects with a LaTeX editor and toolbar, compiled on the server by [Tectonic](https://tectonic-typesetting.github.io/), which downloads the packages a document uses. Compiles run in a locked-down sandbox, packages a command needs are added to the preamble for you, and administrators can turn LaTeX off.
 - **Quick Insert**: Images, tables, other documents, symbols and emoji, with an image picker that searches your drive and uploads by button, drop or paste.
@@ -43,7 +43,7 @@ Full documentation, including a user guide, self-hosting, administration and the
 
 - **Drive**: Folders with custom colors, sorting, grid and list views, stars, file previews, duplicating documents and projects, selecting several items to move, star or delete them together, and a trash that keeps deleted items for 30 days.
 - **Search**: A search bar with `type:`, `is:`, `before:` and `after:` filters, and `doc:` to search the text inside documents.
-- **Projects**: Multi-file workspaces for books, theses and templates, downloadable as a ZIP.
+- **Projects**: Multi-file workspaces for books, theses and templates, with image and PDF previews in the file list, downloadable as a ZIP.
 - **Git Sync**: Link a project to a folder in a GitHub, GitLab, Gitea, Forgejo or Codeberg repository, pull changes and push your own as commits, with GitHub and GitLab tokens saved once in your settings and stored encrypted. Only the document files are copied, so large repositories are fine.
 - **Templates**: Start a document or project from any Typst Universe template, with search, type filters and previews, and fill in author names and affiliations from ORCID. Only the templates people use are downloaded.
 - **Packages**: Publish a project as a package everyone on your server can import, with private packages for people and teams.
@@ -58,7 +58,7 @@ Full documentation, including a user guide, self-hosting, administration and the
 ### Finishing
 
 - **Export**: PDF, HTML, PNG, SVG and Typst or LaTeX source from the editor or straight from the drive's action menu, plus Word, Markdown, LaTeX and HTML through Pandoc.
-- **Presentation Mode**: Full-screen slides with a slide overview, timer, progress bar, laser pointer, pen, highlighter and eraser.
+- **Presentation Mode**: Full-screen slides with a slide overview, timer, progress bar, laser pointer, pen, highlighter and eraser, plus a speaker view with the next slide and speaker notes from Touying, Polylux or Mosaic.
 - **Render API**: Turn Typst and LaTeX into PDF, PNG, SVG or HTML from your own code, render single formulas and snippets as tightly cropped images, pick a page and size, and check documents for errors, with scoped keys, rate limits and usage charts.
 - **Typst Desktop**: Keep documents on your computer and in sync with the [Typst Desktop](https://github.com/SirBlobby/typst-desktop) app.
 
@@ -135,6 +135,15 @@ Before opening TypstDrive to the internet, put it behind a reverse proxy with HT
 - [Administration](https://sirblobby.github.io/TypstDrive/admin/)
 - [API reference](https://sirblobby.github.io/TypstDrive/api/)
 - [Contributing](https://sirblobby.github.io/TypstDrive/development/)
+
+## Contributors
+
+Thanks to everyone who has contributed code to TypstDrive:
+
+| [<img src="https://github.com/SirBlobby.png?size=128" width="64" alt="SirBlobby"><br>SirBlobby](https://github.com/SirBlobby) | [<img src="https://github.com/nikhilweee.png?size=128" width="64" alt="Nikhil Verma"><br>Nikhil Verma](https://github.com/nikhilweee) | [<img src="https://github.com/douxev.png?size=128" width="64" alt="douxev"><br>douxev](https://github.com/douxev) |
+|:-:|:-:|:-:|
+
+See the [Contributing guide](https://sirblobby.github.io/TypstDrive/development/) to get involved.
 
 ## Acknowledgements
 

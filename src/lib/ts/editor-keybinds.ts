@@ -1,8 +1,10 @@
 import { Prec, type Extension } from '@codemirror/state';
-import { keymap, type EditorView, type KeyBinding } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 import { get } from 'svelte/store';
 import { keybindsStore } from './keybinds/keybinds-store';
 import type { KeybindActionId } from './keybinds/keybind-actions';
+import { matchesKeybind } from './keybinds/key-format';
+import { formatDocument } from './editor-format';
 import { openFind, openReplace, wrapSelection } from './editor-insert';
 import { toggleLineComment } from './editor-comments';
 
@@ -36,6 +38,10 @@ export function editorKeybindExtension(commentMarker: string, isTypst: boolean, 
         commands.italic = wrapping('_', '_', 'italic');
         commands.code = wrapping('`', '`', 'code');
         commands.inlineMath = wrapping('$ ', ' $', 'x = y');
+        commands.formatDocument = (view) => {
+            formatDocument(view);
+            return true;
+        };
     }
 
     if (isLatex) {
@@ -45,9 +51,17 @@ export function editorKeybindExtension(commentMarker: string, isTypst: boolean, 
         commands.inlineMath = wrapping('$', '$', 'x = y');
     }
 
-    const bindings: KeyBinding[] = Object.entries(commands)
-        .filter(([id]) => keybinds[id as KeybindActionId])
-        .map(([id, run]) => ({ key: keybinds[id as KeybindActionId], run, preventDefault: true }));
+    const bindings = Object.entries(commands).filter(([id]) => keybinds[id as KeybindActionId]);
 
-    return Prec.high(keymap.of(bindings));
+    return Prec.high(
+        EditorView.domEventHandlers({
+            keydown(event, view) {
+                const match = bindings.find(([id]) => matchesKeybind(keybinds[id as KeybindActionId], event));
+                if (!match) return false;
+                match[1](view);
+                event.preventDefault();
+                return true;
+            }
+        })
+    );
 }

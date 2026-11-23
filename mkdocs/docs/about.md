@@ -12,6 +12,13 @@ If something goes wrong in TypstDrive, please report it on the [TypstDrive issue
 
 TypstDrive is written and maintained by SirBlobby. The source code is on [GitHub](https://github.com/SirBlobby/TypstDrive).
 
+### Contributors
+
+| [<img src="https://github.com/nikhilweee.png?size=128" width="64" alt="Nikhil Verma"><br>Nikhil Verma](https://github.com/nikhilweee) | [<img src="https://github.com/douxev.png?size=128" width="64" alt="douxev"><br>douxev](https://github.com/douxev) |
+|:-:|:-:|
+
+Want to help? See [Developing TypstDrive](development.md).
+
 ## License
 
 TypstDrive is released under the [Apache License 2.0](https://github.com/SirBlobby/TypstDrive/blob/main/LICENSE). You can use, change and share it, including for commercial use, as long as you:

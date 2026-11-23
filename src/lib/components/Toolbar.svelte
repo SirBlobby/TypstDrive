@@ -10,8 +10,10 @@
 	import CitationsModal from './citations/CitationsModal.svelte';
 	import PageSettingsModal from './PageSettingsModal.svelte';
 	import PresentationMode from "./PresentationMode.svelte";
+	import PresentMenu from "./presentation/PresentMenu.svelte";
+	import type { PresentationLayout } from "#lib/ts/presentation-sync";
 	import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
-	import { matchesKeybind, shortcutText } from '#lib/ts/keybinds/key-format';
+	import { editShortcuts, matchesKeybind, shortcutText } from '#lib/ts/keybinds/key-format';
 	import InfoModal from './drive/InfoModal.svelte';
 	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
 	import EditingModeSwitch from './editor/EditingModeSwitch.svelte';
@@ -27,6 +29,7 @@
 	import InsertDialogs from './editor/insert/InsertDialogs.svelte';
 	import { insertDialogStore, insertOptions } from '../ts/insert-dialog';
 	import { openFind, openReplace } from '../ts/editor-insert';
+	import { formatDocument } from '../ts/editor-format';
 	import PromptModal from './PromptModal.svelte';
 	import ConfirmModal from './ConfirmModal.svelte';
 	import Icon from '@iconify/svelte';
@@ -65,7 +68,7 @@
 		checkUnsharedFiles();
 	});
 	let isPageSettingsOpen = $state(false);
-	let isPresentationOpen = $state(false);
+	let presentationLayout = $state<PresentationLayout | null>(null);
 	
 	let { title = 'Untitled Document', docId = undefined, role = 'viewer', language = 'typst' }: { title?: string, docId?: string, role?: DocumentRole, language?: DocumentLanguage } = $props();
 
@@ -372,7 +375,8 @@
 			exportConverted: handlePandocExport,
 			print: handlePrint,
 			openShare: canEdit ? () => (isShareModalOpen = true) : undefined,
-			openPresentation: canEdit ? () => (isPresentationOpen = true) : undefined,
+			openPresentation: canEdit ? () => (presentationLayout = 'audience') : undefined,
+			openSpeakerView: canEdit ? () => (presentationLayout = 'speaker') : undefined,
 			openPageSettings: directEditing && !isLatex ? () => (isPageSettingsOpen = true) : undefined,
 			openCitations: canEdit && docId ? () => (isCitationsOpen = true) : undefined,
 			openInfo: docId ? openInfo : undefined,
@@ -490,16 +494,20 @@
 							Edit
 						</button>
 						{#if activeMenu === 'edit'}
-							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
-								<button onclick={handleUndo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Undo (Ctrl+Z)</button>
-								<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Redo (Ctrl+Y)</button>
+							<div class="absolute left-0 top-full mt-1 min-w-48 w-max bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+								<button onclick={handleUndo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Undo <span class="text-xs opacity-60">{shortcutText(editShortcuts.undo)}</span></button>
+								<button onclick={handleRedo} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Redo <span class="text-xs opacity-60">{shortcutText(editShortcuts.redo)}</span></button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; document.execCommand('cut'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Cut (Ctrl+X)</button>
-								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Copy (Ctrl+C)</button>
-								<button onclick={() => { activeMenu = null; navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t)); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Paste (Ctrl+V)</button>
+								<button onclick={() => { activeMenu = null; document.execCommand('cut'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Cut <span class="text-xs opacity-60">{shortcutText(editShortcuts.cut)}</span></button>
+								<button onclick={() => { activeMenu = null; document.execCommand('copy'); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Copy <span class="text-xs opacity-60">{shortcutText(editShortcuts.copy)}</span></button>
+								<button onclick={() => { activeMenu = null; navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t)); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Paste <span class="text-xs opacity-60">{shortcutText(editShortcuts.paste)}</span></button>
 								<div class="h-px bg-[var(--theme-border)] my-1"></div>
-								<button onclick={() => { activeMenu = null; if ($editorViewStore) openFind($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">Find <span class="text-xs opacity-60">{shortcutText(currentKeybind('find'))}</span></button>
-								<button onclick={() => { activeMenu = null; if ($editorViewStore) openReplace($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)]">Search and Replace</button>
+								<button onclick={() => { activeMenu = null; if ($editorViewStore) openFind($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Find <span class="text-xs opacity-60">{shortcutText(currentKeybind('find'))}</span></button>
+								<button onclick={() => { activeMenu = null; if ($editorViewStore) openReplace($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Search and Replace <span class="text-xs opacity-60">{shortcutText(currentKeybind('replace'))}</span></button>
+								{#if directEditing && !isLatex}
+									<div class="h-px bg-[var(--theme-border)] my-1"></div>
+									<button onclick={() => { activeMenu = null; if ($editorViewStore) formatDocument($editorViewStore); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between gap-4 whitespace-nowrap">Format document <span class="text-xs opacity-60">{shortcutText(currentKeybind('formatDocument'))}</span></button>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -559,7 +567,7 @@
 			<div class="mx-1 w-px h-5 bg-[var(--color-line)]"></div>
 			{#if !readOnly}
 				<HeaderIconButton icon="mdi:history" label="Version history" onclick={() => goto(`/doc/${docId}/history`)} />
-				<HeaderIconButton icon="mdi:presentation-play" label="Present" onclick={() => (isPresentationOpen = true)} />
+				<PresentMenu onpresent={(layout) => (presentationLayout = layout)} />
 				<HeaderIconButton icon="mdi:share-variant-outline" label="Share" onclick={() => (isShareModalOpen = true)} />
 			{/if}
 			<HeaderIconButton icon="mdi:comment-outline" label="Comments" active={$commentsSidebarOpen} onclick={() => ($commentsSidebarOpen = !$commentsSidebarOpen)} />
@@ -614,8 +622,8 @@
 	<PageSettingsModal onClose={() => (isPageSettingsOpen = false)} onApply={handlePageSettings} currentSettings={parseSettings()} />
 {/if}
 
-{#if isPresentationOpen}
-	<PresentationMode onClose={() => (isPresentationOpen = false)} />
+{#if presentationLayout}
+	<PresentationMode mode={presentationLayout} onClose={() => (presentationLayout = null)} />
 {/if}
 
 

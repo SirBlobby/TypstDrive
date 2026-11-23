@@ -1,5 +1,6 @@
 pub mod compiler;
 pub mod fonts;
+pub mod format;
 pub mod handlers;
 pub mod latex;
 pub mod latex_policy;
@@ -8,5 +9,7 @@ pub mod lsp;
 pub mod lsp_guard;
 pub mod pandoc;
 pub mod render;
+pub mod speaker_notes;
+pub mod sync;
 pub mod tectonic;
 pub mod world;

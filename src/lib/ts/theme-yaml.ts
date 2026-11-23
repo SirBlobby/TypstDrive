@@ -1,16 +1,10 @@
 import { parse, stringify } from 'yaml';
-import { paletteKeys, type ThemeDraft, type ThemeMode, type ThemePalette } from './custom-themes';
+import { normalizeColor, paletteKeys, type ThemeDraft, type ThemeMode, type ThemePalette } from './custom-themes';
 import { builtinThemeDraft } from './builtin-palettes';
 
-const MAX_NAME_LENGTH = 40;
+export { normalizeColor };
 
-export function normalizeColor(value: unknown): string | null {
-    if (typeof value !== 'string') return null;
-    const color = value.trim().toLowerCase();
-    if (/^#[0-9a-f]{6}$/.test(color)) return color;
-    if (/^#[0-9a-f]{3}$/.test(color)) return `#${[...color.slice(1)].map((digit) => digit + digit).join('')}`;
-    return null;
-}
+const MAX_NAME_LENGTH = 40;
 
 function readPalette(value: unknown, mode: ThemeMode, fallback: ThemePalette): ThemePalette {
     if (value === undefined || value === null) return { ...fallback };

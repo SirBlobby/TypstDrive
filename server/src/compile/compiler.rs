@@ -1,16 +1,27 @@
-use crate::compile::world::{MemoryWorld, UsedResources};
+use crate::compile::speaker_notes::Note;
+use crate::compile::world::{project_file_id, project_path, MemoryWorld, UsedResources};
 use serde::Serialize;
 use std::collections::HashMap;
 use typst::diag::{SourceDiagnostic, Warned};
 use typst::format::Complete;
-use typst::layout::{Frame, FrameItem};
+use typst::introspection::PagedPosition;
+use typst::layout::{Abs, Frame, FrameItem, Point};
 use typst::utils::Scalar;
 use typst::model::Document;
+use typst::World;
+use typst_ide::Jump;
 use typst_html::{HtmlDocument, HtmlOptions};
 use typst_layout::PagedDocument;
 use typst_pdf::{pdf, PdfOptions};
 use typst_render::{render, PngFormat, RenderOptions};
 use typst_svg::{SvgFormat, SvgOptions};
+
+pub struct Preview {
+    pub svgs: Vec<String>,
+    pub thumbnail: String,
+    pub stats: DocumentStats,
+    pub notes: Option<Vec<Option<Note>>>,
+}
 
 #[derive(Serialize, Clone)]
 pub struct DocumentStats {
@@ -54,7 +65,7 @@ fn extract_frame_text(frame: &Frame, text: &mut String) {
     }
 }
 
-fn svg_options(doc: &PagedDocument) -> SvgOptions<Complete> {
+pub(crate) fn svg_options(doc: &PagedDocument) -> SvgOptions<Complete> {
     let requested: SvgOptions = SvgOptions::default();
     requested.resolve(doc.options().get::<SvgFormat>())
 }
@@ -94,6 +105,34 @@ impl ProjectInput {
     fn into_world(self, enable_html: bool) -> MemoryWorld {
         MemoryWorld::new_project(self.entrypoint, self.files, self.packages, enable_html)
     }
+}
+
+#[derive(Serialize)]
+pub struct PagePoint {
+    pub page: usize,
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum ClickTarget {
+    Source { path: String, offset: usize },
+    Page(PagePoint),
+}
+
+fn compiled(input: ProjectInput) -> Option<(MemoryWorld, PagedDocument)> {
+    let world = input.into_world(false);
+    let document = typst::compile::<PagedDocument>(&world).output.ok()?;
+    Some((world, document))
+}
+
+fn page_point(document: &PagedDocument, position: &PagedPosition) -> Option<PagePoint> {
+    let size = document.pages().get(position.page.get() - 1)?.frame.size();
+    if size.x <= Abs::zero() || size.y <= Abs::zero() {
+        return None;
+    }
+    Some(PagePoint { page: position.page.get(), x: position.point.x / size.x, y: position.point.y / size.y })
 }
 
 pub type CompileFailure = Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>;
@@ -149,10 +188,7 @@ impl TypstCompiler {
     pub fn compile_svg(
         &self,
         input: ProjectInput,
-    ) -> Result<
-        (Vec<String>, String, DocumentStats),
-        Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>,
-    > {
+    ) -> Result<Preview, Vec<(SourceDiagnostic, Option<std::ops::Range<usize>>)>> {
         let world = input.into_world(false);
         match typst::compile::<PagedDocument>(&world) {
             Warned {
@@ -171,7 +207,8 @@ impl TypstCompiler {
                 } else {
                     String::new()
                 };
-                Ok((svgs, thumbnail, stats))
+                let notes = crate::compile::speaker_notes::page_notes(&world, &doc);
+                Ok(Preview { svgs, thumbnail, stats, notes })
             }
             Warned {
                 output: Err(errors),
@@ -187,6 +224,40 @@ impl TypstCompiler {
                     .collect();
                 Err(diag)
             }
+        }
+    }
+
+    pub fn cursor_positions(&self, input: ProjectInput, path: &str, utf16_offset: usize) -> Vec<PagePoint> {
+        let Some((world, document)) = compiled(input) else {
+            return Vec::new();
+        };
+        let Some(source) = project_file_id(path).and_then(|id| world.source(id).ok()) else {
+            return Vec::new();
+        };
+        let Some(cursor) = source.lines().utf16_to_byte(utf16_offset) else {
+            return Vec::new();
+        };
+        typst_ide::jump_from_cursor(&document, &source, cursor)
+            .iter()
+            .filter_map(|position| page_point(&document, position))
+            .collect()
+    }
+
+    pub fn click_target(&self, input: ProjectInput, page: usize, x: f64, y: f64) -> Option<ClickTarget> {
+        let (world, document) = compiled(input)?;
+        let size = document.pages().get(page.checked_sub(1)?)?.frame.size();
+        let position = PagedPosition {
+            page: std::num::NonZeroUsize::new(page)?,
+            point: Point::new(size.x * x.clamp(0.0, 1.0), size.y * y.clamp(0.0, 1.0)),
+        };
+        match typst_ide::jump_from_click(&world, &document, &position)? {
+            Jump::File(id, byte) => {
+                let path = project_path(id)?;
+                let offset = world.source(id).ok()?.lines().byte_to_utf16(byte)?;
+                Some(ClickTarget::Source { path, offset })
+            }
+            Jump::Position(target) => page_point(&document, &target).map(ClickTarget::Page),
+            Jump::Url(_) => None,
         }
     }
 

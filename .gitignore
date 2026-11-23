@@ -24,11 +24,9 @@ vite.config.ts.timestamp-*
 
 # Bun
 .bun
-bun.lock
 
-# Rust 
+# Rust
 target/
-Cargo.lock
 
 # Data
 *.db

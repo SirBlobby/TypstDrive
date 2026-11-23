@@ -7,10 +7,12 @@
 	import ErrorBanner from '#lib/components/ErrorBanner.svelte';
 	import DocFooter from '#lib/components/DocFooter.svelte';
 	import FileTree from '#lib/components/project/FileTree.svelte';
+	import AssetPreview from '#lib/components/project/AssetPreview.svelte';
 	import ProjectToolbar from '#lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '#lib/components/PublishPackageModal.svelte';
 	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
-	import { compileProject } from '#lib/ts/typst-api';
+	import { compileProject, syncClick, syncCursor, type PagePoint } from '#lib/ts/typst-api';
+	import { cursorClickSync, revealOffset } from '#lib/ts/editor-preview-sync';
 	import type { Diagnostic } from '#lib/ts/typst-api';
 	import EditorContextMenu from '#lib/components/editor/EditorContextMenu.svelte';
 	import SlashCommandPalette from '#lib/components/editor/SlashCommandPalette.svelte';
@@ -24,19 +26,14 @@
 	import { previewText } from '#lib/ts/suggestion-preview';
 	import { remoteDraftsChangedStore, shareEditingMode } from '#lib/ts/live-review';
 	import { endReviewSession, startReviewSession, switchReviewFile } from '#lib/ts/review-session';
-	import { editorErrors, documentStatsStore, fileTreeCollapsedStore, commentsSidebarOpen } from '#lib/ts/store';
-	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
+	import { editorErrors, documentStatsStore, speakerNotesStore, fileTreeCollapsedStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
+	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
+	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import Icon from '@iconify/svelte';
-	import { isPlaceholder, placeholderPath } from '#lib/ts/project-tree';
+	import { isPlaceholder, placeholderPath, type ProjectFile } from '#lib/ts/project-tree';
 	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
 	import { createFollowController } from '#lib/ts/follow';
 	import { filePresenceStore } from '#lib/ts/presence';
-
-	interface ProjectFile {
-		id: string;
-		path: string;
-		kind: string;
-	}
 
 	const projectId = page.params.id as string;
 
@@ -45,6 +42,7 @@
 	let role = $state('owner');
 	let files = $state<ProjectFile[]>([]);
 	let activeFileId = $state('');
+	let previewFileId = $state('');
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
 	let showPublish = $state(false);
@@ -54,10 +52,21 @@
 
 	let readOnly = $derived(role === 'viewer');
 	let canEdit = $derived(role === 'owner' || role === 'editor');
-	const editorExtensions = reviewExtensions();
+	const editorExtensions = [reviewExtensions(), cursorClickSync(syncPreviewToCursor)];
+	let lastCompiledFiles: Record<string, string> | null = null;
+	let jumpTo = $state<(PagePoint & { seq: number }) | null>(null);
+	let pendingSelection = $state<{ path: string; offset: number } | null>(null);
 	let showPreview = $derived($previewVisibleStore || readOnly);
+	let previewFile = $derived(files.find((f) => f.id === previewFileId));
+	let assetBesidePreview = $derived(!!previewFile && (readOnly || $previewModeStore === 'preview'));
 	let editorWidthClass = $derived(
-		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-1 border-r border-[var(--color-line)]' : 'flex-1 min-w-0'
+		assetBesidePreview
+			? 'w-full min-w-0 md:w-0 md:flex-1 border-r border-[var(--color-line)]'
+			: $previewModeStore === 'split'
+				? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]'
+				: $previewModeStore === 'preview'
+					? 'hidden'
+					: 'flex-1 min-w-0'
 	);
 	let activeEntry = $derived(activeFileId ? getOpenFile(activeFileId) : undefined);
 	let activePath = $derived(files.find((f) => f.id === activeFileId)?.path ?? '');
@@ -93,6 +102,8 @@
 				if (res.stats) $documentStatsStore = res.stats;
 				if (res.svgs) {
 					svgs = res.svgs;
+					lastCompiledFiles = sources;
+					$speakerNotesStore = res.notes ?? [];
 					errors = [];
 					$editorErrors = [];
 				} else if (res.errors) {
@@ -143,9 +154,47 @@
 		}
 	}
 
+	function syncInput() {
+		if (!showPreview || !lastCompiledFiles) return null;
+		if (JSON.stringify(getAllText()) !== JSON.stringify(lastCompiledFiles)) return null;
+		return { project_id: projectId, files: lastCompiledFiles };
+	}
+
+	async function syncPreviewToCursor(offset: number) {
+		const input = activePath.endsWith('.typ') ? syncInput() : null;
+		if (!input) return;
+		const [position] = await syncCursor(input, activePath, offset);
+		if (position) jumpTo = { ...position, seq: (jumpTo?.seq ?? 0) + 1 };
+	}
+
+	async function syncCursorToPreview(point: PagePoint) {
+		const input = syncInput();
+		if (!input) return;
+		const target = await syncClick(input, point);
+		if (target?.kind === 'page') jumpTo = { ...target, seq: (jumpTo?.seq ?? 0) + 1 };
+		if (target?.kind !== 'source') return;
+		const file = files.find((f) => f.path === target.path);
+		if (!file) return;
+		pendingSelection = { path: target.path, offset: target.offset };
+		selectFile(file);
+	}
+
+	$effect(() => {
+		const view = $editorViewStore;
+		if (!view || !pendingSelection || pendingSelection.path !== activePath) return;
+		if (view.state.doc.toString() !== activeEntry?.text.toString()) return;
+		const { offset } = pendingSelection;
+		pendingSelection = null;
+		revealOffset(view, offset);
+	});
+
 	function selectFile(file: ProjectFile) {
-		if (file.kind !== 'text') return;
-		activeFileId = file.id;
+		if (file.kind === 'text') {
+			activeFileId = file.id;
+			previewFileId = '';
+		} else {
+			previewFileId = file.id;
+		}
 	}
 
 	async function createFile(path: string) {
@@ -160,6 +209,7 @@
 			const entry = openFile(file.id, file.path);
 			entry.text.observe(scheduleCompile);
 			activeFileId = file.id;
+			previewFileId = '';
 		}
 	}
 
@@ -278,7 +328,9 @@
 	});
 
 	function followIntoFile(fileId: string) {
-		if (files.some((file) => file.id === fileId && file.kind === 'text')) activeFileId = fileId;
+		if (!files.some((file) => file.id === fileId && file.kind === 'text')) return;
+		activeFileId = fileId;
+		previewFileId = '';
 	}
 
 	function startProjectReview() {
@@ -340,7 +392,7 @@
 		onFilesChanged={loadFiles}
 	/>
 
-	<main class="flex-1 flex overflow-hidden relative">
+	<main class="flex-1 flex overflow-hidden relative" style="--editor-grow: {$splitRatioStore}; --preview-grow: {1 - $splitRatioStore}">
 		{#if $fileTreeCollapsedStore}
 			<aside class="w-10 flex-shrink-0 hidden md:flex flex-col items-center py-2 bg-[var(--color-surface)] border-r border-[var(--color-line)]">
 				<button onclick={() => fileTreeCollapsedStore.set(false)} title="Show files" aria-label="Show files" class="p-1.5 rounded hover:bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]">
@@ -351,7 +403,7 @@
 			<aside class="w-56 flex-shrink-0 hidden md:block">
 				<FileTree
 					{files}
-					{activeFileId}
+					activeFileId={previewFile?.id ?? activeFileId}
 					{entrypoint}
 					readOnly={!canEdit}
 					presence={$filePresenceStore}
@@ -369,9 +421,11 @@
 			</aside>
 		{/if}
 
-		{#if !readOnly}
+		{#if !readOnly || previewFile}
 			<div class="flex flex-col min-h-0 {editorWidthClass}">
-				{#if ready && activeEntry}
+				{#if previewFile}
+					<AssetPreview {projectId} file={previewFile} onClose={() => (previewFileId = '')} />
+				{:else if ready && activeEntry}
 					{#key activeFileId}
 						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} enableLsp={false} extensions={editorExtensions} slash={{ insertDialogs: canEdit, embedDocuments: false, canComment: !readOnly }} />
 						<CommentHighlights />
@@ -381,9 +435,13 @@
 			</div>
 		{/if}
 
+		{#if !readOnly && showPreview && $previewModeStore === 'split'}
+			<SplitDivider />
+		{/if}
+
 		{#if showPreview}
-			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-1'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
-				<Preview {svgs} />
+			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
+				<Preview {svgs} {jumpTo} onPageClick={syncCursorToPreview} />
 				<ErrorBanner {errors} />
 			</div>
 		{/if}

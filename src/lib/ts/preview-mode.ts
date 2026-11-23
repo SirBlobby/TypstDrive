@@ -21,3 +21,19 @@ if (typeof window !== 'undefined') {
     if (isPreviewMode(savedPreviewMode)) previewModeStore.set(savedPreviewMode);
     previewModeStore.subscribe((mode) => localStorage.setItem('editor-preview-mode', mode));
 }
+
+export const MIN_SPLIT = 0.2;
+export const MAX_SPLIT = 0.8;
+export const DEFAULT_SPLIT = 0.5;
+
+export function clampSplit(ratio: number) {
+    return Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, ratio));
+}
+
+export const splitRatioStore = writable<number>(DEFAULT_SPLIT);
+
+if (typeof window !== 'undefined') {
+    const savedSplit = Number.parseFloat(localStorage.getItem('editor-split-ratio') ?? '');
+    if (Number.isFinite(savedSplit)) splitRatioStore.set(clampSplit(savedSplit));
+    splitRatioStore.subscribe((ratio) => localStorage.setItem('editor-split-ratio', String(ratio)));
+}

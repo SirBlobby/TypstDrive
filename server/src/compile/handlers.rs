@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use crate::compile::compiler::{CompileFailure, DocumentStats, ProjectInput};
 use crate::compile::latex;
 use crate::compile::render::{self, RenderFailure};
+use crate::compile::speaker_notes::Note;
 use crate::sharing::access;
 use crate::AppState;
 use crate::db::sql;
@@ -30,6 +31,8 @@ pub struct CompileResponse {
     pub svgs: Option<Vec<String>>,
     pub errors: Option<Vec<Diagnostic>>,
     pub stats: Option<DocumentStats>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<Vec<Option<Note>>>,
 }
 
 #[derive(Serialize)]
@@ -89,7 +92,7 @@ fn failure_diagnostics(failure: RenderFailure) -> Vec<Diagnostic> {
 }
 
 fn error_response(message: &str) -> Json<CompileResponse> {
-    Json(CompileResponse { svgs: None, errors: Some(single_error(message)), stats: None })
+    Json(CompileResponse { svgs: None, errors: Some(single_error(message)), stats: None, notes: None })
 }
 
 async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<CompileSource> {
@@ -125,6 +128,10 @@ async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Op
     }
 }
 
+pub(crate) async fn compile_input(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<ProjectInput> {
+    resolve_source(state, payload, user_id).await.map(|source| source.input)
+}
+
 async fn current_text(state: &AppState, document_id: &str) -> String {
     let room_id = crate::realtime::live_documents::document_room(document_id);
     match crate::realtime::live_documents::live_text(state, &room_id).await {
@@ -156,9 +163,9 @@ pub async fn compile_handler(
             if let Some(target) = source.thumbnail_target {
                 save_thumbnail(&state, target, &preview.thumbnail).await;
             }
-            Json(CompileResponse { svgs: Some(preview.svgs), errors: None, stats: Some(preview.stats) })
+            Json(CompileResponse { svgs: Some(preview.svgs), errors: None, stats: Some(preview.stats), notes: preview.notes })
         }
-        Err(failure) => Json(CompileResponse { svgs: None, errors: Some(failure_diagnostics(failure)), stats: None }),
+        Err(failure) => Json(CompileResponse { svgs: None, errors: Some(failure_diagnostics(failure)), stats: None, notes: None }),
     }
 }
 

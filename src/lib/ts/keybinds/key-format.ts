@@ -69,3 +69,11 @@ export function keyLabels(key: string) {
 export function shortcutText(key: string) {
     return keyLabels(key).join('+');
 }
+
+export const editShortcuts = {
+    undo: 'Mod-z',
+    redo: isMac ? 'Mod-Shift-z' : 'Mod-y',
+    cut: 'Mod-x',
+    copy: 'Mod-c',
+    paste: 'Mod-v'
+};

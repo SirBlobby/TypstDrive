@@ -10,10 +10,30 @@ function useRunesOutsideLibraries({ filename }: { filename: string }) {
 	return isExternalLibrary ? undefined : true;
 }
 
+type SvelteKitPluginConfig = NonNullable<Parameters<typeof sveltekit>[0]>;
+
+const contentSecurityPolicy: SvelteKitPluginConfig['csp'] = {
+	mode: 'hash',
+	directives: {
+		'default-src': ['self'],
+		'script-src': ['self', 'wasm-unsafe-eval'],
+		'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
+		'font-src': ['self', 'data:', 'https://fonts.gstatic.com'],
+		'img-src': ['self', 'data:', 'blob:', 'https:'],
+		'connect-src': ['self', 'https://api.github.com', 'https://api.iconify.design', 'https://api.simplesvg.com', 'https://api.unisvg.com'],
+		'frame-src': ['self', 'blob:'],
+		'worker-src': ['self', 'blob:'],
+		'object-src': ['none'],
+		'base-uri': ['self'],
+		'form-action': ['self']
+	}
+};
+
 const svelteKitOptions = {
 	compilerOptions: {
 		runes: useRunesOutsideLibraries
 	},
+	csp: contentSecurityPolicy,
 	adapter: adapter({
 		fallback: 'index.html'
 	}),

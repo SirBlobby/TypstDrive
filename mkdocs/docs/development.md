@@ -10,11 +10,15 @@ Contributions are welcome, whether that is a bug fix, a new feature or an improv
 2. Fork the repository and create a branch from `dev`.
 3. Make your change, keeping each pull request focused on one thing.
 4. Run the checks below and make sure they pass.
-5. Open a pull request against `dev`. Describe what changed, why, and how you tested it. Add screenshots for interface changes.
+5. Open a pull request against `dev` and fill in the template. Describe what changed, why, and how you tested it. Add screenshots for interface changes.
+6. A maintainer reviews it. Pull requests need one approval, resolved review threads and passing checks before they can be merged.
 
 ### Code style
 
 - Use clear, descriptive names for variables and functions. Avoid abbreviations.
+- Do not add code comments. Names and small functions should explain the code. Compiler directives such as `svelte-ignore` are fine.
+- Do not use emojis in code or documentation.
+- Write each commit message as one short subject line, with no description.
 - Keep files short and grouped by feature. Split a file when it grows past a few hundred lines.
 - In the web app, import shared code with `#lib/...`, which `package.json` maps to `src/lib` through `imports`:
     - `#lib/ts/name` points to `src/lib/ts/name.ts`, so leave off the `.ts`. For a `.svelte.ts` file write `#lib/ts/name.svelte`.
@@ -29,8 +33,12 @@ Every pull request runs the same checks in CI. Run them locally first:
 ```bash
 bun run check
 bun run build
+cargo test --manifest-path server/Cargo.toml
 cargo clippy --manifest-path server/Cargo.toml -- -D warnings
+python3 .github/scripts/check_code_rules.py dev
 ```
+
+The last command checks your branch against `origin/dev` for added code comments and emojis.
 
 ### Documentation
 
@@ -86,11 +94,25 @@ bun run docs
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | Pushes to `main` or `dev`, pull requests | Type checks and builds the web app, then checks the server. |
+| `ci.yml` | Pushes to `main` or `dev`, pull requests | Type checks and builds the web app, then checks, tests and lints the server. |
+| `code-rules.yml` | Pull requests | Fails when the changes add code comments or emojis. |
 | `docker-publish.yml` | Pushes to `main`, `v*` tags, releases | Builds the Docker image and pushes it to `ghcr.io`. |
 | `docs.yml` | Pushes to `main` that change `mkdocs/` | Builds this site and publishes it to GitHub Pages. |
 
 The image workflow signs in to `ghcr.io` with the built-in `GITHUB_TOKEN`. Run it manually with `linux/amd64,linux/arm64` to build arm images too.
+
+Workflows on pull requests from forks wait for a maintainer to approve them before they run. Dependabot opens weekly pull requests against `dev` for web app packages and GitHub Actions.
+
+### Branch rules
+
+`main` and `dev` are protected:
+
+- Changes go through a pull request with one approval and resolved review threads.
+- The `frontend`, `backend` and `code-rules` checks must pass.
+- Force pushes and deleting the branch are blocked.
+- Merged branches are deleted automatically.
+
+Repository admins can bypass these rules.
 
 ## Writing queries
 

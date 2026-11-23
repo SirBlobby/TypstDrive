@@ -17,6 +17,7 @@
 		onundo: () => void;
 		onredo: () => void;
 		onclear: () => void;
+		floating?: boolean;
 	}
 
 	let {
@@ -33,7 +34,8 @@
 		onoverview,
 		onundo,
 		onredo,
-		onclear
+		onclear,
+		floating = true
 	}: Props = $props();
 
 	const tools: { value: DrawingTool; label: string; icon: string; shortcut: string }[] = [
@@ -54,7 +56,8 @@
 {/snippet}
 
 <div
-	class="absolute inset-x-0 bottom-5 z-20 flex justify-center px-4 transition-all duration-300
+	class="z-20 flex justify-center px-4 transition-all duration-300
+		{floating ? 'absolute inset-x-0 bottom-5' : 'relative py-3'}
 		{visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'}"
 >
 	<div class="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/10 bg-neutral-900/85 p-1.5 shadow-2xl backdrop-blur-md">
@@ -64,7 +67,7 @@
 		<button
 			class="min-w-[4.5rem] shrink-0 rounded-lg px-2 py-1.5 text-center font-mono text-sm font-semibold tabular-nums text-white/90 transition-colors hover:bg-white/10"
 			onclick={onoverview}
-			title="All slides (G)"
+			title="All slides (G or Esc)"
 		>
 			{slideCount === 0 ? 0 : currentSlide + 1} / {slideCount}
 		</button>

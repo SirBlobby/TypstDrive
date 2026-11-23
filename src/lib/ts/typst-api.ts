@@ -10,6 +10,12 @@ export interface CompileResponse {
 	svgs: string[] | null;
 	errors: Diagnostic[] | null;
 	stats?: { pages: number; words: number; characters: number; characters_excluding_spaces: number };
+	notes?: (SpeakerNote | null)[];
+}
+
+export interface SpeakerNote {
+	text: string;
+	svg?: string;
 }
 
 export async function compileTypst(text: string, document_id?: string): Promise<CompileResponse> {
@@ -28,6 +34,35 @@ export async function compileProject(project_id: string, files: Record<string, s
 		body: JSON.stringify({ project_id, files }),
 	});
 	return await res.json();
+}
+
+export type CompileInput = { text: string; document_id?: string } | { project_id: string; files: Record<string, string> };
+
+export interface PagePoint {
+	page: number;
+	x: number;
+	y: number;
+}
+
+export type ClickTarget = { kind: 'source'; path: string; offset: number } | ({ kind: 'page' } & PagePoint);
+
+async function postSync<T>(endpoint: string, body: Record<string, unknown>): Promise<T | null> {
+	const res = await fetch(`/api/sync/${endpoint}`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+	return res.ok ? await res.json() : null;
+}
+
+export async function syncCursor(input: CompileInput, path: string | undefined, offset: number): Promise<PagePoint[]> {
+	const res = await postSync<{ positions: PagePoint[] }>('cursor', { ...input, path, offset });
+	return res?.positions ?? [];
+}
+
+export async function syncClick(input: CompileInput, point: PagePoint): Promise<ClickTarget | null> {
+	const res = await postSync<{ target: ClickTarget | null }>('click', { ...input, ...point });
+	return res?.target ?? null;
 }
 
 export type ExportFormat = 'pdf' | 'png' | 'svg' | 'html';
@@ -73,4 +108,17 @@ export function exportTypst(text: string, format: ExportFormat, title: string = 
 export function exportSavedItem(kind: 'document' | 'project', id: string, format: ExportFormat, name: string) {
 	const body = kind === 'document' ? { document_id: id } : { project_id: id };
 	return downloadExport(format, body, safeFileName(name));
+}
+
+export type FormatScope = { document_id?: string; project_id?: string };
+
+export async function formatTypst(text: string, scope: FormatScope): Promise<string> {
+	const res = await fetch('/api/format', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ text, ...scope })
+	});
+	if (res.status === 422) throw new Error('Fix the syntax errors in this file before formatting it.');
+	if (!res.ok) throw new Error('Formatting failed.');
+	return (await res.json()).text;
 }

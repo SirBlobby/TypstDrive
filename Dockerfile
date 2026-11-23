@@ -17,12 +17,10 @@ RUN git clone https://github.com/typst/typst.git typst \
     && git -C typst checkout bd5ebec285505889e8ff1d4f68804ab147a699f3
 COPY server/Cargo.* server/
 COPY server/.cargo server/.cargo
-COPY server/src server/src
 WORKDIR /app/server
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/app/server/target \
-    cargo build --release && cp target/release/server /app/server-binary
+RUN mkdir src && echo 'fn main() {}' > src/main.rs && cargo build --release && rm -rf src
+COPY server/src src
+RUN touch src/main.rs && cargo build --release && cp target/release/server /app/server-binary
 
 # Final Runtime Image
 FROM alpine:3.19

@@ -69,6 +69,14 @@ fn normalize_path(path: &str) -> String {
     path.trim_start_matches('/').replace('\\', "/")
 }
 
+pub fn project_file_id(path: &str) -> Option<FileId> {
+    VirtualPath::new(path).ok().map(|vpath| FileId::new(RootedPath::new(VirtualRoot::Project, vpath)))
+}
+
+pub fn project_path(id: FileId) -> Option<String> {
+    matches!(id.root(), VirtualRoot::Project).then(|| normalize_path(id.vpath().get_without_slash()))
+}
+
 fn export_formats() -> [Format; 4] {
     [
         typst_html::FORMAT,
@@ -118,10 +126,7 @@ impl MemoryWorld {
         local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
         enable_html: bool,
     ) -> Self {
-        let main = FileId::new(RootedPath::new(
-            VirtualRoot::Project,
-            VirtualPath::new(&entrypoint).unwrap_or_else(|_| VirtualPath::new("main.typ").unwrap()),
-        ));
+        let main = project_file_id(&entrypoint).unwrap_or_else(|| project_file_id("main.typ").unwrap());
         let downloader = SystemDownloader::new("TypstDrive (typst-kit)");
         let packages = SystemPackages::new(downloader);
 
@@ -197,6 +202,12 @@ impl MemoryWorld {
     }
 }
 
+impl typst_ide::IdeWorld for MemoryWorld {
+    fn upcast(&self) -> &dyn World {
+        self
+    }
+}
+
 impl World for MemoryWorld {
     fn library(&self) -> &typst::utils::LazyHash<Library> {
         self.library
@@ -246,5 +257,51 @@ impl World for MemoryWorld {
         };
 
         Datetime::from_ymd(date.year(), date.month() as u8, date.day() as u8)
+    }
+}
+
+pub struct OverlayWorld<'a> {
+    base: &'a MemoryWorld,
+    main: Source,
+}
+
+impl MemoryWorld {
+    pub fn with_main(&self, path: &str, text: String) -> OverlayWorld<'_> {
+        let vpath = VirtualPath::new(path).unwrap_or_else(|_| VirtualPath::new("main.typ").unwrap());
+        let id = FileId::new(RootedPath::new(VirtualRoot::Project, vpath));
+        OverlayWorld { base: self, main: Source::new(id, text) }
+    }
+}
+
+impl World for OverlayWorld<'_> {
+    fn library(&self) -> &typst::utils::LazyHash<Library> {
+        self.base.library()
+    }
+
+    fn book(&self) -> &typst::utils::LazyHash<FontBook> {
+        self.base.book()
+    }
+
+    fn main(&self) -> FileId {
+        self.main.id()
+    }
+
+    fn source(&self, id: FileId) -> FileResult<Source> {
+        if id == self.main.id() {
+            return Ok(self.main.clone());
+        }
+        self.base.source(id)
+    }
+
+    fn file(&self, id: FileId) -> FileResult<Bytes> {
+        self.base.file(id)
+    }
+
+    fn font(&self, index: usize) -> Option<Font> {
+        self.base.font(index)
+    }
+
+    fn today(&self, offset: Option<Duration>) -> Option<Datetime> {
+        self.base.today(offset)
     }
 }
