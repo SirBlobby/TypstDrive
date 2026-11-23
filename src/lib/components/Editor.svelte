@@ -203,7 +203,6 @@
 		const isLatex = fileKind === 'latex';
 		const isTypst = fileKind === 'typst';
 		const commentMarker = commentMarkerFor(fileKind);
-		// Project files are opened with a filePath; the route id is then the project.
 		const formatScope = filePath ? { project_id: page.params.id } : { document_id: lspDocId ?? page.params.id };
 		let languageExtension: Extension = dataFileLanguage(fileKind);
 		if (isTypst) languageExtension = [typstLanguage, typstBracketSettings(typstLanguage)];

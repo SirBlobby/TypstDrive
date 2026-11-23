@@ -2,7 +2,6 @@
     import Icon from '@iconify/svelte';
     import type { PreviewKind } from '#lib/ts/file-preview';
 
-    // Callers wrap this in {#key} per file so the failed state resets.
     let { url, name, kind, zoom = 1, pdfClass = 'max-w-5xl rounded-lg' }: {
         url: string;
         name: string;

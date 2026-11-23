@@ -191,7 +191,6 @@ pub async fn preview(input: ProjectInput) -> Result<Preview, RenderFailure> {
     }
     let pages = latex_pages(&input).await?;
     let preview = latex_page_job(pages, |compiler, pages| compiler.compile_svg(pages)).await?;
-    // LaTeX pages come from a PDF, so stats come from the source and there are no Typst notes.
     let stats = source_stats(&input.entrypoint, &input.files, preview.svgs.len());
     Ok(Preview { stats, notes: None, ..preview })
 }
@@ -226,7 +225,6 @@ pub async fn html(input: ProjectInput) -> Result<String, RenderFailure> {
     typst_job(input, |compiler, input| compiler.export_html(input)).await
 }
 
-// Cursor sync needs Typst's layout introspection, so LaTeX documents have none.
 pub async fn cursor_positions(input: ProjectInput, path: String, offset: usize) -> Vec<PagePoint> {
     if is_latex(&input) {
         return Vec::new();

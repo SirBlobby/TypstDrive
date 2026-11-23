@@ -18,11 +18,8 @@ RUN git clone https://github.com/typst/typst.git typst \
 COPY server/Cargo.* server/
 COPY server/.cargo server/.cargo
 WORKDIR /app/server
-# Cargo cannot build dependencies alone, so build them against a placeholder main.
-# This layer is then reused until Cargo.toml changes, even when server/src does.
 RUN mkdir src && echo 'fn main() {}' > src/main.rs && cargo build --release && rm -rf src
 COPY server/src src
-# COPY keeps the source's older timestamps; touch so cargo rebuilds over the placeholder.
 RUN touch src/main.rs && cargo build --release && cp target/release/server /app/server-binary
 
 # Final Runtime Image

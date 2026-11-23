@@ -11,9 +11,7 @@ use crate::AppState;
 pub struct CursorRequest {
     #[serde(flatten)]
     compile: CompileRequest,
-    /// Project path of the file the cursor is in; defaults to the entrypoint.
     path: Option<String>,
-    /// UTF-16 offset, as CodeMirror counts it.
     offset: usize,
 }
 

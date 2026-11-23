@@ -69,12 +69,10 @@ fn normalize_path(path: &str) -> String {
     path.trim_start_matches('/').replace('\\', "/")
 }
 
-/// The id of a file in the project itself (not in a package).
 pub fn project_file_id(path: &str) -> Option<FileId> {
     VirtualPath::new(path).ok().map(|vpath| FileId::new(RootedPath::new(VirtualRoot::Project, vpath)))
 }
 
-/// The project path of `id`, or `None` for files that live in a package.
 pub fn project_path(id: FileId) -> Option<String> {
     matches!(id.root(), VirtualRoot::Project).then(|| normalize_path(id.vpath().get_without_slash()))
 }
@@ -262,7 +260,6 @@ impl World for MemoryWorld {
     }
 }
 
-/// The same project compiled from a generated main file, e.g. the speaker notes document.
 pub struct OverlayWorld<'a> {
     base: &'a MemoryWorld,
     main: Source,

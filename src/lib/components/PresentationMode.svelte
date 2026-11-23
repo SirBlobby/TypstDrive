@@ -50,7 +50,6 @@
 	let fullscreenExitedAt = 0;
 	let hideControlsTimeout: number | undefined;
 
-	// Speaker mode: the audience window shows `heldIndex` while black or frozen.
 	const isSpeaker = $derived(mode === 'speaker');
 	const session = crypto.randomUUID();
 	let channel: BroadcastChannel | null = null;
@@ -117,7 +116,6 @@
 		}, 2500);
 	}
 
-	// Shared by local key presses and keys forwarded from the audience window.
 	function handleKey(input: ForwardedKey): boolean {
 		const key = input.key.toLowerCase();
 
@@ -128,7 +126,6 @@
 		if (input.ctrlKey || input.metaKey || input.altKey) return false;
 
 		if (key === 'escape') {
-			// The browser uses Escape to leave full screen; only a later press opens the overview.
 			if (document.fullscreenElement || performance.now() - fullscreenExitedAt < 500) return true;
 			toggleOverview();
 		} else if (key === 'g') {
@@ -163,7 +160,6 @@
 		container?.requestFullscreen?.().catch(() => {});
 	}
 
-	// Leaving full screen keeps presenting in the tab; only Exit ends the presentation.
 	function handleFullscreenChange() {
 		fullscreen = !!document.fullscreenElement;
 		if (!fullscreen) fullscreenExitedAt = performance.now();
@@ -197,7 +193,6 @@
 			handleKey(message.key);
 		} else if (message.type === 'bye') {
 			audienceConnected = false;
-			// A reload says bye and then hello again; only a closed window ends speaker mode.
 			window.setTimeout(() => {
 				if (audienceWindow?.closed) exit();
 			}, 500);

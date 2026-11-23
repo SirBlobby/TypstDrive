@@ -6,7 +6,6 @@
 	let divider: HTMLDivElement;
 	let dragging = $state(false);
 
-	// Measure against the neighbouring panes so side panels (file tree, comments) don't skew the ratio.
 	function ratioAt(clientX: number) {
 		const editor = divider.previousElementSibling?.getBoundingClientRect();
 		const preview = divider.nextElementSibling?.getBoundingClientRect();
@@ -17,7 +16,6 @@
 	function startDrag(event: PointerEvent) {
 		if (event.button !== 0) return;
 		event.preventDefault();
-		// Capture keeps events flowing while the pointer is over the preview or an iframe.
 		divider.setPointerCapture(event.pointerId);
 		dragging = true;
 	}
@@ -32,7 +30,6 @@
 		dragging = false;
 	}
 
-	// Keep the resize cursor and stop text selection while the pointer is away from the divider.
 	$effect(() => {
 		if (!dragging) return;
 		document.body.classList.add('select-none', 'cursor-col-resize');
@@ -48,7 +45,6 @@
 	}
 </script>
 
-<!-- A focusable separator with a value is the WAI-ARIA window splitter pattern; Svelte's linter treats every separator as static. -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 <div
 	bind:this={divider}
@@ -68,7 +64,6 @@
 	onkeydown={handleKeydown}
 	class="group relative z-20 hidden md:block w-px flex-shrink-0 cursor-col-resize touch-none bg-[var(--color-line)] outline-none"
 >
-	<!-- Wider invisible hit area around the 1px line. -->
 	<div class="absolute inset-y-0 -left-1 -right-1"></div>
 	<div class="absolute inset-y-0 -left-px -right-px transition-colors {dragging ? 'bg-[var(--color-accent)]' : 'group-hover:bg-[var(--color-accent)] group-focus-visible:bg-[var(--color-accent)]'}"></div>
 </div>

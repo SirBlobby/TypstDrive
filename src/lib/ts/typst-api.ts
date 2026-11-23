@@ -10,11 +10,9 @@ export interface CompileResponse {
 	svgs: string[] | null;
 	errors: Diagnostic[] | null;
 	stats?: { pages: number; words: number; characters: number; characters_excluding_spaces: number };
-	/** Speaker notes per page; absent when the document has none. */
 	notes?: (SpeakerNote | null)[];
 }
 
-/** A note typeset by Typst as SVG, with plain text for when typesetting failed. */
 export interface SpeakerNote {
 	text: string;
 	svg?: string;
@@ -38,10 +36,8 @@ export async function compileProject(project_id: string, files: Record<string, s
 	return await res.json();
 }
 
-// The body /api/compile takes; cursor sync sends the same one so it resolves against the same text.
 export type CompileInput = { text: string; document_id?: string } | { project_id: string; files: Record<string, string> };
 
-// A spot on a page as fractions of its width and height.
 export interface PagePoint {
 	page: number;
 	x: number;

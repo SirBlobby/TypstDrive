@@ -70,7 +70,6 @@ export function shortcutText(key: string) {
     return keyLabels(key).join('+');
 }
 
-// Built-in editing shortcuts that are not rebindable, for showing in menus. CodeMirror binds redo to Mod-Shift-z on macOS instead of Mod-y.
 export const editShortcuts = {
     undo: 'Mod-z',
     redo: isMac ? 'Mod-Shift-z' : 'Mod-y',

@@ -16,7 +16,6 @@ use typst_pdf::{pdf, PdfOptions};
 use typst_render::{render, PngFormat, RenderOptions};
 use typst_svg::{SvgFormat, SvgOptions};
 
-/// Rendered pages for the live preview.
 pub struct Preview {
     pub svgs: Vec<String>,
     pub thumbnail: String,
@@ -108,7 +107,6 @@ impl ProjectInput {
     }
 }
 
-/// A point on a page, as fractions of the page's width and height so the client can place it at any zoom.
 #[derive(Serialize)]
 pub struct PagePoint {
     pub page: usize,
@@ -116,7 +114,6 @@ pub struct PagePoint {
     pub y: f64,
 }
 
-/// Where a click in the preview leads: a spot in a source file (UTF-16 offset, as in the editor) or another spot in the document.
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum ClickTarget {

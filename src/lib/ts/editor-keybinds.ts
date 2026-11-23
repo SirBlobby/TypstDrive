@@ -53,13 +53,11 @@ export function editorKeybindExtension(commentMarker: string, isTypst: boolean, 
 
     const bindings = Object.entries(commands).filter(([id]) => keybinds[id as KeybindActionId]);
 
-    // Matched by hand rather than with keymap.of: CodeMirror's keymap skips Option-only combos on macOS, where they type characters such as Ï.
     return Prec.high(
         EditorView.domEventHandlers({
             keydown(event, view) {
                 const match = bindings.find(([id]) => matchesKeybind(keybinds[id as KeybindActionId], event));
                 if (!match) return false;
-                // Like keymap's preventDefault: a matched shortcut never falls through to the browser, even when its command declines.
                 match[1](view);
                 event.preventDefault();
                 return true;

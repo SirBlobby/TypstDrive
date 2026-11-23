@@ -30,7 +30,6 @@ export function clampSplit(ratio: number) {
     return Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, ratio));
 }
 
-// Share of the editor + preview width taken by the editor in split mode.
 export const splitRatioStore = writable<number>(DEFAULT_SPLIT);
 
 if (typeof window !== 'undefined') {

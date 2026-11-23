@@ -11,11 +11,8 @@
 		onresettimer: () => void;
 		onoverview: () => void;
 		onexit: () => void;
-		/** False in the speaker view, where the header is a fixed bar instead of an overlay. */
 		floating?: boolean;
-		/** Shown when the presentation is not full screen. */
 		onfullscreen?: () => void;
-		/** Audience controls, shown only in the speaker view. */
 		black?: boolean;
 		frozen?: boolean;
 		onblack?: () => void;

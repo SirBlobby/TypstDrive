@@ -14,7 +14,6 @@
 		type SpeakerMessage
 	} from '#lib/ts/presentation-sync';
 
-	// The audience window: it only renders what the speaker window sends.
 	const session = page.url.searchParams.get('session');
 
 	let container = $state<HTMLDivElement | null>(null);
@@ -41,14 +40,12 @@
 		}
 	}
 
-	// Clickers and keyboards may target this window, so the speaker handles every key except Escape.
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Escape' || ended) return;
 		event.preventDefault();
 		send({ type: 'key', key: forwardedKey(event) });
 	}
 
-	// Like presentation mode, the button appears on mouse movement and fades after a pause.
 	function showControls() {
 		controlsVisible = true;
 		window.clearTimeout(hideControlsTimeout);

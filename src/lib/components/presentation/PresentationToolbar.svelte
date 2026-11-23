@@ -17,7 +17,6 @@
 		onundo: () => void;
 		onredo: () => void;
 		onclear: () => void;
-		/** False in the speaker view, where the toolbar is a fixed bar instead of an overlay. */
 		floating?: boolean;
 	}
 

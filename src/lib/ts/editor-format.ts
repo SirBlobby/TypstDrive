@@ -2,10 +2,8 @@ import { Facet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { formatTypst, type FormatScope } from './typst-api';
 
-// Set by the editor for Typst files, so the shortcut and the Edit menu know which document or project to authorize against.
 export const formatScopeFacet = Facet.define<FormatScope, FormatScope | null>({ combine: (scopes) => scopes[0] ?? null });
 
-// Replace only the span that changed, so collaborators' cursors and edits outside it are kept.
 function changedSpan(before: string, after: string) {
     let start = 0;
     while (start < before.length && start < after.length && before[start] === after[start]) start++;
@@ -25,7 +23,6 @@ export async function formatDocument(view: EditorView) {
         alert((error as Error).message);
         return;
     }
-    // Someone typed while the request was in flight; applying now would undo their edit.
     if (view.state.doc.toString() !== before || after === before) return;
     view.dispatch({ changes: changedSpan(before, after), userEvent: 'format' });
 }

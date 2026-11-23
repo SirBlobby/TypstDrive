@@ -9,7 +9,6 @@
 		tool: DrawingTool;
 		color: string;
 		strokes: Stroke[];
-		/** Laser position as a fraction of the slide size. */
 		laser: Point | null;
 		interactive: boolean;
 		oncommit: (strokes: Stroke[]) => void;

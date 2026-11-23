@@ -16,7 +16,6 @@ export function stepZoom(zoom: number, step: number) {
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round((zoom + step) * 100) / 100));
 }
 
-// Same id can hold new bytes after a re-upload, so bust the browser cache on change.
 export function versionedUrl(url: string, updatedAt: string | null | undefined) {
     return updatedAt ? `${url}?v=${encodeURIComponent(updatedAt)}` : url;
 }

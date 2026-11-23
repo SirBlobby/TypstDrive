@@ -42,7 +42,6 @@
 	let role = $state('owner');
 	let files = $state<ProjectFile[]>([]);
 	let activeFileId = $state('');
-	// Binary files open in a viewer in place of the editor; activeFileId keeps the last text file.
 	let previewFileId = $state('');
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -54,14 +53,11 @@
 	let readOnly = $derived(role === 'viewer');
 	let canEdit = $derived(role === 'owner' || role === 'editor');
 	const editorExtensions = [reviewExtensions(), cursorClickSync(syncPreviewToCursor)];
-	// The sources of the last successful compile: cursor sync only works while the editors still show them.
 	let lastCompiledFiles: Record<string, string> | null = null;
 	let jumpTo = $state<(PagePoint & { seq: number }) | null>(null);
-	// A source selection to apply once the editor for its file has opened.
 	let pendingSelection = $state<{ path: string; offset: number } | null>(null);
 	let showPreview = $derived($previewVisibleStore || readOnly);
 	let previewFile = $derived(files.find((f) => f.id === previewFileId));
-	// The asset viewer shows beside the PDF even when the editor column would be hidden.
 	let assetBesidePreview = $derived(!!previewFile && (readOnly || $previewModeStore === 'preview'));
 	let editorWidthClass = $derived(
 		assetBesidePreview
@@ -186,7 +182,6 @@
 	$effect(() => {
 		const view = $editorViewStore;
 		if (!view || !pendingSelection || pendingSelection.path !== activePath) return;
-		// The store can briefly hold the previous file's view while the editor switches.
 		if (view.state.doc.toString() !== activeEntry?.text.toString()) return;
 		const { offset } = pendingSelection;
 		pendingSelection = null;

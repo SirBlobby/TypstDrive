@@ -12,7 +12,6 @@ use crate::compile::handlers::CompileRequest;
 use crate::compile::pandoc::may_convert;
 use crate::AppState;
 
-// Matches tinymist's default print width, so results agree with what the language server produced.
 const MAX_WIDTH: usize = 120;
 
 #[derive(Serialize)]

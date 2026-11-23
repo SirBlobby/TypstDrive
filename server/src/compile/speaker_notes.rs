@@ -1,12 +1,3 @@
-//! Speaker notes per page, read from the metadata that Typst slide packages emit.
-//!
-//! - Touying and Polylux: `metadata((t: "Note", v: text)) <pdfpc>`, one per note.
-//! - Mosaic: `metadata((kind: "speaker-notes", notes: (..))) <mosaic-speaker-notes>`, one per page.
-//!
-//! Notes are typeset with Typst, so lists, emphasis and math look as written. Each note's
-//! markup goes into a small generated document, one page per note: the original source for
-//! content notes, the string itself for text notes.
-
 use std::fmt::Write;
 use std::ops::Range;
 
@@ -25,14 +16,13 @@ const PDFPC_LABEL: &str = "pdfpc";
 const MOSAIC_LABEL: &str = "mosaic-speaker-notes";
 const NOTE_LABEL: &str = "typstdrive-speaker-note";
 const NOTES_FILE: &str = "__typstdrive_speaker_notes__.typ";
+const MAX_SINGLE_NOTE_RETRIES: usize = 20;
 
-/// Sized for the notes pane: the frontend scales the page with the notes font size.
 const NOTES_PREAMBLE: &str = "#set page(width: 300pt, height: auto, margin: (x: 0pt, y: 4pt), fill: none)\n\
 #set text(size: 11pt, fill: white)\n";
 
 #[derive(Serialize, Clone)]
 pub struct Note {
-    /// Plain text, shown when the note can't be typeset.
     pub text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub svg: Option<String>,
@@ -43,7 +33,6 @@ struct NoteSource {
     text: String,
 }
 
-/// One entry per page, or `None` when the document has no notes at all.
 pub fn page_notes(world: &MemoryWorld, document: &PagedDocument) -> Option<Vec<Option<Note>>> {
     let mut pages: Vec<Vec<NoteSource>> = (0..document.pages().len()).map(|_| Vec::new()).collect();
 
@@ -72,7 +61,6 @@ pub fn page_notes(world: &MemoryWorld, document: &PagedDocument) -> Option<Vec<O
     )
 }
 
-/// Metadata values carrying `label`, paired with their zero-based page index.
 fn labelled_values(document: &PagedDocument, label: &str) -> Vec<(usize, Value)> {
     let Some(label) = Label::new(PicoStr::intern(label)) else {
         return Vec::new();
@@ -121,10 +109,6 @@ fn note_source(world: &MemoryWorld, value: &Value) -> Option<NoteSource> {
     (!text.is_empty()).then_some(NoteSource { markup, text })
 }
 
-/// The note's markup exactly as written, e.g. the body of `#note[...]`.
-///
-/// Gives up when the pieces aren't one contiguous run of source, such as a note that
-/// inserts a variable defined elsewhere, since the generated document can't resolve it.
 fn source_markup(world: &MemoryWorld, content: &Content) -> Option<String> {
     let parts = match content.to_packed::<SequenceElem>() {
         Some(sequence) => sequence.children.iter().collect(),
@@ -143,14 +127,12 @@ fn source_markup(world: &MemoryWorld, content: &Content) -> Option<String> {
         let next = world.range(span)?;
         range = Some(match range {
             None => next,
-            // Only whitespace may sit between the parts the note itself wrote.
             Some(current) if text.get(current.end..next.start)?.trim().is_empty() => current.start..next.end,
             Some(_) => return None,
         });
     }
     let range = range?;
 
-    // Keep the first line's indentation so nested lists stay nested after dedenting.
     let line_start = text[..range.start].rfind('\n').map_or(0, |index| index + 1);
     let start = if text[line_start..range.start].trim().is_empty() { line_start } else { range.start };
     Some(dedent(text.get(start..range.end)?))
@@ -169,7 +151,6 @@ fn dedent(text: &str) -> String {
         .join("\n")
 }
 
-/// Typst markup that shows `text` verbatim.
 fn string_literal(text: &str) -> String {
     let mut literal = String::from("#\"");
     for c in text.chars() {
@@ -200,8 +181,6 @@ fn merge_notes(notes: Vec<NoteSource>) -> Option<NoteSource> {
     Some(NoteSource { markup: markup.join("\n\n"), text: text.join("\n\n") })
 }
 
-/// An SVG per note. When the batch fails, each note is retried alone so one broken
-/// note doesn't take the others down with it.
 fn typeset(world: &MemoryWorld, notes: &[Option<NoteSource>]) -> Vec<Option<String>> {
     let pending: Vec<(usize, &str)> = notes
         .iter()
@@ -212,6 +191,7 @@ fn typeset(world: &MemoryWorld, notes: &[Option<NoteSource>]) -> Vec<Option<Stri
     let typeset = typeset_batch(world, &pending).unwrap_or_else(|| {
         pending
             .iter()
+            .take(MAX_SINGLE_NOTE_RETRIES)
             .filter_map(|&note| typeset_batch(world, &[note]))
             .flatten()
             .collect()
@@ -227,7 +207,6 @@ fn typeset(world: &MemoryWorld, notes: &[Option<NoteSource>]) -> Vec<Option<Stri
 fn typeset_batch(world: &MemoryWorld, notes: &[(usize, &str)]) -> Option<Vec<(usize, String)>> {
     let mut source = String::from(NOTES_PREAMBLE);
     for (index, markup) in notes {
-        // Each note sits in its own block, so its set rules and errors stay local.
         let _ = write!(source, "#pagebreak(weak: true)\n#metadata({index}) <{NOTE_LABEL}>\n#[\n{markup}\n]\n");
     }
     let world = world.with_main(NOTES_FILE, source);

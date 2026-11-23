@@ -3,7 +3,6 @@ import type { Slide } from '../components/presentation/slides';
 
 export type { Point, Slide };
 
-// The speaker window owns all presentation state; the audience window only renders what it is sent.
 
 export type PresentationLayout = 'audience' | 'speaker';
 
@@ -44,7 +43,6 @@ export function forwardedKey(event: KeyboardEvent): ForwardedKey {
 	return { key, shiftKey, ctrlKey, metaKey, altKey };
 }
 
-// Notes stay in the speaker window.
 export function audienceSlides(slides: Slide[]): Slide[] {
 	return slides.map(({ markup, aspectRatio }) => ({ markup, aspectRatio, note: null }));
 }

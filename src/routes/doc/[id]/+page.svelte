@@ -48,7 +48,6 @@
 		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]' : 'w-full min-w-0'
 	);
 	const editorExtensions = [reviewExtensions(), cursorClickSync(syncPreviewToCursor)];
-	// The text of the last successful compile: cursor sync only works while the editor still shows it.
 	let lastCompiledInput: { text: string; document_id?: string } | null = null;
 	let jumpTo = $state<(PagePoint & { seq: number }) | null>(null);
 
