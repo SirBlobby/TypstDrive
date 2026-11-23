@@ -101,7 +101,7 @@ These are the shortcuts out of the box. On a Mac, use ++cmd++ instead of ++ctrl+
 
 | Shortcut | Action |
 |---|---|
-| ++ctrl+s++ | Save a version |
+| ++ctrl+s++ | Save a version (in a project, confirm that your changes are saved) |
 | ++ctrl+b++ | Bold |
 | ++ctrl+i++ | Italic |
 | ++ctrl+e++ | Inline code |
@@ -116,3 +116,5 @@ These are the shortcuts out of the box. On a Mac, use ++cmd++ instead of ++ctrl+
 ## Saving
 
 Everything you type is saved automatically every few seconds. **Versions**, which are snapshots you can go back to, are saved when people leave the document or when you press ++ctrl+s++. See [Version history](collaboration.md#version-history).
+
+Projects don't have versions yet. In a project, ++ctrl+s++ just confirms that your changes are saved, or tells you they'll sync once you're back online.

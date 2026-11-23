@@ -5,12 +5,12 @@
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import { undo, redo } from '@codemirror/commands';
-	import { editorViewStore, commentsSidebarOpen } from '../../ts/store';
+	import { editorViewStore, commentsSidebarOpen, connectionStatus } from '../../ts/store';
 	import { suggestingModeStore } from '../../ts/suggestions';
 	import { startCommentOnSelection } from '../../ts/comments';
 	import { formatDocument } from '../../ts/editor-format';
 	import { currentKeybind } from '../../ts/keybinds/keybinds-store';
-	import { editShortcuts, shortcutText } from '../../ts/keybinds/key-format';
+	import { editShortcuts, matchesKeybind, shortcutText } from '../../ts/keybinds/key-format';
 	import { buildPageActions, registerPageActions } from '../../ts/slash/page-actions';
 	import { latexImageFormat, projectImageLibrary, typstImageFormat } from '../../ts/image-library';
 	import { latexFileReference } from '../../ts/latex-file-reference';
@@ -353,11 +353,23 @@
 		if (!target.closest('.action-menu-container')) activeMenu = null;
 	}
 
+	let saveNotice = $state<'saved' | 'offline' | null>(null);
+	let saveNoticeTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function handleShortcut(event: KeyboardEvent) {
+		if (!matchesKeybind(currentKeybind('saveVersion'), event)) return;
+		event.preventDefault();
+		if (!canEdit) return;
+		saveNotice = $connectionStatus === 'connected' ? 'saved' : 'offline';
+		clearTimeout(saveNoticeTimer);
+		saveNoticeTimer = setTimeout(() => (saveNotice = null), 2500);
+	}
+
 	function handleUndo() { activeMenu = null; if ($editorViewStore) undo($editorViewStore); }
 	function handleRedo() { activeMenu = null; if ($editorViewStore) redo($editorViewStore); }
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={handleWindowClick} onkeydown={handleShortcut} />
 
 <header class="flex flex-col border-b border-[var(--theme-border)] bg-[var(--theme-bg)] text-[var(--theme-text)] select-none w-full relative z-[70]">
 	<div class="flex items-center justify-between px-4 py-2.5">
@@ -370,6 +382,12 @@
 				<div class="flex items-center gap-2">
 					<Icon icon="mdi:folder-multiple-outline" class="text-blue-500 text-base" />
 					<h1 class="text-[16px] font-semibold text-[var(--color-ink)] tracking-tight truncate max-w-[200px] md:max-w-xs" title={projectName}>{projectName}</h1>
+					{#if saveNotice}
+						<span class="flex items-center gap-1 text-xs text-[var(--color-ink-muted)]">
+							<Icon icon={saveNotice === 'saved' ? 'mdi:check' : 'mdi:cloud-off-outline'} class="text-sm" />
+							{saveNotice === 'saved' ? 'All changes saved automatically' : 'Offline, changes will sync when you reconnect'}
+						</span>
+					{/if}
 				</div>
 
 				<div class="flex items-center gap-0.5 text-[13px] font-medium text-[var(--color-ink-muted)] -ml-1 action-menu-container">
