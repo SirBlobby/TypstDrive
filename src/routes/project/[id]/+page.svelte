@@ -25,7 +25,8 @@
 	import { remoteDraftsChangedStore, shareEditingMode } from '#lib/ts/live-review';
 	import { endReviewSession, startReviewSession, switchReviewFile } from '#lib/ts/review-session';
 	import { editorErrors, documentStatsStore, fileTreeCollapsedStore, commentsSidebarOpen } from '#lib/ts/store';
-	import { previewModeStore, previewVisibleStore } from '#lib/ts/preview-mode';
+	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
+	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import Icon from '@iconify/svelte';
 	import { isPlaceholder, placeholderPath } from '#lib/ts/project-tree';
 	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
@@ -57,7 +58,7 @@
 	const editorExtensions = reviewExtensions();
 	let showPreview = $derived($previewVisibleStore || readOnly);
 	let editorWidthClass = $derived(
-		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-1 border-r border-[var(--color-line)]' : 'flex-1 min-w-0'
+		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]' : 'flex-1 min-w-0'
 	);
 	let activeEntry = $derived(activeFileId ? getOpenFile(activeFileId) : undefined);
 	let activePath = $derived(files.find((f) => f.id === activeFileId)?.path ?? '');
@@ -340,7 +341,7 @@
 		onFilesChanged={loadFiles}
 	/>
 
-	<main class="flex-1 flex overflow-hidden relative">
+	<main class="flex-1 flex overflow-hidden relative" style="--editor-grow: {$splitRatioStore}; --preview-grow: {1 - $splitRatioStore}">
 		{#if $fileTreeCollapsedStore}
 			<aside class="w-10 flex-shrink-0 hidden md:flex flex-col items-center py-2 bg-[var(--color-surface)] border-r border-[var(--color-line)]">
 				<button onclick={() => fileTreeCollapsedStore.set(false)} title="Show files" aria-label="Show files" class="p-1.5 rounded hover:bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]">
@@ -381,8 +382,12 @@
 			</div>
 		{/if}
 
+		{#if !readOnly && showPreview && $previewModeStore === 'split'}
+			<SplitDivider />
+		{/if}
+
 		{#if showPreview}
-			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-1'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
+			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
 				<Preview {svgs} />
 				<ErrorBanner {errors} />
 			</div>
