@@ -7,15 +7,36 @@ export interface Diagnostic {
 }
 
 export interface CompileResponse {
-	svgs: string[] | null;
+	svgs: (string | null)[] | null;
 	errors: Diagnostic[] | null;
 	stats?: { pages: number; words: number; characters: number; characters_excluding_spaces: number };
 	notes?: (SpeakerNote | null)[];
+	page_hashes?: string[];
 }
 
 export interface SpeakerNote {
 	text: string;
 	svg?: string;
+}
+
+export interface PreviewPages {
+	svgs: string[];
+	hashes: string[];
+}
+
+export function assemblePages(res: CompileResponse, held: Map<string, string>): PreviewPages | undefined {
+	if (!res.svgs) return undefined;
+	const hashes = res.page_hashes;
+	if (!hashes || hashes.length !== res.svgs.length) {
+		return res.svgs.every((svg) => svg !== null) ? { svgs: res.svgs as string[], hashes: [] } : undefined;
+	}
+	const svgs: string[] = [];
+	for (let i = 0; i < res.svgs.length; i++) {
+		const svg = res.svgs[i] ?? held.get(hashes[i]);
+		if (svg === undefined) return undefined;
+		svgs.push(svg);
+	}
+	return { svgs, hashes };
 }
 
 export async function compileTypst(text: string, document_id?: string): Promise<CompileResponse> {
@@ -27,11 +48,11 @@ export async function compileTypst(text: string, document_id?: string): Promise<
 	return await res.json();
 }
 
-export async function compileProject(project_id: string, files: Record<string, string>): Promise<CompileResponse> {
+export async function compileProject(project_id: string, files: Record<string, string>, known_pages?: string[]): Promise<CompileResponse> {
 	const res = await fetch('/api/compile', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ project_id, files }),
+		body: JSON.stringify({ project_id, files, known_pages }),
 	});
 	return await res.json();
 }

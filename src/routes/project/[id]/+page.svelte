@@ -11,7 +11,7 @@
 	import ProjectToolbar from '#lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '#lib/components/PublishPackageModal.svelte';
 	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
-	import { compileProject, syncClick, syncCursor, type PagePoint } from '#lib/ts/typst-api';
+	import { compileProject, assemblePages, syncClick, syncCursor, type PagePoint } from '#lib/ts/typst-api';
 	import { cursorClickSync, revealOffset } from '#lib/ts/editor-preview-sync';
 	import type { Diagnostic } from '#lib/ts/typst-api';
 	import EditorContextMenu from '#lib/components/editor/EditorContextMenu.svelte';
@@ -44,6 +44,7 @@
 	let activeFileId = $state('');
 	let previewFileId = $state('');
 	let svgs = $state<string[]>([]);
+	let pageHashes: string[] = [];
 	let errors = $state<Diagnostic[]>([]);
 	let showPublish = $state(false);
 	let ready = $state(false);
@@ -93,18 +94,28 @@
 		return sources;
 	}
 
-	function triggerCompile() {
-		if (!showPreview || !sourcesReady) return;
+	function triggerCompile(beforeSync = false) {
+		if (!showPreview || (!sourcesReady && !beforeSync)) return;
 		const sources = previewSources();
 		const fingerprint = JSON.stringify(sources);
 		if (fingerprint === lastCompiledSources) return;
 		lastCompiledSources = fingerprint;
 		const matchesEditor = fingerprint === JSON.stringify(getAllText());
-		compileProject(projectId, sources)
+		const held = new Map(pageHashes.map((hash, i) => [hash, svgs[i]]));
+		compileProject(projectId, sources, [...held.keys()])
 			.then((res) => {
 				if (res.stats) $documentStatsStore = res.stats;
 				if (res.svgs) {
-					svgs = res.svgs;
+					pageHashes.forEach((hash, i) => held.set(hash, svgs[i]));
+					const pages = assemblePages(res, held);
+					if (!pages) {
+						pageHashes = [];
+						lastCompiledSources = null;
+						triggerCompile(true);
+						return;
+					}
+					svgs = pages.svgs;
+					pageHashes = pages.hashes;
 					lastCompiledFiles = sources;
 					$speakerNotesStore = res.notes ?? [];
 					errors = [];
@@ -365,6 +376,7 @@
 			.then(loadFiles)
 			.then(async () => {
 				ready = true;
+				triggerCompile(true);
 				await Promise.all(openFiles().map((entry) => whenSynced(entry, SYNC_WAIT_MS)));
 				sourcesReady = true;
 				triggerCompile();

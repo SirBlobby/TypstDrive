@@ -6,7 +6,7 @@ use axum::{
 };
 use axum_extra::extract::cookie::SignedCookieJar;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::compile::compiler::{CompileFailure, DocumentStats, ProjectInput};
 use crate::compile::latex;
@@ -25,15 +25,46 @@ pub struct CompileRequest {
     pub project_id: Option<String>,
     #[serde(default)]
     pub files: Option<HashMap<String, String>>,
+    #[serde(default)]
+    pub known_pages: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
 pub struct CompileResponse {
-    pub svgs: Option<Vec<String>>,
+    pub svgs: Option<Vec<Option<String>>>,
     pub errors: Option<Vec<Diagnostic>>,
     pub stats: Option<DocumentStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<Vec<Option<Note>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_hashes: Option<Vec<String>>,
+}
+
+const MAX_KNOWN_PAGES: usize = 20_000;
+
+fn page_hash(svg: &str) -> String {
+    let mut hash = crate::hashing::sha256_hex(svg.as_bytes());
+    hash.truncate(32);
+    hash
+}
+
+async fn preview_response(svgs: Vec<String>, stats: DocumentStats, notes: Option<Vec<Option<Note>>>, known_pages: Option<Vec<String>>) -> Json<CompileResponse> {
+    let Some(mut known) = known_pages else {
+        let svgs = svgs.into_iter().map(Some).collect();
+        return Json(CompileResponse { svgs: Some(svgs), errors: None, stats: Some(stats), notes, page_hashes: None });
+    };
+    known.truncate(MAX_KNOWN_PAGES);
+    let hashed = tokio::task::spawn_blocking(move || {
+        let known: HashSet<String> = known.into_iter().collect();
+        let hashes: Vec<String> = svgs.iter().map(|svg| page_hash(svg)).collect();
+        let svgs: Vec<Option<String>> = svgs.into_iter().zip(&hashes).map(|(svg, hash)| (!known.contains(hash)).then_some(svg)).collect();
+        (svgs, hashes)
+    })
+    .await;
+    match hashed {
+        Ok((svgs, hashes)) => Json(CompileResponse { svgs: Some(svgs), errors: None, stats: Some(stats), notes, page_hashes: Some(hashes) }),
+        Err(_) => error_response("Compilation stopped unexpectedly"),
+    }
 }
 
 #[derive(Serialize)]
@@ -94,7 +125,7 @@ fn failure_diagnostics(failure: RenderFailure) -> Vec<Diagnostic> {
 }
 
 fn error_response(message: &str) -> Json<CompileResponse> {
-    Json(CompileResponse { svgs: None, errors: Some(single_error(message)), stats: None, notes: None })
+    Json(CompileResponse { svgs: None, errors: Some(single_error(message)), stats: None, notes: None, page_hashes: None })
 }
 
 pub(crate) async fn resolve_source(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<CompileSource> {
@@ -163,6 +194,7 @@ pub async fn compile_handler(
         return error_response("Unauthorized");
     };
 
+    let known_pages = payload.known_pages;
     let CompileSource { input, thumbnail_target, cache_target } = source;
     let cache_target = cache_target.filter(|_| !render::is_latex(&input));
     let (input, key) = match &cache_target {
@@ -185,7 +217,7 @@ pub async fn compile_handler(
                 save_thumbnail(&state, thumbnail_target, first_page).await;
             }
             warm_up::refresh(input, key.clone(), target.clone());
-            return Json(CompileResponse { svgs: Some(stored.svgs), errors: None, stats: Some(stored.stats), notes: stored.notes });
+            return preview_response(stored.svgs, stored.stats, stored.notes, known_pages).await;
         }
     }
 
@@ -201,9 +233,9 @@ pub async fn compile_handler(
             if let Some(target) = thumbnail_target {
                 save_thumbnail(&state, target, &preview.thumbnail).await;
             }
-            Json(CompileResponse { svgs: Some(preview.svgs), errors: None, stats: Some(preview.stats), notes: preview.notes })
+            preview_response(preview.svgs, preview.stats, preview.notes, known_pages).await
         }
-        Err(failure) => Json(CompileResponse { svgs: None, errors: Some(failure_diagnostics(failure)), stats: None, notes: None }),
+        Err(failure) => Json(CompileResponse { svgs: None, errors: Some(failure_diagnostics(failure)), stats: None, notes: None, page_hashes: None }),
     }
 }
 

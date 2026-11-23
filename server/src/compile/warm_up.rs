@@ -188,6 +188,7 @@ async fn warm_up_one(state: &AppState, target: &str, owner: String) -> bool {
         document_id: (kind == "document").then(|| id.to_string()),
         project_id: (kind == "project").then(|| id.to_string()),
         files: None,
+        known_pages: None,
     };
     let Some(source) = crate::compile::handlers::resolve_source(state, &request, &Some(owner)).await else {
         return false;
