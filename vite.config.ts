@@ -1,7 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
-import type { Config } from '@sveltejs/kit';
 import { defineConfig } from 'vite';
 import wasm from 'vite-plugin-wasm';
 
@@ -11,7 +10,9 @@ function useRunesOutsideLibraries({ filename }: { filename: string }) {
 	return isExternalLibrary ? undefined : true;
 }
 
-const contentSecurityPolicy: Config['csp'] = {
+type SvelteKitPluginConfig = NonNullable<Parameters<typeof sveltekit>[0]>;
+
+const contentSecurityPolicy: SvelteKitPluginConfig['csp'] = {
 	mode: 'hash',
 	directives: {
 		'default-src': ['self'],
