@@ -7,7 +7,8 @@ export type KeybindActionId =
     | 'find'
     | 'replace'
     | 'addComment'
-    | 'saveVersion';
+    | 'saveVersion'
+    | 'formatDocument';
 
 export interface KeybindAction {
     id: KeybindActionId;
@@ -24,5 +25,6 @@ export const keybindActions: KeybindAction[] = [
     { id: 'find', label: 'Find', defaultKey: 'Mod-f' },
     { id: 'replace', label: 'Find and replace', defaultKey: 'Mod-h' },
     { id: 'addComment', label: 'Comment on selection', defaultKey: 'Mod-Alt-m' },
-    { id: 'saveVersion', label: 'Save version', defaultKey: 'Mod-s' }
+    { id: 'saveVersion', label: 'Save version', defaultKey: 'Mod-s' },
+    { id: 'formatDocument', label: 'Format document', defaultKey: 'Shift-Alt-f' }
 ];

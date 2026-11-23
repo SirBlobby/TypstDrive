@@ -60,6 +60,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/compile", post(compile::handlers::compile_handler))
         .route("/sync/cursor", post(compile::sync::cursor_handler))
         .route("/sync/click", post(compile::sync::click_handler))
+        .route("/format", post(compile::format::format_handler))
         .route("/export/{format}", post(compile::handlers::export_handler))
         .route("/export/pandoc/{format}", post(compile::pandoc::pandoc_export_handler))
         .route("/import/pandoc", post(compile::pandoc::pandoc_import_handler))

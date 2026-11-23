@@ -87,6 +87,10 @@ Typst and LaTeX files each get their own commands. `//` comments and division li
 
 Press ++ctrl+f++ to search the document, or ++ctrl+h++ to search and replace. Both are also in the **Edit** menu.
 
+## Formatting
+
+Press ++shift+alt+f++ (++shift+option+f++ on a Mac), or choose **Edit → Format document**, to tidy up the indentation, spacing and line breaks of a Typst file. It works in documents and in every `.typ` file of a project. A file with syntax errors is left as it is until you fix them.
+
 ## Spell checking
 
 Turn on spell checking in [your settings](settings.md#editor). It only checks your writing and skips code, math, labels and links. Right-click a marked word for suggestions.
@@ -106,6 +110,7 @@ These are the shortcuts out of the box. On a Mac, use ++cmd++ instead of ++ctrl+
 | ++ctrl+f++ | Find |
 | ++ctrl+h++ | Find and replace |
 | ++ctrl+alt+m++ | Comment on the selected text |
+| ++shift+alt+f++ | Format a Typst file |
 | ++ctrl+z++ and ++ctrl+y++ | Undo and redo |
 
 ## Saving

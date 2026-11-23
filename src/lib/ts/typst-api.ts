@@ -105,3 +105,16 @@ export function exportSavedItem(kind: 'document' | 'project', id: string, format
 	const body = kind === 'document' ? { document_id: id } : { project_id: id };
 	return downloadExport(format, body, safeFileName(name));
 }
+
+export type FormatScope = { document_id?: string; project_id?: string };
+
+export async function formatTypst(text: string, scope: FormatScope): Promise<string> {
+	const res = await fetch('/api/format', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ text, ...scope })
+	});
+	if (res.status === 422) throw new Error('Fix the syntax errors in this file before formatting it.');
+	if (!res.ok) throw new Error('Formatting failed.');
+	return (await res.json()).text;
+}

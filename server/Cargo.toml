@@ -28,6 +28,7 @@ typst-svg = { path = "../typst/crates/typst-svg" }
 typst-html = { path = "../typst/crates/typst-html" }
 typst-layout = { path = "../typst/crates/typst-layout" }
 typst-ide = { path = "../typst/crates/typst-ide" }
+typstyle-core = "0.15.3"
 hayro-syntax = { git = "https://github.com/LaurenzV/hayro", rev = "d8e24e29eda62581e1ea15497effb2a884fb1608" }
 libc = "0.2"
 
