@@ -94,14 +94,24 @@
 		return sources;
 	}
 
+	let compileInFlight = false;
+	let compileQueued = false;
+	let queuedBeforeSync = false;
+
 	function triggerCompile(beforeSync = false) {
 		if (!showPreview || (!sourcesReady && !beforeSync)) return;
+		if (compileInFlight) {
+			compileQueued = true;
+			queuedBeforeSync ||= beforeSync;
+			return;
+		}
 		const sources = previewSources();
 		const fingerprint = JSON.stringify(sources);
 		if (fingerprint === lastCompiledSources) return;
 		lastCompiledSources = fingerprint;
 		const matchesEditor = fingerprint === JSON.stringify(getAllText());
 		const held = new Map(pageHashes.map((hash, i) => [hash, svgs[i]]));
+		compileInFlight = true;
 		compileProject(projectId, sources, [...held.keys()])
 			.then((res) => {
 				if (res.stats) $documentStatsStore = res.stats;
@@ -111,7 +121,8 @@
 					if (!pages) {
 						pageHashes = [];
 						lastCompiledSources = null;
-						triggerCompile(true);
+						compileQueued = true;
+						queuedBeforeSync = true;
 						return;
 					}
 					svgs = pages.svgs;
@@ -128,6 +139,14 @@
 			.catch(() => {
 				lastCompiledSources = null;
 				errors = [{ message: 'Network or server error compiling project.', severity: 'error' }];
+			})
+			.finally(() => {
+				compileInFlight = false;
+				if (!compileQueued) return;
+				const again = queuedBeforeSync;
+				compileQueued = false;
+				queuedBeforeSync = false;
+				triggerCompile(again);
 			});
 	}
 
