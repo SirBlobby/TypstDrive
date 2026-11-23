@@ -59,7 +59,7 @@ pub struct UsedResources {
     pub font_files: HashSet<String>,
 }
 
-const LOCAL_NAMESPACE: &str = "typstdrive";
+pub const LOCAL_PACKAGE_NAMESPACE: &str = "typstdrive";
 
 const REMOTE_FETCH_TIMEOUT_SECS: u64 = 15;
 const REMOTE_MAX_BYTES: u64 = 50 * 1024 * 1024;
@@ -171,7 +171,7 @@ impl MemoryWorld {
         let path = normalize_path(id.vpath().get_without_slash());
 
         if let VirtualRoot::Package(package) = id.root() {
-            if package.namespace.as_str() == LOCAL_NAMESPACE {
+            if package.namespace.as_str() == LOCAL_PACKAGE_NAMESPACE {
                 let key = format!("{}:{}", package.name, package.version);
                 return self
                     .local_packages

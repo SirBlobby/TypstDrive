@@ -34,6 +34,7 @@
 	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
 	import { createFollowController } from '#lib/ts/follow';
 	import { filePresenceStore } from '#lib/ts/presence';
+	import { LspSession } from '#lib/ts/lsp-session.svelte';
 
 	const projectId = page.params.id as string;
 
@@ -70,6 +71,26 @@
 	);
 	let activeEntry = $derived(activeFileId ? getOpenFile(activeFileId) : undefined);
 	let activePath = $derived(files.find((f) => f.id === activeFileId)?.path ?? '');
+	let lspSession = $state.raw<LspSession | null>(null);
+	let lspTree = $derived(files.map((f) => (f.kind === 'text' ? `${f.id}:${f.path}` : `${f.id}:${f.path}:${f.updated_at ?? ''}`)).join('|'));
+
+	$effect(() => {
+		if (!ready || !canEdit || !entrypoint.endsWith('.typ')) return;
+		void lspTree;
+		const session = untrack(
+			() =>
+				new LspSession({
+					path: `/api/projects/${projectId}/lsp`,
+					files: () => openFiles().map((entry) => ({ path: entry.path, text: entry.text })),
+					openPath: (path) => {
+						const file = files.find((f) => f.path === path);
+						if (file) selectFile(file);
+					}
+				})
+		);
+		lspSession = session;
+		return () => session.close();
+	});
 
 	function scheduleCompile() {
 		if (timeoutId) clearTimeout(timeoutId);
@@ -427,7 +448,7 @@
 					<AssetPreview {projectId} file={previewFile} onClose={() => (previewFileId = '')} />
 				{:else if ready && activeEntry}
 					{#key activeFileId}
-						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} enableLsp={false} extensions={editorExtensions} slash={{ insertDialogs: canEdit, embedDocuments: false, canComment: !readOnly }} />
+						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} lsp={lspSession} lspPath={activePath} extensions={editorExtensions} slash={{ insertDialogs: canEdit, embedDocuments: false, canComment: !readOnly }} />
 						<CommentHighlights />
 						<SuggestionHighlights />
 					{/key}

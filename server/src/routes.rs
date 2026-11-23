@@ -65,6 +65,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/export/pandoc/{format}", post(compile::pandoc::pandoc_export_handler))
         .route("/import/pandoc", post(compile::pandoc::pandoc_import_handler))
         .route("/lsp/{id}", get(compile::lsp::lsp_handler))
+        .route("/projects/{id}/lsp", get(compile::lsp::project_lsp_handler))
         .route("/auth/register", post(accounts::auth::register))
         .route("/auth/login", post(accounts::auth::login))
         .route("/auth/logout", post(accounts::auth::logout))

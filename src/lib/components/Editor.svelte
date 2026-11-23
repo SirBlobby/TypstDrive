@@ -10,10 +10,10 @@
 	import { text, provider } from '../ts/yjs-setup';
 	import { getThemeExtension } from '../ts/themes';
 	import { customThemesStore } from '../ts/custom-themes';
-	import { themeStore, darkModeStore, editorViewStore, editorErrors, triggerLspReconnect } from '../ts/store';
+	import { themeStore, darkModeStore, editorViewStore, editorErrors } from '../ts/store';
 	import { page } from '$app/state';
-	import { LSPClient } from "@codemirror/lsp-client";
-	import { typstLspExtensions } from '../ts/editor-lsp';
+	import { LSPPlugin, serverCompletionSource } from '@codemirror/lsp-client';
+	import type { LspSession } from '../ts/lsp-session.svelte';
 	import { setDiagnostics, lintGutter } from '@codemirror/lint';
 	import { bracketExtensions, typstBracketSettings } from '../ts/editor-brackets';
 	import { editorKeybindExtension } from '../ts/editor-keybinds';
@@ -34,8 +34,8 @@
 	let {
 		ytext = undefined,
 		awarenessProvider = undefined,
-		lspDocId = undefined,
-		enableLsp = true,
+		lsp = null,
+		lspPath = undefined,
 		filePath = undefined,
 		language = 'typst',
 		extensions = [],
@@ -43,8 +43,8 @@
 	}: {
 		ytext?: any;
 		awarenessProvider?: any;
-		lspDocId?: string;
-		enableLsp?: boolean;
+		lsp?: LspSession | null;
+		lspPath?: string;
 		filePath?: string;
 		language?: DocumentLanguage;
 		extensions?: Extension[];
@@ -60,14 +60,11 @@
 	let unsubscribeDark: () => void;
 	let unsubscribeCustomThemes: () => void;
 	let unsubscribeErrors: () => void;
-	let unsubscribeLspReconnect: () => void;
 	let unsubscribePreferences: () => void;
 
 	let currentTheme = 'Cerberus';
 	let isDark = true;
 	let state: EditorState;
-	let client: LSPClient | null = null;
-	let lsSocket: WebSocket | null = null;
 
 	const typstOptions = [
 		snippetCompletion("let ${name} = ${value}", { label: "let", type: "keyword", info: "Variable declaration" }),
@@ -165,15 +162,18 @@
 		return view.state.doc.lineAt(Math.min(session.from, view.state.doc.length)).number - 1;
 	}
 
+	function skipSlashLine(diagnostic: { range?: { start?: { line?: number } } }) {
+		return diagnostic.range?.start?.line === openSlashLine();
+	}
+
+	function lspCompletions(context: CompletionContext) {
+		return isSlashPaletteOpen(context.state) ? null : serverCompletionSource(context);
+	}
+
 	function typstCompletions(context: CompletionContext) {
-		if (isSlashPaletteOpen(context.state)) return null;
+		if (isSlashPaletteOpen(context.state) || (context.view && LSPPlugin.get(context.view))) return null;
 		let word = context.matchBefore(/[\w#]*/);
 		if (!word || (word.from == word.to && !context.explicit)) return null;
-		
-		let textBefore = word.text;
-		if (textBefore.startsWith('#')) {
-			textBefore = textBefore.substring(1); 
-		}
 
 		return {
 			from: word.text.startsWith('#') ? word.from + 1 : word.from,
@@ -203,11 +203,11 @@
 		const isLatex = fileKind === 'latex';
 		const isTypst = fileKind === 'typst';
 		const commentMarker = commentMarkerFor(fileKind);
-		const formatScope = filePath ? { project_id: page.params.id } : { document_id: lspDocId ?? page.params.id };
+		const formatScope = filePath ? { project_id: page.params.id } : { document_id: page.params.id };
 		let languageExtension: Extension = dataFileLanguage(fileKind);
 		if (isTypst) languageExtension = [typstLanguage, typstBracketSettings(typstLanguage)];
 		if (isLatex) languageExtension = [latexEditorExtensions(), latexPackageLoader()];
-		const completionExtensions = isTypst ? [autocompletion({ override: [typstCompletions] })] : [];
+		const completionExtensions = isTypst ? [autocompletion({ override: [typstCompletions, lspCompletions] })] : [];
 		const slashExtensions = slash ? slashCommands({ fileKind, context: { ...slash, commentMarker } }) : [];
 
 		state = EditorState.create({
@@ -300,95 +300,20 @@
 			}
 		});
 
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		const host = window.location.host;
-		const docId = lspDocId ?? page.params.id;
+		if (isTypst && lsp) lsp.skipDiagnostic = skipSlashLine;
+	});
 
-		let lsHandlers: ((value: string) => void)[] = [];
-		let lspInitialized = false;
-		let lastServerDiagnostics = '';
-
-		const transport = {
-			send(message: string) { if (lsSocket?.readyState === WebSocket.OPEN) lsSocket.send(message); },
-			subscribe(handler: (value: string) => void) { lsHandlers.push(handler); },
-			unsubscribe(handler: (value: string) => void) { lsHandlers = lsHandlers.filter(h => h != handler); }
-		};
-
-		function connectLsp() {
-			if (lsSocket) {
-				lsSocket.close();
-				lsSocket = null;
-			}
-			
-			lspInitialized = false;
-			lsHandlers = [];
-			lastServerDiagnostics = '';
-			
-			lsSocket = new WebSocket(`${protocol}//${host}/api/lsp/${docId}`);
-
-			lsSocket.onmessage = e => {
-				const data = e.data.toString();
-				if (!lspInitialized) {
-					try {
-						const msg = JSON.parse(data);
-						if (msg.type === 'init') {
-							lspInitialized = true;
-							client = new LSPClient({
-								rootUri: msg.rootUri,
-								timeout: 10000,
-								extensions: typstLspExtensions()
-							}).connect(transport);
-
-							view.dispatch({
-								effects: lspCompartment.reconfigure(client.plugin(`${msg.rootUri}/${docId}.typ`, 'typst'))
-							});
-							return;
-						}
-					} catch (err) {}
-				}
-				
-				let processedData = data;
-				if (lspInitialized) {
-					try {
-						const msg = JSON.parse(data);
-						if (msg.method === 'textDocument/publishDiagnostics' && msg.params && msg.params.diagnostics) {
-							const slashLine = openSlashLine();
-							msg.params.diagnostics = msg.params.diagnostics.filter(
-								(d: any) => !d.message.toLowerCase().includes('unknown font family') && d.range?.start?.line !== slashLine
-							);
-							processedData = JSON.stringify(msg);
-
-							const snapshot = `${msg.params.uri}:${msg.params.version ?? ''}:${JSON.stringify(msg.params.diagnostics)}`;
-							if (snapshot === lastServerDiagnostics) return;
-							lastServerDiagnostics = snapshot;
-						}
-					} catch (err) {}
-				}
-				
-				for (let h of lsHandlers) h(processedData);
-			};
-
-			lsSocket.onopen = () => {};
-		}
-		
-		if (enableLsp && isTypst && docId) {
-			connectLsp();
-
-			unsubscribeLspReconnect = triggerLspReconnect.subscribe((val) => {
-				if (val > 0) {
-					connectLsp();
-				}
-			});
-		}
+	$effect(() => {
+		const extension = lsp && lspPath && editorFileKind(filePath, language) === 'typst' ? lsp.plugin(lspPath) : [];
+		view?.dispatch({ effects: lspCompartment.reconfigure(extension) });
 	});
 
 	onDestroy(() => {
-		if (lsSocket) lsSocket.close();
+		if (lsp?.skipDiagnostic === skipSlashLine) lsp.skipDiagnostic = null;
 		if (unsubscribeTheme) unsubscribeTheme();
 		if (unsubscribeDark) unsubscribeDark();
 		if (unsubscribeCustomThemes) unsubscribeCustomThemes();
 		if (unsubscribeErrors) unsubscribeErrors();
-		if (unsubscribeLspReconnect) unsubscribeLspReconnect();
 		if (unsubscribePreferences) unsubscribePreferences();
 		if (view) {
 			view.destroy();

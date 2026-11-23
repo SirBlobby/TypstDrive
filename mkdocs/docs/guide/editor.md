@@ -13,6 +13,7 @@ This page describes Typst documents. LaTeX documents have their own editor and t
 - Typing an opening bracket or quote adds the closing one for you. With text selected, typing `*`, `_`, `` ` ``, `$`, `(` and similar wraps the selection instead of replacing it.
 - Mistakes are underlined, and the error bar under the toolbar tells you what went wrong and on which line.
 - Smart features such as jumping to where something is defined, renaming and formatting are available to owners and editors.
+- Type `@` to pick a label or a citation key from your bibliography files. In projects this works in every file and includes labels and entries from the whole project.
 
 ## The top bar
 
