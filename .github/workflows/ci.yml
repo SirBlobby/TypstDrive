@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   TYPST_COMMIT: bd5ebec285505889e8ff1d4f68804ab147a699f3
 
@@ -69,6 +73,9 @@ jobs:
 
       - name: Check
         run: cargo check --manifest-path server/Cargo.toml
+
+      - name: Test
+        run: cargo test --manifest-path server/Cargo.toml
 
       - name: Clippy
         run: cargo clippy --manifest-path server/Cargo.toml -- -D warnings

@@ -1,0 +1,25 @@
+name: Code rules
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: code-rules-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  code-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for code comments and emojis
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 .github/scripts/check_code_rules.py "$BASE_REF"
