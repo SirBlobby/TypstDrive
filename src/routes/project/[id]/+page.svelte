@@ -27,7 +27,8 @@
 	import { remoteDraftsChangedStore, shareEditingMode } from '#lib/ts/live-review';
 	import { endReviewSession, startReviewSession, switchReviewFile } from '#lib/ts/review-session';
 	import { editorErrors, documentStatsStore, speakerNotesStore, fileTreeCollapsedStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
-	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
+	import { layoutModeStore, previewVisibleStore, previewWindowStore, splitRatioStore } from '#lib/ts/preview-mode';
+	import PreviewWindowHost from '#lib/components/editor/PreviewWindowHost.svelte';
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import Icon from '@iconify/svelte';
 	import { isPlaceholder, placeholderPath, type ProjectFile } from '#lib/ts/project-tree';
@@ -57,14 +58,16 @@
 	let jumpTo = $state<(PagePoint & { seq: number }) | null>(null);
 	let pendingSelection = $state<{ path: string; offset: number } | null>(null);
 	let showPreview = $derived($previewVisibleStore || readOnly);
+	let previewPoppedOut = $derived($previewWindowStore && !readOnly);
+	let compilePreview = $derived(showPreview || previewPoppedOut);
 	let previewFile = $derived(files.find((f) => f.id === previewFileId));
-	let assetBesidePreview = $derived(!!previewFile && (readOnly || $previewModeStore === 'preview'));
+	let assetBesidePreview = $derived(!!previewFile && (readOnly || $layoutModeStore === 'preview'));
 	let editorWidthClass = $derived(
 		assetBesidePreview
 			? 'w-full min-w-0 md:w-0 md:flex-1 border-r border-[var(--color-line)]'
-			: $previewModeStore === 'split'
+			: $layoutModeStore === 'split'
 				? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]'
-				: $previewModeStore === 'preview'
+				: $layoutModeStore === 'preview'
 					? 'hidden'
 					: 'flex-1 min-w-0'
 	);
@@ -91,7 +94,7 @@
 	}
 
 	function triggerCompile() {
-		if (!showPreview) return;
+		if (!compilePreview) return;
 		const sources = previewSources();
 		const fingerprint = JSON.stringify(sources);
 		if (fingerprint === lastCompiledSources) return;
@@ -133,7 +136,7 @@
 	});
 
 	$effect(() => {
-		if (showPreview && ready) triggerCompile();
+		if (compilePreview && ready) triggerCompile();
 	});
 
 	async function loadFiles() {
@@ -155,7 +158,7 @@
 	}
 
 	function syncInput() {
-		if (!showPreview || !lastCompiledFiles) return null;
+		if (!compilePreview || !lastCompiledFiles) return null;
 		if (JSON.stringify(getAllText()) !== JSON.stringify(lastCompiledFiles)) return null;
 		return { project_id: projectId, files: lastCompiledFiles };
 	}
@@ -435,15 +438,19 @@
 			</div>
 		{/if}
 
-		{#if !readOnly && showPreview && $previewModeStore === 'split'}
+		{#if !readOnly && showPreview && $layoutModeStore === 'split'}
 			<SplitDivider />
 		{/if}
 
 		{#if showPreview}
-			<div class="{readOnly || $previewModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
+			<div class="{readOnly || $layoutModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
 				<Preview {svgs} {jumpTo} onPageClick={syncCursorToPreview} />
 				<ErrorBanner {errors} />
 			</div>
+		{/if}
+
+		{#if previewPoppedOut}
+			<PreviewWindowHost {svgs} {errors} {jumpTo} title={projectName} onPageClick={syncCursorToPreview} />
 		{/if}
 
 		{#if $commentsSidebarOpen}

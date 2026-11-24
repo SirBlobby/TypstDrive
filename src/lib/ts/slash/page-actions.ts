@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 import { commentsSidebarOpen } from '../store';
-import { previewModeOptions, previewModeStore } from '../preview-mode';
+import { choosePreviewMode, layoutModeStore, previewModeOptions, previewWindowOption, previewWindowStore } from '../preview-mode';
 import { suggestingModeStore } from '../suggestions';
 import { exportFormatsFor, type ExportFormat } from '../typst-api';
 import type { SlashCommand } from './slash-command-types';
@@ -110,11 +110,21 @@ function viewCommands(): SlashCommand[] {
         icon: option.icon,
         group: 'View',
         keywords: ['view', 'layout', 'preview', option.value],
-        isAvailable: () => get(previewModeStore) !== option.value,
-        run: () => previewModeStore.set(option.value)
+        isAvailable: () => get(previewWindowStore) || get(layoutModeStore) !== option.value,
+        run: () => choosePreviewMode(option.value)
     }));
     return [
         ...layouts,
+        {
+            id: 'view-window',
+            label: previewWindowOption.label,
+            description: 'Move the preview into its own window',
+            icon: previewWindowOption.icon,
+            group: 'View',
+            keywords: ['view', 'layout', 'preview', 'window', 'pop out', 'monitor'],
+            isAvailable: () => !get(previewWindowStore),
+            run: () => previewWindowStore.set(true)
+        },
         {
             id: 'comments-panel',
             label: 'Comments panel',
