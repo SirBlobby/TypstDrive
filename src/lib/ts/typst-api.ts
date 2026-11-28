@@ -39,23 +39,24 @@ export function assemblePages(res: CompileResponse, held: Map<string, string>): 
 	return { svgs, hashes };
 }
 
-export async function compileTypst(text: string, document_id?: string): Promise<CompileResponse> {
+const COMPILE_TIMEOUT_MS = 180_000;
+
+export async function compileTypst(text: string, document_id?: string, known_pages?: string[]): Promise<CompileResponse> {
 	const res = await fetch('/api/compile', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ text, document_id }),
+		body: JSON.stringify({ text, document_id, known_pages }),
+		signal: AbortSignal.timeout(COMPILE_TIMEOUT_MS),
 	});
 	return await res.json();
 }
-
-const PROJECT_COMPILE_TIMEOUT_MS = 180_000;
 
 export async function compileProject(project_id: string, files: Record<string, string>, known_pages?: string[]): Promise<CompileResponse> {
 	const res = await fetch('/api/compile', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ project_id, files, known_pages }),
-		signal: AbortSignal.timeout(PROJECT_COMPILE_TIMEOUT_MS),
+		signal: AbortSignal.timeout(COMPILE_TIMEOUT_MS),
 	});
 	return await res.json();
 }

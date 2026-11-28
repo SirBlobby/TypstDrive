@@ -32,6 +32,7 @@
 	import type { DocumentRole } from '#lib/ts/document-role';
 	import { documentLanguage, type DocumentLanguage } from '#lib/ts/document-language';
 	import { LspSession, activeLspSession } from '#lib/ts/lsp-session.svelte';
+	import { HeldPages } from '#lib/ts/held-pages';
 
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -85,20 +86,35 @@
 		timeoutId = window.setTimeout(triggerCompile, 500);
 	}
 
+	const heldPages = new HeldPages();
+	let compileInFlight = false;
+	let compileQueued = false;
+
 	function triggerCompile() {
 		if (!text || !doc || !compilePreview) return;
+		if (compileInFlight) {
+			compileQueued = true;
+			return;
+		}
 		const content = previewText({ doc, text, awareness: provider?.awareness });
 		if (content === lastCompiledContent) return;
 		lastCompiledContent = content;
 		const matchesEditor = content === text.toString();
 		const docId = page.params.id;
-		compileTypst(content, docId)
+		compileInFlight = true;
+		compileTypst(content, docId, heldPages.knownHashes())
 			.then((res) => {
 				if (res.stats) {
 					$documentStatsStore = res.stats;
 				}
 				if (res.svgs) {
-					svgs = res.svgs.map((svg) => svg ?? '');
+					const pages = heldPages.assemble(res);
+					if (!pages) {
+						lastCompiledContent = null;
+						compileQueued = true;
+						return;
+					}
+					svgs = pages.svgs;
 					lastCompiledInput = { text: content, document_id: docId };
 					$speakerNotesStore = res.notes ?? [];
 					errors = [];
@@ -112,6 +128,12 @@
 				console.error('Compilation fetch failed', e);
 				lastCompiledContent = null;
 				errors = [{ message: 'Network or Server Error compiling document.', severity: 'error' }];
+			})
+			.finally(() => {
+				compileInFlight = false;
+				if (!compileQueued) return;
+				compileQueued = false;
+				triggerCompile();
 			});
 	}
 
