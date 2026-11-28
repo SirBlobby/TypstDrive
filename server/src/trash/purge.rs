@@ -54,6 +54,7 @@ pub async fn remove_orphans(state: &AppState) {
             tracing::warn!("Could not tidy the trash: {error}");
         }
     }
+    crate::compile::preview_cleanup::forget_deleted(state).await;
 }
 
 async fn purge_expired(state: &AppState) {
@@ -77,6 +78,7 @@ pub fn spawn(state: AppState) {
     tokio::spawn(async move {
         loop {
             purge_expired(&state).await;
+            crate::compile::preview_cleanup::forget_deleted(&state).await;
             tokio::time::sleep(PURGE_INTERVAL).await;
         }
     });

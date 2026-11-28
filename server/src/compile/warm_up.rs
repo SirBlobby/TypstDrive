@@ -85,7 +85,7 @@ pub fn refresh(input: ProjectInput, key: String, target: String) {
     };
     tokio::spawn(async move {
         let _running = running;
-        if compile_in_background(input, Some(key), target.clone(), false).await {
+        if compile_in_background(input, Some(key), target.clone(), true).await {
             note_compiled(&target);
         }
     });

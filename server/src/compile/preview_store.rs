@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -188,6 +188,16 @@ pub fn save(key: &str, target: &str, svgs: &[String], stats: &DocumentStats, not
     }
 }
 
+pub fn stored_targets() -> Vec<String> {
+    store().map(Store::targets).unwrap_or_default()
+}
+
+pub fn forget(target: &str) {
+    if let Some(store) = store() {
+        store.forget_target(target);
+    }
+}
+
 fn write_atomically(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let temporary = path.with_extension(format!("tmp{}", std::process::id()));
     let result = (|| {
@@ -258,23 +268,24 @@ impl Store {
         };
         let manifest_bytes = serde_json::to_vec(&manifest).map_err(std::io::Error::other)?;
 
-        let mut index = self.index.lock().map_err(|_| std::io::Error::other("preview index poisoned"))?;
-        if let Some(entry) = index.entries.get(key) {
-            if entry.target == target {
+        let missing_pages: Vec<usize> = {
+            let index = self.lock_index()?;
+            if index.entries.get(key).is_some_and(|entry| entry.target == target) {
                 drop(index);
                 self.touch(key);
                 return Ok(());
             }
+            (0..pages.len()).filter(|&position| !index.pages.contains_key(&pages[position].hash)).collect()
+        };
+        for &position in &missing_pages {
+            self.write_page(&pages[position].hash, &svgs[position])?;
         }
-        for (page, svg) in pages.iter().zip(svgs) {
-            if index.pages.contains_key(&page.hash) {
-                continue;
+
+        let mut index = self.lock_index()?;
+        for (position, (page, svg)) in pages.iter().zip(svgs).enumerate() {
+            if !index.pages.contains_key(&page.hash) && !missing_pages.contains(&position) {
+                self.write_page(&page.hash, svg)?;
             }
-            let path = self.page_path(&page.hash);
-            if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            write_atomically(&path, svg.as_bytes())?;
         }
         write_atomically(&self.entry_path(key), &manifest_bytes)?;
 
@@ -297,6 +308,36 @@ impl Store {
         }
         self.enforce_cap(&mut index, Some(key));
         Ok(())
+    }
+
+    fn lock_index(&self) -> std::io::Result<std::sync::MutexGuard<'_, Index>> {
+        self.index.lock().map_err(|_| std::io::Error::other("preview index poisoned"))
+    }
+
+    fn write_page(&self, hash: &str, svg: &str) -> std::io::Result<()> {
+        let path = self.page_path(hash);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        write_atomically(&path, svg.as_bytes())
+    }
+
+    fn targets(&self) -> Vec<String> {
+        let Ok(index) = self.index.lock() else {
+            return Vec::new();
+        };
+        let unique: HashSet<&String> = index.entries.values().map(|entry| &entry.target).collect();
+        unique.into_iter().cloned().collect()
+    }
+
+    fn forget_target(&self, target: &str) {
+        let Ok(mut index) = self.index.lock() else {
+            return;
+        };
+        let keys: Vec<String> = index.entries.iter().filter(|(_, entry)| entry.target == target).map(|(key, _)| key.clone()).collect();
+        for key in keys {
+            self.remove_entry(&mut index, &key);
+        }
     }
 
     fn add_entry(index: &mut Index, key: String, entry: Entry) {
