@@ -5,7 +5,7 @@ import { endLiveDraft } from './suggestion-drafts';
 import { currentReviewTarget, reviewTargetStore, type ReviewTarget } from './review-target';
 import { reviewChangedElsewhereStore } from './live-review';
 
-const REFRESH_INTERVAL_MS = 15000;
+const REFRESH_INTERVAL_MS = 60000;
 
 export const reviewLoadStore = writable<{ loaded: boolean; error: string }>({ loaded: false, error: '' });
 
@@ -28,11 +28,16 @@ export async function refreshReview() {
     }
 }
 
+function refreshWhenVisible() {
+    if (document.visibilityState === 'visible') refreshReview();
+}
+
 export function startReviewSession(target: ReviewTarget) {
     endReviewSession();
     reviewTargetStore.set(target);
     refreshReview();
-    refreshTimer = setInterval(refreshReview, REFRESH_INTERVAL_MS);
+    refreshTimer = setInterval(refreshWhenVisible, REFRESH_INTERVAL_MS);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
     stopListeningForChanges = reviewChangedElsewhereStore.subscribe((count) => {
         if (count > 0) refreshReview();
     });
@@ -45,6 +50,7 @@ export function switchReviewFile(fileId: string | null) {
 
 export function endReviewSession() {
     clearInterval(refreshTimer);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', refreshWhenVisible);
     stopListeningForChanges?.();
     stopListeningForChanges = null;
     clearDrafts();
