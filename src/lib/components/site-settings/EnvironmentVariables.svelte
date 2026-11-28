@@ -37,7 +37,7 @@
     title="Environment variables"
     description="{counts.set} set, {counts.default} using their default, {counts.unset} not set, of {variables.length} supported variables. Values are never shown, so secrets stay on the server."
 >
-    <div class="flex flex-wrap gap-4 px-5 pt-3 text-xs text-[var(--color-ink-muted)]">
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 bg-[var(--color-surface-muted)] px-5 py-2.5 text-xs text-[var(--color-ink-muted)]">
         {#each Object.entries(STATE_STYLES) as [state, style] (state)}
             <span class="flex items-center gap-1.5">
                 <Icon icon={style.icon} class="text-sm {style.color}" />
@@ -47,12 +47,12 @@
     </div>
     {#each groups as [group, entries] (group)}
         {@const groupSet = entries.filter((variable) => variable.is_set).length}
-        <div class="px-5 py-3">
-            <p class="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-ink-muted)]">
+        <div class="px-5 py-4">
+            <p class="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-ink-muted)]">
                 {group}
                 <span class="font-normal normal-case tracking-normal">{groupSet} of {entries.length} set</span>
             </p>
-            <ul class="flex flex-col gap-2">
+            <ul class="flex flex-col gap-3">
                 {#each entries as variable (variable.name)}
                     {@const state = stateOf(variable)}
                     {@const style = STATE_STYLES[state]}
