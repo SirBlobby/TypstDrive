@@ -52,6 +52,8 @@ services:
 - `env_file` loads the settings from `.env`.
 - `./data` is where all documents, files and accounts are kept. This is the folder to back up.
 
+To try changes before they are released, use the `dev` image instead of `latest`: `ghcr.io/sirblobby/typstdrive:dev`. It is built from every push to the `dev` branch and can be unstable. Each build is also tagged with its commit, such as `sha-075e16e`, so you can pin one.
+
 ## 4. Start it
 
 ```bash
