@@ -90,6 +90,10 @@ pub fn init() {
     store();
 }
 
+pub fn is_enabled() -> bool {
+    store().is_some()
+}
+
 fn open_store() -> Option<Store> {
     let max_mb = env_usize("PREVIEW_CACHE_MB", DEFAULT_MAX_MB);
     if max_mb == 0 {

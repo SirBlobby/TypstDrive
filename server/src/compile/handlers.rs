@@ -202,8 +202,9 @@ pub async fn compile_handler(
     let known_pages = payload.known_pages;
     let CompileSource { input, thumbnail_target, cache_target } = source;
     let cache_target = cache_target.filter(|_| !render::is_latex(&input));
+    let warm = cache_target.as_deref().is_some_and(warm_up::is_warm);
     let (input, key) = match &cache_target {
-        Some(_) => match tokio::task::spawn_blocking(move || {
+        Some(_) if !warm => match tokio::task::spawn_blocking(move || {
             let key = preview_store::key(&input);
             (input, key)
         })
@@ -212,7 +213,7 @@ pub async fn compile_handler(
             Ok(keyed) => keyed,
             Err(_) => return error_response("Compilation stopped unexpectedly"),
         },
-        None => (input, None),
+        _ => (input, None),
     };
 
     if let (Some(target), Some(key)) = (&cache_target, &key) {
@@ -226,13 +227,14 @@ pub async fn compile_handler(
         }
     }
 
+    let input_to_key = (warm && preview_store::is_enabled()).then(|| input.clone());
     match render::preview(input).await {
         Ok(preview) => {
             if let Some(target) = &cache_target {
                 warm_up::note_compiled(target);
-                if let (Some(key), Some(today)) = (key, preview.outside_dependencies) {
-                    let (target, svgs, stats, notes) = (target.clone(), preview.svgs.clone(), preview.stats.clone(), preview.notes.clone());
-                    tokio::task::spawn_blocking(move || preview_store::save(&key, &target, &svgs, &stats, &notes, today));
+                if let Some(today) = preview.outside_dependencies {
+                    let stored = StoredParts { target: target.clone(), svgs: preview.svgs.clone(), stats: preview.stats.clone(), notes: preview.notes.clone(), today };
+                    store_in_background(key, input_to_key, stored);
                 }
             }
             if let Some(target) = thumbnail_target {
@@ -242,6 +244,23 @@ pub async fn compile_handler(
         }
         Err(failure) => Json(CompileResponse { svgs: None, errors: Some(failure_diagnostics(failure)), stats: None, notes: None, page_hashes: None }),
     }
+}
+
+struct StoredParts {
+    target: String,
+    svgs: Vec<String>,
+    stats: DocumentStats,
+    notes: Option<Vec<Option<Note>>>,
+    today: Vec<crate::compile::world::TodayAnswer>,
+}
+
+fn store_in_background(key: Option<String>, input_to_key: Option<ProjectInput>, parts: StoredParts) {
+    tokio::task::spawn_blocking(move || {
+        let Some(key) = key.or_else(|| input_to_key.as_ref().and_then(preview_store::key)) else {
+            return;
+        };
+        preview_store::save(&key, &parts.target, &parts.svgs, &parts.stats, &parts.notes, parts.today);
+    });
 }
 
 fn file_response(content_type: &'static str, bytes: Vec<u8>) -> Response {

@@ -105,6 +105,7 @@ fn png_options(doc: &PagedDocument) -> RenderOptions<Complete> {
     requested.resolve(doc.options().get::<PngFormat>())
 }
 
+#[derive(Clone)]
 pub struct ProjectInput {
     pub entrypoint: String,
     pub files: HashMap<String, Vec<u8>>,
