@@ -34,6 +34,7 @@ const sharedCommands: SlashCommand[] = [
         group: 'Tools',
         keywords: ['comment out', 'disable'],
         shortcut: 'toggleComment',
+        isAvailable: (context) => context.commentMarker !== null,
         run: (view, context) => toggleLineComment(view, context.commentMarker)
     },
     { id: 'find', label: 'Find', description: 'Search this file', icon: 'mdi:magnify', group: 'Tools', keywords: ['search'], shortcut: 'find', run: openFind },

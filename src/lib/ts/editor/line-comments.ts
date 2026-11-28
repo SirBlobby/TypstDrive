@@ -14,8 +14,8 @@ function selectedLines(view: EditorView) {
     return [...lineNumbers].sort((first, second) => first - second).map((lineNumber) => view.state.doc.line(lineNumber));
 }
 
-export function toggleLineComment(view: EditorView, marker: string) {
-    if (view.state.readOnly) return false;
+export function toggleLineComment(view: EditorView, marker: string | null) {
+    if (view.state.readOnly || !marker) return false;
     const lines = selectedLines(view);
     const contentLines = lines.filter((line) => line.text.trim().length > 0);
     const targetLines = contentLines.length > 0 ? contentLines : lines;

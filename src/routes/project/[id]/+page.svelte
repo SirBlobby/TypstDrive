@@ -8,6 +8,8 @@
 	import DocFooter from '#lib/components/DocFooter.svelte';
 	import FileTree from '#lib/components/project/FileTree.svelte';
 	import AssetPreview from '#lib/components/project/AssetPreview.svelte';
+	import MarkdownPreview from '#lib/components/project/MarkdownPreview.svelte';
+	import { isMarkdownPath } from '#lib/ts/editor/file-kind';
 	import ProjectToolbar from '#lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '#lib/components/PublishPackageModal.svelte';
 	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
@@ -105,6 +107,7 @@
 	);
 	let activeEntry = $derived(activeFileId ? getOpenFile(activeFileId) : undefined);
 	let activePath = $derived(files.find((f) => f.id === activeFileId)?.path ?? '');
+	let markdownEntry = $derived(!previewFile && ready && activeEntry && isMarkdownPath(activePath) ? activeEntry : null);
 	let lspSession = $state.raw<LspSession | null>(null);
 	let lspTree = $derived(files.map((f) => (f.kind === 'text' ? `${f.id}:${f.path}` : `${f.id}:${f.path}:${f.updated_at ?? ''}`)).join('|'));
 
@@ -587,8 +590,14 @@
 
 		{#if showPreview}
 			<div class="{readOnly || $layoutModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
-				<Preview {svgs} {jumpTo} onPageClick={syncCursorToPreview} />
-				<ErrorBanner {errors} />
+				{#if markdownEntry}
+					{#key activeFileId}
+						<MarkdownPreview text={markdownEntry.text} path={activePath} />
+					{/key}
+				{:else}
+					<Preview {svgs} {jumpTo} onPageClick={syncCursorToPreview} />
+					<ErrorBanner {errors} />
+				{/if}
 			</div>
 		{/if}
 

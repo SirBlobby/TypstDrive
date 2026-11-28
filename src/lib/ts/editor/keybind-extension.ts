@@ -18,7 +18,7 @@ function wrapping(prefix: string, suffix: string, placeholder: string): EditorCo
     };
 }
 
-export function editorKeybindExtension(commentMarker: string, isTypst: boolean, isLatex = false): Extension {
+export function editorKeybindExtension(commentMarker: string | null, isTypst: boolean, isLatex = false): Extension {
     const keybinds = get(keybindsStore);
 
     const commands: Partial<Record<KeybindActionId, EditorCommand>> = {

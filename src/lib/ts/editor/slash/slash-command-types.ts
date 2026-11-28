@@ -9,7 +9,7 @@ export interface SlashContext {
     insertDialogs: boolean;
     embedDocuments: boolean;
     canComment: boolean;
-    commentMarker: string;
+    commentMarker: string | null;
 }
 
 export interface SlashCommand {
