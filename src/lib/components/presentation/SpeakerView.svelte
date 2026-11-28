@@ -63,6 +63,8 @@
 	}
 
 	const fontButton = 'flex h-7 w-7 items-center justify-center rounded-md text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30';
+
+	let noteMarkup = $derived(current?.note?.svg ? safeSvg(current.note.svg) : '');
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col gap-4 px-5 lg:flex-row">
@@ -105,7 +107,7 @@
 			</div>
 			<div class="min-h-0 flex-1 overflow-y-auto rounded-lg border border-white/10 bg-neutral-900/70 p-4 leading-relaxed" style="font-size: {noteFontSize}px;">
 				{#if current?.note?.svg}
-					<div class="speaker-note max-w-full" style="width: {(notePageWidth * noteFontSize) / noteTextSize}px;">{@html safeSvg(current.note.svg)}</div>
+					<div class="speaker-note max-w-full" style="width: {(notePageWidth * noteFontSize) / noteTextSize}px;">{@html noteMarkup}</div>
 				{:else if current?.note}
 					<p class="whitespace-pre-wrap text-white/90">{current.note.text}</p>
 				{:else}
