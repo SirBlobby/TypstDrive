@@ -40,6 +40,9 @@ pub struct CompileResponse {
     pub page_hashes: Option<Vec<String>>,
 }
 
+pub const BUSY_MESSAGE: &str = "The server is busy compiling. Try again in a moment.";
+pub const TIMED_OUT_MESSAGE: &str = "Compiling took too long and was stopped. Check the document for loops that never end.";
+
 const MAX_KNOWN_PAGES: usize = 20_000;
 
 fn page_hash(svg: &str) -> String {
@@ -126,6 +129,8 @@ fn failure_diagnostics(failure: RenderFailure) -> Vec<Diagnostic> {
         RenderFailure::Unsupported(message) => single_error(&message),
         RenderFailure::LatexTurnedOff => single_error(crate::compile::latex_policy::TURNED_OFF_MESSAGE),
         RenderFailure::Stopped => single_error("Compilation stopped unexpectedly"),
+        RenderFailure::Busy => single_error(BUSY_MESSAGE),
+        RenderFailure::TimedOut => single_error(TIMED_OUT_MESSAGE),
     }
 }
 

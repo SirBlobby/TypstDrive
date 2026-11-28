@@ -114,6 +114,9 @@ Typst keeps in memory what it learnt from earlier compiles, so an edit recompile
 |---|---|---|
 | `TYPST_CACHE_MAX_IDLE_MINUTES` | `60` | How long Typst keeps in memory what it learnt from compiling a document nobody edits. |
 | `TYPST_CACHE_MAX_MEMORY_MB` | `2560`, or 70 % of the container memory limit when that is lower | Above this memory use, Typst keeps only what was used in the last minute. |
+| `TYPST_MAX_COMPILES` | number of CPU cores | How many Typst compiles run at the same time. Others wait up to 30 seconds for a free slot. |
+| `TYPST_MAX_COMPILES_PER_USER` | `3` | How many of them one account, or one address when signed out, can run at the same time. |
+| `TYPST_COMPILE_TIMEOUT_SECONDS` | `120` | How long a compile may take before the request gets an error. Typst cannot be interrupted, so a compile that never ends keeps its slots until the server restarts. |
 
 ## Typst previews
 

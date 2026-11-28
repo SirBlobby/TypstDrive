@@ -135,6 +135,10 @@ pub fn failure_report(source: Option<&str>, failure: RenderFailure) -> FailureRe
         RenderFailure::Stopped => {
             FailureReport::Other((StatusCode::INTERNAL_SERVER_ERROR, "Compilation stopped unexpectedly").into_response())
         }
+        RenderFailure::Busy => FailureReport::Other((StatusCode::SERVICE_UNAVAILABLE, crate::compile::handlers::BUSY_MESSAGE).into_response()),
+        RenderFailure::TimedOut => {
+            FailureReport::Compile(CompileErrorResponse { error: crate::compile::handlers::TIMED_OUT_MESSAGE.to_string(), details: Vec::new() })
+        }
     }
 }
 

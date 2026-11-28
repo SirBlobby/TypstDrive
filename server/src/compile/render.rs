@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::compile::compiler::{run_blocking, ClickTarget, CompileFailure, PageOutput, PagePoint, ProjectInput, TypstCompiler};
+use crate::compile::compiler::{run_blocking, JobError, ClickTarget, CompileFailure, PageOutput, PagePoint, ProjectInput, TypstCompiler};
 use crate::compile::latex::is_latex_path;
 use crate::compile::latex_policy;
 use crate::compile::latex_preview::{chosen_page_input, pdf_page_count, source_stats, PageChoice};
@@ -33,6 +33,8 @@ pub enum RenderFailure {
     Unsupported(String),
     LatexTurnedOff,
     Stopped,
+    Busy,
+    TimedOut,
 }
 
 fn line_range(text: &str, line_number: usize) -> Option<(usize, usize)> {
@@ -166,8 +168,10 @@ async fn run_typst<T: Send + 'static>(input: ProjectInput, job: TypstWork<T>, ti
     })
     .await;
     match outcome {
-        Some(result) => result.map_err(RenderFailure::Typst),
-        None => Err(RenderFailure::Stopped),
+        Ok(result) => result.map_err(RenderFailure::Typst),
+        Err(JobError::Busy) => Err(RenderFailure::Busy),
+        Err(JobError::TimedOut) => Err(RenderFailure::TimedOut),
+        Err(JobError::Failed) => Err(RenderFailure::Stopped),
     }
 }
 
@@ -236,5 +240,5 @@ pub async fn click_target(input: ProjectInput, page: usize, x: f64, y: f64) -> O
     if is_latex(&input) {
         return None;
     }
-    run_blocking(move |compiler| compiler.click_target(input, page, x, y)).await.flatten()
+    run_blocking(move |compiler| compiler.click_target(input, page, x, y)).await.ok().flatten()
 }

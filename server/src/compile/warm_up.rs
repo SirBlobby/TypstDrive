@@ -51,8 +51,13 @@ fn lower_thread_priority() {
 }
 
 async fn compile_in_background(input: ProjectInput, key: Option<String>, target: String, low_priority: bool) -> bool {
+    let Some(permit) = crate::compile::limits::try_acquire_background() else {
+        tracing::info!("Warm-up: skipped {target}, every compile slot is in use");
+        return false;
+    };
     let (sender, receiver) = tokio::sync::oneshot::channel();
     let spawned = std::thread::Builder::new().name("typst-warm-up".into()).spawn(move || {
+        let _permit = permit;
         if low_priority {
             lower_thread_priority();
         }

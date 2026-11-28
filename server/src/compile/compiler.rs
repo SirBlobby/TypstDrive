@@ -240,17 +240,37 @@ fn paged_document(input: ProjectInput) -> Result<PagedDocument, CompileFailure> 
     })
 }
 
-pub async fn run_blocking<T, F>(job: F) -> Option<T>
+pub enum JobError {
+    Busy,
+    TimedOut,
+    Failed,
+}
+
+pub async fn run_blocking<T, F>(job: F) -> Result<T, JobError>
 where
     F: FnOnce(&TypstCompiler) -> T + Send + 'static,
     T: Send + 'static,
 {
-    let result = tokio::task::spawn_blocking(move || job(&TypstCompiler)).await;
-    match result {
-        Ok(output) => Some(output),
-        Err(error) => {
+    let permit = crate::compile::limits::acquire().await.map_err(|_| JobError::Busy)?;
+    let started = std::time::Instant::now();
+    let handle = tokio::task::spawn_blocking(move || {
+        let output = job(&TypstCompiler);
+        let elapsed = started.elapsed();
+        if elapsed > crate::compile::limits::time_limit() {
+            tracing::warn!("A Typst compile finished after {} s, past the time limit", elapsed.as_secs());
+        }
+        drop(permit);
+        output
+    });
+    match tokio::time::timeout(crate::compile::limits::time_limit(), handle).await {
+        Ok(Ok(output)) => Ok(output),
+        Ok(Err(error)) => {
             tracing::error!("Typst compilation task failed: {error}");
-            None
+            Err(JobError::Failed)
+        }
+        Err(_) => {
+            tracing::warn!("A Typst compile passed the {} s time limit and keeps its compile slot until it ends", crate::compile::limits::time_limit().as_secs());
+            Err(JobError::TimedOut)
         }
     }
 }

@@ -5,6 +5,7 @@ pub mod handlers;
 pub mod latex;
 pub mod latex_policy;
 pub mod latex_preview;
+pub mod limits;
 pub mod lsp;
 pub mod lsp_guard;
 pub mod lsp_limits;
