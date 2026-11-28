@@ -25,7 +25,7 @@ The pages below follow the groups in the site settings sidebar.
 |---|---|
 | [Storage and history](storage.md) | Set storage limits, how many versions each document keeps, and how long the trash keeps deleted items. |
 | [Packages](packages.md) | Control who can publish packages and how big they can be. |
-| [PDF links](pdf-links.md) | Turn public PDF links on or off, limit them, and remove any link. |
+| [Public links](public-links.md) | Turn public PDFs, slides and speaker views on or off, limit them, and remove any link. |
 | [Citations](citations.md) | Turn reference lookups, ORCID lookups and Zotero sync on or off. |
 | [LaTeX](latex.md) | Turn LaTeX documents, projects and API renders on or off. |
 | [Git](git.md) | Turn Git sync on or off, and decide whether repositories outside GitHub and GitLab are allowed. |

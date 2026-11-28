@@ -10,7 +10,7 @@
     import RegistrationSettings from '#lib/components/site-settings/RegistrationSettings.svelte';
     import StorageSettings from '#lib/components/site-settings/StorageSettings.svelte';
     import PackageSettings from '#lib/components/site-settings/PackageSettings.svelte';
-    import PdfLinkSettings from '#lib/components/site-settings/PdfLinkSettings.svelte';
+    import PublicLinkSettings from '#lib/components/site-settings/PublicLinkSettings.svelte';
     import CitationSettings from '#lib/components/site-settings/CitationSettings.svelte';
     import LatexSettings from '#lib/components/site-settings/LatexSettings.svelte';
     import GitSettings from '#lib/components/site-settings/GitSettings.svelte';
@@ -52,7 +52,7 @@
             children: [
                 { id: 'storage', label: 'Storage', icon: 'mdi:harddisk' },
                 { id: 'packages', label: 'Packages', icon: 'mdi:package-variant-closed' },
-                { id: 'pdf-links', label: 'PDF Links', icon: 'mdi:file-pdf-box' },
+                { id: 'public-links', label: 'Public Links', icon: 'mdi:earth' },
                 { id: 'citations', label: 'Citations', icon: 'ph:quotes' },
                 { id: 'latex', label: 'LaTeX', icon: 'mdi:sigma' },
                 { id: 'git', label: 'Git', icon: 'mdi:git' }
@@ -136,8 +136,8 @@
                     <StorageSettings />
                 {:else if activeSection === 'packages'}
                     <PackageSettings />
-                {:else if activeSection === 'pdf-links'}
-                    <PdfLinkSettings />
+                {:else if activeSection === 'public-links'}
+                    <PublicLinkSettings />
                 {:else if activeSection === 'citations'}
                     <CitationSettings />
                 {:else if activeSection === 'latex'}

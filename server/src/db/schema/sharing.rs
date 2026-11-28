@@ -1,4 +1,4 @@
-use super::{Column, CopyRule, Table, plain, created_at, optional_reference, required_reference};
+use super::{Column, CopyRule, Table, plain, created_at, flag, optional_reference, required_reference};
 
 pub const TABLES: &[Table] = &[
     Table {
@@ -74,7 +74,7 @@ pub const TABLES: &[Table] = &[
         constraints: &["PRIMARY KEY (user_id, project_id)"],
     },
     Table {
-        name: "pdf_links",
+        name: "public_links",
         columns: &[
             plain("id", "TEXT PRIMARY KEY"),
             plain("slug", "TEXT NOT NULL UNIQUE"),
@@ -83,6 +83,14 @@ pub const TABLES: &[Table] = &[
             Column { name: "view_count", definition: "{integer} NOT NULL DEFAULT 0", copy: CopyRule::DefaultWhenNull("0") },
             plain("last_viewed_at", "TEXT"),
             created_at("created_at"),
+            Column { name: "pdf_enabled", definition: "{integer} NOT NULL DEFAULT 1", copy: CopyRule::DefaultWhenNull("1") },
+            flag("slides_enabled"),
+            flag("speaker_enabled"),
+            plain("speaker_password_hash", "TEXT"),
+            Column { name: "slides_view_count", definition: "{integer} NOT NULL DEFAULT 0", copy: CopyRule::DefaultWhenNull("0") },
+            plain("slides_last_viewed_at", "TEXT"),
+            Column { name: "speaker_view_count", definition: "{integer} NOT NULL DEFAULT 0", copy: CopyRule::DefaultWhenNull("0") },
+            plain("speaker_last_viewed_at", "TEXT"),
         ],
         constraints: &["UNIQUE (document_id)", "UNIQUE (project_id)"],
     },

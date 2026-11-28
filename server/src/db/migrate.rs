@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use sqlx::{AnyConnection, AnyPool, AssertSqlSafe, Connection};
 
 use super::dialect::Dialect;
-use super::schema::{tables, Column, CopyRule, Table, BACKFILLS, INDEXES, LEGACY_RENAMES, RETIRED_TABLES};
+use super::schema::{tables, Column, CopyRule, Table, BACKFILLS, INDEXES, LEGACY_RENAMES, RETIRED_TABLES, TABLE_RENAMES};
 
-pub const CURRENT_VERSION: i64 = 23;
+pub const CURRENT_VERSION: i64 = 24;
 const REBUILD_SUFFIX: &str = "__rebuild";
 
 async fn run(connection: &mut AnyConnection, sql: String) -> Result<(), sqlx::Error> {
@@ -85,6 +85,15 @@ fn create_table_sql(dialect: Dialect, table: &Table, created_name: &str) -> Stri
         parts.join(",\n    "),
         dialect.table_options()
     )
+}
+
+async fn rename_tables(connection: &mut AnyConnection, dialect: Dialect) -> Result<(), sqlx::Error> {
+    for (old_name, new_name) in TABLE_RENAMES {
+        if table_exists(connection, dialect, old_name).await? && !table_exists(connection, dialect, new_name).await? {
+            run(connection, format!("ALTER TABLE {old_name} RENAME TO {new_name}")).await?;
+        }
+    }
+    Ok(())
 }
 
 async fn add_missing_columns(connection: &mut AnyConnection, dialect: Dialect) -> Result<(), sqlx::Error> {
@@ -191,6 +200,7 @@ async fn upgrade_legacy_schema(connection: &mut AnyConnection, dialect: Dialect)
         }
     }
 
+    rename_tables(connection, dialect).await?;
     for table in tables() {
         rebuild_table(connection, dialect, table).await?;
     }
@@ -212,6 +222,7 @@ async fn apply_migrations(connection: &mut AnyConnection, dialect: Dialect) -> R
 
     if let Some(previous_version) = version {
         tracing::info!("Adding new tables and columns for schema version {CURRENT_VERSION}");
+        rename_tables(&mut transaction, dialect).await?;
         create_fresh_schema(&mut transaction, dialect).await?;
         add_missing_columns(&mut transaction, dialect).await?;
         run_backfills(&mut transaction, previous_version).await?;

@@ -1,24 +1,14 @@
-use std::collections::HashMap;
-
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 
-use super::cache;
-use super::policy::load_policy;
-use crate::compile::compiler::ProjectInput;
-use crate::compile::latex;
-use crate::db::{sql, timestamp_now};
-use crate::drive::versions::current_text;
-use crate::models::Project;
-use crate::sharing::access::{self, AccessRole};
+use super::target::{self, record_view};
+use super::{cache, Format};
 use crate::AppState;
 
-type LinkTarget = (String, Option<String>, Option<String>);
-
 fn not_found() -> Response {
-    (StatusCode::NOT_FOUND, "PDF link not found").into_response()
+    (StatusCode::NOT_FOUND, "Public link not found").into_response()
 }
 
 fn pdf_response(slug: &str, fingerprint: &str, bytes: Vec<u8>) -> Response {
@@ -47,43 +37,9 @@ fn matches_etag(headers: &HeaderMap, fingerprint: &str) -> bool {
         .is_some_and(|value| value.split(',').any(|tag| tag.trim().trim_start_matches("W/") == format!("\"{fingerprint}\"")))
 }
 
-async fn document_input(state: &AppState, document_id: &str) -> Option<ProjectInput> {
-    let (owner_id,) = sqlx::query_as::<_, (String,)>(sql("SELECT owner_id FROM documents WHERE id = $1 AND deleted_at IS NULL"))
-        .bind(document_id)
-        .fetch_optional(&state.db)
-        .await
-        .ok()??;
-    let (document, _) = access::document_role(state, document_id, &Some(owner_id)).await?;
-    let text = current_text(state, &document.id).await.unwrap_or_default();
-    let files = crate::drive::document_assets::compile_files(state, &document, AccessRole::Viewer, &None).await;
-    let mut input = latex::document_input(&document, text, files);
-    crate::packages::imports::attach_imported(state, &mut input, "").await;
-    Some(input)
-}
-
-async fn project_input(state: &AppState, project_id: &str) -> Option<ProjectInput> {
-    let project = sqlx::query_as::<_, Project>(
-        sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND deleted_at IS NULL"),
-    )
-    .bind(project_id)
-    .fetch_optional(&state.db)
-    .await
-    .ok()??;
-    let reader = crate::drive::projects::ProjectReader::Collaborator(None);
-    Some(crate::drive::projects::assemble_project(state, &project, HashMap::new(), reader).await)
-}
-
-async fn record_view(state: &AppState, link_id: &str) {
-    let _ = sqlx::query(sql("UPDATE pdf_links SET view_count = view_count + 1, last_viewed_at = $1 WHERE id = $2"))
-        .bind(timestamp_now())
-        .bind(link_id)
-        .execute(&state.db)
-        .await;
-}
-
 async fn fresh_response(state: &AppState, link_id: &str, slug: &str, headers: &HeaderMap) -> Option<Response> {
     let (fingerprint, bytes) = cache::fresh(link_id)?;
-    record_view(state, link_id).await;
+    record_view(state, link_id, Format::Pdf).await;
     if matches_etag(headers, &fingerprint) {
         return Some(not_modified(&fingerprint));
     }
@@ -91,18 +47,11 @@ async fn fresh_response(state: &AppState, link_id: &str, slug: &str, headers: &H
 }
 
 pub async fn serve_pdf(State(state): State<AppState>, Path(slug): Path<String>, headers: HeaderMap) -> Response {
-    if !load_policy(&state).await.enabled {
-        return not_found();
-    }
-    let slug = slug.strip_suffix(".pdf").unwrap_or(&slug).to_lowercase();
-
-    let target = sqlx::query_as::<_, LinkTarget>(sql("SELECT id, document_id, project_id FROM pdf_links WHERE slug = $1"))
-        .bind(&slug)
-        .fetch_optional(&state.db)
-        .await;
-    let Ok(Some((link_id, document_id, project_id))) = target else {
+    let Some(link) = target::find(&state, &slug, Format::Pdf).await else {
         return not_found();
     };
+    let link_id = link.id.clone();
+    let slug = link.slug.clone();
 
     if let Some(response) = fresh_response(&state, &link_id, &slug, &headers).await {
         return response;
@@ -113,16 +62,11 @@ pub async fn serve_pdf(State(state): State<AppState>, Path(slug): Path<String>, 
         return response;
     }
 
-    let input = match (document_id, project_id) {
-        (Some(document_id), _) => document_input(&state, &document_id).await,
-        (None, Some(project_id)) => project_input(&state, &project_id).await,
-        (None, None) => None,
-    };
-    let Some(input) = input else {
+    let Some(input) = target::compile_input(&state, &link).await else {
         return not_found();
     };
 
-    record_view(&state, &link_id).await;
+    record_view(&state, &link_id, Format::Pdf).await;
     let fingerprint = cache::fingerprint(&input);
     if matches_etag(&headers, &fingerprint) {
         return not_modified(&fingerprint);

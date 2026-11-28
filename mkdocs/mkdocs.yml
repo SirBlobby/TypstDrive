@@ -133,7 +133,7 @@ nav:
       - Content:
           - Storage and history: admin/storage.md
           - Packages: admin/packages.md
-          - PDF links: admin/pdf-links.md
+          - Public links: admin/public-links.md
           - Citations: admin/citations.md
           - LaTeX: admin/latex.md
           - Git: admin/git.md

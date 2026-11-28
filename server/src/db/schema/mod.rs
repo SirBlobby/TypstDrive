@@ -116,7 +116,12 @@ pub const BACKFILLS: &[Backfill] = &[
     Backfill { since_version: 7, statement: "UPDATE files SET size_bytes = LENGTH(data) WHERE storage_key IS NULL" },
     Backfill { since_version: 8, statement: "UPDATE users SET email_verified = 1" },
     Backfill { since_version: 8, statement: "UPDATE api_keys SET rate_limit = 0" },
+    Backfill { since_version: 24, statement: "UPDATE site_settings SET setting_key = 'public_links.pdf_enabled' WHERE setting_key = 'pdf_links.enabled'" },
+    Backfill { since_version: 24, statement: "UPDATE site_settings SET setting_key = 'public_links.max_per_user' WHERE setting_key = 'pdf_links.max_per_user'" },
+    Backfill { since_version: 24, statement: "UPDATE audit_log SET action = REPLACE(action, 'pdf_links', 'public_links') WHERE action LIKE '%pdf_links%'" },
 ];
+
+pub const TABLE_RENAMES: &[(&str, &str)] = &[("pdf_links", "public_links")];
 
 pub const RETIRED_TABLES: &[&str] = &["document_history", "invitations"];
 

@@ -44,9 +44,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/admin/themes/{id}", put(themes::admin::update_site_theme).delete(themes::admin::delete_site_theme))
         .route("/admin/theme-policy", get(themes::policy::get_policy).put(themes::policy::update_policy))
         .route("/admin/trash-policy", get(trash::policy::get_policy).put(trash::policy::update_policy))
-        .route("/admin/pdf-links", get(sharing::pdf_links::admin::overview))
-        .route("/admin/pdf-links/policy", get(sharing::pdf_links::policy::get_policy).put(sharing::pdf_links::policy::update_policy))
-        .route("/admin/pdf-links/{id}", delete(sharing::pdf_links::admin::delete_link))
+        .route("/admin/public-links", get(sharing::public_links::admin::overview))
+        .route("/admin/public-links/policy", get(sharing::public_links::policy::get_policy).put(sharing::public_links::policy::update_policy))
+        .route("/admin/public-links/{id}", delete(sharing::public_links::admin::delete_link))
         .route("/admin/package-policy", get(packages::policy::get_policy).put(packages::policy::update_policy))
         .route("/admin/server", get(admin::server_info::server_info))
         .route("/admin/performance", get(metrics::handlers::performance))
@@ -134,12 +134,15 @@ pub fn build_router(state: AppState) -> Router {
         .route("/citations/{kind}/{id}/files", get(citations::entries::list_files))
         .route("/citations/{kind}/{id}/entries", post(citations::entries::add_entry))
         .route("/citations/{kind}/{id}/syncs", get(citations::sync::list_syncs).post(citations::sync::create_sync))
-        .route("/pdf-links", get(sharing::pdf_links::manage::list_own_links))
+        .route("/public-links", get(sharing::public_links::manage::list_own_links))
+        .route("/public-links/{slug}/slides", get(sharing::public_links::presentation::audience_slides))
+        .route("/public-links/{slug}/speaker", get(sharing::public_links::presentation::speaker_slides))
+        .route("/public-links/{slug}/speaker/unlock", post(sharing::public_links::presentation::unlock_speaker))
         .route(
-            "/pdf-links/{kind}/{id}",
-            get(sharing::pdf_links::manage::get_item_link)
-                .put(sharing::pdf_links::manage::save_item_link)
-                .delete(sharing::pdf_links::manage::delete_item_link),
+            "/public-links/{kind}/{id}",
+            get(sharing::public_links::manage::get_item_link)
+                .put(sharing::public_links::manage::save_item_link)
+                .delete(sharing::public_links::manage::delete_item_link),
         )
         .route("/item-info/{kind}/{id}", get(drive::item_info::get_item_info))
         .route("/stars", get(drive::stars::list_starred))
@@ -323,7 +326,7 @@ pub fn build_router(state: AppState) -> Router {
             v1_routes.layer(axum::middleware::from_fn(metrics::middleware::time_requests)).layer(TraceLayer::new_for_http()),
         )
         .nest("/yjs", yjs_routes.layer(TraceLayer::new_for_http()))
-        .route("/pdf/{slug}", get(sharing::pdf_links::serve::serve_pdf).layer(TraceLayer::new_for_http()))
+        .route("/pdf/{slug}", get(sharing::public_links::serve::serve_pdf).layer(TraceLayer::new_for_http()))
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{}/index.html", static_dir))))
         .layer(axum::middleware::from_fn_with_state(state.clone(), request_context::attach_request_context))
         .layer(axum::middleware::from_fn(security_headers::add_security_headers))

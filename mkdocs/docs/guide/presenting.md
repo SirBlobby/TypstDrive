@@ -68,3 +68,7 @@ Notes are typeset with Typst, so lists, emphasis and math look as you wrote them
 - Touying and Polylux keep notes as text, so math in their notes shows as plain text. Lists, bold and italic still work.
 
 Notes appear only in the speaker view. If you use Touying's `show-notes-on-second-screen`, turn it off: the speaker view already shows the notes, and the setting would also draw them on every slide.
+
+## Presenting from another computer
+
+To present from a computer where you are not signed in, such as a conference laptop, turn on **Slides** or **Speaker view** in the document's [public links](sharing.md#public-links). Open `/slides/name` to present without notes, or `/slides/name/speaker` and enter your password for the speaker view. Both work like presenting from the editor and always show the latest compiled version.

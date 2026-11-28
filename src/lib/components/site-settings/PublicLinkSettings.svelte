@@ -6,20 +6,26 @@
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
-    import PdfLinkRow from '#lib/components/settings/PdfLinkRow.svelte';
-    import { adminRemovePdfLink, fetchPdfLinkOverview, savePdfLinkPolicy, type PdfLink, type PdfLinkPolicy } from '#lib/ts/sharing/pdf-links';
+    import PublicLinkRow from '#lib/components/settings/PublicLinkRow.svelte';
+    import {
+        adminRemovePublicLink,
+        fetchPublicLinkOverview,
+        savePublicLinkPolicy,
+        type PublicLink,
+        type PublicLinkPolicy
+    } from '#lib/ts/sharing/public-links';
 
-    let policy = $state<PdfLinkPolicy | null>(null);
-    let saved = $state<PdfLinkPolicy | null>(null);
+    let policy = $state<PublicLinkPolicy | null>(null);
+    let saved = $state<PublicLinkPolicy | null>(null);
     let limitText = $state('0');
-    let links = $state<PdfLink[]>([]);
+    let links = $state<PublicLink[]>([]);
     let filter = $state('');
     let loadError = $state('');
     let saving = $state(false);
     let message = $state<{ kind: 'success' | 'error'; text: string } | null>(null);
 
     let limit = $derived(Number(String(limitText ?? '').trim()));
-    let pendingPolicy = $derived<PdfLinkPolicy | null>(
+    let pendingPolicy = $derived<PublicLinkPolicy | null>(
         policy && Number.isInteger(limit) && limit >= 0 ? { ...policy, max_links_per_user: limit } : null
     );
     let hasChanges = $derived(!!saved && JSON.stringify(pendingPolicy) !== JSON.stringify(saved));
@@ -31,7 +37,7 @@
         );
     });
 
-    function applyPolicy(value: PdfLinkPolicy) {
+    function applyPolicy(value: PublicLinkPolicy) {
         policy = { ...value };
         saved = { ...value };
         limitText = String(value.max_links_per_user);
@@ -40,7 +46,7 @@
     async function load() {
         loadError = '';
         try {
-            const overview = await fetchPdfLinkOverview();
+            const overview = await fetchPublicLinkOverview();
             applyPolicy(overview.policy);
             links = overview.links;
         } catch (err) {
@@ -56,7 +62,7 @@
         saving = true;
         message = null;
         try {
-            applyPolicy(await savePdfLinkPolicy(pendingPolicy));
+            applyPolicy(await savePublicLinkPolicy(pendingPolicy));
             message = { kind: 'success', text: 'Settings saved.' };
         } catch (err) {
             message = { kind: 'error', text: (err as Error).message };
@@ -69,9 +75,9 @@
         message = null;
     }
 
-    async function remove(link: PdfLink) {
+    async function remove(link: PublicLink) {
         try {
-            await adminRemovePdfLink(link.id);
+            await adminRemovePublicLink(link.id);
             links = links.filter((existing) => existing.id !== link.id);
         } catch (err) {
             message = { kind: 'error', text: (err as Error).message };
@@ -82,9 +88,9 @@
 </script>
 
 <SettingsHeader
-    title="PDF Links"
-    description="Public URLs at /pdf/name that always serve the latest compiled PDF of a document or project. Only owners can create them, and anyone with the URL can download the PDF."
-    icon="mdi:file-pdf-box"
+    title="Public Links"
+    description="Public URLs that always show the latest compiled version of a document or project: /pdf/name for the PDF, /slides/name to present the slides, and /slides/name/speaker for a password-protected speaker view with notes. Only owners can create them."
+    icon="mdi:earth"
 />
 
 {#if loadError}
@@ -93,12 +99,18 @@
     <p class="flex items-center gap-2 text-sm text-[var(--color-ink-muted)]"><Icon icon="mdi:loading" class="animate-spin" /> Loading...</p>
 {:else}
     <div class="space-y-6">
-        <SettingsCard title="Policy" description="Turning links off stops every link from serving PDFs. Links are kept and work again when turned back on.">
-            <SettingsRow label="Allow public PDF links" description="When off, links return not found and members cannot create or rename links.">
-                <ToggleSwitch label="Allow public PDF links" bind:checked={policy.enabled} />
+        <SettingsCard title="Policy" description="Turning a format off stops every link from serving it. Links keep their settings and work again when it is turned back on.">
+            <SettingsRow label="Allow public PDFs" description="Anyone with the link can download the latest PDF.">
+                <ToggleSwitch label="Allow public PDFs" bind:checked={policy.pdf_enabled} />
             </SettingsRow>
-            <SettingsRow label="Maximum links per user" description="Use 0 for no limit. Existing links over the limit are kept." forId="max-pdf-links">
-                <input id="max-pdf-links" type="number" min="0" step="1" bind:value={limitText} placeholder="0" class="{inputClass} sm:!max-w-32" />
+            <SettingsRow label="Allow public slides" description="Anyone with the link can present the slides. Speaker notes are never included.">
+                <ToggleSwitch label="Allow public slides" bind:checked={policy.slides_enabled} />
+            </SettingsRow>
+            <SettingsRow label="Allow public speaker views" description="Slides with speaker notes, behind a password the owner sets.">
+                <ToggleSwitch label="Allow public speaker views" bind:checked={policy.speaker_enabled} />
+            </SettingsRow>
+            <SettingsRow label="Maximum links per user" description="Each document or project counts once, whatever formats it has. Use 0 for no limit. Existing links over the limit are kept." forId="max-public-links">
+                <input id="max-public-links" type="number" min="0" step="1" bind:value={limitText} placeholder="0" class="{inputClass} sm:!max-w-32" />
             </SettingsRow>
             {#snippet footer()}
                 {#if message}
@@ -119,10 +131,10 @@
                 </div>
             {/if}
             {#if filteredLinks.length === 0}
-                <p class="px-5 py-8 text-center text-sm text-[var(--color-ink-muted)]">{links.length === 0 ? 'No public PDF links yet.' : 'No links match.'}</p>
+                <p class="px-5 py-8 text-center text-sm text-[var(--color-ink-muted)]">{links.length === 0 ? 'No public links yet.' : 'No links match.'}</p>
             {:else}
                 {#each filteredLinks as link (link.id)}
-                    <PdfLinkRow {link} showOwner ondelete={remove} />
+                    <PublicLinkRow {link} showOwner ondelete={remove} />
                 {/each}
             {/if}
         </SettingsCard>

@@ -6,17 +6,17 @@ use sha2::{Digest, Sha256};
 
 use crate::compile::compiler::ProjectInput;
 
-const MAX_CACHED_PDFS: usize = 64;
+const MAX_CACHED_OUTPUTS: usize = 64;
 const FRESH_FOR: Duration = Duration::from_secs(15);
 
-struct CachedPdf {
+struct CachedOutput {
     fingerprint: String,
     bytes: Vec<u8>,
     stored_at: Instant,
 }
 
-fn cache() -> &'static Mutex<HashMap<String, CachedPdf>> {
-    static CACHE: OnceLock<Mutex<HashMap<String, CachedPdf>>> = OnceLock::new();
+fn cache() -> &'static Mutex<HashMap<String, CachedOutput>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, CachedOutput>>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
@@ -75,7 +75,7 @@ pub fn remember(link_id: &str, fingerprint: &str, bytes: &[u8]) {
     let Ok(mut cache) = cache().lock() else {
         return;
     };
-    if cache.len() >= MAX_CACHED_PDFS && !cache.contains_key(link_id) {
+    if cache.len() >= MAX_CACHED_OUTPUTS && !cache.contains_key(link_id) {
         let oldest = cache
             .iter()
             .min_by_key(|(_, cached)| cached.stored_at)
@@ -86,7 +86,7 @@ pub fn remember(link_id: &str, fingerprint: &str, bytes: &[u8]) {
     }
     cache.insert(
         link_id.to_string(),
-        CachedPdf { fingerprint: fingerprint.to_string(), bytes: bytes.to_vec(), stored_at: Instant::now() },
+        CachedOutput { fingerprint: fingerprint.to_string(), bytes: bytes.to_vec(), stored_at: Instant::now() },
     );
 }
 
@@ -107,18 +107,27 @@ pub fn has_failed(link_id: &str, fingerprint: &str) -> bool {
 
 pub fn remember_failure(link_id: &str, fingerprint: &str) {
     if let Ok(mut failures) = failures().lock() {
-        if failures.len() >= MAX_CACHED_PDFS && !failures.contains_key(link_id) {
+        if failures.len() >= MAX_CACHED_OUTPUTS && !failures.contains_key(link_id) {
             failures.clear();
         }
         failures.insert(link_id.to_string(), fingerprint.to_string());
     }
 }
 
+pub fn slides_key(link_id: &str) -> String {
+    format!("{link_id}:slides")
+}
+
 pub fn forget(link_id: &str) {
+    let keys = [link_id.to_string(), slides_key(link_id)];
     if let Ok(mut cache) = cache().lock() {
-        cache.remove(link_id);
+        for key in &keys {
+            cache.remove(key);
+        }
     }
     if let Ok(mut failures) = failures().lock() {
-        failures.remove(link_id);
+        for key in &keys {
+            failures.remove(key);
+        }
     }
 }

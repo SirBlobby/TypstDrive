@@ -29,7 +29,7 @@
 	} from './presentation/drawing';
 	import { speakerNotesStore } from '#lib/ts/store';
 
-	let { mode = 'audience', onClose }: { mode?: PresentationLayout; onClose: () => void } = $props();
+	let { mode = 'audience', initialSlides, onClose }: { mode?: PresentationLayout; initialSlides?: Slide[]; onClose: () => void } = $props();
 
 	const toolShortcuts: Record<string, DrawingTool> = { l: 'laser', p: 'pen', h: 'highlighter', e: 'eraser' };
 	const nextKeys = ['arrowright', 'arrowdown', 'pagedown', ' '];
@@ -208,7 +208,7 @@
 	});
 
 	onMount(() => {
-		slides = collectSlides(get(speakerNotesStore));
+		slides = initialSlides ?? collectSlides(get(speakerNotesStore));
 
 		const timer = window.setInterval(() => {
 			if (!timerPaused) elapsedSeconds += 1;
