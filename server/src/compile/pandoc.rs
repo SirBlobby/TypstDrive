@@ -15,6 +15,10 @@ use crate::sharing::access;
 use crate::AppState;
 
 const EXPORT_FORMATS: [&str; 4] = ["docx", "latex", "markdown", "html"];
+const PANDOC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+const PANDOC_SLOTS: usize = 4;
+
+static PANDOC_PERMITS: std::sync::LazyLock<tokio::sync::Semaphore> = std::sync::LazyLock::new(|| tokio::sync::Semaphore::new(PANDOC_SLOTS));
 
 fn unauthorized() -> Response {
     (StatusCode::UNAUTHORIZED, "Sign in to convert documents").into_response()
@@ -57,6 +61,8 @@ pub async fn may_convert(state: &AppState, payload: &CompileRequest, user_id: &O
 }
 
 async fn run_pandoc(from: &str, to: &str, input: Vec<u8>) -> Result<Vec<u8>, Response> {
+    let busy = || (StatusCode::SERVICE_UNAVAILABLE, "The server is busy converting documents. Try again in a moment.").into_response();
+    let _permit = tokio::time::timeout(PANDOC_TIMEOUT, PANDOC_PERMITS.acquire()).await.map_err(|_| busy())?.map_err(|_| busy())?;
     let mut child = Command::new("pandoc")
         .arg("--sandbox")
         .arg("-f")
@@ -76,9 +82,9 @@ async fn run_pandoc(from: &str, to: &str, input: Vec<u8>) -> Result<Vec<u8>, Res
         });
     }
 
-    let output = child
-        .wait_with_output()
+    let output = tokio::time::timeout(PANDOC_TIMEOUT, child.wait_with_output())
         .await
+        .map_err(|_| (StatusCode::UNPROCESSABLE_ENTITY, "Converting took too long and was stopped").into_response())?
         .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, format!("Pandoc failed: {error}")).into_response())?;
 
     if !output.status.success() {
