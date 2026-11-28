@@ -48,11 +48,16 @@ fn page_hash(svg: &str) -> String {
     hash
 }
 
+fn is_page_hash(value: &str) -> bool {
+    value.len() == 32 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
 async fn preview_response(svgs: Vec<String>, stats: DocumentStats, notes: Option<Vec<Option<Note>>>, known_pages: Option<Vec<String>>) -> Json<CompileResponse> {
     let Some(mut known) = known_pages else {
         let svgs = svgs.into_iter().map(Some).collect();
         return Json(CompileResponse { svgs: Some(svgs), errors: None, stats: Some(stats), notes, page_hashes: None });
     };
+    known.retain(|hash| is_page_hash(hash));
     known.truncate(MAX_KNOWN_PAGES);
     let hashed = tokio::task::spawn_blocking(move || {
         let known: HashSet<String> = known.into_iter().collect();

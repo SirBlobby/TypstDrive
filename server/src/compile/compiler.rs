@@ -184,8 +184,20 @@ pub(crate) fn cache_max_idle() -> std::time::Duration {
     CACHE_TICK * env_usize("TYPST_CACHE_MAX_IDLE_MINUTES", 60).max(1) as u32
 }
 
+const DEFAULT_CACHE_MEMORY_MB: usize = 2560;
+
+fn container_memory_limit() -> Option<usize> {
+    let limit = std::fs::read_to_string("/sys/fs/cgroup/memory.max").ok()?;
+    limit.trim().parse().ok()
+}
+
 pub(crate) fn cache_memory_budget() -> usize {
-    env_usize("TYPST_CACHE_MAX_MEMORY_MB", 2560).saturating_mul(1_000_000)
+    let default_budget = DEFAULT_CACHE_MEMORY_MB * 1_000_000;
+    let default_budget = container_memory_limit().map_or(default_budget, |limit| default_budget.min(limit / 10 * 7));
+    std::env::var("TYPST_CACHE_MAX_MEMORY_MB")
+        .ok()
+        .and_then(|value| value.trim().parse::<usize>().ok())
+        .map_or(default_budget, |megabytes| megabytes.saturating_mul(1_000_000))
 }
 
 pub fn spawn_cache_eviction() {

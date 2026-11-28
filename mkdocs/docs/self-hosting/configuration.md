@@ -113,7 +113,7 @@ Typst keeps in memory what it learnt from earlier compiles, so an edit recompile
 | Setting | Default | What it does |
 |---|---|---|
 | `TYPST_CACHE_MAX_IDLE_MINUTES` | `60` | How long Typst keeps in memory what it learnt from compiling a document nobody edits. |
-| `TYPST_CACHE_MAX_MEMORY_MB` | `2560` | Above this memory use, Typst keeps only what was used in the last minute. |
+| `TYPST_CACHE_MAX_MEMORY_MB` | `2560`, or 70 % of the container memory limit when that is lower | Above this memory use, Typst keeps only what was used in the last minute. |
 
 ## Typst previews
 
@@ -133,7 +133,16 @@ After a start, TypstDrive also compiles the most recently edited projects and do
 | `TYPST_WARMUP_PARALLEL` | `1` | How many of these compiles run at the same time. |
 | `TYPST_WARMUP_DELAY_SECONDS` | `10` | How long to wait after the start. |
 
-The warm-up stops early once TypstDrive uses 70 % of `TYPST_CACHE_MAX_MEMORY_MB`.
+The warm-up stops early once TypstDrive uses 70 % of `TYPST_CACHE_MAX_MEMORY_MB`. Previews of documents and projects deleted from the trash are removed from the store.
+
+## Language server
+
+Owners and editors get completions, go to definition and diagnostics from [tinymist](https://github.com/Myriad-Dreamin/tinymist). Each open document or project runs its own tinymist process.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `LSP_MAX_SESSIONS` | `64` | How many tinymist processes the server runs at once. |
+| `LSP_MAX_SESSIONS_PER_USER` | `4` | How many of them one account can use at once. |
 
 ## LaTeX
 

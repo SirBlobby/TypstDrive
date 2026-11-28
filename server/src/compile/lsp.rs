@@ -16,6 +16,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
 use crate::compile::lsp_guard::LspGuard;
+use crate::compile::lsp_limits::LspSlot;
 use crate::compile::world::LOCAL_PACKAGE_NAMESPACE;
 use crate::sharing::access::{self, Resource};
 use crate::AppState;
@@ -91,7 +92,7 @@ async fn read_message<R: AsyncReadExt + Unpin>(reader: &mut R) -> Option<String>
     Some(String::from_utf8_lossy(&body).to_string())
 }
 
-async fn bridge(state: AppState, socket: WebSocket, user_id: Option<String>, spec: LspWorkspace) {
+async fn bridge(state: AppState, socket: WebSocket, user_id: Option<String>, spec: LspWorkspace, _slot: LspSlot) {
     let Ok(workspace) = write_workspace(spec.files, spec.packages) else {
         tracing::warn!("Could not prepare a language server workspace");
         return;
@@ -171,6 +172,10 @@ async fn bridge(state: AppState, socket: WebSocket, user_id: Option<String>, spe
     access::unregister_session(&state, &session.resource, session.session_id).await;
 }
 
+fn too_many_sessions() -> Response {
+    (StatusCode::TOO_MANY_REQUESTS, "Too many language server sessions").into_response()
+}
+
 pub async fn lsp_handler(
     ws: WebSocketUpgrade,
     Path(id): Path<String>,
@@ -184,10 +189,13 @@ pub async fn lsp_handler(
         Some(_) => return access::forbidden().into_response(),
         None => return (StatusCode::NOT_FOUND, "Document not found").into_response(),
     };
+    let Some(slot) = LspSlot::acquire(&user_id) else {
+        return too_many_sessions();
+    };
 
     let files = crate::drive::document_assets::compile_files(&state, &document, role, &user_id).await;
     let spec = LspWorkspace { files, packages: HashMap::new(), entry: None, resource: Resource::Document(id) };
-    ws.on_upgrade(move |socket| bridge(state, socket, user_id, spec))
+    ws.on_upgrade(move |socket| bridge(state, socket, user_id, spec, slot))
 }
 
 pub async fn project_lsp_handler(
@@ -206,6 +214,9 @@ pub async fn project_lsp_handler(
     if !project.entrypoint.ends_with(".typ") {
         return (StatusCode::BAD_REQUEST, "Project entrypoint is not a Typst file").into_response();
     }
+    let Some(slot) = LspSlot::acquire(&user_id) else {
+        return too_many_sessions();
+    };
 
     let reader = crate::drive::projects::ProjectReader::for_role(role, &user_id);
     let input = crate::drive::projects::assemble_project(&state, &project, HashMap::new(), reader).await;
@@ -215,5 +226,5 @@ pub async fn project_lsp_handler(
         entry: Some(input.entrypoint),
         resource: Resource::Project(id),
     };
-    ws.on_upgrade(move |socket| bridge(state, socket, user_id, spec))
+    ws.on_upgrade(move |socket| bridge(state, socket, user_id, spec, slot))
 }
