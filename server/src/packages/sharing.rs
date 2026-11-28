@@ -57,7 +57,7 @@ struct ManagedPackage {
 }
 
 fn internal_error(error: impl ToString) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 async fn managed_package(

@@ -82,7 +82,7 @@ async fn avatar_response(state: &AppState, user_id: &str) -> Result<impl IntoRes
         .bind(user_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     match avatar {
         Some((data,)) => Ok((
@@ -116,7 +116,7 @@ pub async fn upload_avatar(
 
     let compressed = tokio::task::spawn_blocking(move || compress_image(&source, MAX_AVATAR_DIMENSION))
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map_err(|e| crate::server_errors::hidden(e))?
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
 
     let updated_at = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S%.3f").to_string();
@@ -125,7 +125,7 @@ pub async fn upload_avatar(
         .bind(&user_id)
         .execute(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     sqlx::query(sql("INSERT INTO user_avatars (user_id, data, updated_at) VALUES ($1, $2, $3)"))
         .bind(&user_id)
@@ -133,7 +133,7 @@ pub async fn upload_avatar(
         .bind(&updated_at)
         .execute(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     Ok(updated_at)
 }
@@ -148,7 +148,7 @@ pub async fn delete_avatar(
         .bind(&user_id)
         .execute(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     Ok(StatusCode::NO_CONTENT)
 }

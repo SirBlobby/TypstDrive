@@ -30,6 +30,7 @@ mod request_context;
 mod routes;
 mod sealed_secrets;
 mod security_headers;
+mod server_errors;
 mod sharing;
 mod site_url;
 mod teams;

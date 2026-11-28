@@ -23,7 +23,7 @@ pub async fn list_projects(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let shared = sqlx::query_as::<_, (String, String, String, Option<String>, String, String)>(
         sql("SELECT p.id, p.name, p.entrypoint, p.folder_id, p.updated_at, c.role FROM projects p \
@@ -33,7 +33,7 @@ pub async fn list_projects(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let mut projects: Vec<ProjectSummary> = owned
         .into_iter()
@@ -100,13 +100,13 @@ pub async fn create_project(
     .bind(&entrypoint)
     .execute(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let project = sqlx::query_as::<_, Project>(sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1"))
     .bind(&project_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
@@ -161,14 +161,14 @@ pub async fn move_project(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let row = sqlx::query_as::<_, (String, String, String, Option<String>, String)>(sql("SELECT id, name, entrypoint, folder_id, updated_at FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&project_id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| crate::server_errors::hidden(e))?
     .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;

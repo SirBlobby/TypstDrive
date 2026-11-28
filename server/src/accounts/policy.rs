@@ -97,7 +97,7 @@ pub async fn update_policy(
     ];
     save_settings(&state, &entries)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     crate::admin::audit::record(&state, &admin_id, &client, "settings.accounts", "", &format!("registration {}, email domains [{}]", payload.registration_enabled, domains.join(", "))).await;
 

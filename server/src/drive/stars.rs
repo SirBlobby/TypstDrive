@@ -49,7 +49,7 @@ pub struct StarredItems {
 }
 
 fn internal_error(error: impl ToString) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 fn session_user_id(jar: &SignedCookieJar) -> Result<String, ApiError> {

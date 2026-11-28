@@ -117,7 +117,7 @@ pub async fn save(state: &AppState, settings: &AuthSettings) -> Result<(), ApiEr
     ];
     save_settings(state, &entries)
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))
+        .map_err(|error| crate::server_errors::hidden(error))
 }
 
 pub fn email_links_available(state: &AppState) -> bool {

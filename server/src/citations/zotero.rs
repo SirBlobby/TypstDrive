@@ -96,7 +96,7 @@ async fn get(path: String, api_key: String) -> Result<Page, ApiError> {
         Ok(Page { body, total })
     })
     .await
-    .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?
+    .map_err(|error| crate::server_errors::hidden(error))?
 }
 
 pub async fn key_info(api_key: &str) -> Result<KeyInfo, ApiError> {

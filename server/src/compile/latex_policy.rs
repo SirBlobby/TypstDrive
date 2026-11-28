@@ -63,7 +63,7 @@ pub async fn update_policy(
     let admin_id = require_admin(&state, &jar).await?;
     save_settings(&state, &[(ENABLED_KEY, payload.enabled.to_string())])
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+        .map_err(|error| crate::server_errors::hidden(error))?;
     reload(&state).await;
 
     let summary = if payload.enabled { "LaTeX turned on" } else { "LaTeX turned off" };

@@ -144,7 +144,7 @@ async fn load_link(state: &AppState, kind: LinkKind, item_id: &str) -> Result<Li
         .bind(item_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?
+        .map_err(|error| crate::server_errors::hidden(error))?
         .ok_or((StatusCode::NOT_FOUND, "This link does not exist".to_string()))?;
 
     let (name, owner_id, public_role, password_hash, expires_at) = row;
@@ -275,7 +275,7 @@ pub async fn update_link(
         .bind(&item_id)
         .execute(&state.db)
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+        .map_err(|error| crate::server_errors::hidden(error))?;
 
     access::revalidate_resource(&state, kind.resource(&item_id)).await;
 

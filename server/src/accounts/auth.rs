@@ -72,7 +72,7 @@ pub async fn register(
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
             return Err((StatusCode::CONFLICT, "Username or email already exists".to_string()));
         }
-        Err(err) => return Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
+        Err(err) => return Err(crate::server_errors::hidden(err)),
     }
 
     let user = current_user(&state, &user_id).await?;
@@ -163,7 +163,7 @@ pub async fn update_profile(
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
             Err((StatusCode::CONFLICT, "Username or email already exists".to_string()))
         }
-        Err(err) => Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
+        Err(err) => Err(crate::server_errors::hidden(err)),
     }
 }
 
@@ -208,7 +208,7 @@ pub async fn change_password(
         .bind(&session.user_id)
         .execute(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     sessions::end_all_sessions(&state, &session.user_id, Some(&session.session_id)).await?;
     Ok(StatusCode::OK)

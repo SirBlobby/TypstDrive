@@ -42,7 +42,7 @@ pub async fn list_documents(
         .fetch_all(&state.db)
         .await,
     }
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     Ok(Json(
         rows.into_iter()
@@ -78,7 +78,7 @@ pub async fn list_shared(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let projects = sqlx::query_as::<_, (String, String, String, String, String)>(
         sql("SELECT p.id, p.name, p.entrypoint, p.updated_at, c.role FROM projects p \
@@ -88,7 +88,7 @@ pub async fn list_shared(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     Ok(Json(SharedItems {
         documents: documents
@@ -218,7 +218,7 @@ pub async fn push_document(
         .bind(&id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map_err(|e| crate::server_errors::hidden(e))?
         .and_then(|(content,)| content);
     let merged_blob = crate::realtime::live_documents::store_text(&state, &room, stored_blob.as_deref(), &payload.content).await;
 
@@ -228,7 +228,7 @@ pub async fn push_document(
         .bind(&id)
         .execute(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     crate::drive::activity::mark_document_edited(&state, &id, Some(&user_id)).await;
     let owner_id = document_owner(&state, &id).await.unwrap_or(user_id);
@@ -274,7 +274,7 @@ pub async fn create_document(
     .bind(language)
     .execute(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
@@ -311,14 +311,14 @@ pub async fn move_document(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let row = sqlx::query_as::<_, (String, String, Option<String>, String, Option<String>)>(sql("SELECT id, title, folder_id, updated_at, thumbnail_svg FROM documents WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| crate::server_errors::hidden(e))?
     .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;

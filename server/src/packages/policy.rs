@@ -125,7 +125,7 @@ pub async fn is_admin(state: &AppState, user_id: &str) -> Result<bool, ApiError>
         .bind(user_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map_err(|e| crate::server_errors::hidden(e))?
         .map(|(admin,)| admin != 0)
         .unwrap_or(false))
 }
@@ -179,7 +179,7 @@ pub async fn update_policy(
     ];
     save_settings(&state, &entries)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     crate::admin::audit::record(&state, &admin_id, &client, "settings.packages", "", &format!("publishing {}, admins only {}, private packages {}, default {}", payload.publishing_enabled, payload.admins_only, payload.allow_private_packages, default_visibility)).await;
 

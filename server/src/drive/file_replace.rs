@@ -18,7 +18,7 @@ struct ExistingFile {
 }
 
 fn internal_error(error: impl ToString) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 fn not_found() -> ApiError {

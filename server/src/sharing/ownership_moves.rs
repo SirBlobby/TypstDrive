@@ -8,7 +8,7 @@ use crate::db::{sql, sql_owned};
 type ApiError = (StatusCode, String);
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 async fn single_size(state: &AppState, statement: &'static str, binds: &[&str]) -> Result<i64, ApiError> {

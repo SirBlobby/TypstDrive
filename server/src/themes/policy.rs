@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{extract::State, Json};
 use axum_extra::extract::cookie::SignedCookieJar;
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +38,7 @@ pub async fn update_policy(
     let admin_id = require_admin(&state, &jar).await?;
     save_settings(&state, &[(PERSONAL_KEY, payload.personal_enabled.to_string())])
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+        .map_err(|error| crate::server_errors::hidden(error))?;
 
     let details = format!("personal themes {}", payload.personal_enabled);
     crate::admin::audit::record(&state, &admin_id, &client, "settings.themes", "", &details).await;

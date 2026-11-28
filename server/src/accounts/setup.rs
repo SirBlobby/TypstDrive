@@ -58,13 +58,13 @@ pub async fn run_setup(
     .bind(1i64)
     .execute(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let user = sqlx::query_as::<_, User>(sql("SELECT id, username, email, password_hash, is_admin, email_verified FROM users WHERE id = $1"))
     .bind(&user_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let cookie = crate::accounts::sessions::start_session(&state, &user.id, &client).await?;
 

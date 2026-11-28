@@ -72,7 +72,7 @@ fn select_suggestions(kind: ReviewKind) -> String {
 }
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 fn not_found() -> ApiError {

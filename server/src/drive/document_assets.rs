@@ -37,7 +37,7 @@ type ReadableFile = (FileEntry, Option<Vec<u8>>);
 type FileEntryRow = (String, String, Option<String>, Option<String>, String, String, String, i64, i64);
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 fn not_found() -> ApiError {

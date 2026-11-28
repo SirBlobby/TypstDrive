@@ -17,7 +17,7 @@ const MAX_QUOTA_BYTES: i64 = 1024 * 1024 * 1024 * 1024 * 1024;
 type ApiError = (StatusCode, String);
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]

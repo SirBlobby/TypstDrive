@@ -28,7 +28,7 @@ fn session_user_id(jar: &SignedCookieJar) -> Result<String, ApiError> {
 }
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 async fn identities_of(state: &AppState, user_id: &str) -> Result<Vec<IdentityView>, ApiError> {

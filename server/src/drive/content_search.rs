@@ -68,14 +68,14 @@ pub async fn search_document_text(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?
+    .map_err(|error| crate::server_errors::hidden(error))?
     .into_iter()
     .filter(|(_, owner_id, _, _, updated_at, language, _)| query.accepts(owner_id, &user_id, language.as_deref(), updated_at))
     .collect::<Vec<_>>();
 
     let results = tokio::task::spawn_blocking(move || find_matches(rows, &needle, &user_id))
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+        .map_err(|error| crate::server_errors::hidden(error))?;
 
     Ok(Json(results))
 }

@@ -12,7 +12,7 @@ use palette::Theme;
 pub type ApiError = (StatusCode, String);
 
 pub fn internal_error(error: impl std::fmt::Display) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 fn ensure_exists(themes: &[Theme], id: &str) -> Result<(), ApiError> {

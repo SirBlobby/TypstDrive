@@ -63,7 +63,7 @@ pub async fn update_policy(
     ];
     save_settings(&state, &entries)
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+        .map_err(|error| crate::server_errors::hidden(error))?;
 
     crate::admin::audit::record(
         &state,

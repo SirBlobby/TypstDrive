@@ -48,7 +48,7 @@ pub async fn update_policy(
     }
     save_settings(&state, &[(RETENTION_KEY, payload.retention_days.to_string())])
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+        .map_err(|error| crate::server_errors::hidden(error))?;
 
     let details = format!("trash kept for {} days", payload.retention_days);
     crate::admin::audit::record(&state, &admin_id, &client, "settings.trash", "", &details).await;

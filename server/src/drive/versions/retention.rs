@@ -25,7 +25,7 @@ pub struct VersionLimitRequest {
 }
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 pub async fn max_versions(state: &AppState) -> i64 {

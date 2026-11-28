@@ -240,7 +240,7 @@ pub async fn list_projects(
         .fetch_all(&state.db)
         .await
     }
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     Ok(Json(projects))
 }
@@ -262,7 +262,7 @@ pub async fn list_shared_projects(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     Ok(Json(projects))
 }
@@ -288,13 +288,13 @@ pub async fn create_project(
     .bind(entrypoint)
     .execute(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let project = sqlx::query_as::<_, Project>(sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1"))
     .bind(&project_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let seeds = if language == latex::LATEX_LANGUAGE {
         vec![(latex::LATEX_PROJECT_ENTRYPOINT, latex::LATEX_STARTER.to_string())]
@@ -350,7 +350,7 @@ pub async fn update_project(
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| crate::server_errors::hidden(e))?
     .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
 
     if let Some(name) = payload.name {
@@ -377,14 +377,14 @@ pub async fn update_project(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let project = sqlx::query_as::<_, Project>(sql("SELECT id, owner_id, folder_id, name, entrypoint, thumbnail_svg, public_role, created_at, updated_at FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     crate::sharing::access::revalidate_resource(&state, crate::sharing::access::Resource::Project(id.clone())).await;
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
@@ -423,7 +423,7 @@ pub async fn list_project_files(
     .bind(&id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     Ok(Json(files))
 }
@@ -454,13 +454,13 @@ pub async fn create_project_file(
     .bind(encode_text_blob(&content))
     .execute(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let file = sqlx::query_as::<_, ProjectFile>(sql("SELECT id, project_id, path, kind, mime_type, created_at, updated_at FROM project_files WHERE id = $1"))
     .bind(&file_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
@@ -512,7 +512,7 @@ pub async fn upload_project_file(
         .bind(crate::db::timestamp_now())
         .execute(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
         uploaded.push(path);
     }
@@ -540,7 +540,7 @@ pub async fn get_project_file(
     .bind(&id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| crate::server_errors::hidden(e))?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
     let (kind, mime_type, content) = file;
@@ -564,14 +564,14 @@ pub async fn update_project_file(
     let path = clean_project_path(&payload.path)?;
     let old_path = project_file_path(&state, &id, &file_id).await?;
 
-    let mut transaction = state.db.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let mut transaction = state.db.begin().await.map_err(|e| crate::server_errors::hidden(e))?;
     sqlx::query(sql("UPDATE project_files SET path = $1 WHERE id = $2 AND project_id = $3"))
         .bind(&path)
         .bind(&file_id)
         .bind(&id)
         .execute(&mut *transaction)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     let entrypoint = if old_path == project.entrypoint { path } else { project.entrypoint.clone() };
     if entrypoint != project.entrypoint {
@@ -580,9 +580,9 @@ pub async fn update_project_file(
             .bind(&id)
             .execute(&mut *transaction)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .map_err(|e| crate::server_errors::hidden(e))?;
     }
-    transaction.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    transaction.commit().await.map_err(|e| crate::server_errors::hidden(e))?;
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 
@@ -596,7 +596,7 @@ async fn project_file_path(state: &AppState, project_id: &str, file_id: &str) ->
         .bind(project_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map_err(|e| crate::server_errors::hidden(e))?
         .map(|(path,)| path)
         .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))
 }
@@ -610,20 +610,20 @@ pub async fn delete_project_file(
     let project = editable_project(&state, &id, &user_id_opt).await?;
     let old_path = project_file_path(&state, &id, &file_id).await?;
 
-    let mut transaction = state.db.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let mut transaction = state.db.begin().await.map_err(|e| crate::server_errors::hidden(e))?;
     sqlx::query(sql("DELETE FROM project_files WHERE id = $1 AND project_id = $2"))
         .bind(&file_id)
         .bind(&id)
         .execute(&mut *transaction)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| crate::server_errors::hidden(e))?;
 
     let entrypoint = if old_path == project.entrypoint {
         let remaining_paths: Vec<String> = sqlx::query_as::<_, (String,)>(sql("SELECT path FROM project_files WHERE project_id = $1"))
             .bind(&id)
             .fetch_all(&mut *transaction)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+            .map_err(|e| crate::server_errors::hidden(e))?
             .into_iter()
             .map(|(path,)| path)
             .collect();
@@ -637,9 +637,9 @@ pub async fn delete_project_file(
             .bind(&id)
             .execute(&mut *transaction)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .map_err(|e| crate::server_errors::hidden(e))?;
     }
-    transaction.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    transaction.commit().await.map_err(|e| crate::server_errors::hidden(e))?;
 
     notify_devices(&state, &project.owner_id, DeviceEvent::project(&id)).await;
 

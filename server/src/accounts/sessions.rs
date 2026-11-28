@@ -52,7 +52,7 @@ pub struct SessionView {
 }
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 pub fn format_time(time: DateTime<Utc>) -> String {

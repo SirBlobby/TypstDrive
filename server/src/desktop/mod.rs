@@ -121,7 +121,7 @@ pub async fn authenticate(
     .bind(hash_token(&token))
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     let (token_id, user_id, last_used_at) =
         row.ok_or((StatusCode::UNAUTHORIZED, "Invalid device token".to_string()))?;
@@ -195,7 +195,7 @@ async fn owned_folder(
     .bind(user_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| crate::server_errors::hidden(e))?;
 
     if row.0 == 0 {
         return Err((StatusCode::NOT_FOUND, "Folder not found".to_string()));

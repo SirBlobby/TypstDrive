@@ -24,7 +24,7 @@ pub struct FolderColorResponse {
 }
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 fn normalized_color(color: Option<String>) -> Result<Option<String>, ApiError> {

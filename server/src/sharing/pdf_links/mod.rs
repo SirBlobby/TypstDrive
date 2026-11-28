@@ -31,7 +31,7 @@ macro_rules! link_query {
 type LinkRow = (String, String, Option<String>, Option<String>, Option<String>, i64, Option<String>, String, Option<String>);
 
 pub fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

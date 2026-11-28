@@ -12,7 +12,7 @@ pub async fn user_by_email(state: &AppState, email: &str) -> Result<Option<User>
     .bind(email.trim())
     .fetch_optional(&state.db)
     .await
-    .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))
+    .map_err(|error| crate::server_errors::hidden(error))
 }
 
 pub async fn user_by_id(state: &AppState, user_id: &str) -> Result<Option<User>, (StatusCode, String)> {
@@ -23,7 +23,7 @@ pub async fn user_by_id(state: &AppState, user_id: &str) -> Result<Option<User>,
     .bind(user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))
+    .map_err(|error| crate::server_errors::hidden(error))
 }
 
 pub async fn shareable_user_id(state: &AppState, email: &str) -> Result<String, (StatusCode, String)> {

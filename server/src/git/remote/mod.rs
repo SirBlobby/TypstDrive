@@ -119,7 +119,7 @@ pub struct Author {
 async fn blocking<T: Send + 'static>(work: impl FnOnce() -> Result<T, ApiError> + Send + 'static) -> Result<T, ApiError> {
     tokio::task::spawn_blocking(work)
         .await
-        .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?
+        .map_err(|error| crate::server_errors::hidden(error))?
 }
 
 fn is_object_id(value: &str) -> bool {

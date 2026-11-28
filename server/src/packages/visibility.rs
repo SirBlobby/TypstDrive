@@ -7,7 +7,7 @@ use crate::AppState;
 type ApiError = (StatusCode, String);
 
 fn internal_error(error: impl ToString) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 pub async fn find_by_name(state: &AppState, name: &str) -> Result<Option<Package>, ApiError> {

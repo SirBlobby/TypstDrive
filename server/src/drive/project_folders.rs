@@ -19,7 +19,7 @@ use crate::{
 type ApiError = (StatusCode, String);
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 async fn project_file_paths(state: &AppState, project_id: &str) -> Result<Vec<(String, String)>, ApiError> {

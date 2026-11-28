@@ -29,11 +29,11 @@ fn repo_dir(repo: &RemoteRepo) -> PathBuf {
 
 fn create_cache_root() -> Result<(), ApiError> {
     let root = cache_root();
-    std::fs::create_dir_all(&root).map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+    std::fs::create_dir_all(&root).map_err(|error| crate::server_errors::hidden(error))?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).map_err(|error| crate::server_errors::hidden(error))?;
     }
     Ok(())
 }
@@ -148,7 +148,7 @@ fn failure(stderr: &[u8]) -> ApiError {
 fn spawn_error(error: std::io::Error) -> ApiError {
     match error.kind() {
         ErrorKind::NotFound => (StatusCode::INTERNAL_SERVER_ERROR, "Git is not installed on this server".to_string()),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()),
+        _ => crate::server_errors::hidden(error),
     }
 }
 
@@ -164,7 +164,7 @@ fn run(mut command: Command) -> Result<String, ApiError> {
 fn run_with_input(mut command: Command, input: &[u8]) -> Result<String, ApiError> {
     let mut child = command.stdin(Stdio::piped()).spawn().map_err(spawn_error)?;
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(input).map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+        stdin.write_all(input).map_err(|error| crate::server_errors::hidden(error))?;
     }
     let output = child.wait_with_output().map_err(spawn_error)?;
     if output.status.success() {
@@ -271,7 +271,7 @@ pub fn read_blob(repo: &RemoteRepo, sha: &str) -> Result<Option<Vec<u8>>, ApiErr
         stdout
             .take(MAX_FILE_BYTES + 1)
             .read_to_end(&mut bytes)
-            .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+            .map_err(|error| crate::server_errors::hidden(error))?;
     }
     if bytes.len() as u64 > MAX_FILE_BYTES {
         let _ = child.kill();

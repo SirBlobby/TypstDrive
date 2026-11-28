@@ -149,7 +149,10 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap, scope: ApiScope
     .bind(hash_key(&token))
     .fetch_optional(&state.db)
     .await
-    .map_err(|error| reject(StatusCode::INTERNAL_SERVER_ERROR, &format!("Database error: {error}")))?;
+    .map_err(|error| {
+        tracing::error!("API key lookup failed: {error}");
+        reject(StatusCode::INTERNAL_SERVER_ERROR, crate::server_errors::GENERIC_MESSAGE)
+    })?;
 
     let Some((key_id, user_id, scopes, expires_at, key_rate_limit)) = row else {
         return Err(reject(StatusCode::UNAUTHORIZED, "Invalid API key"));

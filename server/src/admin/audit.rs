@@ -93,7 +93,7 @@ pub async fn list_entries(
     .bind(limit)
     .fetch_all(&state.db)
     .await
-    .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))?;
+    .map_err(|error| crate::server_errors::hidden(error))?;
 
     let next_before = if entries.len() as i64 == limit {
         entries.last().map(|entry| entry.created_at.clone())

@@ -60,7 +60,7 @@ const TRANSFER_COLUMNS: &str = "SELECT t.id, t.item_kind, t.item_id, t.from_user
      INNER JOIN users receiver ON receiver.id = t.to_user_id";
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 fn session_user(jar: &SignedCookieJar) -> Result<String, ApiError> {

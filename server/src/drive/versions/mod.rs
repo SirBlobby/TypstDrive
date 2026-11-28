@@ -36,7 +36,7 @@ pub struct SaveVersionResponse {
 }
 
 fn internal_error(error: sqlx::Error) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 fn clean_label(label: Option<String>) -> Option<String> {

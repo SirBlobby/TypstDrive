@@ -16,7 +16,7 @@ const MAX_LOGO_DIMENSION: u32 = 256;
 const LOGO_MIME_TYPE: &str = "image/webp";
 
 fn server_error(error: impl ToString) -> ApiError {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+    crate::server_errors::hidden(error)
 }
 
 pub async fn logo_updated_at(state: &AppState) -> Option<String> {
