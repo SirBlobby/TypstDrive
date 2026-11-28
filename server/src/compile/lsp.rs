@@ -194,7 +194,10 @@ pub async fn lsp_handler(
     };
 
     let files = crate::drive::document_assets::compile_files(&state, &document, role, &user_id).await;
-    let spec = LspWorkspace { files, packages: HashMap::new(), entry: None, resource: Resource::Document(id) };
+    let saved_text = crate::drive::documents::saved_text(&state, &document.id).await;
+    let package_account = crate::packages::imports::reader_account(&document.owner_id, role, &user_id);
+    let packages = crate::packages::imports::load_imported(&state, &package_account, &[saved_text.as_str()]).await;
+    let spec = LspWorkspace { files, packages, entry: None, resource: Resource::Document(id) };
     ws.on_upgrade(move |socket| bridge(state, socket, user_id, spec, slot))
 }
 

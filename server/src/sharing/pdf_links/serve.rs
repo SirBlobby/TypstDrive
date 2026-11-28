@@ -56,7 +56,9 @@ async fn document_input(state: &AppState, document_id: &str) -> Option<ProjectIn
     let (document, _) = access::document_role(state, document_id, &Some(owner_id)).await?;
     let text = current_text(state, &document.id).await.unwrap_or_default();
     let files = crate::drive::document_assets::compile_files(state, &document, AccessRole::Viewer, &None).await;
-    Some(latex::document_input(&document, text, files))
+    let mut input = latex::document_input(&document, text, files);
+    crate::packages::imports::attach_imported(state, &mut input, "").await;
+    Some(input)
 }
 
 async fn project_input(state: &AppState, project_id: &str) -> Option<ProjectInput> {

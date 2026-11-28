@@ -209,14 +209,12 @@ pub async fn assemble_project(
     files.extend(uploaded.into_iter().filter(|(_, data)| matches!(reader, ProjectReader::Owner) || crate::compile::fonts::is_font_data(data)));
 
     let package_account = match reader {
-        ProjectReader::Owner => project.owner_id.as_str(),
-        ProjectReader::Collaborator(user_id) => user_id.unwrap_or_default(),
+        ProjectReader::Owner => project.owner_id.clone(),
+        ProjectReader::Collaborator(user_id) => user_id.unwrap_or_default().to_string(),
     };
-    ProjectInput {
-        entrypoint: project.entrypoint.clone(),
-        files,
-        packages: crate::packages::visibility::load_files_for(state, package_account).await,
-    }
+    let mut input = ProjectInput { entrypoint: project.entrypoint.clone(), files, packages: HashMap::new() };
+    crate::packages::imports::attach_imported(state, &mut input, &package_account).await;
+    input
 }
 
 #[derive(serde::Deserialize)]

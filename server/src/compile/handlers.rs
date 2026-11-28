@@ -161,17 +161,13 @@ pub(crate) async fn resolve_source(state: &AppState, payload: &CompileRequest, u
     let (document, role) = access::document_role(state, document_id, user_id).await?;
     let files = crate::drive::document_assets::compile_files(state, &document, role, user_id).await;
     let cache_target = Some(format!("document:{}", document.id));
-    match (role.can_edit(), payload.text.clone()) {
-        (true, Some(submitted_text)) => {
-            let thumbnail_target = Some(ThumbnailTarget::Document(document.id.clone()));
-            let input = latex::document_input(&document, submitted_text, files);
-            Some(CompileSource { input, thumbnail_target, cache_target })
-        }
-        _ => {
-            let input = latex::document_input(&document, current_text(state, &document.id).await, files);
-            Some(CompileSource { input, thumbnail_target: None, cache_target })
-        }
-    }
+    let package_account = crate::packages::imports::reader_account(&document.owner_id, role, user_id);
+    let (mut input, thumbnail_target) = match (role.can_edit(), payload.text.clone()) {
+        (true, Some(submitted_text)) => (latex::document_input(&document, submitted_text, files), Some(ThumbnailTarget::Document(document.id.clone()))),
+        _ => (latex::document_input(&document, current_text(state, &document.id).await, files), None),
+    };
+    crate::packages::imports::attach_imported(state, &mut input, &package_account).await;
+    Some(CompileSource { input, thumbnail_target, cache_target })
 }
 
 pub(crate) async fn compile_input(state: &AppState, payload: &CompileRequest, user_id: &Option<String>) -> Option<ProjectInput> {
