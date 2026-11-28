@@ -6,12 +6,11 @@ To reach TypstDrive safely from the internet, put a **reverse proxy** in front o
 
 1. Point your domain, such as `typst.example.com`, at your server's IP address with an `A` record at your DNS provider.
 2. Make sure ports 80 and 443 are open on the server.
-3. Set these in `docker-compose.yml` and restart TypstDrive:
+3. Set these in `.env` and restart TypstDrive:
 
-    ```yaml
-    environment:
-      - PUBLIC_URL=https://typst.example.com
-      - TRUST_PROXY_HEADERS=true
+    ```bash
+    PUBLIC_URL=https://typst.example.com
+    TRUST_PROXY_HEADERS=true
     ```
 
     `PUBLIC_URL` must match the address people use. `TRUST_PROXY_HEADERS` lets TypstDrive see each visitor's real address, which it needs for sign-in protection. Only turn it on behind a proxy.
@@ -27,11 +26,8 @@ services:
   typstdrive:
     image: ghcr.io/sirblobby/typstdrive:latest
     restart: unless-stopped
-    environment:
-      - COOKIE_SECRET=paste-your-secret-here
-      - PUBLIC_URL=https://typst.example.com
-      - TRUST_PROXY_HEADERS=true
-      - RUST_LOG=info
+    env_file:
+      - .env
     volumes:
       - ./data:/data
 
@@ -44,6 +40,15 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy:/data
+```
+
+With this in `.env`:
+
+```bash
+COOKIE_SECRET=paste-your-secret-here
+PUBLIC_URL=https://typst.example.com
+TRUST_PROXY_HEADERS=true
+RUST_LOG=info
 ```
 
 TypstDrive no longer needs its own `ports` entry, because only Caddy talks to it. Then create a file named `Caddyfile` next to it:

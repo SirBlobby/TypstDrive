@@ -28,10 +28,9 @@ Replace `<provider>` with `google`, `github` or the name you give your own provi
 2. Add the redirect URL ending in `/api/auth/sso/google/callback`.
 3. Add the ID and secret:
 
-    ```yaml
-    environment:
-      - GOOGLE_CLIENT_ID=...
-      - GOOGLE_CLIENT_SECRET=...
+    ```bash
+    GOOGLE_CLIENT_ID=...
+    GOOGLE_CLIENT_SECRET=...
     ```
 
 To only accept accounts from your Google Workspace, add `GOOGLE_HOSTED_DOMAIN=example.com`.
@@ -42,23 +41,21 @@ To only accept accounts from your Google Workspace, add `GOOGLE_HOSTED_DOMAIN=ex
 2. Use the redirect URL ending in `/api/auth/sso/github/callback`.
 3. Add the ID and secret:
 
-    ```yaml
-    environment:
-      - GITHUB_CLIENT_ID=...
-      - GITHUB_CLIENT_SECRET=...
+    ```bash
+    GITHUB_CLIENT_ID=...
+    GITHUB_CLIENT_SECRET=...
     ```
 
 ## Your own provider (OpenID Connect)
 
 Give your provider a short name, such as `company`. Create a client for TypstDrive in your provider with the redirect URL ending in `/api/auth/sso/company/callback`, then add:
 
-```yaml
-environment:
-  - OIDC_PROVIDERS=company
-  - OIDC_COMPANY_NAME=Company login
-  - OIDC_COMPANY_ISSUER=https://login.example.com/realms/main
-  - OIDC_COMPANY_CLIENT_ID=typstdrive
-  - OIDC_COMPANY_CLIENT_SECRET=...
+```bash
+OIDC_PROVIDERS=company
+OIDC_COMPANY_NAME=Company login
+OIDC_COMPANY_ISSUER=https://login.example.com/realms/main
+OIDC_COMPANY_CLIENT_ID=typstdrive
+OIDC_COMPANY_CLIENT_SECRET=...
 ```
 
 `OIDC_COMPANY_NAME` is the text on the sign-in button. To add several providers, separate their names with commas, such as `OIDC_PROVIDERS=company,school`, and add a set of lines for each.

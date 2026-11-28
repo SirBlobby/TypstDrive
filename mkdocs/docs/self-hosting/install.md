@@ -19,9 +19,20 @@ openssl rand -hex 64
 
 Copy the output. You need it in the next step.
 
-## 3. Write the compose file
+## 3. Write the settings and compose files
 
-Save this as `docker-compose.yml` in the folder, and paste your secret into `COOKIE_SECRET`:
+Save this as `.env` in the folder, and paste your secret into `COOKIE_SECRET`:
+
+```bash
+COOKIE_SECRET=paste-your-secret-here
+PUBLIC_URL=http://localhost:3000
+RUST_LOG=info
+```
+
+- `PUBLIC_URL` is the address people type to open TypstDrive. Change it later when you add a domain.
+- Every other setting goes in this file too. See [Settings reference](configuration.md), or start from `example.env` in the repository.
+
+Save this as `docker-compose.yml` next to it:
 
 ```yaml
 services:
@@ -31,16 +42,14 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      - COOKIE_SECRET=paste-your-secret-here
-      - PUBLIC_URL=http://localhost:3000
-      - RUST_LOG=info
+    env_file:
+      - .env
     volumes:
       - ./data:/data
 ```
 
 - `ports` makes TypstDrive available on port 3000.
-- `PUBLIC_URL` is the address people type to open TypstDrive. Change it later when you add a domain.
+- `env_file` loads the settings from `.env`.
 - `./data` is where all documents, files and accounts are kept. This is the folder to back up.
 
 ## 4. Start it
@@ -83,4 +92,4 @@ cd TypstDrive
 docker compose up -d --build
 ```
 
-The repository's `docker-compose.yml` has commented examples for every optional feature. Put passwords and keys in a `.env` file instead, starting from `example.env`; see [Using a .env file](configuration.md#using-a-env-file).
+`example.env` in the repository has commented examples for every optional feature; see [Using a .env file](configuration.md#using-a-env-file).

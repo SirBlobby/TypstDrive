@@ -14,9 +14,8 @@ You do not need to create tables. TypstDrive sets up the database on first start
 
 This is the default. The database is a file at `/data/typstdrive.db` inside the container. You can set it explicitly:
 
-```yaml
-environment:
-  - DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
+```bash
+DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
 ```
 
 ## PostgreSQL
@@ -27,9 +26,8 @@ Add a database container and point TypstDrive at it:
 services:
   typstdrive:
     image: ghcr.io/sirblobby/typstdrive:latest
-    environment:
-      - DATABASE_URL=postgres://typstdrive:change-me@db:5432/typstdrive
-      - COOKIE_SECRET=paste-your-secret-here
+    env_file:
+      - .env
     depends_on:
       - db
 
@@ -44,6 +42,13 @@ services:
       - ./postgres:/var/lib/postgresql/data
 ```
 
+With this in `.env`:
+
+```bash
+DATABASE_URL=postgres://typstdrive:change-me@db:5432/typstdrive
+COOKIE_SECRET=paste-your-secret-here
+```
+
 ## MySQL and MariaDB
 
 MySQL 8.0.13 or newer and MariaDB 10.5 or newer work. The database must use the `utf8mb4_bin` collation:
@@ -52,9 +57,8 @@ MySQL 8.0.13 or newer and MariaDB 10.5 or newer work. The database must use the 
 services:
   typstdrive:
     image: ghcr.io/sirblobby/typstdrive:latest
-    environment:
-      - DATABASE_URL=mysql://typstdrive:change-me@mysql:3306/typstdrive
-      - COOKIE_SECRET=paste-your-secret-here
+    env_file:
+      - .env
     depends_on:
       - mysql
 
@@ -69,6 +73,13 @@ services:
       MYSQL_PASSWORD: change-me
     volumes:
       - ./mysql:/var/lib/mysql
+```
+
+With this in `.env`:
+
+```bash
+DATABASE_URL=mysql://typstdrive:change-me@mysql:3306/typstdrive
+COOKIE_SECRET=paste-your-secret-here
 ```
 
 Uploaded files are stored in the database unless you use [object storage](scaling.md#object-storage), so `max-allowed-packet` must be larger than your biggest upload.

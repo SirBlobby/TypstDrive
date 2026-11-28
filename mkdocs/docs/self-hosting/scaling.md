@@ -11,9 +11,8 @@ Each copy of TypstDrive keeps the documents people have open in memory. When two
 
 Point every copy at the same server:
 
-```yaml
-environment:
-  - REDIS_URL=redis://valkey:6379
+```bash
+REDIS_URL=redis://valkey:6379
 ```
 
 Every copy must also share the same database and the same `COOKIE_SECRET`.
@@ -29,12 +28,11 @@ Redis only passes messages along, so it needs no backups. If it goes down, each 
 
 Uploaded fonts, images and other files are stored in the database by default. To keep them in S3-compatible object storage instead:
 
-```yaml
-environment:
-  - S3_BUCKET=typstdrive
-  - S3_ENDPOINT=http://rustfs:9000
-  - S3_ACCESS_KEY_ID=your-access-key
-  - S3_SECRET_ACCESS_KEY=your-secret-key
+```bash
+S3_BUCKET=typstdrive
+S3_ENDPOINT=http://rustfs:9000
+S3_ACCESS_KEY_ID=your-access-key
+S3_SECRET_ACCESS_KEY=your-secret-key
 ```
 
 Leave out `S3_ENDPOINT` for Amazon S3. [RustFS](https://rustfs.com/) is a good self-hosted choice, and Cloudflare R2, Backblaze B2 and Wasabi work too.
@@ -54,13 +52,8 @@ services:
   rustfs:
     image: rustfs/rustfs:latest
     restart: unless-stopped
-    environment:
-      - RUSTFS_VOLUMES=/data
-      - RUSTFS_ADDRESS=0.0.0.0:9000
-      - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
-      - RUSTFS_CONSOLE_ENABLE=true
-      - RUSTFS_ACCESS_KEY=your-access-key
-      - RUSTFS_SECRET_KEY=your-secret-key
+    env_file:
+      - .env
     ports:
       - "9001:9001"
     volumes:
@@ -68,6 +61,17 @@ services:
 
 volumes:
   rustfsdata:
+```
+
+With this in `.env`:
+
+```bash
+RUSTFS_VOLUMES=/data
+RUSTFS_ADDRESS=0.0.0.0:9000
+RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+RUSTFS_CONSOLE_ENABLE=true
+RUSTFS_ACCESS_KEY=your-access-key
+RUSTFS_SECRET_KEY=your-secret-key
 ```
 
 1. Start it with `docker compose up -d rustfs`.
@@ -86,16 +90,8 @@ services:
     image: ghcr.io/sirblobby/typstdrive:latest
     deploy:
       replicas: 2
-    environment:
-      - DATABASE_URL=postgres://typstdrive:change-me@db:5432/typstdrive
-      - COOKIE_SECRET=paste-your-secret-here
-      - PUBLIC_URL=https://typst.example.com
-      - TRUST_PROXY_HEADERS=true
-      - REDIS_URL=redis://valkey:6379
-      - S3_BUCKET=typstdrive
-      - S3_ENDPOINT=http://rustfs:9000
-      - S3_ACCESS_KEY_ID=your-access-key
-      - S3_SECRET_ACCESS_KEY=your-secret-key
+    env_file:
+      - .env
 
   db:
     image: postgres:16-alpine
@@ -121,6 +117,20 @@ services:
 volumes:
   pgdata:
   rustfsdata:
+```
+
+With this in `.env`:
+
+```bash
+DATABASE_URL=postgres://typstdrive:change-me@db:5432/typstdrive
+COOKIE_SECRET=paste-your-secret-here
+PUBLIC_URL=https://typst.example.com
+TRUST_PROXY_HEADERS=true
+REDIS_URL=redis://valkey:6379
+S3_BUCKET=typstdrive
+S3_ENDPOINT=http://rustfs:9000
+S3_ACCESS_KEY_ID=your-access-key
+S3_SECRET_ACCESS_KEY=your-secret-key
 ```
 
 Put a [reverse proxy](reverse-proxy.md) in front that spreads visitors across the copies.

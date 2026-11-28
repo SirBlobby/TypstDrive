@@ -15,7 +15,7 @@ Without email everything else works, and these options simply stay hidden.
 
 Links in emails point to `PUBLIC_URL`, so set it first.
 
-The examples below use the `environment:` section of `docker-compose.yml`. The same lines, without the leading `- `, can go in a `.env` file instead, which keeps the password out of the compose file. See [Using a .env file](configuration.md#using-a-env-file).
+The examples below go in the `.env` file next to `docker-compose.yml`. See [Using a .env file](configuration.md#using-a-env-file).
 
 ## Gmail or Google Workspace
 
@@ -23,11 +23,10 @@ The examples below use the `environment:` section of `docker-compose.yml`. The s
 2. Open **Google Account → Security → App passwords** and create one.
 3. Add:
 
-    ```yaml
-    environment:
-      - SMTP_PROVIDER=google
-      - SMTP_USERNAME=you@gmail.com
-      - SMTP_PASSWORD=abcd efgh ijkl mnop
+    ```bash
+    SMTP_PROVIDER=google
+    SMTP_USERNAME=you@gmail.com
+    SMTP_PASSWORD=abcd efgh ijkl mnop
     ```
 
 You can paste the app password with its spaces.
@@ -38,13 +37,12 @@ Most email delivery services can be set up with `SMTP_PROVIDER`, which fills in 
 
 For example, Mailgun with a domain in the EU region:
 
-```yaml
-environment:
-  - SMTP_PROVIDER=mailgun
-  - SMTP_REGION=eu
-  - SMTP_USERNAME=postmaster@mg.example.com
-  - SMTP_PASSWORD=your-smtp-password
-  - SMTP_FROM=TypstDrive <typst@mg.example.com>
+```bash
+SMTP_PROVIDER=mailgun
+SMTP_REGION=eu
+SMTP_USERNAME=postmaster@mg.example.com
+SMTP_PASSWORD=your-smtp-password
+SMTP_FROM=TypstDrive <typst@mg.example.com>
 ```
 
 | `SMTP_PROVIDER` | Service | `SMTP_USERNAME` and `SMTP_PASSWORD` | `SMTP_REGION` |
@@ -66,14 +64,13 @@ environment:
 
 Your email provider lists these values in its help pages, usually under "SMTP".
 
-```yaml
-environment:
-  - SMTP_HOST=smtp.example.com
-  - SMTP_PORT=587
-  - SMTP_SECURITY=starttls
-  - SMTP_USERNAME=typst@example.com
-  - SMTP_PASSWORD=...
-  - SMTP_FROM=TypstDrive <typst@example.com>
+```bash
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURITY=starttls
+SMTP_USERNAME=typst@example.com
+SMTP_PASSWORD=...
+SMTP_FROM=TypstDrive <typst@example.com>
 ```
 
 | Setting | Meaning |
