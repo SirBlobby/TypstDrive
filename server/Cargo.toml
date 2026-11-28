@@ -31,6 +31,7 @@ typst-ide = { path = "../typst/crates/typst-ide" }
 typstyle-core = "0.15.3"
 hayro-syntax = { git = "https://github.com/LaurenzV/hayro", rev = "d8e24e29eda62581e1ea15497effb2a884fb1608" }
 libc = "0.2"
+mimalloc = { version = "0.1", default-features = false }
 
 yrs = "0.18.8"
 yrs-axum = "0.8.2"

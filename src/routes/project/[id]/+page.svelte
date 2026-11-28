@@ -11,7 +11,7 @@
 	import ProjectToolbar from '#lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '#lib/components/PublishPackageModal.svelte';
 	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
-	import { compileProject, syncClick, syncCursor, type PagePoint } from '#lib/ts/typst-api';
+	import { compileProject, assemblePages, syncClick, syncCursor, type PagePoint } from '#lib/ts/typst-api';
 	import { cursorClickSync, revealOffset } from '#lib/ts/editor-preview-sync';
 	import type { Diagnostic } from '#lib/ts/typst-api';
 	import EditorContextMenu from '#lib/components/editor/EditorContextMenu.svelte';
@@ -31,9 +31,11 @@
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import Icon from '@iconify/svelte';
 	import { isPlaceholder, placeholderPath, type ProjectFile } from '#lib/ts/project-tree';
-	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile } from '#lib/ts/yjs-project';
+	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile, whenSynced } from '#lib/ts/yjs-project';
 	import { createFollowController } from '#lib/ts/follow';
 	import { filePresenceStore } from '#lib/ts/presence';
+	import { userStore } from '#lib/ts/auth';
+	import { loadCachedPreview, saveCachedPreview } from '#lib/ts/preview-cache';
 
 	const projectId = page.params.id as string;
 
@@ -44,11 +46,36 @@
 	let activeFileId = $state('');
 	let previewFileId = $state('');
 	let svgs = $state<string[]>([]);
+	let pageHashes: string[] = [];
+	let heldSvgs: string[] = [];
 	let errors = $state<Diagnostic[]>([]);
 	let showPublish = $state(false);
 	let ready = $state(false);
 	let timeoutId: number | undefined;
 	let lastCompiledSources: string | null = null;
+	let sourcesReady = false;
+	const SYNC_WAIT_MS = 8000;
+
+	const viewerId = $userStore?.id ?? null;
+	let cacheSaveTimer: number | undefined;
+	const CACHE_SAVE_DELAY_MS = 2000;
+
+	function scheduleCacheSave() {
+		if (!viewerId) return;
+		if (cacheSaveTimer) clearTimeout(cacheSaveTimer);
+		cacheSaveTimer = window.setTimeout(saveCache, CACHE_SAVE_DELAY_MS);
+	}
+
+	function saveCache() {
+		if (cacheSaveTimer) clearTimeout(cacheSaveTimer);
+		cacheSaveTimer = undefined;
+		if (!viewerId || $userStore?.id !== viewerId || pageHashes.length === 0) return;
+		saveCachedPreview(viewerId, projectId, { svgs: heldSvgs, hashes: pageHashes });
+	}
+
+	function saveCacheWhenHidden() {
+		if (document.visibilityState === 'hidden' && cacheSaveTimer) saveCache();
+	}
 
 	let readOnly = $derived(role === 'viewer');
 	let canEdit = $derived(role === 'owner' || role === 'editor');
@@ -84,26 +111,51 @@
 	function previewSources() {
 		const sources: Record<string, string> = {};
 		for (const entry of openFiles()) {
+			if (!entry.provider.synced) continue;
 			const source = { doc: entry.doc, text: entry.text, awareness: entry.provider.awareness };
 			sources[entry.path] = previewText(source, entry.fileId, entry.fileId === activeFileId);
 		}
 		return sources;
 	}
 
-	function triggerCompile() {
-		if (!showPreview) return;
+	let compileInFlight = false;
+	let compileQueued = false;
+	let queuedBeforeSync = false;
+
+	function triggerCompile(beforeSync = false) {
+		if (!showPreview || (!sourcesReady && !beforeSync)) return;
+		if (compileInFlight) {
+			compileQueued = true;
+			queuedBeforeSync ||= beforeSync;
+			return;
+		}
 		const sources = previewSources();
 		const fingerprint = JSON.stringify(sources);
 		if (fingerprint === lastCompiledSources) return;
 		lastCompiledSources = fingerprint;
 		const matchesEditor = fingerprint === JSON.stringify(getAllText());
-		compileProject(projectId, sources)
+		const held = new Map(pageHashes.map((hash, i) => [hash, heldSvgs[i]]));
+		compileInFlight = true;
+		compileProject(projectId, sources, [...held.keys()])
 			.then((res) => {
 				if (res.stats) $documentStatsStore = res.stats;
 				if (res.svgs) {
-					svgs = res.svgs;
+					pageHashes.forEach((hash, i) => held.set(hash, heldSvgs[i]));
+					const pages = assemblePages(res, held);
+					if (!pages) {
+						pageHashes = [];
+						heldSvgs = [];
+						lastCompiledSources = null;
+						compileQueued = true;
+						queuedBeforeSync = true;
+						return;
+					}
+					svgs = pages.svgs;
+					heldSvgs = pages.svgs;
+					pageHashes = pages.hashes;
 					lastCompiledFiles = sources;
 					$speakerNotesStore = res.notes ?? [];
+					scheduleCacheSave();
 					errors = [];
 					$editorErrors = [];
 				} else if (res.errors) {
@@ -114,6 +166,14 @@
 			.catch(() => {
 				lastCompiledSources = null;
 				errors = [{ message: 'Network or server error compiling project.', severity: 'error' }];
+			})
+			.finally(() => {
+				compileInFlight = false;
+				if (!compileQueued) return;
+				const again = queuedBeforeSync;
+				compileQueued = false;
+				queuedBeforeSync = false;
+				triggerCompile(again);
 			});
 	}
 
@@ -136,9 +196,9 @@
 		if (showPreview && ready) triggerCompile();
 	});
 
-	async function loadFiles() {
+	async function loadFiles(): Promise<boolean> {
 		const res = await fetch(`/api/projects/${projectId}/files`);
-		if (!res.ok) return;
+		if (!res.ok) return false;
 		files = await res.json();
 
 		for (const f of files) {
@@ -152,6 +212,7 @@
 			const entry = files.find((f) => f.path === entrypoint) ?? files.find((f) => f.kind === 'text' && !isPlaceholder(f.path));
 			if (entry) activeFileId = entry.id;
 		}
+		return true;
 	}
 
 	function syncInput() {
@@ -351,6 +412,8 @@
 		setProject(projectId);
 		startProjectReview();
 		const stopFollowController = createFollowController({ sources: presenceSources, activeFileId: () => activeFileId, openFile: followIntoFile });
+		const cachedPreview = viewerId ? loadCachedPreview(viewerId, projectId) : Promise.resolve(null);
+		document.addEventListener('visibilitychange', saveCacheWhenHidden);
 		fetch(`/api/projects/${projectId}`)
 			.then((r) => r.json())
 			.then((p) => {
@@ -360,14 +423,26 @@
 				suggestingModeStore.set(role === 'suggester');
 			})
 			.then(loadFiles)
-			.then(() => {
+			.then(async (granted) => {
+				const cached = await cachedPreview;
+				const shown = granted && cached !== null && pageHashes.length === 0 ? cached : null;
+				if (shown) {
+					heldSvgs = shown.svgs;
+					pageHashes = shown.hashes;
+				}
 				ready = true;
+				triggerCompile(true);
+				if (shown) setTimeout(() => { if (svgs.length === 0) svgs = shown.svgs; }, 0);
+				await Promise.all(openFiles().map((entry) => whenSynced(entry, SYNC_WAIT_MS)));
+				sourcesReady = true;
 				triggerCompile();
 			})
 			.catch((e) => console.error('Failed to load project', e));
 
 		return () => {
 			if (timeoutId) clearTimeout(timeoutId);
+			document.removeEventListener('visibilitychange', saveCacheWhenHidden);
+			if (cacheSaveTimer) saveCache();
 			stopFollowController();
 			endReviewSession();
 			cleanupProject();

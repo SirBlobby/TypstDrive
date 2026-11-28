@@ -96,5 +96,6 @@ ENV STATIC_DIR=/app/build
 ENV DATABASE_URL=sqlite:///data/typstdrive.db?mode=rwc
 ENV GIT_CACHE_DIR=/data/git-cache
 ENV LATEX_DIR=/data/latex
+ENV PREVIEW_CACHE_DIR=/data/preview-cache
 EXPOSE 3000
 CMD ["/app/server"]

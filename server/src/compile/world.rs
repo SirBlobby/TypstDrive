@@ -1,6 +1,7 @@
 use chrono::Datelike;
 use std::collections::{HashMap, HashSet};
 use std::io::Read;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use typst::diag::{FileError, FileResult};
@@ -51,6 +52,29 @@ pub struct MemoryWorld {
     packages: SystemPackages,
     accessed_paths: Mutex<HashSet<String>>,
     accessed_font_files: Mutex<HashSet<String>>,
+    read_outside_input: AtomicBool,
+    today_answers: Mutex<Vec<TodayAnswer>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct TodayAnswer {
+    pub offset_seconds: Option<i32>,
+    pub date: Option<(i32, u32, u32)>,
+}
+
+impl TodayAnswer {
+    pub fn still_holds(&self) -> bool {
+        today_date(self.offset_seconds) == self.date
+    }
+}
+
+fn today_date(offset_seconds: Option<i32>) -> Option<(i32, u32, u32)> {
+    let now = chrono::Local::now();
+    let date = match offset_seconds {
+        Some(seconds) => now.with_timezone(&chrono::FixedOffset::east_opt(seconds)?).date_naive(),
+        None => now.date_naive(),
+    };
+    Some((date.year(), date.month(), date.day()))
 }
 
 #[derive(Default)]
@@ -136,13 +160,19 @@ impl MemoryWorld {
 
         // Add custom fonts from files, registered only by their embedded metadata
         // so that all variants (Bold, Italic, etc.) resolve correctly under one family name.
-        for (name, data) in &files {
-            if name.to_lowercase().ends_with(".ttf") || name.to_lowercase().ends_with(".otf") {
-                for font in Font::iter(Bytes::new(data.clone())) {
-                    custom_fonts.push(font.info().clone());
-                    fonts.push(font);
-                    font_file_names.push(name.clone());
-                }
+        let mut font_names: Vec<&String> = files
+            .keys()
+            .filter(|name| {
+                let lower = name.to_lowercase();
+                lower.ends_with(".ttf") || lower.ends_with(".otf")
+            })
+            .collect();
+        font_names.sort();
+        for name in font_names {
+            for font in Font::iter(Bytes::new(files[name].clone())) {
+                custom_fonts.push(font.info().clone());
+                fonts.push(font);
+                font_file_names.push(name.clone());
             }
         }
 
@@ -157,7 +187,16 @@ impl MemoryWorld {
             packages,
             accessed_paths: Mutex::new(HashSet::new()),
             accessed_font_files: Mutex::new(HashSet::new()),
+            read_outside_input: AtomicBool::new(false),
+            today_answers: Mutex::new(Vec::new()),
         }
+    }
+
+    pub fn outside_dependencies(&self) -> Option<Vec<TodayAnswer>> {
+        if self.read_outside_input.load(Ordering::Relaxed) {
+            return None;
+        }
+        Some(self.today_answers.lock().map(|answers| answers.clone()).unwrap_or_default())
     }
 
     pub fn used_resources(&self) -> UsedResources {
@@ -180,6 +219,9 @@ impl MemoryWorld {
                     .cloned()
                     .ok_or_else(|| FileError::NotFound(path.clone().into()));
             }
+            if package.namespace.as_str() != "preview" {
+                self.read_outside_input.store(true, Ordering::Relaxed);
+            }
 
             let root = self
                 .packages
@@ -189,6 +231,7 @@ impl MemoryWorld {
         }
 
         if let Some(url) = remote_url(&path) {
+            self.read_outside_input.store(true, Ordering::Relaxed);
             return fetch_remote(&url);
         }
 
@@ -247,16 +290,16 @@ impl World for MemoryWorld {
     }
 
     fn today(&self, offset: Option<Duration>) -> Option<Datetime> {
-        let now = chrono::Local::now();
-        let date = if let Some(offset) = offset {
-            let offset_secs = offset.hours() as i32 * 3600;
-            let offset_chrono = chrono::FixedOffset::east_opt(offset_secs)?;
-            now.with_timezone(&offset_chrono).date_naive()
-        } else {
-            now.date_naive()
-        };
-
-        Datetime::from_ymd(date.year(), date.month() as u8, date.day() as u8)
+        let offset_seconds = offset.map(|offset| offset.hours() as i32 * 3600);
+        let date = today_date(offset_seconds);
+        if let Ok(mut answers) = self.today_answers.lock() {
+            let answer = TodayAnswer { offset_seconds, date };
+            if !answers.contains(&answer) {
+                answers.push(answer);
+            }
+        }
+        let (year, month, day) = date?;
+        Datetime::from_ymd(year, month as u8, day as u8)
     }
 }
 

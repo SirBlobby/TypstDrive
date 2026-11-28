@@ -12,6 +12,7 @@
 	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '#lib/ts/branding';
 	import BrandingCredit from '#lib/components/BrandingCredit.svelte';
 	import { reportPageLoad } from '#lib/ts/page-load';
+	import { retainPreviewCacheFor } from '#lib/ts/preview-cache';
 
 	let { children } = $props();
 	let loaded = $state(false);
@@ -50,6 +51,11 @@
 		loadCustomThemes().then((succeeded) => {
 			if (succeeded) themesReady = true;
 		});
+	});
+
+	$effect(() => {
+		const viewerId = $userStore?.id ?? null;
+		if (loaded) retainPreviewCacheFor(viewerId);
 	});
 
 	$effect(() => applyCustomThemeStyles($customThemesStore));

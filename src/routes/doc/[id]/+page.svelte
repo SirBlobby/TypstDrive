@@ -91,7 +91,7 @@
 					$documentStatsStore = res.stats;
 				}
 				if (res.svgs) {
-					svgs = res.svgs;
+					svgs = res.svgs.map((svg) => svg ?? '');
 					lastCompiledInput = { text: content, document_id: docId };
 					$speakerNotesStore = res.notes ?? [];
 					errors = [];

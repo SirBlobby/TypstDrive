@@ -89,6 +89,23 @@ export function openFiles(): OpenFile[] {
 	return [...open.values()];
 }
 
+export function whenSynced(entry: OpenFile, timeoutMs: number): Promise<boolean> {
+	if (entry.provider.synced) return Promise.resolve(true);
+	return new Promise((resolve) => {
+		const onSync = (synced: boolean) => {
+			if (!synced) return;
+			clearTimeout(timer);
+			entry.provider.off('sync', onSync);
+			resolve(true);
+		};
+		const timer = setTimeout(() => {
+			entry.provider.off('sync', onSync);
+			resolve(false);
+		}, timeoutMs);
+		entry.provider.on('sync', onSync);
+	});
+}
+
 export function getAllText(): Record<string, string> {
 	const result: Record<string, string> = {};
 	for (const entry of open.values()) {
