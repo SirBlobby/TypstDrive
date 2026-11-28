@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicI64, Ordering};
-
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 
@@ -8,10 +6,7 @@ use crate::db::sql;
 use crate::AppState;
 
 const RATE_WINDOW_SECONDS: u64 = 60;
-const USAGE_PRUNE_INTERVAL_SECONDS: i64 = 60;
 const WORKSPACE_HEADER: &str = "x-workspace";
-
-static LAST_USAGE_PRUNE: AtomicI64 = AtomicI64::new(0);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ApiScope {
@@ -76,47 +71,6 @@ async fn within_rate_limit(state: &AppState, key_id: &str, rate_limit: i64) -> b
     }
 }
 
-async fn record_usage(state: &AppState, key_id: &str) {
-    let now = chrono::Utc::now();
-
-    let _ = sqlx::query(sql("UPDATE api_keys SET last_used_at = $1 WHERE id = $2"))
-        .bind(now.to_rfc3339())
-        .bind(key_id)
-        .execute(&state.db)
-        .await;
-
-    let _ = sqlx::query(sql(
-        "INSERT INTO api_key_usage (key_id, date, count) VALUES ($1, $2, 1) \
-         ON CONFLICT (key_id, date) DO UPDATE SET count = api_key_usage.count + 1",
-    ))
-    .bind(key_id)
-    .bind(now.format("%Y-%m-%d").to_string())
-    .execute(&state.db)
-    .await;
-
-    let _ = sqlx::query(sql(
-        "INSERT INTO api_key_usage_detail (key_id, minute, count) VALUES ($1, $2, 1) \
-         ON CONFLICT (key_id, minute) DO UPDATE SET count = api_key_usage_detail.count + 1",
-    ))
-    .bind(key_id)
-    .bind(now.format("%Y-%m-%d %H:%M").to_string())
-    .execute(&state.db)
-    .await;
-
-    let last_prune = LAST_USAGE_PRUNE.load(Ordering::Relaxed);
-    let now_seconds = now.timestamp();
-    if now_seconds - last_prune < USAGE_PRUNE_INTERVAL_SECONDS
-        || LAST_USAGE_PRUNE.compare_exchange(last_prune, now_seconds, Ordering::Relaxed, Ordering::Relaxed).is_err()
-    {
-        return;
-    }
-    let cutoff_minute = (now - chrono::TimeDelta::hours(25)).format("%Y-%m-%d %H:%M").to_string();
-    let _ = sqlx::query(sql("DELETE FROM api_key_usage_detail WHERE minute < $1"))
-        .bind(cutoff_minute)
-        .execute(&state.db)
-        .await;
-}
-
 fn requested_workspace(headers: &HeaderMap) -> Option<String> {
     headers
         .get(WORKSPACE_HEADER)
@@ -172,7 +126,7 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap, scope: ApiScope
     if !limits.api_enabled {
         return Err(reject(StatusCode::FORBIDDEN, "API access is disabled for this account"));
     }
-    if limits.daily_quota > 0 && crate::api::limits::requests_today(state, &user_id).await >= limits.daily_quota {
+    if limits.daily_quota > 0 && crate::api::limits::requests_today(state, &user_id).await + crate::api::usage_buffer::pending_today(&user_id) >= limits.daily_quota {
         return Err(reject(StatusCode::TOO_MANY_REQUESTS, "Daily request quota reached for this account."));
     }
 
@@ -182,6 +136,6 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap, scope: ApiScope
     }
 
     let account_id = acting_account(state, headers, &user_id).await?;
-    record_usage(state, &key_id).await;
+    crate::api::usage_buffer::note(&key_id, &user_id);
     Ok(ApiCaller { user_id, account_id })
 }

@@ -9,4 +9,5 @@ pub mod render;
 pub mod render_cache;
 pub mod source_render;
 pub mod typst;
+pub mod usage_buffer;
 pub mod stored_render;

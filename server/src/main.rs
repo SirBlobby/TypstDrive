@@ -124,6 +124,7 @@ async fn main() {
     file_storage::maintenance::spawn(state.clone());
     trash::purge::spawn(state.clone());
     metrics::start();
+    api::usage_buffer::spawn(state.clone());
     compile::warm_up::spawn_start_up_warm_up(state.clone());
     compile::latex_policy::reload(&state).await;
     if compile::latex_policy::is_enabled() {
