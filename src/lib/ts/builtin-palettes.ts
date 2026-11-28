@@ -1,4 +1,4 @@
-import { themes, type ThemeColors } from './themes';
+import { themes, type ThemeColors } from './theme-colors';
 import type { ThemeDraft, ThemeMode, ThemePalette } from './custom-themes';
 
 type AppColors = Pick<ThemePalette, 'surface' | 'surface_muted' | 'surface_sunken' | 'line' | 'ink' | 'ink_muted' | 'accent' | 'accent_soft' | 'danger' | 'success'>;

@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { themeStore, darkModeStore } from '#lib/ts/store';
-	import { resolveEditorColors } from '#lib/ts/themes';
+	import { resolveEditorColors } from '#lib/ts/theme-colors';
 	import { customThemesStore, loadCustomThemes, findCustomTheme, isCustomThemeKey } from '#lib/ts/custom-themes';
 	import { applyCustomThemeStyles } from '#lib/ts/theme-styles';
 	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '#lib/ts/branding';

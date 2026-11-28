@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { ThemeColors } from './themes';
+import type { ThemeColors } from './theme-colors';
 
 export type ThemeScope = 'site' | 'personal';
 export type ThemeMode = 'light' | 'dark';

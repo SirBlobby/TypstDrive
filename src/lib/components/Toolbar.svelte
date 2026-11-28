@@ -3,7 +3,7 @@
 	import { text } from '../ts/yjs-setup';
 	import { editorViewStore, commentsSidebarOpen } from '../ts/store';
 	import { saveVersion } from '../ts/versions';
-	import { themes } from '../ts/themes';
+	import { themes } from '../ts/theme-colors';
 	import { goto } from '$app/navigation';
 	import ShareModal from './ShareModal.svelte';
 	import DocumentAssetsModal from './DocumentAssetsModal.svelte';
