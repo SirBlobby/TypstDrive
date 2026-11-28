@@ -4,11 +4,10 @@
 	import { EditorView, keymap } from '@codemirror/view';
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { autocompletion, snippetCompletion, type CompletionContext } from '@codemirror/autocomplete';
-	import { typst, TypstParser, typstHighlight } from 'codemirror-lang-typst';
-	import { Language } from '@codemirror/language';
+	import { typst_lezer, typstTags } from 'codemirror-lang-typst/lezer';
 	import { yCollab } from 'y-codemirror.next';
 	import { text, provider } from '../ts/yjs-setup';
-	import { getThemeExtension } from '../ts/themes';
+	import { getThemeExtension, type ExtraTagStyles } from '../ts/themes';
 	import { customThemesStore } from '../ts/custom-themes';
 	import { themeStore, darkModeStore, editorViewStore, editorErrors, triggerLspReconnect } from '../ts/store';
 	import { page } from '$app/state';
@@ -30,6 +29,12 @@
 	import { latexPackageLoader } from '../ts/latex-packages';
 	import { slashSessionStore } from '../ts/slash/slash-session';
 	import { get } from 'svelte/store';
+
+	const typstTagStyles: ExtraTagStyles = (colors) => [
+		{ tag: [typstTags.interpolated, typstTags.listMarker], color: colors.keyword },
+		{ tag: typstTags.mathDelimiter, color: colors.string }
+	];
+	const editorTheme = (themeName: string, isDark: boolean) => getThemeExtension(themeName, isDark, typstTagStyles);
 
 	let {
 		ytext = undefined,
@@ -190,14 +195,7 @@
 		themeStore.subscribe(t => { currentTheme = t; })();
 		darkModeStore.subscribe(d => { isDark = d; })();
 
-		const typstSupport = typst();
-		const typstParser = new (TypstParser as any)(typstHighlight);
-		const typstLanguage = new Language(
-			typstSupport.language.data,
-			typstParser,
-			[typstParser.updateListener()],
-			'typst'
-		);
+		const typstLanguage = typst_lezer().language;
 
 		const fileKind = editorFileKind(filePath, language);
 		const isLatex = fileKind === 'latex';
@@ -225,7 +223,7 @@
 				yCollab(activeText, activeProvider.awareness),
 				...completionExtensions,
 				slashExtensions,
-				themeCompartment.of(getThemeExtension(currentTheme as any, isDark)),
+				themeCompartment.of(editorTheme(currentTheme as any, isDark)),
 				lspCompartment.of([]),
 				EditorView.lineWrapping,
 				...extensions,
@@ -277,7 +275,7 @@
 		unsubscribeTheme = themeStore.subscribe((themeName) => {
 			if (view) {
 				view.dispatch({
-					effects: themeCompartment.reconfigure(getThemeExtension(themeName as any, isDark))
+					effects: themeCompartment.reconfigure(editorTheme(themeName as any, isDark))
 				});
 				currentTheme = themeName;
 			}
@@ -286,7 +284,7 @@
 		unsubscribeCustomThemes = customThemesStore.subscribe(() => {
 			if (view) {
 				view.dispatch({
-					effects: themeCompartment.reconfigure(getThemeExtension(currentTheme, isDark))
+					effects: themeCompartment.reconfigure(editorTheme(currentTheme, isDark))
 				});
 			}
 		});
@@ -294,7 +292,7 @@
 		unsubscribeDark = darkModeStore.subscribe((dark) => {
 			if (view) {
 				view.dispatch({
-					effects: themeCompartment.reconfigure(getThemeExtension(currentTheme as any, dark))
+					effects: themeCompartment.reconfigure(editorTheme(currentTheme as any, dark))
 				});
 				isDark = dark;
 			}

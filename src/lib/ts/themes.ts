@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, syntaxHighlighting, type TagStyle } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { get } from 'svelte/store';
 import { customThemesStore, editorColorsFrom, findCustomTheme } from './custom-themes';
@@ -67,7 +67,9 @@ export function resolveEditorColors(themeName: string, isDark: boolean): ThemeCo
     return custom ? editorColorsFrom(custom[mode]) : themes['Cerberus'][mode];
 }
 
-export function getThemeExtension(themeName: string, isDark: boolean) {
+export type ExtraTagStyles = (colors: ThemeColors) => TagStyle[];
+
+export function getThemeExtension(themeName: string, isDark: boolean, extraTagStyles: ExtraTagStyles = () => []) {
     const colors = resolveEditorColors(themeName, isDark);
     
     const theme = EditorView.theme({
@@ -149,6 +151,7 @@ export function getThemeExtension(themeName: string, isDark: boolean) {
         { tag: [t.atom, t.bool, t.special(t.variableName)], color: colors.number },
         { tag: [t.processingInstruction, t.string, t.inserted], color: colors.string },
         { tag: t.invalid, color: "#ff0000" },
+        ...extraTagStyles(colors),
     ]);
 
     return [theme, syntaxHighlighting(highlightStyle)];
