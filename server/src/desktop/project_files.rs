@@ -31,7 +31,7 @@ async fn plain_contents(
     .bind(project_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let mut contents = Vec::with_capacity(rows.len());
     for (id, path, kind, content, updated_at) in rows {
@@ -131,7 +131,7 @@ pub async fn pull_file(
     .bind(&query.path)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
     let (file_id, kind, content) = row;
@@ -212,7 +212,7 @@ pub async fn push_file(
     .bind(&payload.path)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     if let Some((existing_id, existing_kind, existing_content)) = &existing {
         let plain = plain_file_content(&state, &project_id, existing_id, existing_kind, existing_content.clone()).await;
@@ -288,7 +288,7 @@ pub async fn push_file(
     .bind(&now)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     crate::drive::activity::mark_project_edited(&state, &project_id, Some(&user_id)).await;
 
@@ -315,7 +315,7 @@ pub async fn delete_file(
         .bind(&query.path)
         .execute(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "File not found".to_string()));

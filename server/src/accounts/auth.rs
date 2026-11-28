@@ -208,7 +208,7 @@ pub async fn change_password(
         .bind(&session.user_id)
         .execute(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     sessions::end_all_sessions(&state, &session.user_id, Some(&session.session_id)).await?;
     Ok(StatusCode::OK)

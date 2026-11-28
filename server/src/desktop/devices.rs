@@ -48,7 +48,7 @@ async fn authenticate_device(
     .bind(hash_token(&token))
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let (device_id, user_id) = row.ok_or((
         StatusCode::UNAUTHORIZED,
@@ -237,7 +237,7 @@ pub async fn list_devices(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let presence = state.device_presence.lock().await;
 
@@ -271,7 +271,7 @@ pub async fn revoke_device(
         .bind(&user_id)
         .execute(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Device not found".to_string()));

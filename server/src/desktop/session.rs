@@ -52,7 +52,7 @@ pub(super) async fn issue_device_token(
     .bind(chrono::Utc::now().to_rfc3339())
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(token)
 }
@@ -115,7 +115,7 @@ pub async fn me(
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
     Ok(Json(DeviceUser {
@@ -138,13 +138,13 @@ pub async fn logout(
         .bind(hash_token(&token))
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     sqlx::query(sql("DELETE FROM device_tokens WHERE token_hash = $1"))
         .bind(hash_token(&token))
         .execute(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     if let Some((token_id,)) = token_id {
         crate::sharing::access::revoke_device_sessions(&state, &token_id).await;

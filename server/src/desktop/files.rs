@@ -35,7 +35,7 @@ pub async fn list_account_files(
         .fetch_all(&state.db)
         .await,
     }
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(
         rows.into_iter()
@@ -99,13 +99,13 @@ pub async fn upload_account_file(
     .bind(&stored.storage_key)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let row = sqlx::query_as::<_, (String,)>(sql("SELECT created_at FROM files WHERE id = $1"))
     .bind(&file_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
@@ -141,14 +141,14 @@ pub async fn rename_account_file(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT name, mime_type, folder_id, created_at FROM files WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
@@ -185,14 +185,14 @@ pub async fn move_account_file(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let row = sqlx::query_as::<_, (String, String, Option<String>, String)>(sql("SELECT name, mime_type, folder_id, created_at FROM files WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
@@ -228,7 +228,7 @@ pub async fn pull_account_file(
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
     let (name, mime_type, inline_data, storage_key) = row;

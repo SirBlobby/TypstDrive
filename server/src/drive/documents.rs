@@ -53,7 +53,7 @@ pub async fn list_shared_documents(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(docs))
 }
@@ -75,7 +75,7 @@ pub async fn list_documents(
         .bind(&folder_id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
     } else {
         sqlx::query_as::<_, Document>(
             sql("SELECT id, owner_id, folder_id, title, thumbnail_svg, public_role, created_at, updated_at, language, CAST(COALESCE(LENGTH(content), 0) AS BIGINT) AS size_bytes FROM documents WHERE owner_id = $1 AND folder_id IS NULL AND deleted_at IS NULL ORDER BY updated_at DESC")
@@ -83,7 +83,7 @@ pub async fn list_documents(
         .bind(&user_id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
     };
 
     Ok(Json(docs))
@@ -115,13 +115,13 @@ pub async fn create_document(
     .bind(language)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let doc = sqlx::query_as::<_, Document>(sql(DOCUMENT_BY_ID))
     .bind(&doc_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(doc))
 }
@@ -157,7 +157,7 @@ pub async fn update_document(
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "Document not found".to_string()))?;
 
     if let Some(new_title) = payload.title {
@@ -184,14 +184,14 @@ pub async fn update_document(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let doc = sqlx::query_as::<_, Document>(sql(OWNED_DOCUMENT))
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     crate::sharing::access::revalidate_resource(&state, crate::sharing::access::Resource::Document(id.clone())).await;
 

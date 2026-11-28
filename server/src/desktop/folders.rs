@@ -21,7 +21,7 @@ pub async fn list_folders(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(
         rows.into_iter()
@@ -66,7 +66,7 @@ pub async fn create_folder(
         .bind(&name)
         .execute(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
 
@@ -101,14 +101,14 @@ pub async fn rename_folder(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let row = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(sql("SELECT name, parent_id, color FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "Folder not found".to_string()))?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
@@ -141,7 +141,7 @@ async fn creates_cycle(
         .bind(user_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
         .and_then(|row| row.0);
 
         match parent {
@@ -191,14 +191,14 @@ pub async fn move_folder(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let row = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(sql("SELECT name, parent_id, color FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "Folder not found".to_string()))?;
 
     notify_devices(&state, &user_id, DeviceEvent::structure()).await;
@@ -230,7 +230,7 @@ async fn folder_is_empty(
     .bind(user_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(row.0 == 0 && row.1 == 0 && row.2 == 0)
 }

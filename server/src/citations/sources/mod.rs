@@ -55,7 +55,7 @@ pub async fn get_json(request: JsonRequest) -> Result<Option<Value>, ApiError> {
         }
     })
     .await
-    .map_err(|error| crate::server_errors::hidden(error))?
+    .map_err(crate::server_errors::hidden)?
 }
 
 pub fn arxiv_doi(id: &str) -> String {

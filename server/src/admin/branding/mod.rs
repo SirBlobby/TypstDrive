@@ -129,7 +129,7 @@ pub async fn update_branding(
     ];
     save_settings(&state, &entries)
         .await
-        .map_err(|error| crate::server_errors::hidden(error))?;
+        .map_err(crate::server_errors::hidden)?;
 
     let accent = if settings.accent_color.is_empty() { "theme" } else { settings.accent_color.as_str() };
     let details = format!("name \"{}\", accent {accent}", settings.site_name);

@@ -35,7 +35,7 @@ pub async fn list_folders(
         .bind(&parent_id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
     } else {
         sqlx::query_as::<_, Folder>(
             sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE owner_id = $1 AND parent_id IS NULL AND deleted_at IS NULL ORDER BY name ASC")
@@ -43,7 +43,7 @@ pub async fn list_folders(
         .bind(&user_id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
     };
 
     Ok(Json(folders))
@@ -87,13 +87,13 @@ pub async fn create_folder(
     .bind(&payload.name)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE id = $1"))
     .bind(&folder_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(folder))
 }
@@ -163,14 +163,14 @@ pub async fn update_folder(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let folder = sqlx::query_as::<_, Folder>(sql("SELECT id, owner_id, parent_id, name, created_at, color FROM folders WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"))
     .bind(&id)
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     match folder {
         Some(f) => Ok(Json(f)),

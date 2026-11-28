@@ -130,7 +130,7 @@ pub async fn update_policy(
     ];
     save_settings(&state, &entries)
         .await
-        .map_err(|error| crate::server_errors::hidden(error))?;
+        .map_err(crate::server_errors::hidden)?;
 
     let details = format!(
         "enabled {}, creation {}, teams per user {}, members per team {}",

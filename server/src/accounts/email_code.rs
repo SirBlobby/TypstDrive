@@ -68,7 +68,7 @@ pub async fn request_code(
 
     let code = email_tokens::issue_code(&state, &user.id, &user.email, TokenPurpose::SignInCode)
         .await
-        .map_err(|error| crate::server_errors::hidden(error))?;
+        .map_err(crate::server_errors::hidden)?;
     let message = crate::email::messages::sign_in_code(&crate::email::brand::load(&state).await, &user.username, &code, SIGN_IN_CODE_MINUTES);
     if let Err(error) = state.mailer.send(&user.email, message).await {
         tracing::warn!("Sign-in code email to {} failed: {error}", user.email);
@@ -105,7 +105,7 @@ pub async fn sign_in_with_code(
             .bind(&user.id)
             .execute(&state.db)
             .await
-            .map_err(|error| crate::server_errors::hidden(error))?;
+            .map_err(crate::server_errors::hidden)?;
     }
 
     state.login_guard.record_success(VERIFY_SCOPE, email);

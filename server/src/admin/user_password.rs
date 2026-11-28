@@ -28,7 +28,7 @@ pub async fn set_user_password(
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|error| crate::server_errors::hidden(error))?
+        .map_err(crate::server_errors::hidden)?
         .ok_or((StatusCode::NOT_FOUND, "User not found".to_string()))?;
 
     let password_hash = crate::accounts::passwords::hash_password(&payload.password)
@@ -39,7 +39,7 @@ pub async fn set_user_password(
         .bind(&user_id)
         .execute(&state.db)
         .await
-        .map_err(|error| crate::server_errors::hidden(error))?;
+        .map_err(crate::server_errors::hidden)?;
 
     if requester_id != user_id {
         crate::accounts::sessions::end_all_sessions(&state, &user_id, None).await?;

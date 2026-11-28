@@ -38,11 +38,11 @@ pub async fn send_verification(state: &AppState, user_id: &str, username: &str, 
     }
     let token = email_tokens::issue(state, user_id, email, TokenPurpose::VerifyEmail)
         .await
-        .map_err(|error| crate::server_errors::hidden(error))?;
+        .map_err(crate::server_errors::hidden)?;
     let link = crate::site_url::link(&format!("/verify-email?token={token}")).unwrap_or_default();
     let code = email_tokens::issue_code(state, user_id, email, TokenPurpose::VerifyEmailCode)
         .await
-        .map_err(|error| crate::server_errors::hidden(error))?;
+        .map_err(crate::server_errors::hidden)?;
 
     state
         .mailer
@@ -80,7 +80,7 @@ async fn mark_verified(state: &AppState, user_id: &str, email: &str) -> Result<u
         .execute(&state.db)
         .await
         .map(|result| result.rows_affected())
-        .map_err(|error| crate::server_errors::hidden(error))
+        .map_err(crate::server_errors::hidden)
 }
 
 pub async fn verify_with_code(

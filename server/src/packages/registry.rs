@@ -59,7 +59,7 @@ pub async fn publish_package(
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "Project not found".to_string()))?;
 
     if crate::compile::latex::is_latex_path(&project.entrypoint) {
@@ -72,7 +72,7 @@ pub async fn publish_package(
     .bind(&project.id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let mut snapshot: Vec<(String, Vec<u8>)> = Vec::new();
     let mut manifest_text: Option<String> = None;
@@ -127,13 +127,13 @@ pub async fn publish_package(
             .bind(package_visibility)
             .execute(&state.db)
             .await
-            .map_err(|e| crate::server_errors::hidden(e))?;
+            .map_err(crate::server_errors::hidden)?;
 
             sqlx::query_as::<_, Package>(sql("SELECT id, owner_id, namespace, name, description, visibility, created_at FROM packages WHERE id = $1"))
             .bind(&package_id)
             .fetch_one(&state.db)
             .await
-            .map_err(|e| crate::server_errors::hidden(e))?
+            .map_err(crate::server_errors::hidden)?
         }
     };
 
@@ -144,7 +144,7 @@ pub async fn publish_package(
     .bind(&version)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     if version_exists.is_some() {
         return Err((StatusCode::CONFLICT, format!("Version {} already published; versions are immutable", version)));
@@ -156,7 +156,7 @@ pub async fn publish_package(
     .bind(&package.id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
     policy.check_version_count(version_count)?;
 
     let version_id = Uuid::new_v4().to_string();
@@ -170,7 +170,7 @@ pub async fn publish_package(
     .bind(manifest_text.into_bytes())
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     for (path, data) in snapshot {
         let _ = sqlx::query(
@@ -224,7 +224,7 @@ pub async fn list_versions(
     .bind(&package.id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(versions))
 }
@@ -254,7 +254,7 @@ pub async fn delete_package(
             .execute(&state.db)
             .await
     }
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Package not found or unauthorized".to_string()));

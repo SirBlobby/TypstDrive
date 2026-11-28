@@ -45,7 +45,7 @@ pub async fn request_reset(
 
     let token = email_tokens::issue(&state, &user.id, &user.email, TokenPurpose::ResetPassword)
         .await
-        .map_err(|error| crate::server_errors::hidden(error))?;
+        .map_err(crate::server_errors::hidden)?;
     let link = crate::site_url::link(&format!("/reset-password?token={token}")).unwrap_or_default();
 
     if let Err(error) = state.mailer.send(&user.email, crate::email::messages::password_reset(&crate::email::brand::load(&state).await, &user.username, &link)).await {
@@ -72,7 +72,7 @@ pub async fn confirm_reset(
     .bind(&consumed.user_id)
     .execute(&state.db)
     .await
-    .map_err(|error| crate::server_errors::hidden(error))?;
+    .map_err(crate::server_errors::hidden)?;
 
     sessions::end_all_sessions(&state, &consumed.user_id, None).await?;
     crate::sharing::access::revoke_user_sessions(&state, &consumed.user_id).await;

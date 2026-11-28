@@ -22,7 +22,7 @@ pub(crate) async fn require_admin(state: &AppState, jar: &SignedCookieJar) -> Re
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     match is_admin {
         Some((v,)) if v != 0 => Ok(user_id),
@@ -102,7 +102,7 @@ pub async fn list_users(
     )
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(users))
 }
@@ -173,7 +173,7 @@ pub async fn delete_user(
 
     let existing = find_user(&state, &user_id)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
         .ok_or((StatusCode::NOT_FOUND, "User not found".to_string()))?;
 
     crate::teams::handle_departing_user(&state, &user_id).await;
@@ -182,7 +182,7 @@ pub async fn delete_user(
         .bind(&user_id)
         .execute(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     crate::sharing::access::revoke_user_sessions(&state, &user_id).await;
     audit::record(&state, &requester_id, &client, "user.delete", &existing.username, &existing.email).await;
@@ -199,7 +199,7 @@ pub async fn revoke_user_sessions(
     let requester_id = require_admin(&state, &jar).await?;
     let existing = find_user(&state, &user_id)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
         .ok_or((StatusCode::NOT_FOUND, "User not found".to_string()))?;
 
     let revoked = crate::accounts::sessions::end_all_sessions(&state, &user_id, None).await?;

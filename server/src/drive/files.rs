@@ -36,7 +36,7 @@ pub async fn list_files(
         .bind(&folder_id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
     } else {
         sqlx::query_as::<_, File>(
             sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes, updated_at FROM files WHERE owner_id = $1 AND folder_id IS NULL AND deleted_at IS NULL ORDER BY name ASC")
@@ -44,7 +44,7 @@ pub async fn list_files(
         .bind(&user_id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?
+        .map_err(crate::server_errors::hidden)?
     };
 
     Ok(Json(files))
@@ -97,7 +97,7 @@ pub async fn upload_file_global(
             .bind(&stored.storage_key)
             .execute(&state.db)
             .await
-            .map_err(|e| crate::server_errors::hidden(e))?;
+            .map_err(crate::server_errors::hidden)?;
 
         uploaded_files.push(file_name);
         font_families.push(font_family);
@@ -123,7 +123,7 @@ pub async fn get_file_data(
     .bind(&id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
     if owner_id != user_id && !can_read_shared_file(&state, &id, &owner_id, &document_id, &folder_id, &user_id).await {
@@ -190,7 +190,7 @@ pub async fn list_fonts(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let mut families = std::collections::BTreeSet::new();
     for (_, data) in state.file_storage.load_named_skipping_failures(files).await {
@@ -224,7 +224,7 @@ pub async fn update_file(
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?
+    .map_err(crate::server_errors::hidden)?
     .ok_or((StatusCode::NOT_FOUND, "File not found".to_string()))?;
 
     if let Some(new_name) = payload.name {
@@ -250,14 +250,14 @@ pub async fn update_file(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let file = sqlx::query_as::<_, File>(sql("SELECT id, owner_id, document_id, folder_id, name, mime_type, created_at, size_bytes FROM files WHERE id = $1 AND owner_id = $2"))
     .bind(&id)
     .bind(&user_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(file))
 }

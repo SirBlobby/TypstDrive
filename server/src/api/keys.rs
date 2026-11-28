@@ -73,7 +73,7 @@ pub async fn list_keys(
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     for key in &mut keys {
         key.custom_rate_limit = (key.rate_limit > 0).then_some(key.rate_limit);
@@ -133,7 +133,7 @@ pub async fn create_key(
     .bind(&expires_at)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok((StatusCode::CREATED, Json(serde_json::json!({
         "id": id,
@@ -174,7 +174,7 @@ pub async fn get_aggregate_usage(
             .bind(&cutoff)
             .fetch_all(&state.db)
             .await
-            .map_err(|e| crate::server_errors::hidden(e))?
+            .map_err(crate::server_errors::hidden)?
         }
         "1day" => {
             let cutoff = (chrono::Utc::now() - chrono::TimeDelta::hours(24))
@@ -191,7 +191,7 @@ pub async fn get_aggregate_usage(
             .bind(&cutoff)
             .fetch_all(&state.db)
             .await
-            .map_err(|e| crate::server_errors::hidden(e))?
+            .map_err(crate::server_errors::hidden)?
         }
         _ => {
             let cutoff = (chrono::Utc::now() - chrono::TimeDelta::days(6))
@@ -208,7 +208,7 @@ pub async fn get_aggregate_usage(
             .bind(&cutoff)
             .fetch_all(&state.db)
             .await
-            .map_err(|e| crate::server_errors::hidden(e))?
+            .map_err(crate::server_errors::hidden)?
         }
     };
 
@@ -230,7 +230,7 @@ pub async fn regenerate_key(
     .bind(&user_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     let (name,) = row.ok_or((StatusCode::NOT_FOUND, "API key not found".to_string()))?;
 
@@ -249,7 +249,7 @@ pub async fn regenerate_key(
     .bind(&user_id)
     .execute(&state.db)
     .await
-    .map_err(|e| crate::server_errors::hidden(e))?;
+    .map_err(crate::server_errors::hidden)?;
 
     Ok(Json(serde_json::json!({
         "id": key_id,
@@ -274,7 +274,7 @@ pub async fn delete_key(
         .bind(&user_id)
         .execute(&state.db)
         .await
-        .map_err(|e| crate::server_errors::hidden(e))?;
+        .map_err(crate::server_errors::hidden)?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "API key not found".to_string()));
