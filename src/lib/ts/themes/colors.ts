@@ -54,6 +54,17 @@ export const themes: Record<string, ThemeConfig> = {
             background: "#ffffff", text: "#1f2328", selection: "#b6e3ff", activeLine: "#f5f7f9", cursor: "#0a6ea8",
             keyword: "#cf222e", string: "#0a3069", number: "#0550ae", comment: "#6e7781", variable: "#1f2328", function: "#8250df"
         }
+    },
+    "Sandstone": {
+        icon: "mdi:terrain",
+        dark: {
+            background: "#222831", text: "#dfd0b8", selection: "#393e46", activeLine: "#2a2f37", cursor: "#dfd0b8",
+            keyword: "#d4a373", string: "#a3be8c", number: "#e0b872", comment: "#7d766a", variable: "#dfd0b8", function: "#c9b48f"
+        },
+        light: {
+            background: "#fbf8f3", text: "#222831", selection: "#e8dcc6", activeLine: "#f4efe6", cursor: "#7a6a52",
+            keyword: "#9a4f1e", string: "#4f6b2b", number: "#a0522d", comment: "#948979", variable: "#222831", function: "#5a4a35"
+        }
     }
 };
 

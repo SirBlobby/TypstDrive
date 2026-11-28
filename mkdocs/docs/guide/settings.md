@@ -25,7 +25,7 @@ Changing your password signs you out of your other browsers.
 
 ## Appearance
 
-Choose a color theme and switch between light and dark. The picker lists the built-in themes (Cerberus, Catppuccin and Arch Linux), any **Site themes** your administrator added, and **Your themes**. New browsers start with Cerberus in dark mode. For easier reading, change the text size or turn on high contrast.
+Choose a color theme and switch between light and dark. The picker lists the built-in themes (Cerberus, Catppuccin, Arch Linux and Sandstone), any **Site themes** your administrator added, and **Your themes**. New browsers start with Cerberus in dark mode. For easier reading, change the text size or turn on high contrast.
 
 These choices are saved in your browser, so each computer can look different.
 

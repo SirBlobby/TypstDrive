@@ -6,7 +6,7 @@
 
 ## Site themes
 
-Site themes appear under **Site themes** in everyone's theme picker, next to the built-in Cerberus, Catppuccin and Arch Linux themes.
+Site themes appear under **Site themes** in everyone's theme picker, next to the built-in Cerberus, Catppuccin, Arch Linux and Sandstone themes.
 
 - **New theme** opens the theme editor, starting from the theme you are using.
 - **Upload YAML** reads a theme file and opens it in the editor so you can check it before saving.

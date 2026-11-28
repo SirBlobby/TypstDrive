@@ -33,6 +33,16 @@ const appColors: Record<string, Record<ThemeMode, AppColors>> = {
             surface: '#010409', surface_muted: '#0d1117', surface_sunken: '#161b22', line: '#21262d', ink: '#c9d1d9',
             ink_muted: '#6e7681', accent: '#1793d1', accent_soft: '#0d2b3d', danger: '#f4736a', success: '#4cc47f'
         }
+    },
+    'Sandstone': {
+        light: {
+            surface: '#fbf8f3', surface_muted: '#f4efe6', surface_sunken: '#eae3d6', line: '#dfd0b8', ink: '#222831',
+            ink_muted: '#5c5f66', accent: '#7a6a52', accent_soft: '#efe7d9', danger: '#c0392b', success: '#2f7d4a'
+        },
+        dark: {
+            surface: '#1b2027', surface_muted: '#222831', surface_sunken: '#2c323b', line: '#393e46', ink: '#dfd0b8',
+            ink_muted: '#948979', accent: '#b09f84', accent_soft: '#3a3730', danger: '#f4736a', success: '#4cc47f'
+        }
     }
 };
 
