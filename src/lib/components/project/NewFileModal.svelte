@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
+	import { modalCancelClass, modalPrimaryClass } from '#lib/ts/ui/modal';
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { untrack } from 'svelte';
 	import Modal from '../Modal.svelte';
-	import { focusOnMount } from '#lib/ts/focus-on-mount';
+	import { focusOnMount } from '#lib/ts/ui/focus-on-mount';
 
 	let { existingPaths, folders, initialFolder = '', defaultExtension, onsubmit, onclose }: {
 		existingPaths: string[];

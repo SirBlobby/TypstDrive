@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/ui/settings';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
-    import { fetchGitAdminPolicy, saveGitAdminPolicy, type GitPolicy } from '#lib/ts/git';
+    import { fetchGitAdminPolicy, saveGitAdminPolicy, type GitPolicy } from '#lib/ts/integrations/git';
 
     let policy = $state<GitPolicy | null>(null);
     let saved = $state<GitPolicy | null>(null);

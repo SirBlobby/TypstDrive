@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Chart, LineController, LineElement, PointElement, CategoryScale, LinearScale, Filler, Tooltip, Legend } from 'chart.js';
-    import { formatDuration, type TimingPoint } from '#lib/ts/performance';
+    import { formatDuration, type TimingPoint } from '#lib/ts/site/performance';
 
     Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Filler, Tooltip, Legend);
 

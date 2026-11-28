@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { postJson, readError } from '#lib/ts/auth-options';
-    import type { User } from '#lib/ts/auth';
+    import { postJson, readError } from '#lib/ts/account/auth-options';
+    import type { User } from '#lib/ts/account/auth';
     import FormNotice from './FormNotice.svelte';
 
     const RESEND_WAIT_SECONDS = 60;

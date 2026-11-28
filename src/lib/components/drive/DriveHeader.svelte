@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import type { Snippet } from 'svelte';
-    import { latexEnabledStore } from '#lib/ts/latex-policy';
+    import { latexEnabledStore } from '#lib/ts/preview/latex-policy';
 
     type FolderCrumb = { id: string; name: string };
 

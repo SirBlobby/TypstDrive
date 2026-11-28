@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { fetchStarred, starKey, starredStore, type StarKind } from '#lib/ts/stars';
-    import { sortItems, type DriveEntry, type DriveFilters, type ViewMode } from '#lib/ts/drive-filters';
-    import { matchesItem, type DriveSearch } from '#lib/ts/drive-search';
+    import { fetchStarred, starKey, starredStore, type StarKind } from '#lib/ts/drive/stars';
+    import { sortItems, type DriveEntry, type DriveFilters, type ViewMode } from '#lib/ts/drive/filters';
+    import { matchesItem, type DriveSearch } from '#lib/ts/drive/search';
     import DocCard from '#lib/components/drive/DocCard.svelte';
     import ProjectFolderRow from '#lib/components/drive/ProjectFolderRow.svelte';
     import DriveListView from '#lib/components/drive/DriveListView.svelte';

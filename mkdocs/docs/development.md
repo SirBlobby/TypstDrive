@@ -21,7 +21,8 @@ Contributions are welcome, whether that is a bug fix, a new feature or an improv
 - Write each commit message as one short subject line, with no description.
 - Keep files short and grouped by feature. Split a file when it grows past a few hundred lines.
 - In the web app, import shared code with `#lib/...`, which `package.json` maps to `src/lib` through `imports`:
-    - `#lib/ts/name` points to `src/lib/ts/name.ts`, so leave off the `.ts`. For a `.svelte.ts` file write `#lib/ts/name.svelte`.
+    - `#lib/ts/folder/name` points to `src/lib/ts/folder/name.ts`, so leave off the `.ts`. For a `.svelte.ts` file write `#lib/ts/folder/name.svelte`.
+    - `src/lib/ts` is grouped by feature: `account`, `collab` (live editing and presence), `drive`, `editor` (with `keybinds`, `lsp`, `minimap` and `slash`), `integrations` (Git, citations, packages), `preview` (compiling and the preview), `review` (comments, suggestions and versions), `sharing`, `site`, `themes` and `ui`. Shared stores stay in `store.ts`. Put new code in the folder of the feature it belongs to.
     - `#lib/components/Name.svelte` points to the component file, so keep the `.svelte`.
     - TypeScript does not add file extensions to `imports` targets on its own, which is why the `ts` folder has its own entry with `.ts` at the end. A new folder under `src/lib` needs its own entry in the same way.
 - On the server, return errors instead of panicking. Do not use `unwrap` or `expect` on values that come from requests, the database or the network.

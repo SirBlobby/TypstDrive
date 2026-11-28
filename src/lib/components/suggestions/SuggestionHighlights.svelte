@@ -1,14 +1,14 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { editorViewStore } from '#lib/ts/store';
-    import { userStore } from '#lib/ts/auth';
-    import { resolveRange } from '#lib/ts/document-anchors';
-    import { activeSource, currentReviewTarget, inActiveFile, reviewTargetStore, type ReviewSource } from '#lib/ts/review-target';
-    import { remoteDrafts, remoteDraftsChangedStore, type RemoteDraft } from '#lib/ts/live-review';
-    import { activeSuggestionStore, currentSuggestionRange, suggestingModeStore, suggestionsStore } from '#lib/ts/suggestions';
-    import { endLiveDraft, LIVE_DRAFT_ID, liveDraftStore, suggestingHandlers } from '#lib/ts/suggestion-drafts';
-    import { setSuggestionMarks, suggestingCompartment, type SuggestionMark } from '#lib/ts/editor-suggestions';
-    import { suggestingInput } from '#lib/ts/editor-suggesting-input';
+    import { userStore } from '#lib/ts/account/auth';
+    import { resolveRange } from '#lib/ts/review/anchors';
+    import { activeSource, currentReviewTarget, inActiveFile, reviewTargetStore, type ReviewSource } from '#lib/ts/review/target';
+    import { remoteDrafts, remoteDraftsChangedStore, type RemoteDraft } from '#lib/ts/review/live';
+    import { activeSuggestionStore, currentSuggestionRange, suggestingModeStore, suggestionsStore } from '#lib/ts/review/suggestions';
+    import { endLiveDraft, LIVE_DRAFT_ID, liveDraftStore, suggestingHandlers } from '#lib/ts/review/suggestion-drafts';
+    import { setSuggestionMarks, suggestingCompartment, type SuggestionMark } from '#lib/ts/editor/suggestion-marks';
+    import { suggestingInput } from '#lib/ts/editor/suggesting-input';
 
     let documentRevision = $state(0);
 

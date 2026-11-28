@@ -2,9 +2,9 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-	import { brandingStore } from '#lib/ts/branding';
+	import { brandingStore } from '#lib/ts/themes/branding';
 	import SlideStage from '#lib/components/presentation/SlideStage.svelte';
-	import { safeSvg } from '#lib/ts/safe-svg';
+	import { safeSvg } from '#lib/ts/preview/safe-svg';
 	import {
 		forwardedKey,
 		presentationChannel,
@@ -13,7 +13,7 @@
 		type Point,
 		type Slide,
 		type SpeakerMessage
-	} from '#lib/ts/presentation-sync';
+	} from '#lib/ts/preview/presentation-sync';
 
 	const session = page.url.searchParams.get('session');
 

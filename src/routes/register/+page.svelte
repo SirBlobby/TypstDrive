@@ -1,16 +1,16 @@
 <script lang="ts">
-    import { brandingStore } from '#lib/ts/branding';
+    import { brandingStore } from '#lib/ts/themes/branding';
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { userStore } from '#lib/ts/auth';
-    import { fetchAuthOptions, postJson, readError, type AuthOptions } from '#lib/ts/auth-options';
+    import { userStore } from '#lib/ts/account/auth';
+    import { fetchAuthOptions, postJson, readError, type AuthOptions } from '#lib/ts/account/auth-options';
     import AuthShell from '#lib/components/auth/AuthShell.svelte';
     import AuthField from '#lib/components/auth/AuthField.svelte';
     import FormNotice from '#lib/components/auth/FormNotice.svelte';
     import SsoButtons from '#lib/components/auth/SsoButtons.svelte';
     import VerifyEmailCodeForm from '#lib/components/auth/VerifyEmailCodeForm.svelte';
-    import type { User } from '#lib/ts/auth';
+    import type { User } from '#lib/ts/account/auth';
 
     const EMAIL_NOT_VERIFIED = 428;
 

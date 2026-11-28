@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
-    import { fetchLatexAdminPolicy, saveLatexAdminPolicy, type LatexPolicy } from '#lib/ts/latex-policy';
-    import { fetchServerInfo, type ServerInfo } from '#lib/ts/server-info';
+    import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/ui/settings';
+    import { fetchLatexAdminPolicy, saveLatexAdminPolicy, type LatexPolicy } from '#lib/ts/preview/latex-policy';
+    import { fetchServerInfo, type ServerInfo } from '#lib/ts/site/server-info';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';

@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { PROJECT_URL } from '#lib/ts/branding';
+    import { PROJECT_URL } from '#lib/ts/themes/branding';
 </script>
 
 <a

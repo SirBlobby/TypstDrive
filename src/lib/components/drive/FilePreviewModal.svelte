@@ -1,7 +1,7 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { fileDataUrl } from '#lib/ts/item-info';
-    import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP, previewKindFor, stepZoom } from '#lib/ts/file-preview';
+    import { fileDataUrl } from '#lib/ts/drive/item-info';
+    import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP, previewKindFor, stepZoom } from '#lib/ts/drive/file-preview';
     import FileViewer from '#lib/components/FileViewer.svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 

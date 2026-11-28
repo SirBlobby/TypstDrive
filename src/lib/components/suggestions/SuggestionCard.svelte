@@ -1,9 +1,9 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import PersonAvatar from '#lib/components/people/PersonAvatar.svelte';
-    import { userStore } from '#lib/ts/auth';
-    import { formatTimestamp } from '#lib/ts/item-info';
-    import type { SuggestionView } from '#lib/ts/suggestions';
+    import { userStore } from '#lib/ts/account/auth';
+    import { formatTimestamp } from '#lib/ts/drive/item-info';
+    import type { SuggestionView } from '#lib/ts/review/suggestions';
 
     let { suggestion, fileLabel = '', active, canReview, changedSince, onSelect, onAccept, onReject, onWithdraw }: {
         suggestion: SuggestionView;

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack, type Snippet } from "svelte";
   import Modal from "./Modal.svelte";
-  import { modalCancelClass, modalConfirmClass } from "#lib/ts/modal-ui";
+  import { modalCancelClass, modalConfirmClass } from "#lib/ts/ui/modal";
 
   interface Props {
     title: string;

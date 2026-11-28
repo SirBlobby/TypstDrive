@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { brandingStore } from '#lib/ts/branding';
+    import { brandingStore } from '#lib/ts/themes/branding';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { userStore, signOut } from '#lib/ts/auth';
+    import { userStore, signOut } from '#lib/ts/account/auth';
     import SettingsSidebar from '#lib/components/settings/SettingsSidebar.svelte';
     import AccountSection from '#lib/components/settings/sections/AccountSection.svelte';
     import AppearanceSection from '#lib/components/settings/sections/AppearanceSection.svelte';

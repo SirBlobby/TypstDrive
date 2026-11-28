@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { brandingStore } from '#lib/ts/branding';
+    import { brandingStore } from '#lib/ts/themes/branding';
     import { goto } from '$app/navigation';
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/state';
-    import { userStore } from '#lib/ts/auth';
+    import { userStore } from '#lib/ts/account/auth';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Navbar from '#lib/components/drive/Navbar.svelte';
     import FolderRow from '#lib/components/drive/FolderRow.svelte';
@@ -21,7 +21,7 @@
         type DriveEntry,
         type DriveFilters as DriveFilterState,
         type ViewMode
-    } from '#lib/ts/drive-filters';
+    } from '#lib/ts/drive/filters';
     import ShareModal from '#lib/components/ShareModal.svelte';
     import PromptModal from '#lib/components/PromptModal.svelte';
     import ConfirmModal from '#lib/components/ConfirmModal.svelte';
@@ -32,20 +32,20 @@
     import DriveEmptyState from '#lib/components/drive/DriveEmptyState.svelte';
     import DriveSectionTitle from '#lib/components/drive/DriveSectionTitle.svelte';
     import StarredView from '#lib/components/drive/stars/StarredView.svelte';
-    import { fetchStarred, starredStore } from '#lib/ts/stars';
-    import { saveFolderColor } from '#lib/ts/folder-colors';
-    import { activeTeamStore, refreshTeams } from '#lib/ts/workspace';
-    import { languageLabel, type DocumentLanguage } from '#lib/ts/document-language';
-    import { emptySearch, matchesItem, tokenValue, type DriveSearch } from '#lib/ts/drive-search';
+    import { fetchStarred, starredStore } from '#lib/ts/drive/stars';
+    import { saveFolderColor } from '#lib/ts/drive/folder-colors';
+    import { activeTeamStore, refreshTeams } from '#lib/ts/account/workspace';
+    import { languageLabel, type DocumentLanguage } from '#lib/ts/editor/document-language';
+    import { emptySearch, matchesItem, tokenValue, type DriveSearch } from '#lib/ts/drive/search';
     import ContentSearchResults from '#lib/components/drive/ContentSearchResults.svelte';
     import LanguagePicker from '#lib/components/drive/LanguagePicker.svelte';
-    import { latexEnabledStore, loadLatexPolicy } from '#lib/ts/latex-policy';
+    import { latexEnabledStore, loadLatexPolicy } from '#lib/ts/preview/latex-policy';
     import DriveSelectionActions from '#lib/components/drive/DriveSelectionActions.svelte';
     import GitImportModal from '#lib/components/git/GitImportModal.svelte';
-    import { DriveSelection, entryKey, selectionKey } from '#lib/ts/drive-selection.svelte';
-    import { moveEntries } from '#lib/ts/drive-bulk';
-    import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
-    import { duplicateItem, type DuplicateKind } from '#lib/ts/duplicates';
+    import { DriveSelection, entryKey, selectionKey } from '#lib/ts/drive/selection.svelte';
+    import { moveEntries } from '#lib/ts/drive/bulk';
+    import { deletionNotice, trashRetentionStore } from '#lib/ts/drive/trash';
+    import { duplicateItem, type DuplicateKind } from '#lib/ts/drive/duplicates';
 
     let documents = $state<any[]>([]);
     let folders = $state<any[]>([]);

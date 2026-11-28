@@ -1,13 +1,13 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { goto } from '$app/navigation';
-    import { fileType, formatSize, itemModified, itemName, type DriveEntry } from '#lib/ts/drive-filters';
-    import { folderIconStyle } from '#lib/ts/folder-colors';
-    import { downloadFolder, downloadProject } from '#lib/ts/downloads';
+    import { fileType, formatSize, itemModified, itemName, type DriveEntry } from '#lib/ts/drive/filters';
+    import { folderIconStyle } from '#lib/ts/drive/folder-colors';
+    import { downloadFolder, downloadProject } from '#lib/ts/drive/downloads';
     import StarButton from '#lib/components/drive/stars/StarButton.svelte';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
     import SelectCheckbox from './SelectCheckbox.svelte';
-    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
+    import type { ItemSelection } from '#lib/ts/drive/selection.svelte';
 
     type RenameType = 'document' | 'folder' | 'file' | 'project';
 

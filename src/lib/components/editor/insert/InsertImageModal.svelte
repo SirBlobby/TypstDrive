@@ -2,10 +2,10 @@
     import { onMount, untrack } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '#lib/components/Modal.svelte';
-    import { focusOnMount } from '#lib/ts/focus-on-mount';
-    import { formatSize } from '#lib/ts/drive-filters';
-    import { fuzzyMatch } from '#lib/ts/slash/fuzzy-match';
-    import type { ImageCodeFormat, ImageLibrary, PickerImage } from '#lib/ts/image-library';
+    import { focusOnMount } from '#lib/ts/ui/focus-on-mount';
+    import { formatSize } from '#lib/ts/drive/filters';
+    import { fuzzyMatch } from '#lib/ts/editor/slash/fuzzy-match';
+    import type { ImageCodeFormat, ImageLibrary, PickerImage } from '#lib/ts/editor/image-library';
 
     let { library, format, onInsert, onClose }: {
         library: ImageLibrary;

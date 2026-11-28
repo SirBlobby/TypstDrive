@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import HeaderIconButton from '../editor/header/HeaderIconButton.svelte';
-	import type { PresentationLayout } from '#lib/ts/presentation-sync';
+	import type { PresentationLayout } from '#lib/ts/preview/presentation-sync';
 
 	let { onpresent }: { onpresent: (layout: PresentationLayout) => void } = $props();
 

@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalPrimaryClass } from '#lib/ts/ui/modal';
     import Modal from '../Modal.svelte';
     import AddReferencePanel from './AddReferencePanel.svelte';
     import ZoteroSyncPanel from './ZoteroSyncPanel.svelte';
-    import { notifyBibliographyChanged, type CitationTargetKind } from '#lib/ts/citations';
+    import { notifyBibliographyChanged, type CitationTargetKind } from '#lib/ts/integrations/citations';
 
     let { kind, itemId, latex = false, onclose, onchanged }: {
         kind: CitationTargetKind;

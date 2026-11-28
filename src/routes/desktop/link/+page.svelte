@@ -2,9 +2,9 @@
     import { onDestroy, onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { brandingStore } from '#lib/ts/branding';
-    import { fetchUser, userStore } from '#lib/ts/auth';
-    import { readError } from '#lib/ts/auth-options';
+    import { brandingStore } from '#lib/ts/themes/branding';
+    import { fetchUser, userStore } from '#lib/ts/account/auth';
+    import { readError } from '#lib/ts/account/auth-options';
     import AuthShell from '#lib/components/auth/AuthShell.svelte';
     import FormNotice from '#lib/components/auth/FormNotice.svelte';
 

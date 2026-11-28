@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalPrimaryClass } from '#lib/ts/ui/modal';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '../Modal.svelte';
     import GitLinkForm from './GitLinkForm.svelte';
     import GitSyncPanel from './GitSyncPanel.svelte';
-    import { createGitLink, fetchGitStatus, previewGitLink, type GitLink, type GitLinkRequest, type GitLinkStatus } from '#lib/ts/git';
+    import { createGitLink, fetchGitStatus, previewGitLink, type GitLink, type GitLinkRequest, type GitLinkStatus } from '#lib/ts/integrations/git';
 
     let { projectId, isOwner, onchanged, onclose }: {
         projectId: string;

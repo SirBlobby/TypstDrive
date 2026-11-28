@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { goto } from '$app/navigation';
-    import { formatBytes } from '#lib/ts/settings-ui';
+    import { formatBytes } from '#lib/ts/ui/settings';
 
     type StorageStats = {
         documents_size_bytes: number;

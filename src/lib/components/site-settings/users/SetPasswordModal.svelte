@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/ui/modal';
     import Modal from '#lib/components/Modal.svelte';
 
     let { user, onClose }: {

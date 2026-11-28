@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { sortOptions, type DriveFilters, type ViewMode } from '#lib/ts/drive-filters';
+    import { sortOptions, type DriveFilters, type ViewMode } from '#lib/ts/drive/filters';
 
     let { filters = $bindable(), viewMode = $bindable() }: {
         filters: DriveFilters;

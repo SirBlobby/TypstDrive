@@ -1,12 +1,12 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { userStore, signOut } from '#lib/ts/auth';
+    import { userStore, signOut } from '#lib/ts/account/auth';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import UserAvatar from '#lib/components/UserAvatar.svelte';
-    import { DOCS_URL } from '#lib/ts/links';
-    import { brandingStore, logoUrl } from '#lib/ts/branding';
+    import { DOCS_URL } from '#lib/ts/site/links';
+    import { brandingStore, logoUrl } from '#lib/ts/themes/branding';
     import SearchBar from './search/SearchBar.svelte';
-    import { emptySearch, type DriveSearch } from '#lib/ts/drive-search';
+    import { emptySearch, type DriveSearch } from '#lib/ts/drive/search';
 
     let { search = $bindable(emptySearch()), showSearch = false }: {
         search?: DriveSearch;

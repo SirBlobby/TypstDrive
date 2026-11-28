@@ -1,4 +1,4 @@
-import type { SpeakerNote } from '#lib/ts/typst-api';
+import type { SpeakerNote } from '#lib/ts/preview/typst-api';
 
 export interface Slide {
 	markup: string;

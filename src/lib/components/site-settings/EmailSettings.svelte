@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { inputClass, primaryButtonClass } from '#lib/ts/settings-ui';
-    import { fetchAuthentication, sendTestEmail, type EmailStatus } from '#lib/ts/admin-auth';
-    import { emailProviderGuides } from '#lib/ts/email-providers';
+    import { inputClass, primaryButtonClass } from '#lib/ts/ui/settings';
+    import { fetchAuthentication, sendTestEmail, type EmailStatus } from '#lib/ts/account/admin-auth';
+    import { emailProviderGuides } from '#lib/ts/account/email-providers';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';

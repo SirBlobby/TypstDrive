@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { Diagnostic } from '../ts/typst-api';
+	import type { Diagnostic } from '#lib/ts/preview/typst-api';
 	import { documentZoomStore } from '../ts/store';
-	import { safeSvg } from '../ts/safe-svg';
+	import { safeSvg } from '#lib/ts/preview/safe-svg';
 	import { untrack } from 'svelte';
-	import type { PagePoint } from '../ts/typst-api';
+	import type { PagePoint } from '#lib/ts/preview/typst-api';
 
 	let {
 		svgs = [],

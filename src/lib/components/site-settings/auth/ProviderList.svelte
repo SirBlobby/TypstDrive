@@ -2,7 +2,7 @@
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
-    import type { ProviderStatus } from '#lib/ts/admin-auth';
+    import type { ProviderStatus } from '#lib/ts/account/admin-auth';
 
     let { providers, problems, disabledProviders = $bindable() }: {
         providers: ProviderStatus[];

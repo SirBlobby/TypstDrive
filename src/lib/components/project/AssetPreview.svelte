@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import FileViewer from '../FileViewer.svelte';
-	import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP, previewKindFor, projectFileUrl, stepZoom } from '#lib/ts/file-preview';
-	import type { ProjectFile } from '#lib/ts/project-tree';
+	import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP, previewKindFor, projectFileUrl, stepZoom } from '#lib/ts/drive/file-preview';
+	import type { ProjectFile } from '#lib/ts/drive/project-tree';
 
 	let { projectId, file, onClose }: {
 		projectId: string;

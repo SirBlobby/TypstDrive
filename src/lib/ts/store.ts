@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { Diagnostic, SpeakerNote } from './typst-api';
+import type { Diagnostic, SpeakerNote } from './preview/typst-api';
 
 export const themeStore = writable('Cerberus');
 export const darkModeStore = writable(true);

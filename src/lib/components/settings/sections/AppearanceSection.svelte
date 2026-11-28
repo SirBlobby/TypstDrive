@@ -5,7 +5,7 @@
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import ThemeCollection from '#lib/components/themes/ThemeCollection.svelte';
-    import { customThemesStore } from '#lib/ts/custom-themes';
+    import { customThemesStore } from '#lib/ts/themes/custom';
 </script>
 
 <SettingsHeader title="Appearance" description="Choose how TypstDrive looks on this browser." icon="mdi:palette-outline" />

@@ -4,8 +4,8 @@
 	import PromptModal from '../PromptModal.svelte';
 	import FilePresence from './FilePresence.svelte';
 	import type { AwarenessUser } from '#lib/ts/store';
-	import { previewKindFor } from '#lib/ts/file-preview';
-	import { buildProjectTree, projectFolders, type ProjectFile, type TreeNode } from '#lib/ts/project-tree';
+	import { previewKindFor } from '#lib/ts/drive/file-preview';
+	import { buildProjectTree, projectFolders, type ProjectFile, type TreeNode } from '#lib/ts/drive/project-tree';
 
 	let {
 		files = [],

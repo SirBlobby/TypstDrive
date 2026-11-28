@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/ui/modal';
     import Modal from '#lib/components/Modal.svelte';
-    import { createTeam, type TeamSummary } from '#lib/ts/workspace';
+    import { createTeam, type TeamSummary } from '#lib/ts/account/workspace';
 
     let { onClose, onCreated }: { onClose: () => void; onCreated: (team: TeamSummary) => void } = $props();
 

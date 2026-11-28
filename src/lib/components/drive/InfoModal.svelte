@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalPrimaryClass } from '#lib/ts/ui/modal';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '../Modal.svelte';
-    import { formatBytes } from '#lib/ts/settings-ui';
-    import { fetchItemInfo, formatTimestamp, type InfoAccessEntry, type ItemInfo, type ItemKind } from '#lib/ts/item-info';
+    import { formatBytes } from '#lib/ts/ui/settings';
+    import { fetchItemInfo, formatTimestamp, type InfoAccessEntry, type ItemInfo, type ItemKind } from '#lib/ts/drive/item-info';
 
     let { selectedInfo, onClose }: {
         selectedInfo: { id: string; type: ItemKind; title?: string; name?: string };

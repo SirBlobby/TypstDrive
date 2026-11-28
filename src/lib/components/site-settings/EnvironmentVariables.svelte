@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import type { EnvironmentVariable } from '#lib/ts/server-info';
+    import type { EnvironmentVariable } from '#lib/ts/site/server-info';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
 
     let { variables }: { variables: EnvironmentVariable[] } = $props();

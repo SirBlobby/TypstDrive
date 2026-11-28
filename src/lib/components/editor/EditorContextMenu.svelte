@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { editorViewStore } from '#lib/ts/store';
-	import { startCommentOnSelection } from '#lib/ts/comments';
-	import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
-	import { shortcutText } from '#lib/ts/keybinds/key-format';
+	import { startCommentOnSelection } from '#lib/ts/review/comments';
+	import { currentKeybind } from '#lib/ts/editor/keybinds/keybinds-store';
+	import { shortcutText } from '#lib/ts/editor/keybinds/key-format';
 
 	let { canComment }: { canComment: boolean } = $props();
 

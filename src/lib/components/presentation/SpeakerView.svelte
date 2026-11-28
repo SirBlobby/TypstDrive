@@ -3,7 +3,7 @@
 	import SlideStage from './SlideStage.svelte';
 	import type { DrawingTool, Point, Stroke } from './drawing';
 	import type { Slide } from './slides';
-	import { safeSvg } from '#lib/ts/safe-svg';
+	import { safeSvg } from '#lib/ts/preview/safe-svg';
 
 	interface Props {
 		current: Slide | undefined;

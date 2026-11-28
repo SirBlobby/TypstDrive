@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-	import { suggestingModeStore } from '#lib/ts/suggestions';
+	import { suggestingModeStore } from '#lib/ts/review/suggestions';
 	import HeaderIconButton from './header/HeaderIconButton.svelte';
 
 	let { canEdit }: { canEdit: boolean } = $props();

@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import PersonAvatar from '#lib/components/people/PersonAvatar.svelte';
-    import { groupByDay, versionKindLabels, versionTime, type DocumentVersion } from '#lib/ts/versions';
+    import { groupByDay, versionKindLabels, versionTime, type DocumentVersion } from '#lib/ts/review/versions';
 
     let { versions, selectedId, onSelect }: {
         versions: DocumentVersion[];

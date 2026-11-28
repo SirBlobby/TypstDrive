@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import BibliographyFilePicker from './BibliographyFilePicker.svelte';
-    import { formatDate } from '#lib/ts/settings-ui';
+    import { formatDate } from '#lib/ts/ui/settings';
     import {
         collectionLabels,
         createSync,
@@ -17,7 +17,7 @@
         type CitationTargetKind,
         type ZoteroLibrary,
         type ZoteroStatus
-    } from '#lib/ts/citations';
+    } from '#lib/ts/integrations/citations';
 
     let { kind, itemId, onchanged }: { kind: CitationTargetKind; itemId: string; onchanged: () => void } = $props();
 

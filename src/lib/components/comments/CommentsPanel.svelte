@@ -6,13 +6,13 @@
     import CommentThreadCard from './CommentThreadCard.svelte';
     import CommentComposer from './CommentComposer.svelte';
     import SuggestionsList from '#lib/components/suggestions/SuggestionsList.svelte';
-    import { activeSuggestionStore, suggestionsStore } from '#lib/ts/suggestions';
-    import { refreshReview, reviewLoadStore } from '#lib/ts/review-session';
+    import { activeSuggestionStore, suggestionsStore } from '#lib/ts/review/suggestions';
+    import { refreshReview, reviewLoadStore } from '#lib/ts/review/session';
     import { editorViewStore } from '#lib/ts/store';
-    import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
-    import { shortcutText } from '#lib/ts/keybinds/key-format';
-    import { resolveRange } from '#lib/ts/document-anchors';
-    import { currentReviewTarget, inActiveFile, itemFileId, itemSource, reviewTargetStore, type ReviewItem } from '#lib/ts/review-target';
+    import { currentKeybind } from '#lib/ts/editor/keybinds/keybinds-store';
+    import { shortcutText } from '#lib/ts/editor/keybinds/key-format';
+    import { resolveRange } from '#lib/ts/review/anchors';
+    import { currentReviewTarget, inActiveFile, itemFileId, itemSource, reviewTargetStore, type ReviewItem } from '#lib/ts/review/target';
     import {
         activeThreadStore,
         buildThreads,
@@ -22,7 +22,7 @@
         pendingCommentStore,
         type CommentThread,
         type CommentView
-    } from '#lib/ts/comments';
+    } from '#lib/ts/review/comments';
 
     type PanelTab = 'open' | 'resolved' | 'suggestions';
 

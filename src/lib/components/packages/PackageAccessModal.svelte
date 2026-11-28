@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { modalCancelClass } from '#lib/ts/modal-ui';
+    import { modalCancelClass } from '#lib/ts/ui/modal';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '#lib/components/Modal.svelte';
-    import { inputClass, secondaryButtonClass } from '#lib/ts/settings-ui';
-    import { refreshTeams, type TeamSummary } from '#lib/ts/workspace';
+    import { inputClass, secondaryButtonClass } from '#lib/ts/ui/settings';
+    import { refreshTeams, type TeamSummary } from '#lib/ts/account/workspace';
     import {
         addPackageTeam,
         addPackageUser,
@@ -15,7 +15,7 @@
         type Package,
         type PackageAccess,
         type PackageVisibility
-    } from '#lib/ts/packages';
+    } from '#lib/ts/integrations/packages';
 
     let { pkg, canMakePrivate, onClose, onChanged }: {
         pkg: Package;

@@ -3,9 +3,9 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { brandingStore } from '#lib/ts/branding';
-    import { diffLines, summarize } from '#lib/ts/line-diff';
-    import { fetchVersions, renameVersion, restoreVersion, versionDay, versionKindLabels, versionTime, type DocumentVersion } from '#lib/ts/versions';
+    import { brandingStore } from '#lib/ts/themes/branding';
+    import { diffLines, summarize } from '#lib/ts/review/line-diff';
+    import { fetchVersions, renameVersion, restoreVersion, versionDay, versionKindLabels, versionTime, type DocumentVersion } from '#lib/ts/review/versions';
     import VersionTimeline from '#lib/components/history/VersionTimeline.svelte';
     import VersionDiffView from '#lib/components/history/VersionDiffView.svelte';
     import PersonAvatar from '#lib/components/people/PersonAvatar.svelte';

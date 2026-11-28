@@ -12,7 +12,7 @@
         type GitImportPreview as ImportPreview,
         type GitLinkRequest,
         type GitProvider
-    } from '#lib/ts/git';
+    } from '#lib/ts/integrations/git';
 
     let {
         genericHostsEnabled,

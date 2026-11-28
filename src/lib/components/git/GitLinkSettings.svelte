@@ -11,7 +11,7 @@
         type GitAccount,
         type GitLink,
         type GitLinkUpdate
-    } from '#lib/ts/git';
+    } from '#lib/ts/integrations/git';
 
     let { projectId, link, onupdated, onunlinked }: {
         projectId: string;

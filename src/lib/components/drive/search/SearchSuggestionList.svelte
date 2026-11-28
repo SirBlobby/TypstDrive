@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import type { SearchSuggestion } from '#lib/ts/search-suggestions';
+    import type { SearchSuggestion } from '#lib/ts/drive/search-suggestions';
 
     let { suggestions, highlighted, onselect }: {
         suggestions: SearchSuggestion[];

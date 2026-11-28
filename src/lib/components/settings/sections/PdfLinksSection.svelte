@@ -5,7 +5,7 @@
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import PdfLinkRow from '#lib/components/settings/PdfLinkRow.svelte';
     import PromptModal from '#lib/components/PromptModal.svelte';
-    import { fetchOwnPdfLinks, normalizeSlug, removePdfLink, savePdfLink, type OwnPdfLinks, type PdfLink } from '#lib/ts/pdf-links';
+    import { fetchOwnPdfLinks, normalizeSlug, removePdfLink, savePdfLink, type OwnPdfLinks, type PdfLink } from '#lib/ts/sharing/pdf-links';
 
     let data = $state<OwnPdfLinks | null>(null);
     let loadError = $state('');

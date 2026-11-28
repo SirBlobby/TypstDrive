@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { brandingStore } from '#lib/ts/branding';
+    import { brandingStore } from '#lib/ts/themes/branding';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import { userStore } from '#lib/ts/auth';
+    import { userStore } from '#lib/ts/account/auth';
 
     onMount(() => {
         if ($userStore) {

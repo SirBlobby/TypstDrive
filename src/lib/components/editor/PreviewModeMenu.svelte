@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-	import { choosePreviewMode, previewModeOptions, previewModeStore, previewWindowOption, previewWindowStore, type PreviewMode } from '#lib/ts/preview-mode';
+	import { choosePreviewMode, previewModeOptions, previewModeStore, previewWindowOption, previewWindowStore, type PreviewMode } from '#lib/ts/preview/mode';
 	import HeaderIconButton from './header/HeaderIconButton.svelte';
 
 	let open = $state(false);

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { brandingStore } from '#lib/ts/branding';
+	import { brandingStore } from '#lib/ts/themes/branding';
 	import { documentZoomStore } from '#lib/ts/store';
 	import Preview from '#lib/components/Preview.svelte';
 	import ErrorBanner from '#lib/components/ErrorBanner.svelte';
@@ -11,8 +11,8 @@
 		type EditorMessage,
 		type PreviewJump,
 		type PreviewWindowMessage
-	} from '#lib/ts/preview-window';
-	import type { Diagnostic, PagePoint } from '#lib/ts/typst-api';
+	} from '#lib/ts/preview/window';
+	import type { Diagnostic, PagePoint } from '#lib/ts/preview/typst-api';
 
 	const session = page.url.searchParams.get('session');
 

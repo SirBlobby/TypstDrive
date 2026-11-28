@@ -2,11 +2,11 @@
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { goto } from '$app/navigation';
-    import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/ui/settings';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import ConfirmModal from '#lib/components/ConfirmModal.svelte';
-    import { emptyTrash, fetchTrash, type TrashListing } from '#lib/ts/trash';
+    import { emptyTrash, fetchTrash, type TrashListing } from '#lib/ts/drive/trash';
 
     let listing = $state<TrashListing | null>(null);
     let loadError = $state('');

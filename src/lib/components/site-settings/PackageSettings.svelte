@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
-    import { draftToQuota, quotaToDraft, type QuotaDraft } from '#lib/ts/storage-quota';
-    import type { PackagePolicy } from '#lib/ts/packages';
+    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/ui/settings';
+    import { draftToQuota, quotaToDraft, type QuotaDraft } from '#lib/ts/account/storage-quota';
+    import type { PackagePolicy } from '#lib/ts/integrations/packages';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';

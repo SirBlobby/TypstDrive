@@ -1,9 +1,9 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { fileDataUrl } from '#lib/ts/item-info';
+    import { fileDataUrl } from '#lib/ts/drive/item-info';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
     import SelectCheckbox from './SelectCheckbox.svelte';
-    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
+    import type { ItemSelection } from '#lib/ts/drive/selection.svelte';
 
     let { file, deleteFile, openRename, openPreview, openInfo = undefined, onReplaced = undefined, readOnly = false, selection = undefined }: {
         file: any;

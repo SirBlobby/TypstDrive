@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DEFAULT_SPLIT, clampSplit, splitRatioStore } from '#lib/ts/preview-mode';
+	import { DEFAULT_SPLIT, clampSplit, splitRatioStore } from '#lib/ts/preview/mode';
 
 	const keyboardStep = 0.05;
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import HeaderIconButton from './HeaderIconButton.svelte';
-	import { exportFormatsFor, type ExportFormat as RenderedFormat } from '#lib/ts/typst-api';
+	import { exportFormatsFor, type ExportFormat as RenderedFormat } from '#lib/ts/preview/typst-api';
 
 	type ExportFormat = RenderedFormat | 'source';
 

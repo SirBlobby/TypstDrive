@@ -4,7 +4,7 @@
     import StarButton from '#lib/components/drive/stars/StarButton.svelte';
     import SelectCheckbox from './SelectCheckbox.svelte';
     import ExportMenuItems from './ExportMenuItems.svelte';
-    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
+    import type { ItemSelection } from '#lib/ts/drive/selection.svelte';
 
     let { doc, activeMenu, setActiveMenu, openInfo, openRename, shareItem, deleteDoc, duplicateDoc = undefined, readOnly = false, selection = undefined }: {
         doc: any;

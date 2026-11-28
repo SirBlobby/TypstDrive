@@ -1,19 +1,19 @@
 <script lang="ts">
 	import '../app.css';
-	import '#lib/ts/icons';
-	import { fetchUser, userStore } from '#lib/ts/auth';
-	import { installWorkspaceHeader } from '#lib/ts/workspace';
+	import '#lib/ts/ui/icons';
+	import { fetchUser, userStore } from '#lib/ts/account/auth';
+	import { installWorkspaceHeader } from '#lib/ts/account/workspace';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { themeStore, darkModeStore } from '#lib/ts/store';
-	import { resolveEditorColors } from '#lib/ts/theme-colors';
-	import { customThemesStore, loadCustomThemes, findCustomTheme, isCustomThemeKey } from '#lib/ts/custom-themes';
-	import { applyCustomThemeStyles } from '#lib/ts/theme-styles';
-	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '#lib/ts/branding';
+	import { resolveEditorColors } from '#lib/ts/themes/colors';
+	import { customThemesStore, loadCustomThemes, findCustomTheme, isCustomThemeKey } from '#lib/ts/themes/custom';
+	import { applyCustomThemeStyles } from '#lib/ts/themes/styles';
+	import { brandingStore, loadBranding, logoUrl, applyAccentColor } from '#lib/ts/themes/branding';
 	import BrandingCredit from '#lib/components/BrandingCredit.svelte';
-	import { reportPageLoad } from '#lib/ts/page-load';
-	import { retainPreviewCacheFor } from '#lib/ts/preview-cache';
+	import { reportPageLoad } from '#lib/ts/site/page-load';
+	import { retainPreviewCacheFor } from '#lib/ts/preview/cache';
 
 	let { children } = $props();
 	let loaded = $state(false);

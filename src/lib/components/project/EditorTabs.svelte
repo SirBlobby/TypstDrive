@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-	import type { ProjectFile } from '#lib/ts/project-tree';
+	import type { ProjectFile } from '#lib/ts/drive/project-tree';
 
 	let {
 		tabs,

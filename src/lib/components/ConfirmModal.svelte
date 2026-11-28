@@ -1,7 +1,7 @@
 <script lang="ts">
   import Modal from "./Modal.svelte";
-  import { splitConfirmMessage } from "#lib/ts/confirm-message";
-  import { modalCancelClass, modalConfirmClass, type ModalTone } from "#lib/ts/modal-ui";
+  import { splitConfirmMessage } from "#lib/ts/ui/confirm-message";
+  import { modalCancelClass, modalConfirmClass, type ModalTone } from "#lib/ts/ui/modal";
 
   interface Props {
     title: string;

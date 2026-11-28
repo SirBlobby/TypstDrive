@@ -2,11 +2,11 @@
     import ConfirmModal from '../ConfirmModal.svelte';
     import DriveSelectionBar from './DriveSelectionBar.svelte';
     import MoveToFolderModal from './MoveToFolderModal.svelte';
-    import { starredStore } from '#lib/ts/stars';
-    import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
-    import type { DriveEntry } from '#lib/ts/drive-filters';
-    import type { DriveSelection } from '#lib/ts/drive-selection.svelte';
-    import { allStarred, deleteEntries, describeEntries, isMovable, isStarrable, moveEntries, starEntries } from '#lib/ts/drive-bulk';
+    import { starredStore } from '#lib/ts/drive/stars';
+    import { deletionNotice, trashRetentionStore } from '#lib/ts/drive/trash';
+    import type { DriveEntry } from '#lib/ts/drive/filters';
+    import type { DriveSelection } from '#lib/ts/drive/selection.svelte';
+    import { allStarred, deleteEntries, describeEntries, isMovable, isStarrable, moveEntries, starEntries } from '#lib/ts/drive/bulk';
 
     let { selection, entries, rootLabel, currentFolderId, onchanged }: {
         selection: DriveSelection;

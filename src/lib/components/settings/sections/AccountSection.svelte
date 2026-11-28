@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { userStore } from '#lib/ts/auth';
-    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { userStore } from '#lib/ts/account/auth';
+    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/ui/settings';
     import AvatarUploader from '#lib/components/settings/AvatarUploader.svelte';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';

@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { fetchCitationPolicy } from '#lib/ts/citations';
-    import { affiliationLabel, authorFromProfile, fetchOrcidProfile, type OrcidAffiliation, type TemplateAuthor } from '#lib/ts/orcid';
+    import { fetchCitationPolicy } from '#lib/ts/integrations/citations';
+    import { affiliationLabel, authorFromProfile, fetchOrcidProfile, type OrcidAffiliation, type TemplateAuthor } from '#lib/ts/integrations/orcid';
 
     let { authors = $bindable() }: { authors: TemplateAuthor[] } = $props();
 

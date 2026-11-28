@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { editorViewStore } from '#lib/ts/store';
-	import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
-	import { shortcutText } from '#lib/ts/keybinds/key-format';
-	import { focusOnMount } from '#lib/ts/focus-on-mount';
+	import { currentKeybind } from '#lib/ts/editor/keybinds/keybinds-store';
+	import { shortcutText } from '#lib/ts/editor/keybinds/key-format';
+	import { focusOnMount } from '#lib/ts/ui/focus-on-mount';
 	import {
 		closeSlash,
 		moveSlashSelection,
@@ -12,8 +12,8 @@
 		setSelectionQuery,
 		slashSessionStore,
 		visibleCommands
-	} from '#lib/ts/slash/slash-session';
-	import type { SlashCommand } from '#lib/ts/slash/slash-command-types';
+	} from '#lib/ts/editor/slash/slash-session';
+	import type { SlashCommand } from '#lib/ts/editor/slash/slash-command-types';
 
 	const PALETTE_WIDTH = 304;
 	const PALETTE_MAX_HEIGHT = 340;

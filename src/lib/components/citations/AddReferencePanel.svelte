@@ -13,7 +13,7 @@
         type AddedEntry,
         type CitationTargetKind,
         type LookupResult
-    } from '#lib/ts/citations';
+    } from '#lib/ts/integrations/citations';
 
     let { kind, itemId, latex, onchanged }: {
         kind: CitationTargetKind;

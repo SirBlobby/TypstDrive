@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-	import { userStore } from '#lib/ts/auth';
-	import { brandingStore, logoUrl } from '#lib/ts/branding';
-	import { errorCopy } from '#lib/ts/error-pages';
+	import { userStore } from '#lib/ts/account/auth';
+	import { brandingStore, logoUrl } from '#lib/ts/themes/branding';
+	import { errorCopy } from '#lib/ts/ui/error-pages';
 
 	let copy = $derived(errorCopy(page.status));
 	let detail = $derived(page.error?.message && page.error.message !== 'Not Found' ? page.error.message : '');

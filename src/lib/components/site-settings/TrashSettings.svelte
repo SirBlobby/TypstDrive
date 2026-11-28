@@ -1,10 +1,10 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/ui/settings';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
-    import { fetchTrashAdminPolicy, saveTrashAdminPolicy } from '#lib/ts/trash';
+    import { fetchTrashAdminPolicy, saveTrashAdminPolicy } from '#lib/ts/drive/trash';
 
     const MAX_DAYS = 365;
 

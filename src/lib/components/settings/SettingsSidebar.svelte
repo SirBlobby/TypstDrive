@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { userStore } from '#lib/ts/auth';
+    import { userStore } from '#lib/ts/account/auth';
     import { settingsSidebarCollapsedStore } from '#lib/ts/store';
     import UserAvatar from '#lib/components/UserAvatar.svelte';
 

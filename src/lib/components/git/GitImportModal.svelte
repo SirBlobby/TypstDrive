@@ -3,7 +3,7 @@
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '../Modal.svelte';
     import GitLinkForm from './GitLinkForm.svelte';
-    import { fetchGitPolicy, importGitProject, previewGitImport, repositoryName, type GitLinkRequest, type GitPolicy } from '#lib/ts/git';
+    import { fetchGitPolicy, importGitProject, previewGitImport, repositoryName, type GitLinkRequest, type GitPolicy } from '#lib/ts/integrations/git';
 
     let { folderId, onimported, onclose }: {
         folderId: string | null;

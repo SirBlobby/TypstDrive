@@ -1,10 +1,10 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { downloadFolder } from '#lib/ts/downloads';
-    import { folderIconStyle, folderTileStyle } from '#lib/ts/folder-colors';
+    import { downloadFolder } from '#lib/ts/drive/downloads';
+    import { folderIconStyle, folderTileStyle } from '#lib/ts/drive/folder-colors';
     import FolderColorPicker from './FolderColorPicker.svelte';
     import SelectCheckbox from './SelectCheckbox.svelte';
-    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
+    import type { ItemSelection } from '#lib/ts/drive/selection.svelte';
 
     let { folder, dragOverFolderId, navigateToFolder, handleDrop, deleteFolder, setDragOverFolderId, activeMenu, setActiveMenu, shareFolder = undefined, openInfo = undefined, openRename = undefined, changeColor = undefined, readOnly = false, selection = undefined }: {
         folder: any;

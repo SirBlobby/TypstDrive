@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { brandingStore } from '#lib/ts/branding';
+    import { brandingStore } from '#lib/ts/themes/branding';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { userStore, signOut } from '#lib/ts/auth';
+    import { userStore, signOut } from '#lib/ts/account/auth';
     import SettingsSidebar from '#lib/components/settings/SettingsSidebar.svelte';
     import UserManagement from '#lib/components/site-settings/UserManagement.svelte';
     import ApiAccessSettings from '#lib/components/site-settings/ApiAccessSettings.svelte';

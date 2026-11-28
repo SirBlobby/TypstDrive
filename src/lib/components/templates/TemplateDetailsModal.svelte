@@ -1,13 +1,13 @@
 <script lang="ts">
-    import { modalCancelClass } from '#lib/ts/modal-ui';
+    import { modalCancelClass } from '#lib/ts/ui/modal';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { untrack } from 'svelte';
     import Modal from '../Modal.svelte';
     import TemplateThumbnail from './TemplateThumbnail.svelte';
     import TemplateAuthorsEditor from './TemplateAuthorsEditor.svelte';
-    import { focusOnMount } from '#lib/ts/focus-on-mount';
-    import { categoryLabel, readableName, universeUrl, type UniverseTemplate } from '#lib/ts/templates';
-    import { loadSavedAuthors, saveAuthors, type TemplateAuthor } from '#lib/ts/orcid';
+    import { focusOnMount } from '#lib/ts/ui/focus-on-mount';
+    import { categoryLabel, readableName, universeUrl, type UniverseTemplate } from '#lib/ts/drive/templates';
+    import { loadSavedAuthors, saveAuthors, type TemplateAuthor } from '#lib/ts/integrations/orcid';
 
     let { template, oncreate, onclose }: {
         template: UniverseTemplate;

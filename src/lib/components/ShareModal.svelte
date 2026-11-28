@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalPrimaryClass } from '#lib/ts/ui/modal';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from './Modal.svelte';
@@ -7,7 +7,7 @@
     import LinkSharing from './sharing/LinkSharing.svelte';
     import PdfLinkSharing from './sharing/PdfLinkSharing.svelte';
     import TeamMembersAccess from './sharing/TeamMembersAccess.svelte';
-    import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind, type TeamAccess } from '#lib/ts/ownership';
+    import { cancelTransfer, fetchShareInfo, requestTransfer, type OwnershipTransfer, type ShareKind, type TeamAccess } from '#lib/ts/sharing/ownership';
 
     let { onClose, itemId = undefined, kind = 'document' }: { onClose: () => void, itemId?: string, kind?: ShareKind } = $props();
 

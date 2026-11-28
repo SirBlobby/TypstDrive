@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Diagnostic } from '../ts/typst-api';
+	import type { Diagnostic } from '#lib/ts/preview/typst-api';
 
 	let { errors = [] }: { errors: Diagnostic[] } = $props();
 </script>

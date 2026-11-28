@@ -2,8 +2,8 @@
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '#lib/components/Modal.svelte';
-    import { focusOnMount } from '#lib/ts/focus-on-mount';
-    import { formatTimestamp } from '#lib/ts/item-info';
+    import { focusOnMount } from '#lib/ts/ui/focus-on-mount';
+    import { formatTimestamp } from '#lib/ts/drive/item-info';
 
     type LibraryDocument = { id: string; title: string; updated_at: string };
 

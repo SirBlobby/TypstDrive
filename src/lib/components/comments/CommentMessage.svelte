@@ -2,9 +2,9 @@
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import PersonAvatar from '#lib/components/people/PersonAvatar.svelte';
     import CommentComposer from './CommentComposer.svelte';
-    import { userStore } from '#lib/ts/auth';
-    import { formatTimestamp } from '#lib/ts/item-info';
-    import type { CommentView } from '#lib/ts/comments';
+    import { userStore } from '#lib/ts/account/auth';
+    import { formatTimestamp } from '#lib/ts/drive/item-info';
+    import type { CommentView } from '#lib/ts/review/comments';
 
     interface ResolveAction {
         resolved: boolean;

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { userStore } from '#lib/ts/auth';
+    import { userStore } from '#lib/ts/account/auth';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SetPasswordModal from './users/SetPasswordModal.svelte';
 

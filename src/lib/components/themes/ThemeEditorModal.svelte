@@ -1,14 +1,14 @@
 <script lang="ts">
-    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/ui/modal';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { untrack } from 'svelte';
     import Modal from '../Modal.svelte';
     import ColorField from './ColorField.svelte';
     import ThemePreview from './ThemePreview.svelte';
-    import { appColorFields, editorColorFields, cloneDraft, type PaletteKey, type ThemeDraft, type ThemeMode } from '#lib/ts/custom-themes';
-    import { builtinThemeDraft, builtinThemeNames } from '#lib/ts/builtin-palettes';
-    const themeYaml = () => import('#lib/ts/theme-yaml');
-    import { focusOnMount } from '#lib/ts/focus-on-mount';
+    import { appColorFields, editorColorFields, cloneDraft, type PaletteKey, type ThemeDraft, type ThemeMode } from '#lib/ts/themes/custom';
+    import { builtinThemeDraft, builtinThemeNames } from '#lib/ts/themes/builtin-palettes';
+    const themeYaml = () => import('#lib/ts/themes/yaml');
+    import { focusOnMount } from '#lib/ts/ui/focus-on-mount';
 
     let { title, theme, onsave, onclose }: {
         title: string;

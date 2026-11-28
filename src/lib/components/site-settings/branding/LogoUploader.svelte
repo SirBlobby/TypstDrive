@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { brandingStore, logoUrl } from '#lib/ts/branding';
-    import { secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { brandingStore, logoUrl } from '#lib/ts/themes/branding';
+    import { secondaryButtonClass } from '#lib/ts/ui/settings';
     const imageCropDialog = () => import('#lib/components/ImageCropDialog.svelte');
 
     const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;

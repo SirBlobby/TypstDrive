@@ -3,7 +3,7 @@
     import ThemeEditorModal from './ThemeEditorModal.svelte';
     import ConfirmModal from '../ConfirmModal.svelte';
     import { themeStore } from '#lib/ts/store';
-    import { builtinThemeDraft } from '#lib/ts/builtin-palettes';
+    import { builtinThemeDraft } from '#lib/ts/themes/builtin-palettes';
     import {
         customThemesStore,
         findCustomTheme,
@@ -14,8 +14,8 @@
         type CustomTheme,
         type ThemeDraft,
         type ThemeScope
-    } from '#lib/ts/custom-themes';
-    const themeYaml = () => import('#lib/ts/theme-yaml');
+    } from '#lib/ts/themes/custom';
+    const themeYaml = () => import('#lib/ts/themes/yaml');
 
     let { scope, themes, emptyText }: {
         scope: ThemeScope;

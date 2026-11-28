@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import type { GitChange } from '#lib/ts/git';
+    import type { GitChange } from '#lib/ts/integrations/git';
 
     let { changes, selected = $bindable([]), selectable = false, conflicts = [] }: {
         changes: GitChange[];

@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import type { DocumentLanguage } from '#lib/ts/document-language';
-    import { latexEnabledStore } from '#lib/ts/latex-policy';
+    import type { DocumentLanguage } from '#lib/ts/editor/document-language';
+    import { latexEnabledStore } from '#lib/ts/preview/latex-policy';
 
     let { language = $bindable() }: { language: DocumentLanguage } = $props();
 

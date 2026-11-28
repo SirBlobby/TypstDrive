@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { brandingStore } from '#lib/ts/branding';
+    import { brandingStore } from '#lib/ts/themes/branding';
     import { page } from '$app/state';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { postJson, readError } from '#lib/ts/auth-options';
+    import { postJson, readError } from '#lib/ts/account/auth-options';
     import AuthShell from '#lib/components/auth/AuthShell.svelte';
     import AuthField from '#lib/components/auth/AuthField.svelte';
     import FormNotice from '#lib/components/auth/FormNotice.svelte';

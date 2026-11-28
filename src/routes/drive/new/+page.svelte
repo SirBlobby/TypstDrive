@@ -3,13 +3,13 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { userStore } from '#lib/ts/auth';
-    import { brandingStore } from '#lib/ts/branding';
+    import { userStore } from '#lib/ts/account/auth';
+    import { brandingStore } from '#lib/ts/themes/branding';
     import Navbar from '#lib/components/drive/Navbar.svelte';
     import DriveSidebar from '#lib/components/drive/DriveSidebar.svelte';
     import TemplateCard from '#lib/components/templates/TemplateCard.svelte';
     import TemplateDetailsModal from '#lib/components/templates/TemplateDetailsModal.svelte';
-    import type { TemplateAuthor } from '#lib/ts/orcid';
+    import type { TemplateAuthor } from '#lib/ts/integrations/orcid';
     import {
         fetchTemplates,
         createFromTemplate,
@@ -20,7 +20,7 @@
         sortTemplates,
         type TemplateSort,
         type UniverseTemplate
-    } from '#lib/ts/templates';
+    } from '#lib/ts/drive/templates';
 
     const PAGE_SIZE = 48;
 

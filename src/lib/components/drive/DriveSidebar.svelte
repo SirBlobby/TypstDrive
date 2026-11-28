@@ -3,10 +3,10 @@
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { goto } from '$app/navigation';
     import { driveSidebarCollapsedStore } from '#lib/ts/store';
-    import { fetchLatestRelease, fetchServerVersion, isNewerVersion, type LatestRelease } from '#lib/ts/version';
+    import { fetchLatestRelease, fetchServerVersion, isNewerVersion, type LatestRelease } from '#lib/ts/site/version';
     import StorageSummary from '#lib/components/drive/StorageSummary.svelte';
     import TeamSwitcher from '#lib/components/drive/teams/TeamSwitcher.svelte';
-    import { activeTeamStore, type TeamSummary } from '#lib/ts/workspace';
+    import { activeTeamStore, type TeamSummary } from '#lib/ts/account/workspace';
 
     type DriveView = 'drive' | 'new' | 'shared' | 'starred' | 'trash' | 'packages';
 

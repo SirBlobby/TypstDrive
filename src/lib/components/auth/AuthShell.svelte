@@ -2,7 +2,7 @@
     import type { Snippet } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Footer from '#lib/components/Footer.svelte';
-    import { brandingStore, logoUrl } from '#lib/ts/branding';
+    import { brandingStore, logoUrl } from '#lib/ts/themes/branding';
 
     let { title, subtitle, icon, children, footer }: {
         title: string;

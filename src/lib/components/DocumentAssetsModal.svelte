@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalPrimaryClass } from '#lib/ts/ui/modal';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from './Modal.svelte';
     import UnsharedFilesWarning from './UnsharedFilesWarning.svelte';
     import ReplaceFileButton from './drive/ReplaceFileButton.svelte';
-    import { formatSize } from '#lib/ts/drive-filters';
+    import { formatSize } from '#lib/ts/drive/filters';
 
     type LinkedFile = { id: string; name: string; mime_type: string; size_bytes?: number; shared_with_collaborators: boolean };
 

@@ -2,9 +2,9 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { userStore } from '#lib/ts/auth';
-    import { brandingStore } from '#lib/ts/branding';
-    import { activeTeamStore } from '#lib/ts/workspace';
+    import { userStore } from '#lib/ts/account/auth';
+    import { brandingStore } from '#lib/ts/themes/branding';
+    import { activeTeamStore } from '#lib/ts/account/workspace';
     import Navbar from '#lib/components/drive/Navbar.svelte';
     import DriveSidebar from '#lib/components/drive/DriveSidebar.svelte';
     import ConfirmModal from '#lib/components/ConfirmModal.svelte';
@@ -18,7 +18,7 @@
         type TrashEntry,
         type TrashKind,
         type TrashListing
-    } from '#lib/ts/trash';
+    } from '#lib/ts/drive/trash';
 
     const kindStyles: Record<TrashKind, { icon: string; color: string; label: string }> = {
         document: { icon: 'mdi:file-document', color: 'text-[var(--color-accent)]', label: 'Document' },

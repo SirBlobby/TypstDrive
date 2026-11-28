@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import SuggestionCard from './SuggestionCard.svelte';
-    import { inActiveFile, itemFileId, itemSource, reviewTargetStore, type ReviewItem } from '#lib/ts/review-target';
+    import { inActiveFile, itemFileId, itemSource, reviewTargetStore, type ReviewItem } from '#lib/ts/review/target';
     import {
         acceptSuggestion,
         activeSuggestionStore,
@@ -10,7 +10,7 @@
         textChangedSince,
         withdrawSuggestion,
         type SuggestionView
-    } from '#lib/ts/suggestions';
+    } from '#lib/ts/review/suggestions';
 
     let { canReview, showAllFiles, onReveal }: {
         canReview: boolean;

@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalCancelClass, modalPrimaryClass } from '#lib/ts/ui/modal';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { onMount } from 'svelte';
     import Modal from '../Modal.svelte';
-    import { folderIconStyle } from '#lib/ts/folder-colors';
+    import { folderIconStyle } from '#lib/ts/drive/folder-colors';
 
     type FolderCrumb = { id: string; name: string };
 

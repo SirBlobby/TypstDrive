@@ -4,8 +4,8 @@
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
     import KeybindsCard from '#lib/components/settings/KeybindsCard.svelte';
-    import { inputClass, secondaryButtonClass } from '#lib/ts/settings-ui';
-    import { editorFonts, findEditorFont, loadEditorFont } from '#lib/ts/editor-fonts';
+    import { inputClass, secondaryButtonClass } from '#lib/ts/ui/settings';
+    import { editorFonts, findEditorFont, loadEditorFont } from '#lib/ts/editor/fonts';
     import {
         defaultEditorSettings,
         editorSettingsStore,
@@ -13,8 +13,8 @@
         MIN_FONT_SIZE,
         spellCheckLanguages,
         updateEditorSettings
-    } from '#lib/ts/editor-settings';
-    import { minimapSizeOptions, type MinimapSize } from '#lib/ts/minimap/minimap-sizes';
+    } from '#lib/ts/editor/settings';
+    import { minimapSizeOptions, type MinimapSize } from '#lib/ts/editor/minimap/minimap-sizes';
 
     const sampleText = '= Introduction\n#let total = 42\nThe quick brown fox jumps over the lazy dog.';
 

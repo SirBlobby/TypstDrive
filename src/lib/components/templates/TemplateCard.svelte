@@ -1,6 +1,6 @@
 <script lang="ts">
     import TemplateThumbnail from './TemplateThumbnail.svelte';
-    import { categoryLabel, readableName, type UniverseTemplate } from '#lib/ts/templates';
+    import { categoryLabel, readableName, type UniverseTemplate } from '#lib/ts/drive/templates';
 
     let { template, onselect }: { template: UniverseTemplate; onselect: () => void } = $props();
 </script>

@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { defaultFolderColor, folderColorOptions } from '#lib/ts/folder-colors';
+    import { defaultFolderColor, folderColorOptions } from '#lib/ts/drive/folder-colors';
 
     let { color, onchange }: {
         color: string | null | undefined;

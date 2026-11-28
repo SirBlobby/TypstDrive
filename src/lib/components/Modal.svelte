@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from "@iconify/svelte/dist/OfflineIcon.svelte";
   import type { Snippet } from "svelte";
-  import type { ModalTone } from "#lib/ts/modal-ui";
+  import type { ModalTone } from "#lib/ts/ui/modal";
 
   interface Props {
     title: string;

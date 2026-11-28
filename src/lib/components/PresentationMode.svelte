@@ -16,7 +16,7 @@
 		type ForwardedKey,
 		type PresentationLayout,
 		type SpeakerMessage
-	} from '#lib/ts/presentation-sync';
+	} from '#lib/ts/preview/presentation-sync';
 	import {
 		commitStrokes,
 		emptyInk,

@@ -1,11 +1,11 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { goto } from '$app/navigation';
-    import { downloadProject } from '#lib/ts/downloads';
+    import { downloadProject } from '#lib/ts/drive/downloads';
     import StarButton from '#lib/components/drive/stars/StarButton.svelte';
     import SelectCheckbox from './SelectCheckbox.svelte';
     import ExportMenuItems from './ExportMenuItems.svelte';
-    import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
+    import type { ItemSelection } from '#lib/ts/drive/selection.svelte';
 
     let { project, activeMenu, setActiveMenu, openInfo, openRename, deleteProject, duplicateProject = undefined, shareItem = undefined, readOnly = false, selection = undefined }: {
         project: any;

@@ -1,16 +1,16 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-	import { text } from '#lib/ts/yjs-setup';
+	import { text } from '#lib/ts/collab/yjs-setup';
 	import { editorViewStore } from '#lib/ts/store';
-	import { activeLspSession } from '#lib/ts/lsp-session.svelte';
-	import { replaceSelection, uploadDocumentFile } from '#lib/ts/document-uploads';
+	import { activeLspSession } from '#lib/ts/editor/lsp/session.svelte';
+	import { replaceSelection, uploadDocumentFile } from '#lib/ts/editor/document-uploads';
 	import ZoomControl from './ZoomControl.svelte';
-	import { currentHeadingLevel, insertQuote, openFind, openReplace, setHeadingLevel, wrapSelection } from '#lib/ts/editor-insert';
-	import { insertDialogStore, insertOptions } from '#lib/ts/insert-dialog';
-	import { insertTypstSetting } from '#lib/ts/typst-settings';
-	import { startCommentOnSelection } from '#lib/ts/comments';
+	import { currentHeadingLevel, insertQuote, openFind, openReplace, setHeadingLevel, wrapSelection } from '#lib/ts/editor/insert';
+	import { insertDialogStore, insertOptions } from '#lib/ts/editor/insert-dialog';
+	import { insertTypstSetting } from '#lib/ts/editor/typst-settings';
+	import { startCommentOnSelection } from '#lib/ts/review/comments';
 	import ToolbarButton from './ToolbarButton.svelte';
-	import { withShortcut } from '#lib/ts/keybinds/keybinds-store';
+	import { withShortcut } from '#lib/ts/editor/keybinds/keybinds-store';
 
 	let { docId, readOnly, canComment, unsharedFileCount, onOpenAssets, onOpenPageSettings }: {
 		docId?: string;

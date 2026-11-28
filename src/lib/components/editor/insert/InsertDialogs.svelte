@@ -1,10 +1,10 @@
 <script lang="ts">
     import { editorViewStore } from '#lib/ts/store';
-    import { insertDialogStore } from '#lib/ts/insert-dialog';
-    import { insertAtCursor, insertBlock } from '#lib/ts/editor-insert';
-    import { symbolCategories, type PickerCharacter } from '#lib/ts/editor-symbols';
-    import { emojiCategories } from '#lib/ts/editor-emoji';
-    import type { ImageCodeFormat, ImageLibrary } from '#lib/ts/image-library';
+    import { insertDialogStore } from '#lib/ts/editor/insert-dialog';
+    import { insertAtCursor, insertBlock } from '#lib/ts/editor/insert';
+    import { symbolCategories, type PickerCharacter } from '#lib/ts/editor/symbols';
+    import { emojiCategories } from '#lib/ts/editor/emoji';
+    import type { ImageCodeFormat, ImageLibrary } from '#lib/ts/editor/image-library';
     import InsertImageModal from './InsertImageModal.svelte';
     import InsertTableModal from './InsertTableModal.svelte';
     import InsertDocumentModal from './InsertDocumentModal.svelte';

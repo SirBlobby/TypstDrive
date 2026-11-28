@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { formatDate, inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
+    import { formatDate, inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/ui/settings';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
@@ -14,7 +14,7 @@
         type GitAccount,
         type GitAccountProvider,
         type GitPolicy
-    } from '#lib/ts/git';
+    } from '#lib/ts/integrations/git';
 
     const providers: { id: GitAccountProvider; label: string; icon: string; server: string; scope: string }[] = [
         { id: 'github', label: 'GitHub', icon: 'mdi:github', server: 'github.com', scope: 'a fine-grained token with Contents: Read and write' },

@@ -3,7 +3,7 @@
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import GitChangeList from './GitChangeList.svelte';
     import GitLinkSettings from './GitLinkSettings.svelte';
-    import { formatDate } from '#lib/ts/settings-ui';
+    import { formatDate } from '#lib/ts/ui/settings';
     import {
         fetchGitChanges,
         providerLabels,
@@ -13,7 +13,7 @@
         type GitChanges,
         type GitLink,
         type GitResolution
-    } from '#lib/ts/git';
+    } from '#lib/ts/integrations/git';
 
     let { projectId, link, onlinkchanged, onchanged, onunlinked }: {
         projectId: string;

@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-    import { brandingStore, logoUrl, PROJECT_URL } from '#lib/ts/branding';
-    import { fetchServerInfo, type ServerInfo } from '#lib/ts/server-info';
+    import { brandingStore, logoUrl, PROJECT_URL } from '#lib/ts/themes/branding';
+    import { fetchServerInfo, type ServerInfo } from '#lib/ts/site/server-info';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';

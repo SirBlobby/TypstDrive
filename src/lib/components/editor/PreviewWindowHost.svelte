@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { documentZoomStore } from '#lib/ts/store';
-	import { previewWindowStore } from '#lib/ts/preview-mode';
+	import { previewWindowStore } from '#lib/ts/preview/mode';
 	import {
 		previewChannel,
 		previewWindowName,
@@ -9,8 +9,8 @@
 		type EditorMessage,
 		type PreviewJump,
 		type PreviewWindowMessage
-	} from '#lib/ts/preview-window';
-	import type { Diagnostic, PagePoint } from '#lib/ts/typst-api';
+	} from '#lib/ts/preview/window';
+	import type { Diagnostic, PagePoint } from '#lib/ts/preview/typst-api';
 
 	let {
 		svgs,

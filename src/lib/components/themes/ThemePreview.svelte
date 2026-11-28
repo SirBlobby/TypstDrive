@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { ThemePalette } from '#lib/ts/custom-themes';
+    import type { ThemePalette } from '#lib/ts/themes/custom';
 
     let { palette }: { palette: ThemePalette } = $props();
 </script>

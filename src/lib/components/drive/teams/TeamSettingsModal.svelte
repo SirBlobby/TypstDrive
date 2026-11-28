@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { modalPrimaryClass } from '#lib/ts/modal-ui';
+    import { modalPrimaryClass } from '#lib/ts/ui/modal';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '#lib/components/Modal.svelte';
-    import { userStore } from '#lib/ts/auth';
+    import { userStore } from '#lib/ts/account/auth';
     import TeamMembersList from './TeamMembersList.svelte';
     import {
         addTeamMember,
@@ -15,7 +15,7 @@
         type TeamDetail,
         type TeamMember,
         type TeamRole
-    } from '#lib/ts/workspace';
+    } from '#lib/ts/account/workspace';
 
     let { teamId, onClose, onChanged, onLeft }: {
         teamId: string;
