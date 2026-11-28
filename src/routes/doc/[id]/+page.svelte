@@ -30,6 +30,7 @@
 	import { endReviewSession, startReviewSession } from '#lib/ts/review-session';
 	import type { DocumentRole } from '#lib/ts/document-role';
 	import { documentLanguage, type DocumentLanguage } from '#lib/ts/document-language';
+	import { LspSession, activeLspSession } from '#lib/ts/lsp-session.svelte';
 
 	let svgs = $state<string[]>([]);
 	let errors = $state<Diagnostic[]>([]);
@@ -42,6 +43,9 @@
 	let language = $state<DocumentLanguage>('typst');
 
 	let isViewer = $derived(roleLoaded && role === 'viewer');
+	let canEdit = $derived(role === 'owner' || role === 'editor');
+	let lspSession = $state.raw<LspSession | null>(null);
+	let lspPath = $derived(`${page.params.id}.typ`);
 	let canComment = $derived(role !== 'viewer');
 	let showPreview = $derived($previewVisibleStore || isViewer);
 	let editorWidthClass = $derived(
@@ -113,7 +117,22 @@
 		untrack(() => {
 			lastCompiledContent = null;
 			triggerCompile();
+			lspSession?.restart();
 		});
+	});
+
+	$effect(() => {
+		const docId = page.params.id;
+		if (!initialized || !roleLoaded || !canEdit || language !== 'typst' || !docId) return;
+		const session = untrack(
+			() => new LspSession({ path: `/api/lsp/${docId}`, files: () => (text ? [{ path: `${docId}.typ`, text }] : []) })
+		);
+		lspSession = session;
+		activeLspSession.set(session);
+		return () => {
+			session.close();
+			activeLspSession.set(null);
+		};
 	});
 
 	$effect(() => {
@@ -194,7 +213,7 @@
 		{#if !isViewer}
 		<div class="flex flex-col relative min-h-[50%] md:min-h-0 bg-transparent z-10 {editorWidthClass}">
 			{#if initialized && roleLoaded}
-				<Editor extensions={editorExtensions} {language} slash={{ insertDialogs: role === 'owner' || role === 'editor', embedDocuments: role === 'owner' || role === 'editor', canComment }} />
+				<Editor extensions={editorExtensions} {language} lsp={lspSession} {lspPath} slash={{ insertDialogs: role === 'owner' || role === 'editor', embedDocuments: role === 'owner' || role === 'editor', canComment }} />
 				<CommentHighlights />
 				<SuggestionHighlights />
 			{/if}

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { text } from '#lib/ts/yjs-setup';
-	import { editorViewStore, triggerLspReconnect } from '#lib/ts/store';
+	import { editorViewStore } from '#lib/ts/store';
+	import { activeLspSession } from '#lib/ts/lsp-session.svelte';
 	import { replaceSelection, uploadDocumentFile } from '#lib/ts/document-uploads';
 	import ZoomControl from './ZoomControl.svelte';
 	import { currentHeadingLevel, insertQuote, openFind, openReplace, setHeadingLevel, wrapSelection } from '#lib/ts/editor-insert';
@@ -77,8 +78,8 @@
 		uploadDocumentFile(docId, file)
 			.then((data) => {
 				if (!data) return;
+				$activeLspSession?.restart();
 				if (isFontName(data.filename)) {
-					triggerLspReconnect.update((count) => count + 1);
 					const fontName = data.font_family || data.filename.substring(0, data.filename.lastIndexOf('.'));
 					if (!uploadedFonts.includes(fontName)) uploadedFonts = [...uploadedFonts, fontName];
 				}

@@ -30,12 +30,13 @@ WORKDIR /app
 RUN apk add --no-cache libgcc openssl pandoc curl sqlite font-noto-emoji git ca-certificates
 RUN mkdir -p /data
 # Install tinymist for the target architecture.
+ARG TINYMIST_VERSION=v0.15.12
 RUN case "$TARGETARCH" in \
         amd64) TINYMIST_TRIPLE="x86_64-unknown-linux-musl" ;; \
         arm64) TINYMIST_TRIPLE="aarch64-unknown-linux-musl" ;; \
         *) echo "Unsupported TARGETARCH: $TARGETARCH" && exit 1 ;; \
     esac && \
-    curl -fL "https://github.com/Myriad-Dreamin/tinymist/releases/latest/download/tinymist-${TINYMIST_TRIPLE}.tar.gz" -o /tmp/tinymist.tar.gz && \
+    curl -fL "https://github.com/Myriad-Dreamin/tinymist/releases/download/${TINYMIST_VERSION}/tinymist-${TINYMIST_TRIPLE}.tar.gz" -o /tmp/tinymist.tar.gz && \
     tar -xzf /tmp/tinymist.tar.gz -C /usr/local/bin --strip-components=1 "tinymist-${TINYMIST_TRIPLE}/tinymist" && \
     chmod +x /usr/local/bin/tinymist && \
     rm /tmp/tinymist.tar.gz
