@@ -2,7 +2,7 @@
     import Icon from '@iconify/svelte';
     import { brandingStore, logoUrl } from '#lib/ts/branding';
     import { secondaryButtonClass } from '#lib/ts/settings-ui';
-    import ImageCropDialog from '#lib/components/ImageCropDialog.svelte';
+    const imageCropDialog = () => import('#lib/components/ImageCropDialog.svelte');
 
     const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
     const LOGO_OUTPUT_SIZE = 256;
@@ -82,5 +82,7 @@
 </div>
 
 {#if cropSource}
-    <ImageCropDialog image={cropSource} title="Crop logo" outputSize={LOGO_OUTPUT_SIZE} onCancel={closeCropper} onConfirm={uploadLogo} />
+    {#await imageCropDialog() then cropper}
+        <cropper.default image={cropSource} title="Crop logo" outputSize={LOGO_OUTPUT_SIZE} onCancel={closeCropper} onConfirm={uploadLogo} />
+    {/await}
 {/if}

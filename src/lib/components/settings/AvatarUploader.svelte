@@ -2,7 +2,7 @@
     import Icon from '@iconify/svelte';
     import { userStore } from '#lib/ts/auth';
     import UserAvatar from '#lib/components/UserAvatar.svelte';
-    import ImageCropDialog from '#lib/components/ImageCropDialog.svelte';
+    const imageCropDialog = () => import('#lib/components/ImageCropDialog.svelte');
 
     const maxUploadBytes = 15 * 1024 * 1024;
 
@@ -91,5 +91,7 @@
 </div>
 
 {#if cropSource}
-    <ImageCropDialog image={cropSource} title="Crop profile picture" round onCancel={closeCropper} onConfirm={uploadAvatar} />
+    {#await imageCropDialog() then cropper}
+        <cropper.default image={cropSource} title="Crop profile picture" round onCancel={closeCropper} onConfirm={uploadAvatar} />
+    {/await}
 {/if}

@@ -7,7 +7,7 @@
     import ThemePreview from './ThemePreview.svelte';
     import { appColorFields, editorColorFields, cloneDraft, type PaletteKey, type ThemeDraft, type ThemeMode } from '#lib/ts/custom-themes';
     import { builtinThemeDraft, builtinThemeNames } from '#lib/ts/builtin-palettes';
-    import { parseThemeYaml, downloadThemeYaml } from '#lib/ts/theme-yaml';
+    const themeYaml = () => import('#lib/ts/theme-yaml');
     import { focusOnMount } from '#lib/ts/focus-on-mount';
 
     let { title, theme, onsave, onclose }: {
@@ -45,6 +45,7 @@
         input.value = '';
         if (!file) return;
         try {
+            const { parseThemeYaml } = await themeYaml();
             const uploaded = parseThemeYaml(await file.text());
             draft = { ...uploaded, name: uploaded.name || draft.name };
             problem = '';
@@ -105,7 +106,7 @@
                 <button type="button" onclick={() => fileInput.click()} class="flex items-center gap-1.5 rounded-md border border-[var(--color-line)] px-2.5 py-2 text-xs text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)]">
                     <Icon icon="mdi:upload" class="text-sm" /> Upload YAML
                 </button>
-                <button type="button" onclick={() => downloadThemeYaml(draft)} class="flex items-center gap-1.5 rounded-md border border-[var(--color-line)] px-2.5 py-2 text-xs text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)]">
+                <button type="button" onclick={async () => (await themeYaml()).downloadThemeYaml(draft)} class="flex items-center gap-1.5 rounded-md border border-[var(--color-line)] px-2.5 py-2 text-xs text-[var(--color-ink)] hover:bg-[var(--color-surface-sunken)]">
                     <Icon icon="mdi:download" class="text-sm" /> Download YAML
                 </button>
                 <input bind:this={fileInput} type="file" accept=".yml,.yaml,application/yaml,text/yaml" class="hidden" onchange={upload} />

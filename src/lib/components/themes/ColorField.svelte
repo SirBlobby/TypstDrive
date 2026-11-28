@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { normalizeColor } from '#lib/ts/theme-yaml';
+    import { normalizeColor } from '#lib/ts/custom-themes';
 
     let { label, value = $bindable() }: { label: string; value: string } = $props();
 

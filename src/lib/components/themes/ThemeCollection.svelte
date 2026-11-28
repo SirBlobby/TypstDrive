@@ -15,7 +15,7 @@
         type ThemeDraft,
         type ThemeScope
     } from '#lib/ts/custom-themes';
-    import { parseThemeYaml, downloadThemeYaml } from '#lib/ts/theme-yaml';
+    const themeYaml = () => import('#lib/ts/theme-yaml');
 
     let { scope, themes, emptyText }: {
         scope: ThemeScope;
@@ -41,6 +41,7 @@
         input.value = '';
         if (!file) return;
         try {
+            const { parseThemeYaml } = await themeYaml();
             editing = { draft: parseThemeYaml(await file.text()) };
             problem = '';
         } catch (err) {
@@ -108,7 +109,7 @@
                     <button onclick={() => (editing = { id: theme.id, draft: cloneDraft(theme) })} class={iconButtonClass} title="Edit" aria-label="Edit {theme.name}">
                         <Icon icon="mdi:pencil-outline" class="text-base" />
                     </button>
-                    <button onclick={() => downloadThemeYaml(theme)} class={iconButtonClass} title="Download YAML" aria-label="Download {theme.name}">
+                    <button onclick={async () => (await themeYaml()).downloadThemeYaml(theme)} class={iconButtonClass} title="Download YAML" aria-label="Download {theme.name}">
                         <Icon icon="mdi:download" class="text-base" />
                     </button>
                     <button onclick={() => (removing = theme)} class="{iconButtonClass} hover:text-[var(--color-danger)]" title="Delete" aria-label="Delete {theme.name}">

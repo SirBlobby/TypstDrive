@@ -4,7 +4,7 @@
     import { dangerButtonClass, formatDate, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
-    import ApiUsageChart from '#lib/components/settings/ApiUsageChart.svelte';
+    const apiUsageChart = () => import('#lib/components/settings/ApiUsageChart.svelte');
     import { API_DOCS_URL } from '#lib/ts/links';
     import { isExpired, keyFromCreated, scopeLabels, type ApiKey, type CreatedApiKey } from '#lib/ts/api-keys';
     import CreateKeyForm from '#lib/components/settings/api-keys/CreateKeyForm.svelte';
@@ -159,7 +159,9 @@
     {/if}
 
     <SettingsCard title="Usage" description="Requests across all of your keys, in UTC.">
-        <ApiUsageChart />
+        {#await apiUsageChart() then chart}
+            <chart.default />
+        {/await}
     </SettingsCard>
 
     <SettingsCard title="Your keys">

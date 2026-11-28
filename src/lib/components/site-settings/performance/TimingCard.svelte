@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import { failureShare, formatDuration, type TimingSummary } from '#lib/ts/performance';
-    import TimingChart from './TimingChart.svelte';
+    const timingChart = () => import('./TimingChart.svelte');
 
     let { title, description, icon, summary }: {
         title: string;
@@ -42,7 +42,9 @@
                 Nothing recorded in this period.
             </div>
         {:else}
-            <TimingChart points={summary.points} />
+            {#await timingChart() then chart}
+                <chart.default points={summary.points} />
+            {/await}
         {/if}
     </div>
 </section>
