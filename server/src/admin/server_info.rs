@@ -22,6 +22,7 @@ const KNOWN_VARIABLES: &[KnownVariable] = &[
     variable("PORT", "Server", "Port the HTTP server listens on."),
     variable("STATIC_DIR", "Server", "Folder with the built web app."),
     variable("RUST_LOG", "Server", "Log filter."),
+    variable("UPLOAD_MAX_MB", "Server", "The largest file people can upload, in MB. Default 25."),
     variable("REMOTE_CACHE_MB", "Server", "Memory for files that documents load from web addresses, kept for 10 minutes. Default 256."),
     variable("REMOTE_URLS_ALLOW_PRIVATE", "Server", "Let documents load images and files from private network addresses. Off by default."),
     variable("GIT_CACHE_DIR", "Server", "Folder for the disposable partial clones used to sync with Git servers other than GitHub and GitLab."),

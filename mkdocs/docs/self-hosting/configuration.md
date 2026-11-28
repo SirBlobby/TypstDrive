@@ -92,7 +92,8 @@ See [Bigger installs](scaling.md).
 | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | not set | Keys for the bucket. |
 | `S3_PREFIX` | `typstdrive` | Folder inside the bucket. |
 | `S3_VIRTUAL_HOSTED_STYLE` | `false` | Use `bucket.host` addresses instead of `host/bucket`. |
-| `OBJECT_CACHE_MB` | `256` | Memory used to cache files from the bucket. |
+| `OBJECT_CACHE_MB` | `256` | Memory used to cache files from the bucket, and images and other binary project files between compiles. |
+| `UPLOAD_MAX_MB` | `25` | The largest file people can upload, in MB. Storage quotas still apply. |
 
 ## Security
 

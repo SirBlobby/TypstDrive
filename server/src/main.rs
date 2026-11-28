@@ -36,6 +36,7 @@ mod teams;
 mod templates;
 mod themes;
 mod trash;
+mod upload_limits;
 mod user_content;
 
 #[global_allocator]

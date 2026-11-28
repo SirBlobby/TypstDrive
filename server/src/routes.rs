@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, citations, compile, desktop, drive, git, metrics, origin_guard, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, AppState,
+    accounts, admin, api, citations, compile, desktop, drive, git, metrics, origin_guard, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, upload_limits, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -63,7 +63,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/format", post(compile::format::format_handler))
         .route("/export/{format}", post(compile::handlers::export_handler))
         .route("/export/pandoc/{format}", post(compile::pandoc::pandoc_export_handler))
-        .route("/import/pandoc", post(compile::pandoc::pandoc_import_handler))
+        .route("/import/pandoc", post(compile::pandoc::pandoc_import_handler).layer(upload_limits::file_uploads()))
         .route("/lsp/{id}", get(compile::lsp::lsp_handler).layer(axum::middleware::from_fn(origin_guard::same_origin_sockets)))
         .route("/projects/{id}/lsp", get(compile::lsp::project_lsp_handler).layer(axum::middleware::from_fn(origin_guard::same_origin_sockets)))
         .route("/auth/register", post(accounts::auth::register))
@@ -145,15 +145,15 @@ pub fn build_router(state: AppState) -> Router {
         .route("/folders/{id}/color", patch(drive::folder_colors::set_folder_color))
         .route("/folders/{id}/download", get(drive::downloads::download_folder))
         .route("/fonts", get(drive::files::list_fonts))
-        .route("/files", get(drive::files::list_files).post(drive::files::upload_file_global))
+        .route("/files", get(drive::files::list_files).post(drive::files::upload_file_global).layer(upload_limits::file_uploads()))
         .route("/files/{id}", delete(drive::files::delete_file).patch(drive::files::update_file))
-        .route("/files/{id}/data", get(drive::files::get_file_data).put(drive::file_replace::replace_file_data))
+        .route("/files/{id}/data", get(drive::files::get_file_data).put(drive::file_replace::replace_file_data).layer(upload_limits::file_uploads()))
         .route("/docs/shared", get(drive::documents::list_shared_documents))
         .route("/docs/search", get(drive::content_search::search_document_text))
         .route("/docs", get(drive::documents::list_documents).post(drive::documents::create_document))
         .route("/docs/{id}", get(drive::documents::get_document).delete(drive::documents::delete_document).patch(drive::documents::update_document))
         .route("/docs/{id}/duplicate", post(drive::duplicates::duplicate_document))
-        .route("/docs/{id}/files", get(drive::document_assets::list_assets).post(drive::document_assets::upload_asset))
+        .route("/docs/{id}/files", get(drive::document_assets::list_assets).post(drive::document_assets::upload_asset).layer(upload_limits::file_uploads()))
         .route("/docs/{id}/files/{file_id}", get(drive::document_assets::get_asset_data))
         .route("/docs/{id}/files/share-unshared", post(drive::document_assets::attach_unshared_assets))
         .route("/docs/{id}/files/{file_id}/attach", post(drive::document_assets::attach_asset))
@@ -189,7 +189,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/projects/{id}/collaborators/{collab_id}", delete(sharing::members::remove_project_collaborator))
         .route("/projects/{id}/invite", post(sharing::members::invite_project_collaborator))
         .route("/projects/{id}/files", get(drive::projects::list_project_files).post(drive::projects::create_project_file))
-        .route("/projects/{id}/files/upload", post(drive::projects::upload_project_file))
+        .route("/projects/{id}/files/upload", post(drive::projects::upload_project_file).layer(upload_limits::file_uploads()))
         .route("/projects/{id}/entrypoint", put(drive::project_entrypoints::set_project_entrypoint))
         .route("/projects/{id}/folders", patch(drive::project_folders::rename_project_folder).delete(drive::project_folders::delete_project_folder))
         .route("/projects/{id}/files/{fid}", get(drive::projects::get_project_file).patch(drive::projects::update_project_file).delete(drive::projects::delete_project_file))
@@ -246,10 +246,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/documents/{id}", get(desktop::documents::pull_document).put(desktop::documents::push_document).delete(desktop::documents::delete_document).patch(desktop::documents::move_document))
         .route("/shared", get(desktop::documents::list_shared))
         .route("/spaces", get(desktop::spaces::list_spaces))
-        .route("/files", get(desktop::files::list_account_files).post(desktop::files::upload_account_file))
+        .route("/files", get(desktop::files::list_account_files).post(desktop::files::upload_account_file).layer(upload_limits::encoded_uploads()))
         .route("/files/{id}", get(desktop::files::pull_account_file).patch(desktop::files::rename_account_file).delete(desktop::files::delete_account_file))
         .route("/files/{id}/move", patch(desktop::files::move_account_file))
-        .route("/projects/{id}/file", get(desktop::project_files::pull_file).put(desktop::project_files::push_file).delete(desktop::project_files::delete_file))
+        .route("/projects/{id}/file", get(desktop::project_files::pull_file).put(desktop::project_files::push_file).delete(desktop::project_files::delete_file).layer(upload_limits::encoded_uploads()))
         .route("/documents/{id}/versions", get(drive::versions::get_versions).post(drive::versions::create_version))
         .route("/documents/{id}/versions/{version_id}", patch(drive::versions::rename_version))
         .route("/documents/{id}/versions/{version_id}/restore", post(drive::versions::restore_version))
