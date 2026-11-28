@@ -156,7 +156,7 @@
     }
 </script>
 
-<Modal title="Share {kind}" icon="ph:share-network" width="max-w-[500px]" onclose={onClose}>
+<Modal title="Share {kind}" icon="ph:share-network" width="max-w-2xl" onclose={onClose}>
     <div class="flex flex-col gap-5">
         <p class="text-xs text-[var(--color-ink-muted)]">{shareDescriptions[kind as ShareKind]}</p>
         {#if kind === 'document' && itemId}
