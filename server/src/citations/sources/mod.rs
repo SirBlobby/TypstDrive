@@ -40,6 +40,7 @@ pub async fn get_json(request: JsonRequest) -> Result<Option<Value>, ApiError> {
             .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS))
             .user_agent(USER_AGENT)
             .redirects(5)
+            .resolver(crate::remote_hosts::resolve_remote_host)
             .build();
         let mut call = agent.get(&request.url).set("Accept", request.accept);
         if let Some((header, key)) = &request.api_key {

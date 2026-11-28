@@ -22,6 +22,7 @@ mod git;
 mod hashing;
 mod metrics;
 mod models;
+mod origin_guard;
 mod packages;
 mod realtime;
 mod remote_hosts;

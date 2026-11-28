@@ -34,8 +34,18 @@ fn account_key(scope: &str, account: &str) -> String {
     format!("{scope}:account:{}", account.trim().to_lowercase())
 }
 
+fn address_group(ip_address: &str) -> String {
+    match ip_address.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V6(address)) if address.to_ipv4_mapped().is_none() => {
+            let [first, second, third, fourth, ..] = address.segments();
+            format!("{first:x}:{second:x}:{third:x}:{fourth:x}::/64")
+        }
+        _ => ip_address.to_string(),
+    }
+}
+
 fn address_key(scope: &str, ip_address: &str) -> String {
-    format!("{scope}:address:{ip_address}")
+    format!("{scope}:address:{}", address_group(ip_address))
 }
 
 fn locked_error(remaining: Duration) -> (StatusCode, String) {
@@ -99,5 +109,18 @@ impl LoginGuard {
         if let Ok(mut failures) = self.failures.lock() {
             failures.remove(&account_key(scope, account));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::address_group;
+
+    #[test]
+    fn groups_ipv6_by_prefix() {
+        assert_eq!(address_group("2001:db8:1:2:aaaa::1"), "2001:db8:1:2::/64");
+        assert_eq!(address_group("2001:db8:1:2:bbbb::9"), "2001:db8:1:2::/64");
+        assert_eq!(address_group("192.0.2.7"), "192.0.2.7");
+        assert_eq!(address_group("::ffff:192.0.2.7"), "::ffff:192.0.2.7");
     }
 }

@@ -7,7 +7,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    accounts, admin, api, citations, compile, desktop, drive, git, metrics, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, AppState,
+    accounts, admin, api, citations, compile, desktop, drive, git, metrics, origin_guard, packages, realtime, request_context, security_headers, sharing, teams, templates, themes, trash, AppState,
 };
 
 pub fn build_router(state: AppState) -> Router {
@@ -64,8 +64,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/export/{format}", post(compile::handlers::export_handler))
         .route("/export/pandoc/{format}", post(compile::pandoc::pandoc_export_handler))
         .route("/import/pandoc", post(compile::pandoc::pandoc_import_handler))
-        .route("/lsp/{id}", get(compile::lsp::lsp_handler))
-        .route("/projects/{id}/lsp", get(compile::lsp::project_lsp_handler))
+        .route("/lsp/{id}", get(compile::lsp::lsp_handler).layer(axum::middleware::from_fn(origin_guard::same_origin_sockets)))
+        .route("/projects/{id}/lsp", get(compile::lsp::project_lsp_handler).layer(axum::middleware::from_fn(origin_guard::same_origin_sockets)))
         .route("/auth/register", post(accounts::auth::register))
         .route("/auth/login", post(accounts::auth::login))
         .route("/auth/logout", post(accounts::auth::logout))
@@ -294,7 +294,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/teams", get(api::read::teams::list_teams));
 
     let yjs_routes = Router::new()
-        .route("/{id}", get(realtime::yjs::yjs_handler));
+        .route("/{id}", get(realtime::yjs::yjs_handler).layer(axum::middleware::from_fn(origin_guard::same_origin_sockets)));
 
     let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "../build".to_string());
 

@@ -41,11 +41,14 @@ fn timestamp(time: chrono::DateTime<chrono::Utc>) -> String {
     time.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
+const FULLY_RANDOM_UUID_BYTES: usize = 6;
+
 fn generate_code() -> String {
-    let random_bytes = Uuid::new_v4();
-    random_bytes
-        .as_bytes()
+    let first = Uuid::new_v4();
+    let second = Uuid::new_v4();
+    first.as_bytes()[..FULLY_RANDOM_UUID_BYTES]
         .iter()
+        .chain(&second.as_bytes()[..FULLY_RANDOM_UUID_BYTES])
         .take(CODE_LENGTH)
         .map(|byte| CODE_ALPHABET[(*byte as usize) % CODE_ALPHABET.len()] as char)
         .collect()
