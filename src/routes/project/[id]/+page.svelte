@@ -10,6 +10,8 @@
 	import AssetPreview from '#lib/components/project/AssetPreview.svelte';
 	import MarkdownPreview from '#lib/components/project/MarkdownPreview.svelte';
 	import { isMarkdownPath } from '#lib/ts/editor/file-kind';
+	import { resolveRelativePath } from '#lib/ts/editor/markdown-preview';
+	import { projectFileUrl } from '#lib/ts/drive/file-preview';
 	import ProjectToolbar from '#lib/components/project/ProjectToolbar.svelte';
 	import PublishPackageModal from '#lib/components/PublishPackageModal.svelte';
 	import ConfirmModal from '#lib/components/ConfirmModal.svelte';
@@ -128,6 +130,12 @@
 		lspSession = session;
 		return () => session.close();
 	});
+
+	function markdownImageUrl(href: string) {
+		const path = resolveRelativePath(activePath, href);
+		const file = path ? files.find((candidate) => candidate.path === path) : undefined;
+		return file ? projectFileUrl(projectId, file) : null;
+	}
 
 	function scheduleCompile() {
 		if (timeoutId) clearTimeout(timeoutId);
@@ -592,7 +600,7 @@
 			<div class="{readOnly || $layoutModeStore === 'preview' ? 'flex-1' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] flex flex-col">
 				{#if markdownEntry}
 					{#key activeFileId}
-						<MarkdownPreview text={markdownEntry.text} path={activePath} />
+						<MarkdownPreview text={markdownEntry.text} path={activePath} resolveImage={markdownImageUrl} />
 					{/key}
 				{:else}
 					<Preview {svgs} {jumpTo} onPageClick={syncCursorToPreview} />

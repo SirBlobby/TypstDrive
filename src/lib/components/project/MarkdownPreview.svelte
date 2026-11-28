@@ -1,14 +1,14 @@
 <script lang="ts">
 	import type * as Y from 'yjs';
 	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
-	import { renderMarkdown } from '#lib/ts/editor/markdown-preview';
+	import { renderMarkdown, type ImageResolver } from '#lib/ts/editor/markdown-preview';
 
 	const RENDER_DELAY_MS = 150;
 
-	let { text, path }: { text: Y.Text; path: string } = $props();
+	let { text, path, resolveImage }: { text: Y.Text; path: string; resolveImage?: ImageResolver } = $props();
 
 	let source = $state('');
-	let html = $derived(renderMarkdown(source));
+	let html = $derived(renderMarkdown(source, resolveImage));
 
 	$effect(() => {
 		let timer: number | undefined;

@@ -38,6 +38,9 @@
 	import CitationsModal from '../citations/CitationsModal.svelte';
 	import GitModal from '../git/GitModal.svelte';
 	import LatexFormattingBar from '../editor/LatexFormattingBar.svelte';
+	import MarkdownFormattingBar from '../editor/MarkdownFormattingBar.svelte';
+	import PlainFileBar from '../editor/PlainFileBar.svelte';
+	import { editorFileKind } from '#lib/ts/editor/file-kind';
 	import ZoomControl from '../editor/ZoomControl.svelte';
 
 	let {
@@ -68,6 +71,8 @@
 	let imageLibrary = $derived(projectImageLibrary(projectId, onFilesChanged));
 	let isLatexFile = $derived(activePath.toLowerCase().endsWith('.tex'));
 	let isTypstFile = $derived(activePath.toLowerCase().endsWith('.typ'));
+	let activeFileKind = $derived(activePath ? editorFileKind(activePath) : 'typst');
+	const plainFileLabels: Record<string, string> = { bibtex: 'Bibliography', yaml: 'YAML', toml: 'TOML', plain: 'Text' };
 	let isLatexProject = $derived(entrypoint.toLowerCase().endsWith('.tex'));
 	let canPublish = $derived(role === 'owner' && !isLatexProject);
 
@@ -504,6 +509,10 @@
 
 	{#if isLatexFile}
 		<LatexFormattingBar readOnly={!directEditing} uploadImage={uploadProjectImage} canComment={!isViewer} />
+	{:else if activeFileKind === 'markdown'}
+		<MarkdownFormattingBar readOnly={!directEditing} canComment={!isViewer} />
+	{:else if plainFileLabels[activeFileKind]}
+		<PlainFileBar readOnly={!directEditing} canComment={!isViewer} label={plainFileLabels[activeFileKind]} />
 	{:else}
 	<div class="flex items-center px-4 py-1.5 bg-[var(--color-surface-muted)] border-t border-[var(--color-line)] gap-4 overflow-x-auto no-scrollbar">
 		<div class="flex items-center gap-1">
