@@ -26,19 +26,24 @@
 		return width > 0 && height > 0 ? { width, height } : null;
 	}
 
-	type PreparedPage = { svg: string; size: { width: number; height: number } | null };
+	type PreparedPage = { id: number; svg: string; size: { width: number; height: number } | null };
+	type ShownPage = PreparedPage & { key: string };
 	let preparedPages = new Map<string, PreparedPage>();
+	let nextPageId = 0;
 
-	function preparePages(rawPages: string[]) {
+	function preparePages(rawPages: string[]): ShownPage[] {
 		const nextPrepared = new Map<string, PreparedPage>();
+		const occurrences = new Map<number, number>();
 		const result = rawPages.map((raw) => {
 			let prepared = nextPrepared.get(raw) ?? preparedPages.get(raw);
 			if (!prepared) {
 				const svg = safeSvg(raw);
-				prepared = { svg, size: pageSize(svg) };
+				prepared = { id: nextPageId++, svg, size: pageSize(svg) };
 			}
 			nextPrepared.set(raw, prepared);
-			return prepared;
+			const occurrence = occurrences.get(prepared.id) ?? 0;
+			occurrences.set(prepared.id, occurrence + 1);
+			return { ...prepared, key: `${prepared.id}:${occurrence}` };
 		});
 		preparedPages = nextPrepared;
 		return result;
@@ -83,7 +88,7 @@
 <div bind:this={viewport} class="relative h-full w-full overflow-auto bg-transparent py-8 px-4 flex flex-col items-center gap-8">
 	<div class="flex flex-col items-center gap-8 transition-transform duration-200" style="transform: scale({$documentZoomStore / 100}); transform-origin: top center; {columnWidth}">
 		{#if pages.length > 0}
-			{#each pages as page, i}
+			{#each pages as page, i (page.key)}
 				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 				<div
 					data-page={i + 1}
