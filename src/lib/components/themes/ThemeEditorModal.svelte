@@ -1,6 +1,6 @@
 <script lang="ts">
     import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { untrack } from 'svelte';
     import Modal from '../Modal.svelte';
     import ColorField from './ColorField.svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import PersonAvatar from '#lib/components/people/PersonAvatar.svelte';
     import { userStore } from '#lib/ts/auth';
     import { formatTimestamp } from '#lib/ts/item-info';

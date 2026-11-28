@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import type { HTMLInputAttributes } from 'svelte/elements';
 
     let { id, label, icon, type = 'text', placeholder = '', autocomplete, hint, value = $bindable('') }: {

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { userStore, signOut } from '#lib/ts/auth';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import UserAvatar from '#lib/components/UserAvatar.svelte';
     import { DOCS_URL } from '#lib/ts/links';
     import { brandingStore, logoUrl } from '#lib/ts/branding';

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import ActiveSessions from '#lib/components/settings/security/ActiveSessions.svelte';
     import ConnectedAccounts from '#lib/components/settings/security/ConnectedAccounts.svelte';

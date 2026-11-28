@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import SuggestionCard from './SuggestionCard.svelte';
     import { inActiveFile, itemFileId, itemSource, reviewTargetStore, type ReviewItem } from '#lib/ts/review-target';
     import {

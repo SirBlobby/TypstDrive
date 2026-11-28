@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { goto } from '$app/navigation';
     import { driveSidebarCollapsedStore } from '#lib/ts/store';
     import { fetchLatestRelease, fetchServerVersion, isNewerVersion, type LatestRelease } from '#lib/ts/version';

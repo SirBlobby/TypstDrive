@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
     import { draftToQuota, quotaToDraft, type QuotaDraft } from '#lib/ts/storage-quota';
     import type { PackagePolicy } from '#lib/ts/packages';

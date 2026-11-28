@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '../Modal.svelte';
     import GitLinkForm from './GitLinkForm.svelte';
     import { fetchGitPolicy, importGitProject, previewGitImport, repositoryName, type GitLinkRequest, type GitPolicy } from '#lib/ts/git';

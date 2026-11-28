@@ -30,7 +30,7 @@
 	import { layoutModeStore, previewVisibleStore, previewWindowStore, splitRatioStore } from '#lib/ts/preview-mode';
 	import PreviewWindowHost from '#lib/components/editor/PreviewWindowHost.svelte';
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { isPlaceholder, placeholderPath, type ProjectFile } from '#lib/ts/project-tree';
 	import { setProject, openFile, getOpenFile, closeFile, renameOpenFile, getAllText, openFiles, cleanupProject, presenceSources, setActiveFile, whenSynced } from '#lib/ts/yjs-project';
 	import { createFollowController } from '#lib/ts/follow';

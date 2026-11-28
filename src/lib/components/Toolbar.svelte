@@ -33,7 +33,7 @@
 	import { formatDocument } from '../ts/editor-format';
 	import PromptModal from './PromptModal.svelte';
 	import ConfirmModal from './ConfirmModal.svelte';
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { undo, redo } from '@codemirror/commands';
 	import type { DocumentRole } from '#lib/ts/document-role';
 	import { suggestingModeStore } from '#lib/ts/suggestions';

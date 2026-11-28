@@ -1,7 +1,7 @@
 <script lang="ts">
     import { modalCancelClass } from '#lib/ts/modal-ui';
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '#lib/components/Modal.svelte';
     import { inputClass, secondaryButtonClass } from '#lib/ts/settings-ui';
     import { refreshTeams, type TeamSummary } from '#lib/ts/workspace';

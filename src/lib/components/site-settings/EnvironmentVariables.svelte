@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import type { EnvironmentVariable } from '#lib/ts/server-info';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import type { PreviewKind } from '#lib/ts/file-preview';
 
     let { url, name, kind, zoom = 1, pdfClass = 'max-w-5xl rounded-lg' }: {

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { formatBytes, secondaryButtonClass } from '#lib/ts/settings-ui';
     import { fetchServerInfo, type ServerInfo } from '#lib/ts/server-info';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';

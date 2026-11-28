@@ -1,7 +1,7 @@
 <script lang="ts">
     import { modalPrimaryClass } from '#lib/ts/modal-ui';
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from './Modal.svelte';
     import UnsharedFilesWarning from './UnsharedFilesWarning.svelte';
     import ReplaceFileButton from './drive/ReplaceFileButton.svelte';

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { userStore } from '#lib/ts/auth';
     import { canOpenItem, fetchLinkStatus, unlockLink, type LinkKind, type LinkStatus } from '#lib/ts/share-links';
 

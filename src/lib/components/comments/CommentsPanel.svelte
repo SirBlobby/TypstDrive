@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount, tick, untrack } from 'svelte';
     import { get } from 'svelte/store';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import ConfirmModal from '#lib/components/ConfirmModal.svelte';
     import CommentThreadCard from './CommentThreadCard.svelte';
     import CommentComposer from './CommentComposer.svelte';

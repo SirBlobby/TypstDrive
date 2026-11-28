@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { failureShare, formatDuration, type TimingSummary } from '#lib/ts/performance';
     const timingChart = () => import('./TimingChart.svelte');
 

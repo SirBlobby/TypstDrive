@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import NewFileModal from './NewFileModal.svelte';
 	import PromptModal from '../PromptModal.svelte';
 	import FilePresence from './FilePresence.svelte';

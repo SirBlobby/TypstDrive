@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { providerIcon, signInUrl, type SignInProvider } from '#lib/ts/auth-options';
 
     let { providers, redirect, showDivider = false }: {

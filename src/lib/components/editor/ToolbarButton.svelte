@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 
 	let { icon, title, onclick }: { icon: string; title: string; onclick: () => void } = $props();
 </script>

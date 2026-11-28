@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { exportFormatsFor, exportSavedItem, type ExportFormat } from '#lib/ts/typst-api';
 
     let { kind, id, name, onstart, isLatex = false }: {

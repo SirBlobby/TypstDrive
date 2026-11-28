@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import HeaderIconButton from '../editor/header/HeaderIconButton.svelte';
 	import type { PresentationLayout } from '#lib/ts/presentation-sync';
 

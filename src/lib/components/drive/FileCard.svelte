@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { fileDataUrl } from '#lib/ts/item-info';
     import ReplaceFileButton from './ReplaceFileButton.svelte';
     import SelectCheckbox from './SelectCheckbox.svelte';

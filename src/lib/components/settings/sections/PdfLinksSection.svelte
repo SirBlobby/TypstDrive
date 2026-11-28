@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import PdfLinkRow from '#lib/components/settings/PdfLinkRow.svelte';

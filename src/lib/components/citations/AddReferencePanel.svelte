@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import BibliographyFilePicker from './BibliographyFilePicker.svelte';
     import { editorViewStore } from '#lib/ts/store';
     import {

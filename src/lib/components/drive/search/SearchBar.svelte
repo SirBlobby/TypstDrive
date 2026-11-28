@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import SearchChip from './SearchChip.svelte';
     import SearchSuggestionList from './SearchSuggestionList.svelte';
     import {

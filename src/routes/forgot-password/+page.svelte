@@ -1,6 +1,6 @@
 <script lang="ts">
     import { brandingStore } from '#lib/ts/branding';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { postJson, readError } from '#lib/ts/auth-options';
     import AuthShell from '#lib/components/auth/AuthShell.svelte';
     import AuthField from '#lib/components/auth/AuthField.svelte';

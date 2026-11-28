@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Footer from '#lib/components/Footer.svelte';
     import { brandingStore, logoUrl } from '#lib/ts/branding';
 

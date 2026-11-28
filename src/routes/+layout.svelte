@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import '#lib/ts/icons';
 	import { fetchUser, userStore } from '#lib/ts/auth';
 	import { installWorkspaceHeader } from '#lib/ts/workspace';
 	import { onMount } from 'svelte';

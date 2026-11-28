@@ -4,7 +4,7 @@
     import { onMount, untrack } from 'svelte';
     import { page } from '$app/state';
     import { userStore } from '#lib/ts/auth';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Navbar from '#lib/components/drive/Navbar.svelte';
     import FolderRow from '#lib/components/drive/FolderRow.svelte';
     import ProjectFolderRow from '#lib/components/drive/ProjectFolderRow.svelte';

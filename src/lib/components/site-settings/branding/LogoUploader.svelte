@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { brandingStore, logoUrl } from '#lib/ts/branding';
     import { secondaryButtonClass } from '#lib/ts/settings-ui';
     const imageCropDialog = () => import('#lib/components/ImageCropDialog.svelte');

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import type { ItemSelection } from '#lib/ts/drive-selection.svelte';
 
     let { selection, label, class: className = '' }: { selection: ItemSelection; label: string; class?: string } = $props();

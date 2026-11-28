@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import CommentMessage from './CommentMessage.svelte';
     import CommentComposer from './CommentComposer.svelte';
     import { createComment, updateComment, type CommentThread, type CommentView } from '#lib/ts/comments';

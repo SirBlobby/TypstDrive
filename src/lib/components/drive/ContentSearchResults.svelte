@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import DriveEmptyState from './DriveEmptyState.svelte';
     import DriveSectionTitle from './DriveSectionTitle.svelte';
     import { starKey, starredStore } from '#lib/ts/stars';

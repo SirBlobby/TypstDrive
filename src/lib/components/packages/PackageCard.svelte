@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import type { Package, PackageVersion } from '#lib/ts/packages';
 
     let { pkg, canDelete, canManage, onDelete, onManageAccess }: {

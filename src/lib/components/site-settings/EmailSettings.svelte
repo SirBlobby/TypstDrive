@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { inputClass, primaryButtonClass } from '#lib/ts/settings-ui';
     import { fetchAuthentication, sendTestEmail, type EmailStatus } from '#lib/ts/admin-auth';
     import { emailProviderGuides } from '#lib/ts/email-providers';

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { downloadFolder } from '#lib/ts/downloads';
     import { folderIconStyle, folderTileStyle } from '#lib/ts/folder-colors';
     import FolderColorPicker from './FolderColorPicker.svelte';

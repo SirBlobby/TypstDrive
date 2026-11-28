@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
     import { fetchLatexAdminPolicy, saveLatexAdminPolicy, type LatexPolicy } from '#lib/ts/latex-policy';
     import { fetchServerInfo, type ServerInfo } from '#lib/ts/server-info';

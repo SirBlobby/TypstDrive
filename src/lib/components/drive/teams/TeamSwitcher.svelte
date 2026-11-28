@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import CreateTeamModal from './CreateTeamModal.svelte';
     import TeamSettingsModal from './TeamSettingsModal.svelte';
     import {

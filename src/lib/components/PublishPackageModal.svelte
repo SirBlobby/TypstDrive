@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { modalCancelClass, modalPrimaryClass } from '#lib/ts/modal-ui';
 	import { onMount } from 'svelte';
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import Modal from './Modal.svelte';
 	import { fetchUserPackagePolicy, type PackageVisibility, type UserPackagePolicy } from '#lib/ts/packages';
 	import { formatBytes } from '#lib/ts/settings-ui';

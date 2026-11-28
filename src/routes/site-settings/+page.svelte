@@ -2,7 +2,7 @@
     import { brandingStore } from '#lib/ts/branding';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { userStore, signOut } from '#lib/ts/auth';
     import SettingsSidebar from '#lib/components/settings/SettingsSidebar.svelte';
     import UserManagement from '#lib/components/site-settings/UserManagement.svelte';

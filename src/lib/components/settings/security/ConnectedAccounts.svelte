@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { formatDate, secondaryButtonClass } from '#lib/ts/settings-ui';
     import { fetchAuthOptions, providerIcon, signInUrl, type SignInProvider } from '#lib/ts/auth-options';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';

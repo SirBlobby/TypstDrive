@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import GitChangeList from './GitChangeList.svelte';
     import GitLinkSettings from './GitLinkSettings.svelte';
     import { formatDate } from '#lib/ts/settings-ui';

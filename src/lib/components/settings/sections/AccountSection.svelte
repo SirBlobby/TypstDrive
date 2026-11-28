@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { userStore } from '#lib/ts/auth';
     import { inputClass, primaryButtonClass, secondaryButtonClass } from '#lib/ts/settings-ui';
     import AvatarUploader from '#lib/components/settings/AvatarUploader.svelte';

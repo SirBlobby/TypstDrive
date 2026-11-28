@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { editorViewStore } from '#lib/ts/store';
 	import { currentKeybind } from '#lib/ts/keybinds/keybinds-store';
 	import { shortcutText } from '#lib/ts/keybinds/key-format';

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import KeybindRecorder from '#lib/components/settings/KeybindRecorder.svelte';

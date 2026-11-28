@@ -1,6 +1,6 @@
 <script lang="ts">
     import { tick, untrack } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 
     let { placeholder, submitLabel, initialValue = '', compact = false, onSubmit, onCancel }: {
         placeholder: string;

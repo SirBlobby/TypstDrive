@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { goto } from '$app/navigation';
     import StarButton from '#lib/components/drive/stars/StarButton.svelte';
     import SelectCheckbox from './SelectCheckbox.svelte';

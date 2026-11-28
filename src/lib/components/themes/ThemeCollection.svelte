@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import ThemeEditorModal from './ThemeEditorModal.svelte';
     import ConfirmModal from '../ConfirmModal.svelte';
     import { themeStore } from '#lib/ts/store';

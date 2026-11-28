@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import type { TeamAccess } from '#lib/ts/ownership';
 
     let { team }: { team: TeamAccess } = $props();

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { goto } from '$app/navigation';
     import { fileType, formatSize, itemModified, itemName, type DriveEntry } from '#lib/ts/drive-filters';
     import { folderIconStyle } from '#lib/ts/folder-colors';

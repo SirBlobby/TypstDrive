@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { dangerButtonClass, formatDate, secondaryButtonClass } from '#lib/ts/settings-ui';
     import { copyText, itemPageUrl, pdfLinkUrl, type PdfLink } from '#lib/ts/pdf-links';
 

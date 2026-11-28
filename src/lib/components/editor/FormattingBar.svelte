@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { text } from '#lib/ts/yjs-setup';
 	import { editorViewStore } from '#lib/ts/store';
 	import { activeLspSession } from '#lib/ts/lsp-session.svelte';

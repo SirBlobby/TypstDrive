@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { thumbnailUrl, type UniverseTemplate } from '#lib/ts/templates';
 
     let { template, class: className = '' }: { template: UniverseTemplate; class?: string } = $props();

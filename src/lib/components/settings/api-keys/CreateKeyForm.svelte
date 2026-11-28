@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { inputClass, primaryButtonClass } from '#lib/ts/settings-ui';
     import { API_SCOPES, EXPIRY_CHOICES, type CreatedApiKey } from '#lib/ts/api-keys';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 
     let { count, canMove, canStar, starred, busy, onMove, onStar, onDelete, onClear }: {
         count: number;

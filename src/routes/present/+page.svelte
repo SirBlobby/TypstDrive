@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { brandingStore } from '#lib/ts/branding';
 	import SlideStage from '#lib/components/presentation/SlideStage.svelte';
 	import { safeSvg } from '#lib/ts/safe-svg';

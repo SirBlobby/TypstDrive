@@ -9,7 +9,7 @@
 </script>
 
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 
 	let { mode }: { mode: EditingMode } = $props();
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { setStarred, starKey, starredStore, type StarKind } from '#lib/ts/stars';
 
     let { kind, id, name, sizeClass = 'text-base' }: {

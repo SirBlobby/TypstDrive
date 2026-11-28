@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { brandingStore } from '#lib/ts/branding';
 	import { onMount } from 'svelte';
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { userStore } from '#lib/ts/auth';
 	import { fetchUserPackagePolicy, type Package, type UserPackagePolicy } from '#lib/ts/packages';
 	import Navbar from '#lib/components/drive/Navbar.svelte';

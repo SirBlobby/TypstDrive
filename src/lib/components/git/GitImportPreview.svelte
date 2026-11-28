@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { formatBytes } from '#lib/ts/settings-ui';
     import { shortCommit, type GitImportPreview } from '#lib/ts/git';
 

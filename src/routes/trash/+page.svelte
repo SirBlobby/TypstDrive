@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { userStore } from '#lib/ts/auth';
     import { brandingStore } from '#lib/ts/branding';
     import { activeTeamStore } from '#lib/ts/workspace';

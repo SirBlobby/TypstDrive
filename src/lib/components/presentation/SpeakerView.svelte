@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import SlideStage from './SlideStage.svelte';
 	import type { DrawingTool, Point, Stroke } from './drawing';
 	import type { Slide } from './slides';

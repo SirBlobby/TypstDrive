@@ -3,7 +3,7 @@
 	import { duplicateItem, duplicatePath } from '#lib/ts/duplicates';
 	import { userStore } from '#lib/ts/auth';
 	import { goto } from '$app/navigation';
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { undo, redo } from '@codemirror/commands';
 	import { editorViewStore, commentsSidebarOpen, connectionStatus } from '../../ts/store';
 	import { suggestingModeStore } from '../../ts/suggestions';

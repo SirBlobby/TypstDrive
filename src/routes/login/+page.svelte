@@ -3,7 +3,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { userStore } from '#lib/ts/auth';
     import { fetchAuthOptions, postJson, readError, type AuthOptions } from '#lib/ts/auth-options';
     import AuthShell from '#lib/components/auth/AuthShell.svelte';

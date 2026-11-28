@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { userStore } from '#lib/ts/auth';
     import UserAvatar from '#lib/components/UserAvatar.svelte';
     const imageCropDialog = () => import('#lib/components/ImageCropDialog.svelte');

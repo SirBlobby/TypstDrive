@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { connectedUsers, type AwarenessUser } from '#lib/ts/store';
 	import { followingStore, stopFollowing, toggleFollow } from '#lib/ts/follow';
 	import UserAvatar from './UserAvatar.svelte';

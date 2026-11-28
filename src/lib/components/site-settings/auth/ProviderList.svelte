@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
     import SettingsCard from '#lib/components/settings/SettingsCard.svelte';
     import type { ProviderStatus } from '#lib/ts/admin-auth';

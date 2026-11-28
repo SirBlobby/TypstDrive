@@ -3,7 +3,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { userStore, signOut } from '#lib/ts/auth';
     import SettingsSidebar from '#lib/components/settings/SettingsSidebar.svelte';
     import AccountSection from '#lib/components/settings/sections/AccountSection.svelte';

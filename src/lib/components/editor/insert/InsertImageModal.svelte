@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, untrack } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import Modal from '#lib/components/Modal.svelte';
     import { focusOnMount } from '#lib/ts/focus-on-mount';
     import { formatSize } from '#lib/ts/drive-filters';

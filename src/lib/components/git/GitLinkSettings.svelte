@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, untrack } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import ConfirmModal from '../ConfirmModal.svelte';
     import {
         deleteGitLink,

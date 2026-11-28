@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 	import { editorViewStore } from '#lib/ts/store';
 	import { openFind, openReplace, wrapSelection } from '#lib/ts/editor-insert';
 	import {

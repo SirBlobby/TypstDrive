@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { fetchStarred, starKey, starredStore, type StarKind } from '#lib/ts/stars';
     import { sortItems, type DriveEntry, type DriveFilters, type ViewMode } from '#lib/ts/drive-filters';
     import { matchesItem, type DriveSearch } from '#lib/ts/drive-search';

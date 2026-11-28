@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { formatBytes } from '#lib/ts/settings-ui';
     import { fetchPerformance, formatUptime, TIMING_DETAILS, type PerformancePeriod, type PerformanceReport } from '#lib/ts/performance';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';

@@ -2,7 +2,7 @@
     import { themeStore, darkModeStore } from '../ts/store';
     import { builtinThemeNames } from '../ts/builtin-palettes';
     import { customThemesStore, themeKey } from '../ts/custom-themes';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
 
     let { class: className = '' } = $props();
 </script>

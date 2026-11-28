@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@iconify/svelte";
+  import Icon from "@iconify/svelte/dist/OfflineIcon.svelte";
   import type { Snippet } from "svelte";
   import type { ModalTone } from "#lib/ts/modal-ui";
 

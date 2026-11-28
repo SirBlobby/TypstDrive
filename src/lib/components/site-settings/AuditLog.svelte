@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Icon from '@iconify/svelte';
+    import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { inputClass, secondaryButtonClass } from '#lib/ts/settings-ui';
     import { fetchAuditLog, formatTimestamp, type AuditEntry } from '#lib/ts/admin-auth';
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
