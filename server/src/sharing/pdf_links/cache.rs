@@ -51,6 +51,13 @@ pub fn fingerprint(input: &ProjectInput) -> String {
     crate::hashing::to_hex(hasher.finalize().as_slice())
 }
 
+pub fn compile_lock(link_id: &str) -> std::sync::Arc<tokio::sync::Mutex<()>> {
+    static LOCKS: OnceLock<Mutex<HashMap<String, std::sync::Arc<tokio::sync::Mutex<()>>>>> = OnceLock::new();
+    let mut locks = LOCKS.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    locks.retain(|_, lock| std::sync::Arc::strong_count(lock) > 1);
+    locks.entry(link_id.to_string()).or_default().clone()
+}
+
 pub fn latest(link_id: &str) -> Option<(String, Vec<u8>)> {
     let cache = cache().lock().ok()?;
     cache.get(link_id).map(|cached| (cached.fingerprint.clone(), cached.bytes.clone()))

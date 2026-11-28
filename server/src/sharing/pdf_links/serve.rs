@@ -81,6 +81,15 @@ async fn record_view(state: &AppState, link_id: &str) {
         .await;
 }
 
+async fn fresh_response(state: &AppState, link_id: &str, slug: &str, headers: &HeaderMap) -> Option<Response> {
+    let (fingerprint, bytes) = cache::fresh(link_id)?;
+    record_view(state, link_id).await;
+    if matches_etag(headers, &fingerprint) {
+        return Some(not_modified(&fingerprint));
+    }
+    Some(pdf_response(slug, &fingerprint, bytes))
+}
+
 pub async fn serve_pdf(State(state): State<AppState>, Path(slug): Path<String>, headers: HeaderMap) -> Response {
     if !load_policy(&state).await.enabled {
         return not_found();
@@ -95,12 +104,13 @@ pub async fn serve_pdf(State(state): State<AppState>, Path(slug): Path<String>, 
         return not_found();
     };
 
-    if let Some((fingerprint, bytes)) = cache::fresh(&link_id) {
-        record_view(&state, &link_id).await;
-        if matches_etag(&headers, &fingerprint) {
-            return not_modified(&fingerprint);
-        }
-        return pdf_response(&slug, &fingerprint, bytes);
+    if let Some(response) = fresh_response(&state, &link_id, &slug, &headers).await {
+        return response;
+    }
+    let lock = cache::compile_lock(&link_id);
+    let _compiling = lock.lock().await;
+    if let Some(response) = fresh_response(&state, &link_id, &slug, &headers).await {
+        return response;
     }
 
     let input = match (document_id, project_id) {
