@@ -6,7 +6,7 @@ use crate::AppState;
 
 pub async fn user_by_email(state: &AppState, email: &str) -> Result<Option<User>, (StatusCode, String)> {
     sqlx::query_as::<_, User>(sql(
-        "SELECT id, username, email, password_hash, is_admin, email_verified FROM users \
+        "SELECT id, username, email, password_hash, is_admin, email_verified, password_change_required, two_factor_method FROM users \
          WHERE LOWER(email) = LOWER($1) AND account_kind = 'user'",
     ))
     .bind(email.trim())
@@ -17,7 +17,7 @@ pub async fn user_by_email(state: &AppState, email: &str) -> Result<Option<User>
 
 pub async fn user_by_id(state: &AppState, user_id: &str) -> Result<Option<User>, (StatusCode, String)> {
     sqlx::query_as::<_, User>(sql(
-        "SELECT id, username, email, password_hash, is_admin, email_verified FROM users \
+        "SELECT id, username, email, password_hash, is_admin, email_verified, password_change_required, two_factor_method FROM users \
          WHERE id = $1 AND account_kind = 'user'",
     ))
     .bind(user_id)

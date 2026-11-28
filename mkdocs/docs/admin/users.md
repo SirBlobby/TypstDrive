@@ -6,11 +6,20 @@
 
 - **Grant or revoke** administrator rights.
 - **Mark the email** as confirmed or not.
-- **Set password**, for example when someone forgot theirs and email is not set up. This signs them out everywhere.
+- **Temporary password**, for example when someone forgot theirs and email is not set up. TypstDrive creates a random password and shows it once. It works for one sign-in within 72 hours, and the user must choose a new password right away. It replaces their old password and signs them out everywhere. Their two-factor authentication stays on.
+- **Turn off two-factor** for someone who lost their authenticator app and backup codes.
 - **Sign out everywhere**, ending every browser session they have.
 - **Delete** the account and everything it owns. Teams they owned pass to another member.
 
-**Create** adds a new account with a username, email and temporary password, optionally as an administrator. This works even when public sign-up is off.
+**Create** adds a new account with a username and email, optionally as an administrator, and shows a temporary password for it. This works even when public sign-up is off.
+
+The list marks accounts that use two-factor authentication with **2FA**, and accounts that have not used their temporary password yet with **Temporary password**.
+
+### Two-factor for administrators
+
+Creating users, granting or revoking administrator rights, changing email confirmation, temporary passwords, turning off someone's two-factor and deleting users are locked until your own account uses two-factor authentication, either an authenticator app or email codes. Turn it on in **Settings → Security**. Signing a user out everywhere always works.
+
+If you lose your authenticator app and backup codes and there is no other administrator, set `TWO_FACTOR_RESET_EMAIL` to your email address and restart TypstDrive. It turns off two-factor for that account. Remove the setting and restart again afterwards. See [Settings reference](../self-hosting/configuration.md).
 
 ## Who can sign up
 

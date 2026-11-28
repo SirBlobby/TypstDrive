@@ -6,7 +6,7 @@
 
 | Setting | Default | What it does |
 |---|---|---|
-| Password sign-in | On | When off, members must use single sign-on or email codes. Administrators can always use their password. |
+| Password sign-in | On | When off, members must use single sign-on or email codes. Administrators can always use their password, followed by their two-factor code when it is on. |
 | Sign-in with email codes | On | Lets people sign in with a one-time code sent by email. Needs email. |
 | Create accounts on first sign-in | Off | Makes a new account when someone signs in with a provider for the first time. |
 | Require verified email | Off | People must confirm their email before they can sign in. Needs email. |

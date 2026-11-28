@@ -98,6 +98,8 @@ pub const INDEXES: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_document_stars_document ON document_stars (document_id)",
     "CREATE INDEX IF NOT EXISTS idx_project_stars_project ON project_stars (project_id)",
     "CREATE INDEX IF NOT EXISTS idx_desktop_link_codes_user ON desktop_link_codes (user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_two_factor_backup_codes_user ON two_factor_backup_codes (user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_pending_sign_ins_user ON pending_sign_ins (user_id)",
     "CREATE INDEX IF NOT EXISTS idx_package_members_user ON package_members (user_id)",
     "CREATE INDEX IF NOT EXISTS idx_package_teams_team ON package_teams (team_id)",
     "CREATE INDEX IF NOT EXISTS idx_teams_created_by ON teams (created_by)",

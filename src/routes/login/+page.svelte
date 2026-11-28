@@ -11,7 +11,8 @@
     import FormNotice from '#lib/components/auth/FormNotice.svelte';
     import SsoButtons from '#lib/components/auth/SsoButtons.svelte';
     import EmailCodeForm from '#lib/components/auth/EmailCodeForm.svelte';
-    import type { User } from '#lib/ts/account/auth';
+    import SignInSteps from '#lib/components/auth/SignInSteps.svelte';
+    import { fetchPendingStep, isPendingStep, type PendingStep, type SignInResult } from '#lib/ts/account/sign-in';
     import { safeRedirectPath } from '#lib/ts/site/links';
 
     const EMAIL_NOT_VERIFIED = 428;
@@ -24,6 +25,7 @@
     let submitting = $state(false);
     let options = $state<AuthOptions | null>(null);
     let useEmailCode = $state(false);
+    let pendingStep = $state<PendingStep | null>(null);
 
     let passwordAvailable = $derived(options?.password_login_enabled ?? true);
     let emailCodeAvailable = $derived(options?.email_code_login_available ?? false);
@@ -44,7 +46,7 @@
                 errorMsg = await readError(res, 'Login failed');
                 return;
             }
-            finishSignIn(await res.json());
+            handleResult(await res.json());
         } catch (e: any) {
             errorMsg = e.message;
         } finally {
@@ -52,9 +54,22 @@
         }
     }
 
-    function finishSignIn(user: User) {
-        userStore.set(user);
+    function handleResult(result: SignInResult) {
+        errorMsg = '';
+        if (isPendingStep(result)) {
+            pendingStep = result;
+            return;
+        }
+        pendingStep = null;
+        userStore.set(result);
         goto(redirectTo);
+    }
+
+    function restart() {
+        pendingStep = null;
+        password = '';
+        errorMsg = '';
+        goto(`/login?redirect=${encodeURIComponent(redirectTo)}`, { replaceState: true });
     }
 
     function switchMethod(toEmailCode: boolean) {
@@ -77,6 +92,10 @@
 
     onMount(async () => {
         if ($userStore) { goto('/drive'); return; }
+        if (page.url.searchParams.get('step') === 'continue') {
+            pendingStep = await fetchPendingStep();
+            if (!pendingStep) errorMsg = 'This sign-in has expired. Sign in again.';
+        }
         options = await fetchAuthOptions();
     });
 </script>
@@ -87,57 +106,63 @@
 </svelte:head>
 
 <AuthShell title="Welcome back" subtitle={`Sign in to your ${$brandingStore.site_name} workspace`}>
-    {#if errorMsg}
-        <FormNotice>
-            {errorMsg}
-            {#if needsVerification}
-                <button type="button" onclick={resendVerification} class="block mt-1 underline font-semibold">Send a new verification email</button>
-            {/if}
-        </FormNotice>
-    {/if}
-    {#if infoMsg}
-        <FormNotice tone="success">{infoMsg}</FormNotice>
-    {/if}
-    {#if $brandingStore.login_message}
-        <FormNotice tone="info"><span class="whitespace-pre-line">{$brandingStore.login_message}</span></FormNotice>
-    {/if}
-
-    {#if showEmailCode}
-        <EmailCodeForm bind:email onSignedIn={finishSignIn} />
-        {#if passwordAvailable}
-            <div class="text-center -mt-2">
-                <button type="button" onclick={() => switchMethod(false)} class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Sign in with a password instead</button>
-            </div>
+    {#if pendingStep}
+        {#key pendingStep.next_step}
+            <SignInSteps step={pendingStep} onResult={handleResult} onRestart={restart} />
+        {/key}
+    {:else}
+        {#if errorMsg}
+            <FormNotice>
+                {errorMsg}
+                {#if needsVerification}
+                    <button type="button" onclick={resendVerification} class="block mt-1 underline font-semibold">Send a new verification email</button>
+                {/if}
+            </FormNotice>
         {/if}
-    {:else if passwordAvailable}
-        <form class="space-y-6" onsubmit={login}>
-            <div class="space-y-5">
-                <AuthField id="email" label="Email address" icon="mdi:email" type="email" autocomplete="email" placeholder="user@example.com" bind:value={email} />
-                <AuthField id="password" label="Password" icon="mdi:lock" type="password" autocomplete="current-password" placeholder="Your password" bind:value={password} />
-            </div>
+        {#if infoMsg}
+            <FormNotice tone="success">{infoMsg}</FormNotice>
+        {/if}
+        {#if $brandingStore.login_message}
+            <FormNotice tone="info"><span class="whitespace-pre-line">{$brandingStore.login_message}</span></FormNotice>
+        {/if}
 
-            {#if options?.password_reset_available}
-                <div class="text-right -mt-3">
-                    <a href="/forgot-password" class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Forgot your password?</a>
+        {#if showEmailCode}
+            <EmailCodeForm bind:email onSignedIn={handleResult} />
+            {#if passwordAvailable}
+                <div class="text-center -mt-2">
+                    <button type="button" onclick={() => switchMethod(false)} class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Sign in with a password instead</button>
                 </div>
             {/if}
+        {:else if passwordAvailable}
+            <form class="space-y-6" onsubmit={login}>
+                <div class="space-y-5">
+                    <AuthField id="email" label="Email address" icon="mdi:email" type="email" autocomplete="email" placeholder="user@example.com" bind:value={email} />
+                    <AuthField id="password" label="Password" icon="mdi:lock" type="password" autocomplete="current-password" placeholder="Your password" bind:value={password} />
+                </div>
 
-            <button type="submit" disabled={submitting} class="group w-full flex justify-center items-center gap-2 py-3 px-4 text-sm font-bold rounded-md text-white bg-[var(--color-accent)] hover:opacity-90 focus:outline-none transition disabled:opacity-60">
-                Sign in
-                <Icon icon="mdi:arrow-right" class="text-lg group-hover:translate-x-1 transition-transform" />
-            </button>
-        </form>
-        {#if emailCodeAvailable}
-            <div class="text-center -mt-2">
-                <button type="button" onclick={() => switchMethod(true)} class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Email me a sign-in code instead</button>
-            </div>
+                {#if options?.password_reset_available}
+                    <div class="text-right -mt-3">
+                        <a href="/forgot-password" class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Forgot your password?</a>
+                    </div>
+                {/if}
+
+                <button type="submit" disabled={submitting} class="group w-full flex justify-center items-center gap-2 py-3 px-4 text-sm font-bold rounded-md text-white bg-[var(--color-accent)] hover:opacity-90 focus:outline-none transition disabled:opacity-60">
+                    Sign in
+                    <Icon icon="mdi:arrow-right" class="text-lg group-hover:translate-x-1 transition-transform" />
+                </button>
+            </form>
+            {#if emailCodeAvailable}
+                <div class="text-center -mt-2">
+                    <button type="button" onclick={() => switchMethod(true)} class="text-xs font-semibold text-[var(--color-accent)] hover:underline">Email me a sign-in code instead</button>
+                </div>
+            {/if}
         {/if}
-    {/if}
 
-    {#if options}
-        <SsoButtons providers={options.providers} redirect={redirectTo} showDivider={passwordAvailable || emailCodeAvailable} />
-        {#if !passwordAvailable && !emailCodeAvailable && options.providers.length === 0}
-            <FormNotice tone="info">No sign-in method is available. Contact your administrator.</FormNotice>
+        {#if options}
+            <SsoButtons providers={options.providers} redirect={redirectTo} showDivider={passwordAvailable || emailCodeAvailable} />
+            {#if !passwordAvailable && !emailCodeAvailable && options.providers.length === 0}
+                <FormNotice tone="info">No sign-in method is available. Contact your administrator.</FormNotice>
+            {/if}
         {/if}
     {/if}
 

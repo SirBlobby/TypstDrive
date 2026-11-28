@@ -65,7 +65,7 @@ pub async fn confirm_reset(
 
     let password_hash = passwords::hash_password(&payload.password).await.map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error))?;
     sqlx::query(sql(
-        "UPDATE users SET password_hash = $1, email_verified = CASE WHEN LOWER(email) = LOWER($2) THEN 1 ELSE email_verified END WHERE id = $3",
+        "UPDATE users SET password_hash = $1, password_change_required = 0, temporary_password_expires_at = NULL, email_verified = CASE WHEN LOWER(email) = LOWER($2) THEN 1 ELSE email_verified END WHERE id = $3",
     ))
     .bind(&password_hash)
     .bind(&consumed.email)

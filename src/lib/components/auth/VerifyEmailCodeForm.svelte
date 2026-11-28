@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { postJson, readError } from '#lib/ts/account/auth-options';
-    import type { User } from '#lib/ts/account/auth';
+    import type { SignInResult } from '#lib/ts/account/sign-in';
     import FormNotice from './FormNotice.svelte';
 
     const RESEND_WAIT_SECONDS = 60;
@@ -9,7 +9,7 @@
     let { email, canSkip, onVerified, onSkip }: {
         email: string;
         canSkip: boolean;
-        onVerified: (user: User) => void;
+        onVerified: (result: SignInResult) => void;
         onSkip: () => void;
     } = $props();
 

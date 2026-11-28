@@ -26,6 +26,12 @@ pub struct User {
     #[serde(with = "serde_i64_bool", default)]
     #[sqlx(default)]
     pub email_verified: i64,
+    #[serde(skip)]
+    #[sqlx(default)]
+    pub password_change_required: i64,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub two_factor_method: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -46,6 +52,12 @@ pub struct AdminUserView {
     #[serde(with = "serde_i64_bool")]
     pub email_verified: i64,
     pub created_at: String,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub two_factor_method: Option<String>,
+    #[serde(with = "serde_i64_bool", default)]
+    #[sqlx(default)]
+    pub password_change_required: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -291,7 +303,6 @@ pub struct InviteRequest {
 pub struct AdminCreateUserRequest {
     pub username: String,
     pub email: String,
-    pub password: String,
     pub is_admin: Option<bool>,
 }
 

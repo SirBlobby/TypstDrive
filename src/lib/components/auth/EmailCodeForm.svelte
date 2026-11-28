@@ -1,13 +1,13 @@
 <script lang="ts">
     import Icon from '@iconify/svelte/dist/OfflineIcon.svelte';
     import { postJson, readError } from '#lib/ts/account/auth-options';
-    import type { User } from '#lib/ts/account/auth';
+    import type { SignInResult } from '#lib/ts/account/sign-in';
     import AuthField from './AuthField.svelte';
     import FormNotice from './FormNotice.svelte';
 
     const RESEND_WAIT_SECONDS = 60;
 
-    let { email = $bindable(''), onSignedIn }: { email?: string; onSignedIn: (user: User) => void } = $props();
+    let { email = $bindable(''), onSignedIn }: { email?: string; onSignedIn: (result: SignInResult) => void } = $props();
 
     let step = $state<'email' | 'code'>('email');
     let code = $state('');

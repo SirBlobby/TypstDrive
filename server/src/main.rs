@@ -119,6 +119,8 @@ async fn main() {
         themes: Arc::new(RwLock::new(themes::cache::ThemeCache::default())),
     };
 
+    accounts::two_factor::reset_from_environment(&state).await;
+
     themes::cache::load(&state).await;
     cluster::start(state.clone());
     file_storage::maintenance::spawn(state.clone());

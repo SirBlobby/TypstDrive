@@ -15,6 +15,11 @@ Changing your password signs you out of your other browsers.
 
 ## Security
 
+- **Two-factor authentication** asks for a second code after your password, an email sign-in code or single sign-on. Choose one:
+    - **Authenticator app**: scan the QR code with an app such as Google Authenticator, Microsoft Authenticator, 1Password or Bitwarden, then enter the code it shows.
+    - **Email codes**: a 6-digit code is emailed each time you sign in. This needs a verified email address and email set up on the server. A sign-in with an email code does not ask for a second email code.
+
+    When you turn it on you get 10 **backup codes**. Each one works once in place of a code, so keep them somewhere safe. **New backup codes** replaces them, and **Turn off** removes two-factor. Both need a current code or a backup code. The desktop app cannot sign in with a password while two-factor is on; sign it in through the browser instead.
 - **Active sessions** lists every browser signed in to your account. Sign out of one, or **Sign out everywhere else**.
 - **Connected accounts** lets you link or unlink Google, GitHub or your organization's sign-in. You always need at least one way left to sign in.
 

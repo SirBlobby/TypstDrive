@@ -4,13 +4,14 @@
     import SettingsHeader from '#lib/components/settings/SettingsHeader.svelte';
     import ActiveSessions from '#lib/components/settings/security/ActiveSessions.svelte';
     import ConnectedAccounts from '#lib/components/settings/security/ConnectedAccounts.svelte';
+    import TwoFactorCard from '#lib/components/settings/security/TwoFactorCard.svelte';
 
     const signInError = page.url.searchParams.get('sso_error');
 </script>
 
 <SettingsHeader
     title="Security"
-    description="See where you are signed in and which providers can sign you in."
+    description="Protect your account with a second step, and see where you are signed in."
     icon="mdi:shield-lock-outline"
 />
 
@@ -21,6 +22,7 @@
             {signInError}
         </div>
     {/if}
+    <TwoFactorCard />
     <ActiveSessions />
     <ConnectedAccounts />
 </div>

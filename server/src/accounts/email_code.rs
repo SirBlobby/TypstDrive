@@ -9,9 +9,8 @@ use serde::Deserialize;
 use crate::accounts::client_info::ClientInfo;
 use crate::accounts::email_tokens::{self, TokenPurpose, SIGN_IN_CODE_MINUTES};
 use crate::accounts::login_guard::LockoutRules;
-use crate::accounts::{auth, auth_settings, lookup, sessions};
+use crate::accounts::{auth_settings, lookup, sign_in};
 use crate::db::sql;
-use crate::models::UserProfile;
 use crate::AppState;
 
 type ApiError = (StatusCode, String);
@@ -81,7 +80,7 @@ pub async fn sign_in_with_code(
     client: ClientInfo,
     jar: CookieJar,
     Json(payload): Json<CodeSignIn>,
-) -> Result<(CookieJar, Json<UserProfile>), ApiError> {
+) -> Result<(CookieJar, Json<sign_in::SignInResult>), ApiError> {
     ensure_available(&state).await?;
     let email = payload.email.trim();
     state.login_guard.ensure_allowed(VERIFY_SCOPE, email, &client.ip_address)?;
@@ -110,9 +109,5 @@ pub async fn sign_in_with_code(
 
     state.login_guard.record_success(VERIFY_SCOPE, email);
     state.login_guard.record_success(REQUEST_SCOPE, email);
-    let cookie = sessions::start_session(&state, &user.id, &client).await?;
-    let user = lookup::user_by_id(&state, &user.id).await?.unwrap_or(user);
-    let profile = auth::profile_for(&state, user).await;
-
-    Ok((jar.add(cookie), Json(profile)))
+    sign_in::complete(&state, jar, &user, sign_in::FirstStep::EmailCode, false, &client).await
 }

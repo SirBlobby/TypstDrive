@@ -16,6 +16,7 @@ pub enum TokenPurpose {
     ResetPassword,
     SignInCode,
     VerifyEmailCode,
+    TwoFactorCode,
 }
 
 impl TokenPurpose {
@@ -25,6 +26,7 @@ impl TokenPurpose {
             Self::ResetPassword => "reset_password",
             Self::SignInCode => "sign_in_code",
             Self::VerifyEmailCode => "verify_email_code",
+            Self::TwoFactorCode => "two_factor_code",
         }
     }
 
@@ -34,6 +36,7 @@ impl TokenPurpose {
             Self::ResetPassword => TimeDelta::hours(1),
             Self::SignInCode => TimeDelta::minutes(SIGN_IN_CODE_MINUTES),
             Self::VerifyEmailCode => TimeDelta::minutes(VERIFY_EMAIL_CODE_MINUTES),
+            Self::TwoFactorCode => TimeDelta::minutes(SIGN_IN_CODE_MINUTES),
         }
     }
 }

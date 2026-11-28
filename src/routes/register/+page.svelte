@@ -10,7 +10,7 @@
     import FormNotice from '#lib/components/auth/FormNotice.svelte';
     import SsoButtons from '#lib/components/auth/SsoButtons.svelte';
     import VerifyEmailCodeForm from '#lib/components/auth/VerifyEmailCodeForm.svelte';
-    import type { User } from '#lib/ts/account/auth';
+    import { continueSignInUrl, isPendingStep, type SignInResult } from '#lib/ts/account/sign-in';
 
     const EMAIL_NOT_VERIFIED = 428;
 
@@ -56,8 +56,12 @@
         }
     }
 
-    function finishSignIn(user: User) {
-        userStore.set(user);
+    function finishSignIn(result: SignInResult) {
+        if (isPendingStep(result)) {
+            goto(continueSignInUrl('/drive'));
+            return;
+        }
+        userStore.set(result);
         goto('/drive');
     }
 

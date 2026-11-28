@@ -6,7 +6,7 @@ use serde::Deserialize;
 use super::http::encode_component;
 use super::state_cookie::{self, PendingSignIn};
 use super::{github, linking, oidc, ExternalProfile, ProviderConfig, ProviderKind};
-use crate::accounts::{auth_settings, client_info::ClientInfo, sessions};
+use crate::accounts::{auth_settings, client_info::ClientInfo, lookup, sign_in};
 use crate::AppState;
 
 const LOGIN_PAGE: &str = "/login";
@@ -136,8 +136,17 @@ pub async fn callback(
         Err(error) => return (jar, error_redirect(LOGIN_PAGE, &error)).into_response(),
     };
 
-    match sessions::start_session(&state, &user_id, &client).await {
-        Ok(cookie) => (jar, session_jar.add(cookie), Redirect::to(&pending.redirect_to)).into_response(),
+    let user = match lookup::user_by_id(&state, &user_id).await {
+        Ok(Some(user)) => user,
+        Ok(None) => return (jar, error_redirect(LOGIN_PAGE, "User not found")).into_response(),
+        Err((_, message)) => return (jar, error_redirect(LOGIN_PAGE, &message)).into_response(),
+    };
+    match sign_in::begin(&state, &user, sign_in::FirstStep::SingleSignOn, false, &client).await {
+        Ok(sign_in::Outcome::SignedIn(cookie)) => (jar, session_jar.add(cookie), Redirect::to(&pending.redirect_to)).into_response(),
+        Ok(sign_in::Outcome::Pending(cookie, _)) => {
+            let next_page = format!("{LOGIN_PAGE}?step=continue&redirect={}", encode_component(&pending.redirect_to));
+            (jar, session_jar.add(cookie), Redirect::to(&next_page)).into_response()
+        }
         Err((_, message)) => (jar, error_redirect(LOGIN_PAGE, &message)).into_response(),
     }
 }

@@ -4,6 +4,7 @@ use axum::{
     Json,
 };
 use axum_extra::extract::cookie::SignedCookieJar;
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
@@ -30,9 +31,21 @@ pub(crate) async fn require_admin(state: &AppState, jar: &SignedCookieJar) -> Re
     }
 }
 
+pub(crate) async fn require_secure_admin(state: &AppState, jar: &SignedCookieJar) -> Result<String, (StatusCode, String)> {
+    let admin_id = require_admin(state, jar).await?;
+    match crate::accounts::two_factor::method_of(state, &admin_id).await {
+        Some(_) => Ok(admin_id),
+        None => Err((
+            StatusCode::FORBIDDEN,
+            "Turn on two-factor authentication in your account settings before managing users".to_string(),
+        )),
+    }
+}
+
 async fn find_user(state: &AppState, user_id: &str) -> Result<Option<AdminUserView>, sqlx::Error> {
     sqlx::query_as::<_, AdminUserView>(sql(
-        "SELECT id, username, email, is_admin, email_verified, created_at FROM users WHERE id = $1 AND account_kind = 'user'",
+        "SELECT id, username, email, is_admin, email_verified, created_at, two_factor_method, password_change_required FROM users \
+         WHERE id = $1 AND account_kind = 'user'",
     ))
     .bind(user_id)
     .fetch_optional(&state.db)
@@ -43,22 +56,25 @@ fn yes_no(value: bool) -> &'static str {
     if value { "yes" } else { "no" }
 }
 
+#[derive(Serialize)]
+pub struct CreatedUser {
+    #[serde(flatten)]
+    user: AdminUserView,
+    temporary_password: String,
+    temporary_password_expires_at: String,
+}
+
 pub async fn create_user(
     State(state): State<AppState>,
     jar: SignedCookieJar,
     client: ClientInfo,
     Json(payload): Json<AdminCreateUserRequest>,
-) -> Result<(StatusCode, Json<AdminUserView>), (StatusCode, String)> {
-    let admin_id = require_admin(&state, &jar).await?;
+) -> Result<(StatusCode, Json<CreatedUser>), (StatusCode, String)> {
+    let admin_id = require_secure_admin(&state, &jar).await?;
 
-    if payload.username.is_empty() || payload.email.is_empty() || payload.password.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Username, email, and password are required".to_string()));
+    if payload.username.is_empty() || payload.email.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Username and email are required".to_string()));
     }
-    crate::accounts::passwords::check_new_password(&payload.password)?;
-
-    let password_hash = crate::accounts::passwords::hash_password(&payload.password)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     let user_id = Uuid::new_v4().to_string();
     let is_admin = payload.is_admin.unwrap_or(false);
@@ -67,28 +83,32 @@ pub async fn create_user(
         .bind(&user_id)
         .bind(&payload.username)
         .bind(payload.email.trim())
-        .bind(&password_hash)
+        .bind(crate::accounts::passwords::NO_PASSWORD)
         .bind(if is_admin { 1i64 } else { 0i64 })
         .bind(1i64)
         .execute(&state.db)
         .await;
 
-    let result = match inserted {
-        Ok(_) => find_user(&state, &user_id).await.and_then(|user| user.ok_or(sqlx::Error::RowNotFound)),
-        Err(err) => Err(err),
-    };
-
-    match result {
-        Ok(user) => {
-            let details = format!("email {}, admin {}", user.email, yes_no(is_admin));
-            audit::record(&state, &admin_id, &client, "user.create", &user.username, &details).await;
-            Ok((StatusCode::CREATED, Json(user)))
-        }
+    match inserted {
+        Ok(_) => {}
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
-            Err((StatusCode::CONFLICT, "Username or email already exists".to_string()))
+            return Err((StatusCode::CONFLICT, "Username or email already exists".to_string()));
         }
-        Err(e) => Err(crate::server_errors::hidden(e)),
+        Err(err) => return Err(crate::server_errors::hidden(err)),
     }
+
+    let temporary = crate::accounts::temporary_password::assign(&state, &user_id).await?;
+    let user = find_user(&state, &user_id)
+        .await
+        .map_err(crate::server_errors::hidden)?
+        .ok_or((StatusCode::NOT_FOUND, "User not found".to_string()))?;
+
+    let details = format!("email {}, admin {}", user.email, yes_no(is_admin));
+    audit::record(&state, &admin_id, &client, "user.create", &user.username, &details).await;
+    Ok((
+        StatusCode::CREATED,
+        Json(CreatedUser { user, temporary_password: temporary.password, temporary_password_expires_at: temporary.expires_at }),
+    ))
 }
 
 pub async fn list_users(
@@ -98,7 +118,10 @@ pub async fn list_users(
     require_admin(&state, &jar).await?;
 
     let users = sqlx::query_as::<_, AdminUserView>(
-        sql("SELECT id, username, email, is_admin, email_verified, created_at FROM users WHERE account_kind = 'user' ORDER BY created_at ASC")
+        sql(
+            "SELECT id, username, email, is_admin, email_verified, created_at, two_factor_method, password_change_required FROM users \
+             WHERE account_kind = 'user' ORDER BY created_at ASC",
+        )
     )
     .fetch_all(&state.db)
     .await
@@ -114,7 +137,7 @@ pub async fn update_user(
     Path(user_id): Path<String>,
     Json(payload): Json<UpdateUserRequest>,
 ) -> Result<Json<AdminUserView>, (StatusCode, String)> {
-    let requester_id = require_admin(&state, &jar).await?;
+    let requester_id = require_secure_admin(&state, &jar).await?;
     let internal = |e: sqlx::Error| crate::server_errors::hidden(e);
 
     let existing = find_user(&state, &user_id)
@@ -165,7 +188,7 @@ pub async fn delete_user(
     client: ClientInfo,
     Path(user_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let requester_id = require_admin(&state, &jar).await?;
+    let requester_id = require_secure_admin(&state, &jar).await?;
 
     if requester_id == user_id {
         return Err((StatusCode::BAD_REQUEST, "Cannot delete your own account via admin panel".to_string()));

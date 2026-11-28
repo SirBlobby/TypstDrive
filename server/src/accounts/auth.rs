@@ -7,7 +7,7 @@ use axum_extra::extract::cookie::{CookieJar, SignedCookieJar};
 use uuid::Uuid;
 
 use crate::{
-    accounts::{auth_settings, avatars, client_info::ClientInfo, lookup, passwords, sessions, verification},
+    accounts::{auth_settings, avatars, client_info::ClientInfo, lookup, passwords, sessions, sign_in, temporary_password, verification},
     models::{User, UserProfile, RegisterRequest, LoginRequest, ChangePasswordRequest, UpdateProfileRequest},
     AppState,
 };
@@ -85,7 +85,7 @@ pub async fn login(
     client: ClientInfo,
     jar: CookieJar,
     Json(payload): Json<LoginRequest>,
-) -> Result<(CookieJar, Json<UserProfile>), ApiError> {
+) -> Result<(CookieJar, Json<sign_in::SignInResult>), ApiError> {
     let settings = auth_settings::load(&state).await;
     state.login_guard.ensure_allowed(LOGIN_SCOPE, &payload.email, &client.ip_address)?;
 
@@ -110,10 +110,11 @@ pub async fn login(
     }
 
     state.login_guard.record_success(LOGIN_SCOPE, &payload.email);
-    let cookie = sessions::start_session(&state, &user.id, &client).await?;
-    let profile = profile_for(&state, user).await;
-
-    Ok((jar.add(cookie), Json(profile)))
+    let change_password = user.password_change_required != 0;
+    if change_password {
+        temporary_password::redeem(&state, &user).await?;
+    }
+    sign_in::complete(&state, jar, &user, sign_in::FirstStep::Password, change_password, &client).await
 }
 
 pub async fn update_profile(
@@ -203,7 +204,9 @@ pub async fn change_password(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
-    sqlx::query(sql("UPDATE users SET password_hash = $1 WHERE id = $2"))
+    sqlx::query(sql(
+        "UPDATE users SET password_hash = $1, password_change_required = 0, temporary_password_expires_at = NULL WHERE id = $2",
+    ))
         .bind(&new_password_hash)
         .bind(&session.user_id)
         .execute(&state.db)

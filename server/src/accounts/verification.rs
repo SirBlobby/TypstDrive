@@ -7,9 +7,8 @@ use serde::Deserialize;
 use crate::accounts::client_info::ClientInfo;
 use crate::accounts::email_code::CODE_ATTEMPT_RULES;
 use crate::accounts::email_tokens::{self, TokenPurpose, VERIFY_EMAIL_CODE_MINUTES};
-use crate::accounts::{auth, lookup, sessions};
+use crate::accounts::{lookup, sign_in};
 use crate::db::sql;
-use crate::models::UserProfile;
 use crate::AppState;
 
 const VERIFY_CODE_SCOPE: &str = "verify_email_code";
@@ -88,7 +87,7 @@ pub async fn verify_with_code(
     client: ClientInfo,
     jar: CookieJar,
     Json(payload): Json<VerifyCodeRequest>,
-) -> Result<(CookieJar, Json<UserProfile>), ApiError> {
+) -> Result<(CookieJar, Json<sign_in::SignInResult>), ApiError> {
     let email = payload.email.trim();
     state.login_guard.ensure_allowed(VERIFY_CODE_SCOPE, email, &client.ip_address)?;
 
@@ -107,11 +106,7 @@ pub async fn verify_with_code(
     }
 
     state.login_guard.record_success(VERIFY_CODE_SCOPE, email);
-    let cookie = sessions::start_session(&state, &user.id, &client).await?;
-    let user = lookup::user_by_id(&state, &user.id).await?.unwrap_or(user);
-    let profile = auth::profile_for(&state, user).await;
-
-    Ok((jar.add(cookie), Json(profile)))
+    sign_in::complete(&state, jar, &user, sign_in::FirstStep::EmailCode, false, &client).await
 }
 
 pub async fn resend_verification(

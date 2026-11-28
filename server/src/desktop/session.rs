@@ -84,6 +84,15 @@ pub async fn login(
     if crate::accounts::auth_settings::verification_required(&state, &settings) && user.email_verified == 0 {
         return Err((StatusCode::PRECONDITION_REQUIRED, "Verify your email address before signing in".to_string()));
     }
+    if user.password_change_required != 0 {
+        return Err((StatusCode::FORBIDDEN, "Sign in on the website first to choose a new password".to_string()));
+    }
+    if user.two_factor_method.is_some() {
+        return Err((
+            StatusCode::FORBIDDEN,
+            "This account uses two-factor authentication. Sign in through the browser instead.".to_string(),
+        ));
+    }
     state.login_guard.record_success(DESKTOP_LOGIN_SCOPE, &payload.email);
 
     let token = issue_device_token(&state, &user.id, payload.device_name).await?;

@@ -82,4 +82,4 @@ People can link and unlink providers themselves in **Settings → Security**.
 
 ## Passwords off
 
-You can turn off passwords for everyone except administrators, so people must use single sign-on or email codes. Administrators can always use their password, so a broken provider can never lock you out.
+You can turn off passwords for everyone except administrators, so people must use single sign-on or email codes. Administrators can always use their password, so a broken provider can never lock you out. Administrators need [two-factor authentication](../admin/users.md#two-factor-for-administrators) before they can manage users.

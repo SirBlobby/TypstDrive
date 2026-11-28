@@ -9,6 +9,7 @@ export type User = {
     email_verified?: boolean;
     has_password?: boolean;
     avatar_updated_at?: string | null;
+    two_factor_method?: 'totp' | 'email' | null;
 };
 
 export const userStore = writable<User | null>(null);

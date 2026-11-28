@@ -28,9 +28,10 @@ Only `COOKIE_SECRET` and `PUBLIC_URL` matter for most installs. Everything else 
 
 | Setting | Default | What it does |
 |---|---|---|
-| `COOKIE_SECRET` | random on every start | Keeps people signed in across restarts, and encrypts saved Zotero keys and Git tokens. Use 64 or more random bytes, from `openssl rand -hex 64`. |
+| `COOKIE_SECRET` | random on every start | Keeps people signed in across restarts, and encrypts saved Zotero keys, Git tokens and authenticator app secrets. Use 64 or more random bytes, from `openssl rand -hex 64`. Authenticator apps cannot be set up without it. Changing it later means people with an authenticator app must sign in with a backup code and set it up again. |
 | `PUBLIC_URL` | not set | The address people use, such as `https://typst.example.com`, without a slash at the end. Needed for sign-in providers and links in emails. When it starts with `https://`, cookies are marked secure and browsers are told to always use HTTPS. Live editing and the language server accept connections only from this address or from the address in the request's `Host` header. |
 | `TRUST_PROXY_HEADERS` | `false` | Set to `true` behind a [reverse proxy](reverse-proxy.md) so TypstDrive sees visitors' real addresses. |
+| `TWO_FACTOR_RESET_EMAIL` | not set | Turns off two-factor authentication for the account with this email address when TypstDrive starts. For an administrator who lost their authenticator app and backup codes. Remove it after signing in. |
 | `PORT` | `3000` | The port TypstDrive listens on inside the container. |
 | `RUST_LOG` | `server=debug,tower_http=debug` | How much is written to the logs. `info` is quieter. |
 | `STATIC_DIR` | `/app/build` | Where the web app files are. Only change this outside Docker. |
