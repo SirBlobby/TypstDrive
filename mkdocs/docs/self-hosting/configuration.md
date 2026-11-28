@@ -99,6 +99,7 @@ See [Bigger installs](scaling.md).
 | Setting | Default | What it does |
 |---|---|---|
 | `REMOTE_URLS_ALLOW_PRIVATE` | `false` | Documents can load images and data from web addresses. By default addresses on private networks, such as `localhost`, `192.168.x.x` or cloud metadata services, are blocked. Set to `true` only if documents need to reach servers on your own network. |
+| `REMOTE_CACHE_MB` | `256` | Memory for files loaded from web addresses. Each one is kept for 10 minutes, so edits do not download it again. A document can load at most 50 web addresses and 150 MB in total. |
 
 ## Git
 

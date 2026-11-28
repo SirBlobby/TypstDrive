@@ -1,6 +1,5 @@
 use chrono::Datelike;
 use std::collections::{HashMap, HashSet};
-use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
@@ -15,7 +14,7 @@ use typst_kit::downloader::SystemDownloader;
 use typst_kit::packages::SystemPackages;
 
 use crate::compile::fonts::{shared_book, shared_fonts};
-use crate::remote_hosts::resolve_remote_host;
+use crate::compile::remote_files::RemoteBudget;
 
 fn shared_library(enable_html: bool) -> &'static typst::utils::LazyHash<Library> {
     static PLAIN: OnceLock<typst::utils::LazyHash<Library>> = OnceLock::new();
@@ -44,8 +43,8 @@ fn custom_book(custom_fonts: Vec<typst::text::FontInfo>) -> Option<typst::utils:
 pub struct MemoryWorld {
     library: &'static typst::utils::LazyHash<Library>,
     main: FileId,
-    files: HashMap<String, Vec<u8>>,
-    local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
+    files: HashMap<String, Bytes>,
+    local_packages: HashMap<String, HashMap<String, Bytes>>,
     custom_book: Option<typst::utils::LazyHash<FontBook>>,
     fonts: Vec<Font>,
     font_file_names: Vec<String>,
@@ -54,6 +53,7 @@ pub struct MemoryWorld {
     accessed_font_files: Mutex<HashSet<String>>,
     read_outside_input: AtomicBool,
     today_answers: Mutex<Vec<TodayAnswer>>,
+    remote: RemoteBudget,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -85,9 +85,6 @@ pub struct UsedResources {
 
 pub const LOCAL_PACKAGE_NAMESPACE: &str = "typstdrive";
 
-const REMOTE_FETCH_TIMEOUT_SECS: u64 = 15;
-const REMOTE_MAX_BYTES: u64 = 50 * 1024 * 1024;
-const REMOTE_MAX_REDIRECTS: u32 = 5;
 
 fn normalize_path(path: &str) -> String {
     path.trim_start_matches('/').replace('\\', "/")
@@ -121,28 +118,6 @@ fn remote_url(path: &str) -> Option<String> {
     None
 }
 
-fn fetch_remote(url: &str) -> FileResult<Vec<u8>> {
-    let agent = ureq::AgentBuilder::new()
-        .timeout(std::time::Duration::from_secs(REMOTE_FETCH_TIMEOUT_SECS))
-        .redirects(REMOTE_MAX_REDIRECTS)
-        .resolver(resolve_remote_host)
-        .build();
-
-    let response = agent
-        .get(url)
-        .call()
-        .map_err(|e| FileError::Other(Some(format!("failed to fetch {url}: {e}").into())))?;
-
-    let mut bytes = Vec::new();
-    response
-        .into_reader()
-        .take(REMOTE_MAX_BYTES)
-        .read_to_end(&mut bytes)
-        .map_err(|e| FileError::Other(Some(format!("failed to read {url}: {e}").into())))?;
-
-    Ok(bytes)
-}
-
 impl MemoryWorld {
     pub fn new_project(
         entrypoint: String,
@@ -150,6 +125,11 @@ impl MemoryWorld {
         local_packages: HashMap<String, HashMap<String, Vec<u8>>>,
         enable_html: bool,
     ) -> Self {
+        let files: HashMap<String, Bytes> = files.into_iter().map(|(name, data)| (name, Bytes::new(data))).collect();
+        let local_packages: HashMap<String, HashMap<String, Bytes>> = local_packages
+            .into_iter()
+            .map(|(key, package_files)| (key, package_files.into_iter().map(|(path, data)| (path, Bytes::new(data))).collect()))
+            .collect();
         let main = project_file_id(&entrypoint).unwrap_or_else(|| project_file_id("main.typ").unwrap());
         let downloader = SystemDownloader::new("TypstDrive (typst-kit)");
         let packages = SystemPackages::new(downloader);
@@ -169,7 +149,7 @@ impl MemoryWorld {
             .collect();
         font_names.sort();
         for name in font_names {
-            for font in Font::iter(Bytes::new(files[name].clone())) {
+            for font in Font::iter(files[name].clone()) {
                 custom_fonts.push(font.info().clone());
                 fonts.push(font);
                 font_file_names.push(name.clone());
@@ -189,6 +169,7 @@ impl MemoryWorld {
             accessed_font_files: Mutex::new(HashSet::new()),
             read_outside_input: AtomicBool::new(false),
             today_answers: Mutex::new(Vec::new()),
+            remote: RemoteBudget::default(),
         }
     }
 
@@ -206,7 +187,7 @@ impl MemoryWorld {
         }
     }
 
-    fn load_bytes(&self, id: FileId) -> FileResult<Vec<u8>> {
+    fn load_bytes(&self, id: FileId) -> FileResult<Bytes> {
         let path = normalize_path(id.vpath().get_without_slash());
 
         if let VirtualRoot::Package(package) = id.root() {
@@ -227,12 +208,12 @@ impl MemoryWorld {
                 .packages
                 .obtain(package)
                 .map_err(|e| FileError::Other(Some(e.to_string().into())))?;
-            return root.load(id.vpath()).map(|bytes| bytes.to_vec());
+            return root.load(id.vpath());
         }
 
         if let Some(url) = remote_url(&path) {
             self.read_outside_input.store(true, Ordering::Relaxed);
-            return fetch_remote(&url);
+            return self.remote.fetch(&url);
         }
 
         let data = self.files.get(&path).cloned();
@@ -273,8 +254,7 @@ impl World for MemoryWorld {
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        let data = self.load_bytes(id)?;
-        Ok(Bytes::new(data))
+        self.load_bytes(id)
     }
 
     fn font(&self, index: usize) -> Option<Font> {

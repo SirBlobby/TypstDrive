@@ -12,6 +12,7 @@ pub mod lsp_limits;
 pub mod pandoc;
 pub mod preview_cleanup;
 pub mod preview_store;
+pub mod remote_files;
 pub mod render;
 pub mod speaker_notes;
 pub mod sync;
