@@ -38,6 +38,9 @@
 	import { userStore } from '#lib/ts/auth';
 	import { loadCachedPreview, saveCachedPreview } from '#lib/ts/preview-cache';
 	import { LspSession } from '#lib/ts/lsp-session.svelte';
+	import EditorTabs from '#lib/components/project/EditorTabs.svelte';
+	import { loadTabs, saveTabs, tabAfterClosing } from '#lib/ts/editor-tabs';
+	import { forgetPosition, rememberPosition, restorePosition } from '#lib/ts/editor-positions';
 
 	const projectId = page.params.id as string;
 
@@ -47,6 +50,7 @@
 	let files = $state<ProjectFile[]>([]);
 	let activeFileId = $state('');
 	let previewFileId = $state('');
+	let openTabs = $state<string[]>([]);
 	let svgs = $state<string[]>([]);
 	let pageHashes: string[] = [];
 	let heldSvgs: string[] = [];
@@ -233,8 +237,11 @@
 		}
 
 		if (!activeFileId) {
-			const entry = files.find((f) => f.path === entrypoint) ?? files.find((f) => f.kind === 'text' && !isPlaceholder(f.path));
-			if (entry) activeFileId = entry.id;
+			const editable = new Set(files.filter((f) => f.kind === 'text' && !isPlaceholder(f.path)).map((f) => f.id));
+			const saved = loadTabs(projectId);
+			openTabs = saved?.tabs.filter((id) => editable.has(id)) ?? [];
+			const entry = files.find((f) => f.path === entrypoint) ?? files.find((f) => editable.has(f.id));
+			activeFileId = saved && editable.has(saved.active) ? saved.active : (openTabs[0] ?? entry?.id ?? '');
 		}
 		return true;
 	}
@@ -331,12 +338,47 @@
 
 	function forgetFiles(removed: ProjectFile[]) {
 		const removedIds = new Set(removed.map((f) => f.id));
-		for (const fileId of removedIds) closeFile(fileId);
+		for (const fileId of removedIds) {
+			closeFile(fileId);
+			forgetPosition(positionKey(fileId));
+		}
 		files = files.filter((f) => !removedIds.has(f.id));
+		const nextTab = removedIds.has(activeFileId) ? tabAfterClosing(openTabs, activeFileId) : activeFileId;
+		openTabs = openTabs.filter((id) => !removedIds.has(id));
 		if (!files.some((f) => f.id === activeFileId)) {
-			activeFileId = files.find((f) => f.kind === 'text' && !isPlaceholder(f.path))?.id ?? '';
+			activeFileId = removedIds.has(nextTab) ? (openTabs[0] ?? '') : nextTab;
 		}
 	}
+
+	function positionKey(fileId: string) {
+		return `${projectId}:${fileId}`;
+	}
+
+	function closeTab(fileId: string) {
+		if (fileId === activeFileId) activeFileId = tabAfterClosing(openTabs, fileId);
+		openTabs = openTabs.filter((id) => id !== fileId);
+	}
+
+	let tabFiles = $derived(openTabs.map((id) => files.find((f) => f.id === id)).filter((f): f is ProjectFile => !!f));
+
+	$effect(() => {
+		if (activeFileId && !untrack(() => openTabs).includes(activeFileId)) openTabs = [...untrack(() => openTabs), activeFileId];
+	});
+
+	$effect(() => {
+		if (ready) saveTabs(projectId, openTabs, activeFileId);
+	});
+
+	$effect(() => {
+		const view = $editorViewStore;
+		if (!view) return;
+		untrack(() => {
+			if (pendingSelection?.path === activePath) return;
+			if (view.state.doc.toString() !== activeEntry?.text.toString()) return;
+			const { anchor, head } = view.state.selection.main;
+			if (anchor === 0 && head === 0) restorePosition(positionKey(activeFileId), view);
+		});
+	});
 
 	async function applyEntrypoint(res: Response) {
 		const result: { entrypoint: string } = await res.json();
@@ -522,14 +564,19 @@
 
 		{#if !readOnly || previewFile}
 			<div class="flex flex-col min-h-0 {editorWidthClass}">
+				{#if !readOnly}
+					<EditorTabs tabs={tabFiles} activeId={previewFile ? '' : activeFileId} onSelect={selectFile} onClose={closeTab} />
+				{/if}
 				{#if previewFile}
 					<AssetPreview {projectId} file={previewFile} onClose={() => (previewFileId = '')} />
 				{:else if ready && activeEntry}
 					{#key activeFileId}
-						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} lsp={lspSession} lspPath={activePath} extensions={editorExtensions} slash={{ insertDialogs: canEdit, embedDocuments: false, canComment: !readOnly }} />
+						<Editor ytext={activeEntry.text} awarenessProvider={activeEntry.provider} filePath={activePath} lsp={lspSession} lspPath={activePath} extensions={[...editorExtensions, rememberPosition(positionKey(activeFileId))]} slash={{ insertDialogs: canEdit, embedDocuments: false, canComment: !readOnly }} />
 						<CommentHighlights />
 						<SuggestionHighlights />
 					{/key}
+				{:else if ready && !readOnly}
+					<p class="flex flex-1 items-center justify-center p-6 text-sm text-[var(--color-ink-muted)]">Open a file from the file tree to edit it.</p>
 				{/if}
 			</div>
 		{/if}
