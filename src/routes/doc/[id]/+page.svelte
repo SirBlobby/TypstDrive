@@ -20,7 +20,8 @@
 	import CommentsPanel from '#lib/components/comments/CommentsPanel.svelte';
 	import { editorErrors, documentStatsStore, speakerNotesStore, commentsSidebarOpen, editorViewStore } from '#lib/ts/store';
 	import { bibliographyChangedStore } from '#lib/ts/citations';
-	import { previewModeStore, previewVisibleStore, splitRatioStore } from '#lib/ts/preview-mode';
+	import { layoutModeStore, previewVisibleStore, previewWindowStore, splitRatioStore } from '#lib/ts/preview-mode';
+	import PreviewWindowHost from '#lib/components/editor/PreviewWindowHost.svelte';
 	import SplitDivider from '#lib/components/editor/SplitDivider.svelte';
 	import { reviewExtensions } from '#lib/ts/review-extensions';
 	import { suggestingModeStore, suggestionsStore } from '#lib/ts/suggestions';
@@ -48,15 +49,17 @@
 	let lspPath = $derived(`${page.params.id}.typ`);
 	let canComment = $derived(role !== 'viewer');
 	let showPreview = $derived($previewVisibleStore || isViewer);
+	let previewPoppedOut = $derived($previewWindowStore && !isViewer);
+	let compilePreview = $derived(showPreview || previewPoppedOut);
 	let editorWidthClass = $derived(
-		$previewModeStore === 'preview' ? 'hidden' : $previewModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]' : 'w-full min-w-0'
+		$layoutModeStore === 'preview' ? 'hidden' : $layoutModeStore === 'split' ? 'w-full min-w-0 md:w-0 md:flex-[var(--editor-grow)_1_0%]' : 'w-full min-w-0'
 	);
 	const editorExtensions = [reviewExtensions(), cursorClickSync(syncPreviewToCursor)];
 	let lastCompiledInput: { text: string; document_id?: string } | null = null;
 	let jumpTo = $state<(PagePoint & { seq: number }) | null>(null);
 
 	function syncInput() {
-		if (language === 'latex' || !showPreview || !text || !lastCompiledInput) return null;
+		if (language === 'latex' || !compilePreview || !text || !lastCompiledInput) return null;
 		return text.toString() === lastCompiledInput.text ? lastCompiledInput : null;
 	}
 
@@ -83,7 +86,7 @@
 	}
 
 	function triggerCompile() {
-		if (!text || !doc || !showPreview) return;
+		if (!text || !doc || !compilePreview) return;
 		const content = previewText({ doc, text, awareness: provider?.awareness });
 		if (content === lastCompiledContent) return;
 		lastCompiledContent = content;
@@ -136,7 +139,7 @@
 	});
 
 	$effect(() => {
-		if (showPreview && initialized) {
+		if (compilePreview && initialized) {
 			triggerCompile();
 		}
 	});
@@ -220,15 +223,19 @@
 		</div>
 		{/if}
 
-		{#if !isViewer && showPreview && $previewModeStore === 'split'}
+		{#if !isViewer && showPreview && $layoutModeStore === 'split'}
 			<SplitDivider />
 		{/if}
 
 		{#if showPreview}
-		<div class="{isViewer || $previewModeStore === 'preview' ? 'w-full' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
+		<div class="{isViewer || $layoutModeStore === 'preview' ? 'w-full' : 'w-full md:w-0 md:flex-[var(--preview-grow)_1_0%]'} min-w-0 relative bg-[var(--color-surface)] min-h-[50%] md:min-h-0 flex flex-col">
 			<Preview {svgs} {jumpTo} onPageClick={syncCursorToPreview} />
 			<ErrorBanner {errors} />
 		</div>
+		{/if}
+
+		{#if previewPoppedOut}
+			<PreviewWindowHost {svgs} {errors} {jumpTo} title={documentTitle} onPageClick={syncCursorToPreview} />
 		{/if}
 
 		{#if $commentsSidebarOpen}

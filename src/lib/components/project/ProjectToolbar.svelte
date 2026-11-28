@@ -18,7 +18,7 @@
 	import InsertDialogs from '../editor/insert/InsertDialogs.svelte';
 	import { untrack } from 'svelte';
 	import EditingModeSwitch from '../editor/EditingModeSwitch.svelte';
-	import { previewModeOptions, previewModeStore } from '../../ts/preview-mode';
+	import { choosePreviewMode, previewModeOptions, previewModeStore, previewWindowOption, previewWindowStore } from '../../ts/preview-mode';
 	import PreviewModeMenu from '../editor/PreviewModeMenu.svelte';
 	import { deletionNotice, trashRetentionStore } from '#lib/ts/trash';
 	import HeaderIconButton from '../editor/header/HeaderIconButton.svelte';
@@ -457,10 +457,14 @@
 					<div class="relative">
 						<button onclick={(e) => { e.stopPropagation(); activeMenu = activeMenu === 'view' ? null : 'view'; }} class="px-2 py-0.5 rounded transition-colors {activeMenu === 'view' ? 'bg-[var(--theme-border)]' : 'hover:bg-[var(--theme-border)]'}">View</button>
 						{#if activeMenu === 'view'}
-							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+							<div class="absolute left-0 top-full mt-1 min-w-48 w-max bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
 								{#each previewModeOptions as option (option.value)}
-									<button onclick={() => { activeMenu = null; $previewModeStore = option.value; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between">{option.label}<Icon icon={$previewModeStore === option.value ? 'mdi:check' : ''} class="text-sm" /></button>
+									<button onclick={() => { activeMenu = null; choosePreviewMode(option.value); }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between whitespace-nowrap gap-4">{option.label}<Icon icon="mdi:check" class="text-sm {!$previewWindowStore && $previewModeStore === option.value ? '' : 'invisible'}" /></button>
 								{/each}
+								{#if !isViewer}
+									<div class="h-px bg-[var(--theme-border)] my-1"></div>
+									<button onclick={() => { activeMenu = null; $previewWindowStore = !$previewWindowStore; }} class="w-full text-left px-4 py-1.5 text-sm hover:bg-[var(--theme-border)] flex items-center justify-between whitespace-nowrap gap-4">{previewWindowOption.label}<Icon icon="mdi:check" class="text-sm {$previewWindowStore ? '' : 'invisible'}" /></button>
+								{/if}
 							</div>
 						{/if}
 					</div>

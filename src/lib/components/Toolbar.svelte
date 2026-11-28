@@ -18,6 +18,7 @@
 	import CollaboratorAvatars from './editor/CollaboratorAvatars.svelte';
 	import EditingModeSwitch from './editor/EditingModeSwitch.svelte';
 	import PreviewModeMenu from './editor/PreviewModeMenu.svelte';
+	import { previewWindowOption, previewWindowStore } from '../ts/preview-mode';
 	import HeaderIconButton from './editor/header/HeaderIconButton.svelte';
 	import HeaderTypstLinks from './editor/header/HeaderTypstLinks.svelte';
 	import HeaderExportMenu from './editor/header/HeaderExportMenu.svelte';
@@ -549,10 +550,17 @@
 							View
 						</button>
 						{#if activeMenu === 'view'}
-							<div class="absolute left-0 top-full mt-1 w-48 bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
+							<div class="absolute left-0 top-full mt-1 min-w-48 w-max bg-[var(--theme-bg)] rounded-xl shadow-xl border border-[var(--theme-border)] py-1 z-[100]">
 								<button onclick={() => { activeMenu = null; goto(`/doc/${docId}/history`); }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between">
 									Version History
 								</button>
+								{#if canComment}
+									<div class="h-px bg-[var(--theme-border)] my-1"></div>
+									<button onclick={() => { activeMenu = null; $previewWindowStore = !$previewWindowStore; }} class="w-full text-left px-4 py-1.5 text-sm text-[var(--theme-text)] hover:bg-[var(--theme-border)] flex items-center justify-between whitespace-nowrap gap-4">
+										{previewWindowOption.label}
+										<Icon icon="mdi:check" class="text-sm {$previewWindowStore ? '' : 'invisible'}" />
+									</button>
+								{/if}
 							</div>
 						{/if}
 					</div>

@@ -8,13 +8,22 @@ export const previewModeOptions: { value: PreviewMode; label: string; icon: stri
     { value: 'preview', label: 'Preview only', icon: 'mdi:eye-outline' }
 ];
 
+export const previewWindowOption = { label: 'Preview in new window', icon: 'mdi:open-in-new' };
+
 function isPreviewMode(value: string | null): value is PreviewMode {
     return value === 'split' || value === 'editor' || value === 'preview';
 }
 
 export const previewModeStore = writable<PreviewMode>('split');
-export const previewVisibleStore = derived(previewModeStore, (mode) => mode !== 'editor');
-export const editorVisibleStore = derived(previewModeStore, (mode) => mode !== 'preview');
+export const previewWindowStore = writable(false);
+export const layoutModeStore = derived([previewModeStore, previewWindowStore], ([mode, popped]): PreviewMode => (popped ? 'editor' : mode));
+export const previewVisibleStore = derived(layoutModeStore, (mode) => mode !== 'editor');
+export const editorVisibleStore = derived(layoutModeStore, (mode) => mode !== 'preview');
+
+export function choosePreviewMode(mode: PreviewMode) {
+    previewWindowStore.set(false);
+    previewModeStore.set(mode);
+}
 
 if (typeof window !== 'undefined') {
     const savedPreviewMode = localStorage.getItem('editor-preview-mode');

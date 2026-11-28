@@ -47,6 +47,12 @@ In a Typst file, the editor and preview follow each other. Click in the text and
 
 Your choice and the split are remembered in your browser. Viewers only ever see the preview.
 
+### Preview in a separate window
+
+Choose **Preview in new window** from the **View** button or the **View** menu to move the preview into its own window, for example on a second monitor. The editor gets the full width of its window. The preview window updates as you type, follows the cursor both ways as described above, and has its own zoom control. Close the preview window, or choose it again, to bring the preview back beside the editor. Choosing a view mode also brings it back.
+
+If nothing opens, allow pop-ups for the site. The preview window closes when you leave the document or project.
+
 ## The toolbar
 
 The formatting toolbar sits above the text:
