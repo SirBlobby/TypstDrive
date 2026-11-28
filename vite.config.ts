@@ -2,7 +2,6 @@ import tailwindcss from '@tailwindcss/vite';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import wasm from 'vite-plugin-wasm';
 
 function useRunesOutsideLibraries({ filename }: { filename: string }) {
 	const pathSegments = filename.toLowerCase().split(/[\\/]/);
@@ -16,7 +15,7 @@ const contentSecurityPolicy: SvelteKitPluginConfig['csp'] = {
 	mode: 'hash',
 	directives: {
 		'default-src': ['self'],
-		'script-src': ['self', 'wasm-unsafe-eval'],
+		'script-src': ['self'],
 		'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
 		'font-src': ['self', 'data:', 'https://fonts.gstatic.com'],
 		'img-src': ['self', 'data:', 'blob:', 'https:'],
@@ -44,7 +43,7 @@ const svelteKitOptions = {
 };
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit(svelteKitOptions), wasm()],
+	plugins: [tailwindcss(), sveltekit(svelteKitOptions)],
 	server: {
 		proxy: {
 			'/api': 'http://127.0.0.1:3000',
@@ -54,9 +53,6 @@ export default defineConfig({
 				ws: true,
 			},
 		},
-	},
-	optimizeDeps: {
-		exclude: ['codemirror-lang-typst']
 	},
 	build: {
 		target: 'esnext'
