@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for code comments and emojis
+      - name: Check for emojis
         env:
           BASE_REF: ${{ github.base_ref }}
-        run: python3 .github/scripts/check_code_rules.py "$BASE_REF"
+        run: python3 .github/scripts/check_emojis.py "$BASE_REF"

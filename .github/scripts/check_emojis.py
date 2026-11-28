@@ -2,35 +2,9 @@ import re
 import subprocess
 import sys
 
-SLASH_COMMENT = re.compile(r"^\s*(//|/\*)")
-MARKUP_COMMENT = re.compile(r"^\s*<!--")
-HASH_COMMENT = re.compile(r"^\s*#(?!!)")
-ALLOWED_COMMENT = re.compile(r"svelte-ignore|eslint-disable|@ts-(ignore|expect-error|nocheck)")
 EMOJI = re.compile(
     "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U0001F1E6-\U0001F1FF\U00002B00-\U00002BFF️]"
 )
-
-COMMENT_STYLES = {
-    ".rs": [SLASH_COMMENT],
-    ".ts": [SLASH_COMMENT],
-    ".js": [SLASH_COMMENT],
-    ".css": [SLASH_COMMENT],
-    ".svelte": [SLASH_COMMENT, MARKUP_COMMENT],
-    ".html": [MARKUP_COMMENT],
-    ".yml": [HASH_COMMENT],
-    ".yaml": [HASH_COMMENT],
-    ".toml": [HASH_COMMENT],
-    ".py": [HASH_COMMENT],
-    ".sh": [HASH_COMMENT],
-    "Dockerfile": [HASH_COMMENT],
-}
-
-
-def comment_styles(path):
-    for ending, styles in COMMENT_STYLES.items():
-        if path.endswith(ending):
-            return styles
-    return []
 
 
 def changed_lines(base_ref):
@@ -56,9 +30,6 @@ def problems(base_ref):
     for path, line_number, text in changed_lines(base_ref):
         if EMOJI.search(text):
             yield f"{path}:{line_number}: emoji found"
-        is_comment = any(style.match(text) for style in comment_styles(path))
-        if is_comment and not ALLOWED_COMMENT.search(text):
-            yield f"{path}:{line_number}: code comment found"
 
 
 def main():
@@ -66,9 +37,9 @@ def main():
     for problem in found:
         print(problem)
     if found:
-        print(f"{len(found)} problem(s). Code comments and emojis are not allowed.")
+        print(f"{len(found)} problem(s). Emojis are not allowed in code or documentation.")
         sys.exit(1)
-    print("No code comments or emojis added.")
+    print("No emojis added.")
 
 
 if __name__ == "__main__":

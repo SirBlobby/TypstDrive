@@ -16,7 +16,7 @@ Contributions are welcome, whether that is a bug fix, a new feature or an improv
 ### Code style
 
 - Use clear, descriptive names for variables and functions. Avoid abbreviations.
-- Do not add code comments. Names and small functions should explain the code. Compiler directives such as `svelte-ignore` are fine.
+- Let names and small functions explain what the code does. Add a short comment only when the code cannot show why it is written that way, such as a workaround, a limit set by another tool or a non-obvious order of steps. Rust `///` doc comments and `TODO` notes are welcome. Do not add comments that repeat what the code says.
 - Do not use emojis in code or documentation.
 - Write each commit message as one short subject line, with no description.
 - Keep files short and grouped by feature. Split a file when it grows past a few hundred lines.
@@ -35,10 +35,10 @@ bun run check
 bun run build
 cargo test --manifest-path server/Cargo.toml
 cargo clippy --manifest-path server/Cargo.toml -- -D warnings
-python3 .github/scripts/check_code_rules.py dev
+python3 .github/scripts/check_emojis.py dev
 ```
 
-The last command checks your branch against `origin/dev` for added code comments and emojis.
+The last command checks your branch against `origin/dev` for added emojis.
 
 ### Documentation
 
@@ -95,7 +95,7 @@ bun run docs
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | Pushes to `main` or `dev`, pull requests | Type checks and builds the web app, then checks, tests and lints the server. |
-| `code-rules.yml` | Pull requests | Fails when the changes add code comments or emojis. |
+| `code-rules.yml` | Pull requests | Fails when the changes add emojis. |
 | `docker-publish.yml` | Pushes to `main`, `v*` tags, releases | Builds the Docker image and pushes it to `ghcr.io`. |
 | `docs.yml` | Pushes to `main` that change `mkdocs/` | Builds this site and publishes it to GitHub Pages. |
 
