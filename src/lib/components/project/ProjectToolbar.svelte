@@ -355,6 +355,7 @@
 
 	let saveNotice = $state<'saved' | 'offline' | null>(null);
 	let saveNoticeTimer: ReturnType<typeof setTimeout> | undefined;
+	$effect(() => () => clearTimeout(saveNoticeTimer));
 
 	function handleShortcut(event: KeyboardEvent) {
 		if (!matchesKeybind(currentKeybind('saveVersion'), event)) return;

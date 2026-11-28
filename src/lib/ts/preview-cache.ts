@@ -1,13 +1,12 @@
 import type { PreviewPages } from './typst-api';
 
-
 const DB_NAME = 'typstdrive-preview-cache';
 const DB_VERSION = 1;
 const PAGES = 'pages';
 const PROJECTS = 'projects';
 const META = 'meta';
 const MAX_PROJECTS = 6;
-const MAX_CHARS = 200_000_000;
+const MAX_CHARS = 100_000_000;
 
 interface ProjectRecord {
 	key: string;
