@@ -67,7 +67,7 @@ async fn new_speaker_password_hash(payload: &SavePublicLinkRequest) -> Result<Op
     let Some(password) = payload.speaker_password.as_deref().filter(|password| !password.is_empty()) else {
         return Ok(None);
     };
-    crate::accounts::passwords::check_new_password(password)?;
+    crate::accounts::passwords::check_new_password(password, crate::accounts::passwords::DEFAULT_MIN_PASSWORD_LENGTH)?;
     crate::accounts::passwords::hash_password(password)
         .await
         .map(Some)

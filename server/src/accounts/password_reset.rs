@@ -58,7 +58,7 @@ pub async fn confirm_reset(
     State(state): State<AppState>,
     Json(payload): Json<ResetConfirmation>,
 ) -> Result<StatusCode, ApiError> {
-    passwords::check_new_password(&payload.password)?;
+    passwords::check_account_password(&state, &payload.password).await?;
 
     let invalid = (StatusCode::BAD_REQUEST, "This reset link is invalid or has expired".to_string());
     let consumed = email_tokens::consume(&state, &payload.token, TokenPurpose::ResetPassword).await.ok_or(invalid)?;

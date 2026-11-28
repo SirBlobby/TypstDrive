@@ -50,7 +50,7 @@ pub async fn register(
     }
 
     policy.check_email_domain(&payload.email)?;
-    passwords::check_new_password(&payload.password)?;
+    passwords::check_account_password(&state, &payload.password).await?;
 
     let password_hash = passwords::hash_password(&payload.password)
         .await
@@ -191,7 +191,7 @@ pub async fn change_password(
     sessions::CurrentSession(session): sessions::CurrentSession,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<StatusCode, ApiError> {
-    passwords::check_new_password(&payload.new_password)?;
+    passwords::check_account_password(&state, &payload.new_password).await?;
 
     let user = current_user(&state, &session.user_id).await?;
     if passwords::has_password(&user.password_hash)

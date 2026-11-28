@@ -213,7 +213,7 @@ pub async fn change_password(
     if !pending.change_password {
         return Err((StatusCode::BAD_REQUEST, "No new password is needed".to_string()));
     }
-    passwords::check_new_password(&payload.new_password)?;
+    passwords::check_account_password(&state, &payload.new_password).await?;
     let password_hash = passwords::hash_password(&payload.new_password)
         .await
         .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error))?;

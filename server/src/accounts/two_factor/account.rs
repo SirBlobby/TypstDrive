@@ -7,7 +7,7 @@ use super::{backup_codes, totp, Method};
 use crate::accounts::client_info::ClientInfo;
 use crate::accounts::email_code::CODE_ATTEMPT_RULES;
 use crate::accounts::email_tokens::{self, TokenPurpose};
-use crate::accounts::lookup;
+use crate::accounts::{auth_settings, lookup};
 use crate::accounts::random_text::grouped;
 use crate::accounts::sessions::CurrentSession;
 use crate::db::sql;
@@ -25,6 +25,8 @@ pub struct TwoFactorStatus {
     backup_codes_left: i64,
     authenticator_available: bool,
     email_available: bool,
+    authenticator_allowed: bool,
+    email_allowed: bool,
 }
 
 #[derive(Serialize)]
@@ -59,6 +61,19 @@ async fn ensure_not_set_up(state: &AppState, user_id: &str) -> Result<(), ApiErr
     match super::method_of(state, user_id).await {
         Some(_) => Err((StatusCode::CONFLICT, "Two-factor authentication is already on. Turn it off first to switch methods.".to_string())),
         None => Ok(()),
+    }
+}
+
+async fn ensure_allowed(state: &AppState, method: Method) -> Result<(), ApiError> {
+    let settings = auth_settings::load(state).await;
+    let allowed = match method {
+        Method::Totp => settings.authenticator_app_allowed,
+        Method::Email => settings.email_two_factor_allowed,
+    };
+    if allowed {
+        Ok(())
+    } else {
+        Err((StatusCode::FORBIDDEN, "An administrator turned off this two-factor method".to_string()))
     }
 }
 
@@ -100,11 +115,14 @@ async fn enable(state: &AppState, user_id: &str, method: Method, last_step: i64)
 
 pub async fn status(State(state): State<AppState>, CurrentSession(session): CurrentSession) -> Result<Json<TwoFactorStatus>, ApiError> {
     let user = signed_in_user(&state, &session.user_id).await?;
+    let settings = auth_settings::load(&state).await;
     Ok(Json(TwoFactorStatus {
         method: super::method_of(&state, &user.id).await,
         backup_codes_left: backup_codes::remaining(&state, &user.id).await,
         authenticator_available: super::authenticator_available(),
         email_available: email_available_for(&state, &user),
+        authenticator_allowed: settings.authenticator_app_allowed,
+        email_allowed: settings.email_two_factor_allowed,
     }))
 }
 
@@ -113,6 +131,7 @@ pub async fn start_authenticator(
     CurrentSession(session): CurrentSession,
 ) -> Result<Json<AuthenticatorSetup>, ApiError> {
     ensure_not_set_up(&state, &session.user_id).await?;
+    ensure_allowed(&state, Method::Totp).await?;
     if !super::authenticator_available() {
         return Err((
             StatusCode::SERVICE_UNAVAILABLE,
@@ -141,6 +160,7 @@ pub async fn confirm_authenticator(
     Json(payload): Json<CodeInput>,
 ) -> Result<Json<BackupCodes>, ApiError> {
     ensure_not_set_up(&state, &session.user_id).await?;
+    ensure_allowed(&state, Method::Totp).await?;
     let sealed = sqlx::query_as::<_, (Option<String>,)>(sql("SELECT totp_setup_secret FROM users WHERE id = $1"))
         .bind(&session.user_id)
         .fetch_optional(&state.db)
@@ -164,7 +184,7 @@ pub async fn send_email_code(State(state): State<AppState>, CurrentSession(sessi
     match super::method_of(&state, &user.id).await {
         Some(Method::Totp) => return Err((StatusCode::BAD_REQUEST, "Your account uses an authenticator app".to_string())),
         Some(Method::Email) if state.mailer.is_configured() => {}
-        None if email_available_for(&state, &user) => {}
+        None if email_available_for(&state, &user) => ensure_allowed(&state, Method::Email).await?,
         _ => return Err((StatusCode::SERVICE_UNAVAILABLE, "Email codes need a verified email address and email set up on the server".to_string())),
     }
     super::send_email_code(&state, &user.id, &user.username, &user.email).await?;
@@ -178,6 +198,7 @@ pub async fn confirm_email(
     Json(payload): Json<CodeInput>,
 ) -> Result<Json<BackupCodes>, ApiError> {
     ensure_not_set_up(&state, &session.user_id).await?;
+    ensure_allowed(&state, Method::Email).await?;
     check_attempt(&state, &session.user_id, &client, async {
         email_tokens::consume_code(&state, &session.user_id, &payload.code, TokenPurpose::TwoFactorCode).await.is_some()
     })

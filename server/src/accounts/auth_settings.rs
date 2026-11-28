@@ -17,10 +17,17 @@ const DISABLED_PROVIDERS_KEY: &str = "auth.disabled_providers";
 const MAX_FAILED_LOGINS_KEY: &str = "auth.max_failed_logins";
 const LOCKOUT_MINUTES_KEY: &str = "auth.lockout_minutes";
 const SESSION_DAYS_KEY: &str = "auth.session_days";
+const MIN_PASSWORD_LENGTH_KEY: &str = "auth.min_password_length";
+const TEMPORARY_PASSWORD_HOURS_KEY: &str = "auth.temporary_password_hours";
+const AUTHENTICATOR_ALLOWED_KEY: &str = "auth.authenticator_app_allowed";
+const EMAIL_TWO_FACTOR_ALLOWED_KEY: &str = "auth.email_two_factor_allowed";
 
 const MAX_FAILED_LOGINS_LIMIT: i64 = 100;
 const MAX_LOCKOUT_MINUTES: i64 = 24 * 60;
 const MAX_SESSION_DAYS: i64 = 365;
+const MAX_PASSWORD_LENGTH_SETTING: i64 = 128;
+const MAX_TEMPORARY_PASSWORD_HOURS: i64 = 30 * 24;
+const DEFAULT_TEMPORARY_PASSWORD_HOURS: i64 = 72;
 
 type ApiError = (StatusCode, String);
 
@@ -35,10 +42,26 @@ pub struct AuthSettings {
     pub max_failed_logins: i64,
     pub lockout_minutes: i64,
     pub session_days: i64,
+    #[serde(default = "default_min_password_length")]
+    pub min_password_length: i64,
+    #[serde(default = "default_temporary_password_hours")]
+    pub temporary_password_hours: i64,
+    #[serde(default = "enabled_by_default")]
+    pub authenticator_app_allowed: bool,
+    #[serde(default = "enabled_by_default")]
+    pub email_two_factor_allowed: bool,
 }
 
 fn enabled_by_default() -> bool {
     true
+}
+
+fn default_min_password_length() -> i64 {
+    crate::accounts::passwords::DEFAULT_MIN_PASSWORD_LENGTH
+}
+
+fn default_temporary_password_hours() -> i64 {
+    DEFAULT_TEMPORARY_PASSWORD_HOURS
 }
 
 impl Default for AuthSettings {
@@ -52,6 +75,10 @@ impl Default for AuthSettings {
             max_failed_logins: 5,
             lockout_minutes: 15,
             session_days: 30,
+            min_password_length: default_min_password_length(),
+            temporary_password_hours: DEFAULT_TEMPORARY_PASSWORD_HOURS,
+            authenticator_app_allowed: true,
+            email_two_factor_allowed: true,
         }
     }
 }
@@ -78,7 +105,16 @@ impl AuthSettings {
         };
         in_range("Failed sign-ins before lockout", self.max_failed_logins, 0, MAX_FAILED_LOGINS_LIMIT)?;
         in_range("Lockout length", self.lockout_minutes, 1, MAX_LOCKOUT_MINUTES)?;
-        in_range("Session length", self.session_days, 1, MAX_SESSION_DAYS)
+        in_range("Session length", self.session_days, 1, MAX_SESSION_DAYS)?;
+        in_range("Minimum password length", self.min_password_length, default_min_password_length(), MAX_PASSWORD_LENGTH_SETTING)?;
+        in_range("Temporary password lifetime", self.temporary_password_hours, 1, MAX_TEMPORARY_PASSWORD_HOURS)?;
+        if !self.authenticator_app_allowed && !self.email_two_factor_allowed {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "Allow at least one two-factor method. Administrators need two-factor authentication to manage users.".to_string(),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -100,6 +136,10 @@ pub async fn load(state: &AppState) -> AuthSettings {
         max_failed_logins: number(MAX_FAILED_LOGINS_KEY, defaults.max_failed_logins),
         lockout_minutes: number(LOCKOUT_MINUTES_KEY, defaults.lockout_minutes),
         session_days: number(SESSION_DAYS_KEY, defaults.session_days),
+        min_password_length: number(MIN_PASSWORD_LENGTH_KEY, defaults.min_password_length),
+        temporary_password_hours: number(TEMPORARY_PASSWORD_HOURS_KEY, defaults.temporary_password_hours),
+        authenticator_app_allowed: flag(AUTHENTICATOR_ALLOWED_KEY, defaults.authenticator_app_allowed),
+        email_two_factor_allowed: flag(EMAIL_TWO_FACTOR_ALLOWED_KEY, defaults.email_two_factor_allowed),
     }
 }
 
@@ -114,6 +154,10 @@ pub async fn save(state: &AppState, settings: &AuthSettings) -> Result<(), ApiEr
         (MAX_FAILED_LOGINS_KEY, settings.max_failed_logins.to_string()),
         (LOCKOUT_MINUTES_KEY, settings.lockout_minutes.to_string()),
         (SESSION_DAYS_KEY, settings.session_days.to_string()),
+        (MIN_PASSWORD_LENGTH_KEY, settings.min_password_length.to_string()),
+        (TEMPORARY_PASSWORD_HOURS_KEY, settings.temporary_password_hours.to_string()),
+        (AUTHENTICATOR_ALLOWED_KEY, settings.authenticator_app_allowed.to_string()),
+        (EMAIL_TWO_FACTOR_ALLOWED_KEY, settings.email_two_factor_allowed.to_string()),
     ];
     save_settings(state, &entries)
         .await
@@ -147,6 +191,7 @@ pub struct AuthOptions {
     pub email_code_login_available: bool,
     pub email_verification_available: bool,
     pub verification_required: bool,
+    pub min_password_length: i64,
     pub providers: Vec<ProviderButton>,
 }
 
@@ -171,6 +216,7 @@ pub async fn auth_options(State(state): State<AppState>) -> Json<AuthOptions> {
         email_code_login_available: email_code_login_available(&state, &settings),
         email_verification_available: email_links_available(&state),
         verification_required: verification_required(&state, &settings),
+        min_password_length: settings.min_password_length,
         providers,
     })
 }

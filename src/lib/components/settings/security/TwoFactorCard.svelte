@@ -103,19 +103,23 @@
                 </div>
             {/if}
             <div class="flex flex-wrap gap-2">
-                <button type="button" onclick={() => (view = 'authenticator')} disabled={!status.authenticator_available} class={primaryButtonClass}>
+                <button type="button" onclick={() => (view = 'authenticator')} disabled={!status.authenticator_available || !status.authenticator_allowed} class={primaryButtonClass}>
                     <Icon icon="mdi:cellphone-key" class="text-base" />
                     Use an authenticator app
                 </button>
-                <button type="button" onclick={() => (view = 'email')} disabled={!status.email_available} class={secondaryButtonClass}>
+                <button type="button" onclick={() => (view = 'email')} disabled={!status.email_available || !status.email_allowed} class={secondaryButtonClass}>
                     <Icon icon="mdi:email-lock-outline" class="text-base" />
                     Use email codes
                 </button>
             </div>
-            {#if !status.authenticator_available}
+            {#if !status.authenticator_allowed}
+                <p class="text-xs text-[var(--color-ink-muted)]">Your administrator turned off authenticator apps.</p>
+            {:else if !status.authenticator_available}
                 <p class="text-xs text-[var(--color-ink-muted)]">Authenticator apps need COOKIE_SECRET to be set on the server.</p>
             {/if}
-            {#if !status.email_available}
+            {#if !status.email_allowed}
+                <p class="text-xs text-[var(--color-ink-muted)]">Your administrator turned off email codes.</p>
+            {:else if !status.email_available}
                 <p class="text-xs text-[var(--color-ink-muted)]">Email codes need email set up on the server and a verified email address.</p>
             {/if}
         </div>

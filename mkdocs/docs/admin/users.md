@@ -6,7 +6,7 @@
 
 - **Grant or revoke** administrator rights.
 - **Mark the email** as confirmed or not.
-- **Temporary password**, for example when someone forgot theirs and email is not set up. TypstDrive creates a random password and shows it once. It works for one sign-in within 72 hours, and the user must choose a new password right away. It replaces their old password and signs them out everywhere. Their two-factor authentication stays on.
+- **Temporary password**, for example when someone forgot theirs and email is not set up. TypstDrive creates a random password and shows it once. It works for one sign-in within 72 hours (change this in [Authentication](security.md#authentication)), and the user must choose a new password right away. It replaces their old password and signs them out everywhere. Their two-factor authentication stays on.
 - **Turn off two-factor** for someone who lost their authenticator app and backup codes.
 - **Sign out everywhere**, ending every browser session they have.
 - **Delete** the account and everything it owns. Teams they owned pass to another member.

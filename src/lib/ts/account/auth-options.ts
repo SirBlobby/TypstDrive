@@ -11,6 +11,7 @@ export type AuthOptions = {
     email_code_login_available: boolean;
     email_verification_available: boolean;
     verification_required: boolean;
+    min_password_length: number;
     providers: SignInProvider[];
 };
 
@@ -21,6 +22,7 @@ const fallbackOptions: AuthOptions = {
     email_code_login_available: false,
     email_verification_available: false,
     verification_required: false,
+    min_password_length: 8,
     providers: []
 };
 

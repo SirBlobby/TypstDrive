@@ -76,7 +76,7 @@
     <form class="space-y-6" onsubmit={saveNewPassword}>
         <FormNotice tone="info">You signed in with a temporary password. Choose your own password to continue. The temporary one no longer works.</FormNotice>
         <div class="space-y-5">
-            <AuthField id="new-password" label="New password" icon="mdi:lock" type="password" autocomplete="new-password" placeholder="At least 8 characters" bind:value={newPassword} />
+            <AuthField id="new-password" label="New password" icon="mdi:lock" type="password" autocomplete="new-password" placeholder="Choose a password" bind:value={newPassword} />
             <AuthField id="confirm-password" label="Confirm new password" icon="mdi:lock-check" type="password" autocomplete="new-password" placeholder="Type it again" bind:value={confirmPassword} />
         </div>
         <button type="submit" disabled={submitting} class="group w-full flex justify-center items-center gap-2 py-3 px-4 text-sm font-bold rounded-md text-white bg-[var(--color-accent)] hover:opacity-90 focus:outline-none transition disabled:opacity-60">

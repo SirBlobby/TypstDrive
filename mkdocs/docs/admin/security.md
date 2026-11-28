@@ -14,6 +14,12 @@
 | Failed sign-ins before lockout | 5 | After this many wrong passwords, the account is locked for a while. `0` turns this off. |
 | Lockout length | 15 minutes | How long a locked account waits. |
 | Session length | 30 days | How long people stay signed in. |
+| Minimum password length | 8 | The shortest new password allowed, from 8 to 128 characters. Existing passwords keep working until they are changed. Public link speaker passwords always need at least 8. |
+| Temporary password lifetime | 72 hours | How long a [temporary password](users.md#users) works, from 1 hour to 30 days. It always works for only one sign-in. |
+| Authenticator apps | On | Whether people can set up two-factor with an authenticator app. Needs `COOKIE_SECRET`. |
+| Email codes | On | Whether people can set up two-factor with email codes. Needs email. |
+
+At least one two-factor method must stay on, because administrators need two-factor authentication to [manage users](users.md#two-factor-for-administrators). Turning a method off stops new setups only; people who already use it keep it.
 
 A warning appears here while `PUBLIC_URL` is not set.
 

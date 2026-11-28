@@ -10,7 +10,6 @@ use crate::AppState;
 
 type ApiError = (StatusCode, String);
 
-pub const LIFETIME_HOURS: i64 = 72;
 const PASSWORD_LENGTH: usize = 16;
 const GROUP_LENGTH: usize = 4;
 
@@ -24,7 +23,8 @@ pub async fn assign(state: &AppState, user_id: &str) -> Result<TemporaryPassword
     let password_hash = passwords::hash_password(&password)
         .await
         .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error))?;
-    let expires_at = format_time(Utc::now() + TimeDelta::hours(LIFETIME_HOURS));
+    let lifetime_hours = crate::accounts::auth_settings::load(state).await.temporary_password_hours;
+    let expires_at = format_time(Utc::now() + TimeDelta::hours(lifetime_hours));
     sqlx::query(sql(
         "UPDATE users SET password_hash = $1, password_change_required = 1, temporary_password_expires_at = $2 WHERE id = $3",
     ))

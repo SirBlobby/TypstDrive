@@ -6,6 +6,8 @@ export type TwoFactorStatus = {
     backup_codes_left: number;
     authenticator_available: boolean;
     email_available: boolean;
+    authenticator_allowed: boolean;
+    email_allowed: boolean;
 };
 
 export type AuthenticatorSetup = {

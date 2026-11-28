@@ -8,6 +8,8 @@
     import SettingsRow from '#lib/components/settings/SettingsRow.svelte';
     import ToggleSwitch from '#lib/components/settings/ToggleSwitch.svelte';
     import ProviderList from './auth/ProviderList.svelte';
+    import PasswordPolicyCard from './auth/PasswordPolicyCard.svelte';
+    import TwoFactorPolicyCard from './auth/TwoFactorPolicyCard.svelte';
 
     let overview = $state<AuthenticationOverview | null>(null);
     let settings = $state<AuthSettings | null>(null);
@@ -89,6 +91,10 @@
         </SettingsCard>
 
         <ProviderList providers={overview.providers} problems={overview.provider_problems} bind:disabledProviders={settings.disabled_providers} />
+
+        <PasswordPolicyCard bind:settings />
+
+        <TwoFactorPolicyCard bind:settings emailConfigured={overview.email.configured} />
 
         <SettingsCard title="Sessions and lockout" description="Lockout counts failed sign-ins per account and per address on each server instance.">
             <SettingsRow label="Failed sign-ins before lockout" description="0 turns lockout off." forId="max-failed">

@@ -7,6 +7,10 @@ export type AuthSettings = {
     max_failed_logins: number;
     lockout_minutes: number;
     session_days: number;
+    min_password_length: number;
+    temporary_password_hours: number;
+    authenticator_app_allowed: boolean;
+    email_two_factor_allowed: boolean;
 };
 
 export type EmailStatus = {
