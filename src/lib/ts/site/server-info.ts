@@ -2,6 +2,7 @@ export interface EnvironmentVariable {
     name: string;
     group: string;
     description: string;
+    default_value: string | null;
     is_set: boolean;
 }
 

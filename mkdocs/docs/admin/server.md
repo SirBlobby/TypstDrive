@@ -7,7 +7,7 @@
 - **Database**: which database is used, its version, and the TypstDrive database version.
 - **Real-time collaboration**: whether Redis or Valkey is in use and connected, and which copy of TypstDrive you are talking to. See [Bigger installs](../self-hosting/scaling.md).
 - **File storage**: whether uploads are kept in the database or in object storage, and how many files are in each.
-- **Environment variables**: every setting TypstDrive reads, what it is for, and whether it is set. Values are never shown, even to administrators.
+- **Environment variables**: every setting TypstDrive reads and what it is for. Each one is marked **Set**, **Default** (not set, so its default value, shown next to it, is used) or **Not set** (an optional feature that stays off). Values are never shown, even to administrators.
 
 ## Performance
 
