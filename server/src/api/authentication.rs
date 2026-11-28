@@ -173,8 +173,8 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap, scope: ApiScope
         return Err(reject(StatusCode::TOO_MANY_REQUESTS, "Daily request quota reached for this account."));
     }
 
-    let rate_limit = effective_rate_limit(key_rate_limit, limits.rate_limit);
-    if !within_rate_limit(state, &key_id, rate_limit).await {
+    let key_limited = key_rate_limit > 0 && !within_rate_limit(state, &format!("key:{key_id}"), key_rate_limit).await;
+    if key_limited || !within_rate_limit(state, &format!("account:{user_id}"), limits.rate_limit).await {
         return Err(reject(StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded. Max requests per minute reached."));
     }
 
