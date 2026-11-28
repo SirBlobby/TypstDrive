@@ -89,6 +89,14 @@ impl FileStorage {
         self.remote.is_some()
     }
 
+    pub fn cached(&self, key: &str) -> Option<Vec<u8>> {
+        self.cache.get(key)
+    }
+
+    pub fn remember(&self, key: &str, data: Vec<u8>) {
+        self.cache.insert(key, data);
+    }
+
     pub fn cache_limit_bytes(&self) -> usize {
         self.cache.limit_bytes()
     }

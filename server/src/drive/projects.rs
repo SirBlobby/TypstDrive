@@ -170,26 +170,19 @@ pub async fn assemble_project(
     mut overrides: HashMap<String, String>,
     reader: ProjectReader<'_>,
 ) -> ProjectInput {
-    let rows = sqlx::query_as::<_, (String, String, Option<Vec<u8>>)>(
-        sql("SELECT path, kind, content FROM project_files WHERE project_id = $1"),
-    )
-    .bind(&project.id)
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
-
-    let mut files: HashMap<String, Vec<u8>> = HashMap::with_capacity(rows.len() + overrides.len());
+    let stored = crate::drive::project_file_data::load(state, &project.id).await;
+    let mut files: HashMap<String, Vec<u8>> = HashMap::with_capacity(stored.len() + overrides.len());
     let mut text_paths: Vec<String> = Vec::new();
-    for (path, kind, content) in rows {
-        let (data, is_text) = match overrides.remove(&path) {
+    for file in stored {
+        let (data, is_text) = match overrides.remove(&file.path) {
             Some(live) => (live.into_bytes(), true),
-            None if kind == "binary" => (content.unwrap_or_default(), false),
-            None => (decode_text_blob(&content.unwrap_or_default()).into_bytes(), true),
+            None if file.is_binary => (file.content, false),
+            None => (decode_text_blob(&file.content).into_bytes(), true),
         };
         if is_text {
-            text_paths.push(path.clone());
+            text_paths.push(file.path.clone());
         }
-        files.insert(path, data);
+        files.insert(file.path, data);
     }
     for (path, content) in overrides {
         text_paths.push(path.clone());

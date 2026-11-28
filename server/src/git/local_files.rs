@@ -86,8 +86,8 @@ async fn write_text(state: &AppState, project_id: &str, path: &str, text: &str) 
 
 async fn upsert(state: &AppState, project_id: &str, path: &str, kind: &str, content: Vec<u8>) -> Result<(), ApiError> {
     sqlx::query(sql(
-        "INSERT INTO project_files (id, project_id, path, kind, content, mime_type) VALUES ($1, $2, $3, $4, $5, $6) \
-         ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, kind = excluded.kind, mime_type = excluded.mime_type",
+        "INSERT INTO project_files (id, project_id, path, kind, content, mime_type, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) \
+         ON CONFLICT (project_id, path) DO UPDATE SET content = excluded.content, kind = excluded.kind, mime_type = excluded.mime_type, updated_at = excluded.updated_at",
     ))
     .bind(Uuid::new_v4().to_string())
     .bind(project_id)
@@ -95,6 +95,7 @@ async fn upsert(state: &AppState, project_id: &str, path: &str, kind: &str, cont
     .bind(kind)
     .bind(content)
     .bind(mime_type(path))
+    .bind(crate::db::timestamp_now())
     .execute(&state.db)
     .await
     .map_err(internal_error)?;

@@ -14,6 +14,7 @@ pub mod folders;
 pub mod item_info;
 pub mod people;
 pub mod project_entrypoints;
+pub mod project_file_data;
 pub mod project_folders;
 pub mod project_paths;
 pub mod project_reviews;
