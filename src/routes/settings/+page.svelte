@@ -4,7 +4,7 @@
     import { page } from '$app/state';
     import { onMount } from 'svelte';
     import Icon from '@iconify/svelte';
-    import { userStore } from '#lib/ts/auth';
+    import { userStore, signOut } from '#lib/ts/auth';
     import SettingsSidebar from '#lib/components/settings/SettingsSidebar.svelte';
     import AccountSection from '#lib/components/settings/sections/AccountSection.svelte';
     import AppearanceSection from '#lib/components/settings/sections/AppearanceSection.svelte';
@@ -34,8 +34,7 @@
     let activeSection = $state(navItems.some((item) => item.id === requestedSection) ? requestedSection! : 'account');
 
     async function logout() {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        userStore.set(null);
+        await signOut();
         goto('/login');
     }
 

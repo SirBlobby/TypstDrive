@@ -3,7 +3,7 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte';
-    import { userStore } from '#lib/ts/auth';
+    import { userStore, signOut } from '#lib/ts/auth';
     import SettingsSidebar from '#lib/components/settings/SettingsSidebar.svelte';
     import UserManagement from '#lib/components/site-settings/UserManagement.svelte';
     import ApiAccessSettings from '#lib/components/site-settings/ApiAccessSettings.svelte';
@@ -83,8 +83,7 @@
     let activeSection = $state('users');
 
     async function logout() {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        userStore.set(null);
+        await signOut();
         goto('/login');
     }
 

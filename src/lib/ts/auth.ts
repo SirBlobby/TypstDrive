@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { activeTeamStore, teamsStore } from './workspace';
 
 export type User = {
     id: string;
@@ -22,6 +23,16 @@ export async function fetchUser() {
             userStore.set(null);
         }
     } catch {
+        userStore.set(null);
+    }
+}
+
+export async function signOut() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+        activeTeamStore.set(null);
+        teamsStore.set([]);
         userStore.set(null);
     }
 }

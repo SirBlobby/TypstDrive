@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { userStore } from '#lib/ts/auth';
+    import { userStore, signOut } from '#lib/ts/auth';
     import Icon from '@iconify/svelte';
     import UserAvatar from '#lib/components/UserAvatar.svelte';
     import { DOCS_URL } from '#lib/ts/links';
@@ -17,8 +17,7 @@
 
     async function logout() {
         showUserMenu = false;
-        await fetch('/api/auth/logout', { method: 'POST' });
-        userStore.set(null);
+        await signOut();
         goto('/login');
     }
 
